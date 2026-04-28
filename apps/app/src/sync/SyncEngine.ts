@@ -323,8 +323,9 @@ export class SyncEngine {
         .download(path);
 
       if (downloadError) {
-        if (downloadError.message.includes('Not found') || downloadError.message.includes('404')) {
-          this.notifyState({ status: 'idle', lastError: null });
+        const msg = downloadError.message.toLowerCase();
+        if (msg.includes('not found') || msg.includes('404')) {
+          await this.pullAndMerge();
           return;
         }
         throw downloadError;

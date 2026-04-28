@@ -197,7 +197,9 @@ describe('SyncProvider', () => {
       await waitFor(() => {
         expect(screen.getByTestId('status')).toBeDefined();
       });
-      expect(screen.getByTestId('status').textContent).toBe('idle');
+      await waitFor(() => {
+        expect(screen.getByTestId('status').textContent).toBe('idle');
+      });
       expect(screen.getByTestId('pending').textContent).toBe('0');
     });
   });
