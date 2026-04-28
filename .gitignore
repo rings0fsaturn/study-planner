@@ -9,3 +9,4 @@ dist/
 .svelte-kit/
 .vercel/
 .output/
+test-results/
