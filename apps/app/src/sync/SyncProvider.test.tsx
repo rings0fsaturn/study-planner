@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, act } from '@testing-library/react';
-import { createContext, useContext, type ReactNode } from 'react';
 import Dexie from 'dexie';
 import { EventStore } from '../events/EventStore';
 import { SyncProvider } from './SyncProvider';
 import { useSync } from './useSync';
 import { SyncEngine } from './SyncEngine';
-import type { SupabaseClientLike, SyncState } from './types';
+import type { SupabaseClientLike } from './types';
 
 interface FakeRemoteEvent {
   id: number;
@@ -262,7 +261,6 @@ describe('SyncProvider', () => {
       });
 
       const prevRestoreCount = restoreSpy.mock.calls.length;
-      const prevDestroyCount = destroySpy.mock.calls.length;
 
       rerender(
         <SyncProvider
