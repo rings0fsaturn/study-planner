@@ -150,6 +150,7 @@
   gap: 6px;
   width: 100%;
   max-width: 420px;
+  margin-bottom: var(--space-4);
 }
 .field-label {
   font-family: var(--font-mono);
