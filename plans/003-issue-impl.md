@@ -2,9 +2,9 @@
 
 ## Status: IN PROGRESS
 
-**Completed Phases:** 0, 1, 2, 3, 4, 5, 6  
-**Current Phase:** 7 (SyncIndicator Component)  
-**Pending Phases:** 8, 9, 10
+**Completed Phases:** 0, 1, 2, 3, 4, 5, 6, 7  
+**Current Phase:** 8 (Integration)  
+**Pending Phases:** 9, 10
 
 ---
 
@@ -43,17 +43,17 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 | `apps/app/src/sync/SyncProvider.test.tsx` | ✅ Done (5 tests) |
 | `apps/app/src/sync/useSync.ts` | ✅ Done |
 | `apps/app/src/sync/index.ts` | ✅ Done (barrel export) |
+| `apps/app/src/components/SyncIndicator.tsx` | ✅ Done |
+| `apps/app/src/components/SyncIndicator.test.tsx` | ✅ Done (12 tests) |
+| `packages/design-tokens/src/components.css` | ✅ Done (`.sync-indicator` CSS) |
 
 ### Remaining Files
 
 | File | Purpose |
 |------|---------|
-| `apps/app/src/components/SyncIndicator.tsx` | "Synced X ago" pill widget |
-| `apps/app/src/components/SyncIndicator.test.tsx` | 4 rendering tests per state |
 | `apps/app/src/App.tsx` | Nest `<SyncProvider>` inside `<EventStoreProvider>` |
 | `apps/app/src/pages/Log.tsx` | Replace `eventStore.append()` → `useSync().logEvent()` |
 | `apps/app/src/pages/Home.tsx` | Add `<SyncIndicator />` next to greeting |
-| `packages/design-tokens/src/components.css` | Add `.sync-indicator` |
 | `e2e/sync.spec.ts` | Cross-device session visibility E2E |
 
 ---
@@ -103,9 +103,11 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 - EventStoreProvider upgraded to Dexie v2 schema (sync_queue, sync_meta tables)
 - All 5 tests passing
 
-### Phase 7: SyncIndicator Component
-- Tests: idle/syncing/error/offline render states, click triggers forceSyncNow
-- Implementation: `SyncIndicator.tsx` with design tokens
+### Phase 7: SyncIndicator Component ✅
+- Tests: idle/syncing/error/offline render states, click triggers forceSyncNow, formatTimeAgo
+- Implementation: `SyncIndicator.tsx`, `SyncIndicator.test.tsx`, `.sync-indicator` CSS
+- Online/offline detection added to SyncProvider
+- 12 tests passing
 
 ### Phase 8: Integration
 - Wire into `App.tsx`, `Log.tsx`, `Home.tsx`
