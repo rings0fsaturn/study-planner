@@ -51,7 +51,9 @@ study-planner-web/
 | Build Tool | Vite 5 |
 | UI Framework | React 19 |
 | Language | TypeScript 5.4 |
+| Auth Backend | Supabase |
 | E2E Testing | Playwright |
+| Unit Testing | Vitest |
 | Deployment | Vercel |
 | Design System | Marginalia (custom) |
 
@@ -60,7 +62,13 @@ study-planner-web/
 | Path | Purpose |
 |---|---|
 | `apps/marketing/` | Astro marketing site (homepage, about, privacy, terms) |
-| `apps/app/` | Vite + React SPA (placeholder at `/study/`) |
+| `apps/app/` | Vite + React 19 SPA (auth-protected at `/study/`) |
+| `apps/app/src/auth/` | Auth deep module (AuthGate with DI), AuthProvider, ProtectedRoute, useAuth |
+| `apps/app/src/lib/supabase.ts` | Supabase client singleton |
+| `apps/app/src/components/` | Shared components (Field.tsx) |
+| `apps/app/src/pages/` | Route pages (SignIn, SignUp, Home, AuthConfirmed, ResetPassword) |
+| `apps/app/src/test/` | Vitest test setup |
+| `apps/app/.env.example` | Required env vars template |
 | `packages/design-tokens/` | Shared design tokens package |
 | `e2e/` | Playwright smoke tests |
 | `prd/` | Product Requirements Document |
@@ -79,6 +87,10 @@ See [`.opencode/rules/`](.opencode/rules/):
 | [`css-workspace-packages.md`](.opencode/rules/css-workspace-packages.md) | CSS imports failing to resolve in workspace packages |
 | [`playwright-config.md`](.opencode/rules/playwright-config.md) | E2E tests failing due to config issues |
 | [`astro-selectors.md`](.opencode/rules/astro-selectors.md) | Selector strict mode violations in Astro dev mode |
+| [`react-router-v7-basename.md`](.opencode/rules/react-router-v7-basename.md) | Double basename prefixes in navigation |
+| [`auth-testing-fakes.md`](.opencode/rules/auth-testing-fakes.md) | Brittle Supabase mock tests |
+| [`form-design-spacing.md`](.opencode/rules/form-design-spacing.md) | Collapsed form field groups |
+| [`auth-init-timeout.md`](.opencode/rules/auth-init-timeout.md) | React hanging on slow auth init |
 
 ## Commands
 
@@ -95,6 +107,8 @@ pnpm build:app          # Vite → apps/app/dist
 
 # Testing
 pnpm test:e2e           # Run Playwright smoke tests
+pnpm --filter app test           # Run Vitest unit tests
+pnpm --filter app test:watch     # Run Vitest in watch mode
 pnpm lint              # Lint all packages
 pnpm typecheck          # TypeScript check all packages
 ```
@@ -132,6 +146,52 @@ Vite `vite.config.ts`:
 base: '/study/'
 ```
 
+## Auth Architecture
+
+### Overview
+
+The auth layer uses a dependency-injected deep module pattern to keep Supabase logic isolated and testable.
+
+| File | Purpose |
+|---|---|
+| `apps/app/src/auth/AuthGate.ts` | Deep module wrapping Supabase Auth. Accepts client via constructor for DI. |
+| `apps/app/src/auth/AuthGate.test.ts` | 6 unit tests using hand-written fake client |
+| `apps/app/src/auth/AuthProvider.tsx` | React context with 500ms init timeout (prevents React hang) |
+| `apps/app/src/auth/ProtectedRoute.tsx` | Auth guard — redirects unauthenticated to `/sign-in` |
+| `apps/app/src/auth/useAuth.ts` | Hook exposing `{ user, loading, signIn, signUp, signOut }` |
+
+### Routes
+
+| Path | Component | Auth Required |
+|---|---|---|
+| `/sign-in` | SignIn | No (redirects if authenticated) |
+| `/sign-up` | SignUp | No (redirects if authenticated) |
+| `/auth-confirmed` | AuthConfirmed | No |
+| `/reset-password` | ResetPassword | No (redirects if authenticated) |
+| `/home` | Home | Yes (ProtectedRoute) |
+| `/` | RootRedirect | Yes (auto-redirects to /home or /sign-in) |
+
+### DI Pattern
+
+```ts
+// AuthGate accepts client via constructor — enables hand-written fakes in tests
+class AuthGate {
+  constructor(private supabase: SupabaseClient) {}
+  async signIn(email: string, password: string) { ... }
+}
+```
+
+## Environment Variables
+
+Required in `apps/app/.env.local`:
+
+| Variable | Purpose |
+|---|---|
+| `VITE_SUPABASE_URL` | Supabase project URL (e.g., `https://xxxxx.supabase.co`) |
+| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
+
+Template provided in `apps/app/.env.example`.
+
 ## Design System: Marginalia
 
 Tokens live in `packages/design-tokens/src/`:
@@ -162,13 +222,20 @@ import '@study-tracker/design-tokens/components.css';
 
 **E2E Tests:** [`e2e/smoke.spec.ts`](e2e/smoke.spec.ts)
 
-Current coverage (12 tests):
+Current coverage (20 tests):
 - Marketing: homepage loads with design tokens, components render, privacy/terms pages load
-- React: placeholder loads with design tokens, components render
+- React: sign-in/sign-up/home/auth-confirmed/reset-password pages load and render correctly
+- Auth: unauthenticated users redirected to sign-in
+
+**Unit Tests:** Vitest in `apps/app/src/auth/AuthGate.test.ts`
+
+Current coverage (6 tests):
+- AuthGate: sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection
 
 **Run tests:**
 ```bash
-pnpm test:e2e
+pnpm test:e2e           # Run Playwright smoke tests
+pnpm --filter app test  # Run Vitest unit tests
 ```
 
 ## Deployment
