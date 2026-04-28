@@ -17,15 +17,15 @@ The point is to surface deployment, routing, and design-system integration risk 
 
 ## Acceptance criteria
 
-- [ ] Visiting the apex domain returns a styled Astro page with placeholder content
-- [ ] Visiting `/study/` returns a styled React page with placeholder content
-- [ ] Visiting `/privacy` and `/terms` return placeholder Astro pages
-- [ ] Vercel routing correctly directs apex requests to the Astro project and `/study/*` requests to the React project
-- [ ] DNS and subdomain configuration are in place; both URLs resolve over HTTPS
-- [ ] Design-system tokens (color, spacing, type scale) are imported and applied on both the Astro and the React surfaces
-- [ ] At least 2–3 design-system primitive components render on each placeholder page so the design system is visibly active, not just imported
-- [ ] A Playwright smoke test asserts both URLs return 200 and that a known design-system class or token is present in the rendered HTML
-- [ ] HITL: Vercel projects, DNS records, and any required environment variables are documented in a `DEPLOYMENT.md`
+- [X] Visiting the apex domain returns a styled Astro page with placeholder content
+- [X] Visiting `/study/` returns a styled React page with placeholder content
+- [X] Visiting `/privacy` and `/terms` return placeholder Astro pages
+- [X] Vercel routing correctly directs apex requests to the Astro project and `/study/*` requests to the React project
+- [X] DNS and subdomain configuration are in place; both URLs resolve over HTTPS
+- [X] Design-system tokens (color, spacing, type scale) are imported and applied on both the Astro and the React surfaces
+- [X] At least 2–3 design-system primitive components render on each placeholder page so the design system is visibly active, not just imported
+- [X] A Playwright smoke test asserts both URLs return 200 and that a known design-system class or token is present in the rendered HTML
+- [X] HITL: Vercel projects, DNS records, and any required environment variables are documented in a `DEPLOYMENT.md`
 
 ## Blocked by
 
