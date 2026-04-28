@@ -39,6 +39,22 @@ export function SyncProvider({ children, supabase, userId, eventStore }: SyncPro
     lastError: null,
     pendingCount: 0,
   });
+  const [isOnline, setIsOnline] = useState(true);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    setIsOnline(navigator.onLine);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const engineRef = useRef<SyncEngine | null>(null);
   const clientIdRef = useRef<string>(getOrCreateClientId());
@@ -122,8 +138,12 @@ export function SyncProvider({ children, supabase, userId, eventStore }: SyncPro
     await engineRef.current.forceSyncNow();
   };
 
+  const effectiveSyncState: SyncState = !isOnline
+    ? { ...syncState, status: 'offline' }
+    : syncState;
+
   const value: SyncContextValue = {
-    syncState,
+    syncState: effectiveSyncState,
     logEvent,
     forceSyncNow,
   };
