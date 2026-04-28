@@ -17,16 +17,16 @@ A user can sign up with email and password, receive a confirmation email, click 
 
 ## Acceptance criteria
 
-- [ ] A new user can complete email/password sign-up at `/study/sign-up`
-- [ ] Sign-up sends a confirmation email; the account cannot sign in until the email is confirmed
-- [ ] Clicking the confirmation link from the email lands the user on a confirmed-success state
-- [ ] A confirmed user can sign in at `/study/sign-in` with email and password
-- [ ] After sign-in, the user lands on `/study/home` and sees a greeting using their email
-- [ ] An unauthenticated user navigating to `/study/home` is redirected to `/study/sign-in`
-- [ ] An authenticated user can sign out from `/study/home`; afterward, navigating to `/study/home` redirects to `/study/sign-in`
-- [ ] Sign-in, sign-up, and sign-out screens use design-system primitives from slice 1a
-- [ ] AuthGate has unit tests covering: sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection
-- [ ] HITL: Supabase project provisioned in `ap-south-1`; project URL and anon key documented in `DEPLOYMENT.md`; email templates reviewed
+- [X] A new user can complete email/password sign-up at `/study/sign-up`
+- [X] Sign-up sends a confirmation email; the account cannot sign in until the email is confirmed
+- [X] Clicking the confirmation link from the email lands the user on a confirmed-success state
+- [X] A confirmed user can sign in at `/study/sign-in` with email and password
+- [X] After sign-in, the user lands on `/study/home` and sees a greeting using their email
+- [X] An unauthenticated user navigating to `/study/home` is redirected to `/study/sign-in`
+- [X] An authenticated user can sign out from `/study/home`; afterward, navigating to `/study/home` redirects to `/study/sign-in`
+- [X] Sign-in, sign-up, and sign-out screens use design-system primitives from slice 1a
+- [X] AuthGate has unit tests covering: sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection
+- [X] HITL: Supabase project provisioned in `ap-south-1`; project URL and anon key documented in `DEPLOYMENT.md`; email templates reviewed
 
 ## Blocked by
 
