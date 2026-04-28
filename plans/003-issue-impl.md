@@ -2,9 +2,9 @@
 
 ## Status: IN PROGRESS
 
-**Completed Phases:** 0, 1, 2, 3, 4, 5  
-**Current Phase:** 6 (SyncProvider + Lifecycle Hooks)  
-**Pending Phases:** 7, 8, 9, 10
+**Completed Phases:** 0, 1, 2, 3, 4, 5, 6  
+**Current Phase:** 7 (SyncIndicator Component)  
+**Pending Phases:** 8, 9, 10
 
 ---
 
@@ -38,17 +38,18 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 | `apps/app/src/sync/types.ts` | ✅ Done |
 | `apps/app/src/sync/SyncEngine.ts` | ✅ Done (core + pull + retry + snapshot + restore) |
 | `apps/app/src/sync/SyncEngine.test.ts` | ✅ Done (53 tests - includes snapshot/restore tests) |
+| `apps/app/src/events/EventStoreProvider.tsx` | ✅ Done (Dexie v2 schema) |
+| `apps/app/src/sync/SyncProvider.tsx` | ✅ Done (context + lifecycle) |
+| `apps/app/src/sync/SyncProvider.test.tsx` | ✅ Done (5 tests) |
+| `apps/app/src/sync/useSync.ts` | ✅ Done |
+| `apps/app/src/sync/index.ts` | ✅ Done (barrel export) |
 
 ### Remaining Files
 
 | File | Purpose |
 |------|---------|
-| `apps/app/src/sync/SyncProvider.tsx` | React context; creates SyncEngine per user; lifecycle hooks |
-| `apps/app/src/sync/useSync.ts` | Hook: `{ syncState, logEvent, forceSyncNow }` |
-| `apps/app/src/sync/index.ts` | Barrel export |
 | `apps/app/src/components/SyncIndicator.tsx` | "Synced X ago" pill widget |
 | `apps/app/src/components/SyncIndicator.test.tsx` | 4 rendering tests per state |
-| `apps/app/src/events/EventStoreProvider.tsx` | Upgrade Dexie schema to v2 (add sync_queue, sync_meta tables) |
 | `apps/app/src/App.tsx` | Nest `<SyncProvider>` inside `<EventStoreProvider>` |
 | `apps/app/src/pages/Log.tsx` | Replace `eventStore.append()` → `useSync().logEvent()` |
 | `apps/app/src/pages/Home.tsx` | Add `<SyncIndicator />` next to greeting |
@@ -96,9 +97,11 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 - 8 new tests added: saveSnapshot (2), restoreFromCloud (4), snapshot scheduling (2)
 - All 53 tests passing
 
-### Phase 6: SyncProvider + Lifecycle Hooks (IN PROGRESS)
+### Phase 6: SyncProvider + Lifecycle Hooks ✅
 - Tests: mount creates engine, user switch restores, visibility/pagehide wiring
 - Implementation: `SyncProvider.tsx`, `useSync` hook, lifecycle handlers
+- EventStoreProvider upgraded to Dexie v2 schema (sync_queue, sync_meta tables)
+- All 5 tests passing
 
 ### Phase 7: SyncIndicator Component
 - Tests: idle/syncing/error/offline render states, click triggers forceSyncNow
