@@ -66,7 +66,8 @@ study-planner-web/
 | `apps/app/src/auth/` | Auth deep module (AuthGate with DI), AuthProvider, ProtectedRoute, useAuth |
 | `apps/app/src/lib/supabase.ts` | Supabase client singleton |
 | `apps/app/src/components/` | Shared components (Field.tsx) |
-| `apps/app/src/pages/` | Route pages (SignIn, SignUp, Home, AuthConfirmed, ResetPassword) |
+| `apps/app/src/events/` | EventStore (Dexie-backed per-user DB), ProgressEngine, EventStoreProvider |
+| `apps/app/src/pages/` | Route pages (SignIn, SignUp, Home, Log, AuthConfirmed, ResetPassword) |
 | `apps/app/src/test/` | Vitest test setup |
 | `apps/app/.env.example` | Required env vars template |
 | `packages/design-tokens/` | Shared design tokens package |
@@ -91,6 +92,8 @@ See [`.opencode/rules/`](.opencode/rules/):
 | [`auth-testing-fakes.md`](.opencode/rules/auth-testing-fakes.md) | Brittle Supabase mock tests |
 | [`form-design-spacing.md`](.opencode/rules/form-design-spacing.md) | Collapsed form field groups |
 | [`auth-init-timeout.md`](.opencode/rules/auth-init-timeout.md) | React hanging on slow auth init |
+| [`eventstore-per-user-db.md`](.opencode/rules/eventstore-per-user-db.md) | Cross-account data bleed and data loss in shared IndexedDB |
+| [`dexie-test-setup.md`](.opencode/rules/dexie-test-setup.md) | Dexie tests failing due to fake-indexeddb or stale DB state |
 
 ## Commands
 
@@ -169,6 +172,7 @@ The auth layer uses a dependency-injected deep module pattern to keep Supabase l
 | `/auth-confirmed` | AuthConfirmed | No |
 | `/reset-password` | ResetPassword | No (redirects if authenticated) |
 | `/home` | Home | Yes (ProtectedRoute) |
+| `/log` | Log | Yes (ProtectedRoute) |
 | `/` | RootRedirect | Yes (auto-redirects to /home or /sign-in) |
 
 ### DI Pattern
@@ -180,6 +184,61 @@ class AuthGate {
   async signIn(email: string, password: string) { ... }
 }
 ```
+
+## EventStore Architecture
+
+### Overview
+
+Local-first event storage using Dexie (IndexedDB). Each signed-in user gets their own isolated database — no shared tables, no cross-account bleed, no wipe-on-switch logic.
+
+| File | Purpose |
+|---|---|
+| `apps/app/src/events/EventStore.ts` | Deep module: append, getAll, liveQuery, wipe, close. Accepts Dexie DB via constructor for DI. |
+| `apps/app/src/events/EventStoreProvider.tsx` | React context that creates a per-user EventStore (`StudyTracker_<userId>`). Tracks `ready` state. |
+| `apps/app/src/events/useEventStore.ts` | Hook returning the current user's EventStore. Throws if called without an active user. |
+| `apps/app/src/events/ProgressEngine.ts` | Pure function: `totalMinutesLogged(events)` aggregates session durations. |
+
+### Per-user database isolation
+
+```tsx
+// EventStoreProvider creates a new Dexie DB for each user
+function createEventStore(userId: string): EventStore {
+  const db = new Dexie(`StudyTracker_${userId}`);
+  db.version(1).stores({
+    events: '++id, kind, createdAt'
+  });
+  return new EventStore(db);
+}
+```
+
+When `userId` changes (sign out → sign in as different user), the provider closes the old DB connection and creates a new one. Returning users find their previous data intact.
+
+### Event shape
+
+```ts
+interface Event {
+  id?: number;
+  kind: string;          // e.g., 'SessionLogged'
+  payload: Record<string, unknown>;
+  createdAt: string;     // ISO 8601
+}
+```
+
+### Wiring in App.tsx
+
+```tsx
+// App.tsx — EventStoreRouter reads user from AuthContext and passes userId to provider
+function EventStoreRouter({ children }) {
+  const { user } = useAuthContext();
+  return (
+    <EventStoreProvider userId={user?.id ?? null}>
+      {children}
+    </EventStoreProvider>
+  );
+}
+```
+
+AuthProvider has **zero knowledge** of EventStore. No imports, no wipe calls, no localStorage tracking.
 
 ## Environment Variables
 
@@ -221,21 +280,25 @@ import '@study-tracker/design-tokens/components.css';
 
 ## Testing
 
-**E2E Tests:** [`e2e/smoke.spec.ts`](e2e/smoke.spec.ts)
+**E2E Tests:**
 
-Current coverage (20 tests):
+Current coverage (22 tests):
 - Marketing: homepage loads with design tokens, components render, privacy/terms pages load
-- React: sign-in/sign-up/home/auth-confirmed/reset-password pages load and render correctly
+- React: sign-in/sign-up/home/log/auth-confirmed/reset-password pages load and render correctly
 - Auth: unauthenticated users redirected to sign-in
+- Session log lifecycle: sign in → log session → see on Home → refresh → persists → sign out → sign in as different user → not visible
 
-**Unit Tests:** Vitest in `apps/app/src/auth/AuthGate.test.ts`
+**Unit Tests:**
 
-Current coverage (6 tests):
-- AuthGate: sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection
+| File | Tests | Coverage |
+|---|---|---|
+| `auth/AuthGate.test.ts` | 6 | sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection |
+| `events/EventStore.test.ts` | 5 | append, getAll, liveQuery, wipe, append+getAll round-trip |
+| `events/ProgressEngine.test.ts` | 4 | total time: empty, single, multiple, ignores non-session events |
 
 **Run tests:**
 ```bash
-pnpm test:e2e           # Run Playwright smoke tests
+pnpm test:e2e           # Run Playwright smoke + session-log tests
 pnpm --filter app test  # Run Vitest unit tests
 ```
 
