@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.com/vercel.json",
+  "framework": "astro",
+  "buildCommand": "pnpm --filter @study-tracker/marketing build",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install",
+  "rewrites": [
+    {
+      "source": "/study/:path*",
+      "destination": "https://study-tracker-app.vercel.app/study/:path*"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Not Found">
+  <section class="page-content">
+    <div class="container">
+      <h1 class="t-display-2">Page not found</h1>
+      <p class="t-body">The page you're looking for doesn't exist.</p>
+      <a href="/" class="btn btn-primary">Go home</a>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-content {
+    padding: var(--space-9) 0;
+    text-align: center;
+  }
+
+  .page-content .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .page-content h1 {
+    margin-bottom: var(--space-4);
+  }
+
+  .page-content p {
+    margin-bottom: var(--space-5);
+    color: var(--text-secondary);
+  }
+</style>
