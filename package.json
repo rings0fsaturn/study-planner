@@ -1,0 +1,24 @@
+{
+  "name": "study-tracker-web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev:marketing": "pnpm --filter @study-tracker/marketing dev",
+    "dev:app": "pnpm --filter @study-tracker/app dev",
+    "dev": "pnpm -r --parallel run dev",
+    "build": "pnpm -r run build",
+    "build:marketing": "pnpm --filter @study-tracker/marketing build",
+    "build:app": "pnpm --filter @study-tracker/app build",
+    "test:e2e": "playwright test -c e2e/playwright.config.ts",
+    "lint": "pnpm -r run lint",
+    "typecheck": "pnpm -r run typecheck"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
