@@ -19,6 +19,7 @@ export class SyncEngine {
   private snapshotTimer: ReturnType<typeof setTimeout> | null = null;
   private writeCount = 0;
   private destroyed = false;
+  private lastSnapshotTime = 0;
 
   constructor(
     private supabase: SupabaseClientLike,
@@ -26,6 +27,7 @@ export class SyncEngine {
     private userId: string,
     private clientId: string,
     private onStateChange?: (state: SyncState) => void,
+    private sendBeaconUrl: string = '',
     options: SyncOptions = {}
   ) {
     this.opts = { ...DEFAULT_OPTIONS, ...options };
@@ -65,6 +67,11 @@ export class SyncEngine {
     this.writeCount++;
 
     if (this.writeCount >= this.opts.snapshotInterval) {
+      this.scheduleSnapshot();
+    }
+
+    const now = Date.now();
+    if (this.lastSnapshotTime > 0 && now - this.lastSnapshotTime >= this.opts.snapshotTimeThreshold) {
       this.scheduleSnapshot();
     }
 
@@ -295,6 +302,7 @@ export class SyncEngine {
     }
 
     this.writeCount = 0;
+    this.lastSnapshotTime = Date.now();
 
     this.notifyState({
       status: 'idle',
@@ -369,14 +377,36 @@ export class SyncEngine {
     }
   }
 
-  handleVisibilityChange(_wasHidden: boolean, _hiddenDurationMs: number): void {
+  async handleVisibilityChange(wasHidden: boolean, hiddenDurationMs: number): Promise<void> {
     if (this.destroyed) return;
-    // Stub for Phase 6
+    if (wasHidden && hiddenDurationMs > this.opts.visibilityIdleThresholdMs) {
+      await this.pullAndMerge();
+    }
   }
 
   async flushOnPageHide(): Promise<void> {
     if (this.destroyed) return;
-    await this.flushQueue();
+
+    const queue = await this.eventStore.table('sync_queue').orderBy('id').toArray() as QueuedEvent[];
+    if (queue.length === 0) return;
+
+    const records = queue.map(item => ({
+      user_id: this.userId,
+      kind: item.kind,
+      payload: item.payload,
+      client_id: this.clientId,
+      device_local_id: item.localId,
+      created_at: item.createdAt,
+    }));
+
+    const body = JSON.stringify(records);
+
+    if (this.sendBeaconUrl && typeof navigator.sendBeacon === 'function') {
+      const blob = new Blob([body], { type: 'application/json' });
+      navigator.sendBeacon(this.sendBeaconUrl, blob);
+    } else {
+      await this.flushQueue();
+    }
   }
 
   destroy(): void {

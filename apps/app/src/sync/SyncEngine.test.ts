@@ -159,6 +159,7 @@ describe('SyncEngine', () => {
       userId,
       clientId,
       (state) => stateChanges.push(state),
+      '',
       opts
     );
   }

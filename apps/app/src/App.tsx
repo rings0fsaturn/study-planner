@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
-import { EventStoreProvider } from './events/EventStoreProvider';
+import { EventStoreProvider, useEventStoreContext } from './events/EventStoreProvider';
+import { SyncProvider } from './sync/SyncProvider';
+import { supabase, supabaseUrl } from './lib/supabase';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 import { Home } from './pages/Home';
@@ -16,6 +18,21 @@ function EventStoreRouter({ children }: { children: React.ReactNode }) {
     <EventStoreProvider userId={user?.id ?? null}>
       {children}
     </EventStoreProvider>
+  );
+}
+
+function SyncRouter({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext();
+  const { eventStore, ready } = useEventStoreContext();
+
+  if (!user || !ready || !eventStore) {
+    return <>{children}</>;
+  }
+
+  return (
+    <SyncProvider supabase={supabase} supabaseUrl={supabaseUrl} userId={user.id} eventStore={eventStore}>
+      {children}
+    </SyncProvider>
   );
 }
 
@@ -128,9 +145,11 @@ function App() {
     <BrowserRouter basename="/study">
       <AuthProvider>
         <EventStoreRouter>
-          <div className="app">
-            <AppRoutes />
-          </div>
+          <SyncRouter>
+            <div className="app">
+              <AppRoutes />
+            </div>
+          </SyncRouter>
         </EventStoreRouter>
       </AuthProvider>
     </BrowserRouter>

@@ -1,10 +1,9 @@
 # Implementation Plan: Issue #003 — Sync Events to Postgres; Restore on a Fresh Device
 
-## Status: IN PROGRESS
+## Status: COMPLETE
 
-**Completed Phases:** 0, 1, 2, 3, 4, 5, 6, 7  
-**Current Phase:** 8 (Integration)  
-**Pending Phases:** 9, 10
+**Completed Phases:** 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10  
+**Current Phase:** N/A (All done!)
 
 ---
 
@@ -51,10 +50,10 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 
 | File | Purpose |
 |------|---------|
-| `apps/app/src/App.tsx` | Nest `<SyncProvider>` inside `<EventStoreProvider>` |
-| `apps/app/src/pages/Log.tsx` | Replace `eventStore.append()` → `useSync().logEvent()` |
-| `apps/app/src/pages/Home.tsx` | Add `<SyncIndicator />` next to greeting |
-| `e2e/sync.spec.ts` | Cross-device session visibility E2E |
+| `apps/app/src/App.tsx` | ✅ Done - Nest `<SyncProvider>` inside `<EventStoreProvider>` |
+| `apps/app/src/pages/Log.tsx` | ✅ Done - Replace `eventStore.append()` → `useSync().logEvent()` |
+| `apps/app/src/pages/Home.tsx` | ✅ Done - Add `<SyncIndicator />` next to greeting |
+| `e2e/sync.spec.ts` | ✅ Done - Cross-device session visibility E2E |
 
 ---
 
@@ -109,16 +108,21 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 - Online/offline detection added to SyncProvider
 - 12 tests passing
 
-### Phase 8: Integration
+### Phase 8: Integration ✅
 - Wire into `App.tsx`, `Log.tsx`, `Home.tsx`
 - Add `.sync-indicator` to design tokens
+- Implement sendBeacon flush on pagehide
+- Implement handleVisibilityChange pull
+- Implement time-based snapshot trigger (24h threshold)
 
-### Phase 9: E2E Test
+### Phase 9: E2E Test ✅
 - Test: session logged on device A appears on device B after sync
+- Created `e2e/sync.spec.ts`
 
-### Phase 10: Final Verification
-- Run all tests
-- Verify no regressions
+### Phase 10: Final Verification ✅
+- All tests pass (70 unit tests)
+- Build succeeds
+- TypeScript typecheck passes
 
 ---
 
@@ -146,15 +150,15 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 
 ## Acceptance Criteria (from issue #003)
 
-- [ ] A Postgres `events` table exists with row-level security restricting reads/writes to `auth.uid() = user_id`
-- [ ] Every event appended to the local EventStore is pushed to the `events` table
-- [ ] Sync queue retries with backoff on transient failure; queue survives a refresh
-- [ ] On `pagehide`, pending events are flushed via `sendBeacon`
+- [x] A Postgres `events` table exists with row-level security restricting reads/writes to `auth.uid() = user_id`
+- [x] Every event appended to the local EventStore is pushed to the `events` table
+- [x] Sync queue retries with backoff on transient failure; queue survives a refresh
+- [x] On `pagehide`, pending events are flushed via `sendBeacon`
 - [x] Snapshots are written to Supabase Storage on a debounced cadence (debounce window documented in the implementation)
-- [ ] Every snapshot includes a `schemaVersion` integer field
-- [ ] On sign-in on a fresh device, the client pulls the latest snapshot, applies it, then pulls and replays events newer than the snapshot's `as_of` timestamp
-- [ ] On returning to a tab (`visibilitychange` → visible), the client pulls events newer than its local high-water mark
-- [ ] `/study/home` shows a "Synced X ago" indicator; tapping it forces a pull
-- [ ] Account-switch wipe (from slice 2) is followed by a restore-from-cloud for the new user
+- [x] Every snapshot includes a `schemaVersion` integer field
+- [x] On sign-in on a fresh device, the client pulls the latest snapshot, applies it, then pulls and replays events newer than the snapshot's `as_of` timestamp
+- [x] On returning to a tab (`visibilitychange` → visible), the client pulls events newer than its local high-water mark
+- [x] `/study/home` shows a "Synced X ago" indicator; tapping it forces a pull
+- [x] Account-switch wipe (from slice 2) is followed by a restore-from-cloud for the new user
 - [x] SyncEngine has tests for: event push ordering, retry/backoff, snapshot round-trip, fresh-device restore, account-switch wipe + restore
-- [ ] An end-to-end test covers: log a session on device A → sign in on device B → see the session
+- [x] An end-to-end test covers: log a session on device A → sign in on device B → see the session

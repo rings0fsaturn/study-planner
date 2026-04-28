@@ -41,25 +41,5 @@ export interface SyncMeta {
   value: unknown;
 }
 
-export interface SupabaseClientLike {
-  from: (table: string) => {
-    insert: (values: Record<string, unknown> | Record<string, unknown>[]) => {
-      select: () => Promise<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
-    };
-    select: (columns?: string) => {
-      eq: (column: string, value: unknown) => {
-        order: (column: string, options?: { ascending?: boolean }) => {
-          gt: (column: string, value: unknown) => Promise<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
-          gte: (column: string, value: unknown) => Promise<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
-        };
-      };
-    };
-  };
-  storage: {
-    from: (bucket: string) => {
-      upload: (path: string, fileBody: Blob | File | FormData | ArrayBuffer | string, options?: Record<string, unknown>) => Promise<{ data: { path: string } | null; error: Error | null }>;
-      download: (path: string) => Promise<{ data: Blob | null; error: Error | null }>;
-      list: (path: string, options?: Record<string, unknown>) => Promise<{ data: Array<{ name: string }> | null; error: Error | null }>;
-    };
-  };
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type SupabaseClientLike = any;

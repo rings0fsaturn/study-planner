@@ -28,11 +28,12 @@ function getOrCreateClientId(): string {
 interface SyncProviderProps {
   children: ReactNode;
   supabase: SupabaseClientLike;
+  supabaseUrl?: string;
   userId: string;
   eventStore: EventStore;
 }
 
-export function SyncProvider({ children, supabase, userId, eventStore }: SyncProviderProps) {
+export function SyncProvider({ children, supabase, supabaseUrl, userId, eventStore }: SyncProviderProps) {
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'idle',
     lastSyncedAt: null,
@@ -77,12 +78,15 @@ export function SyncProvider({ children, supabase, userId, eventStore }: SyncPro
       }
     }
 
+    const sendBeaconUrl = supabaseUrl ? `${supabaseUrl}/rest/v1/events` : '';
+
     const engine = new SyncEngine(
       supabase,
       eventStore,
       userId,
       clientIdRef.current,
       (newState) => setSyncState(newState),
+      sendBeaconUrl,
       DEFAULT_OPTIONS
     );
 
@@ -104,9 +108,7 @@ export function SyncProvider({ children, supabase, userId, eventStore }: SyncPro
         hiddenTimeRef.current = Date.now();
       } else {
         const hiddenDuration = Date.now() - hiddenTimeRef.current;
-        if (hiddenDuration > DEFAULT_OPTIONS.visibilityIdleThresholdMs) {
-          engineRef.current?.pullAndMerge().catch(() => {});
-        }
+        engineRef.current?.handleVisibilityChange(true, hiddenDuration).catch(() => {});
         hiddenTimeRef.current = 0;
       }
     };

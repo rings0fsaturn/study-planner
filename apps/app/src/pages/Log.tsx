@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useEventStore } from '../events/useEventStore';
+import { useSync } from '../sync/useSync';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { FieldGroup, FieldLabel, FieldInput, FieldTextarea, FieldHelper } from '../components/Field';
@@ -14,7 +14,7 @@ function formatDateForInput(date: Date): string {
 
 export function Log() {
   const navigate = useNavigate();
-  const eventStore = useEventStore();
+  const { logEvent } = useSync();
   const [duration, setDuration] = useState('');
   const [date, setDate] = useState(formatDateForInput(new Date()));
   const [description, setDescription] = useState('');
@@ -34,7 +34,7 @@ export function Log() {
     setLoading(true);
 
     try {
-      await eventStore.append('SessionLogged', {
+      await logEvent('SessionLogged', {
         duration: durationNum,
         date,
         description: description.trim() || null
