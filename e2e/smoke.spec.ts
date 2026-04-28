@@ -41,25 +41,59 @@ test.describe('Marketing site', () => {
 test.describe('React app at /study/', () => {
   test.use({ baseURL: 'http://localhost:5173' });
 
-  test('placeholder page loads with design tokens', async ({ page }) => {
-    const response = await page.goto('/study/');
+  test('sign-in page loads with design tokens', async ({ page }) => {
+    const response = await page.goto('/study/sign-in');
     expect(response?.status()).toBe(200);
 
     const html = await page.content();
     expect(html).toContain('--paper');
-    expect(html).toContain('--moss');
+    expect(html).toContain('--terracotta');
   });
 
-  test('placeholder page renders design system components', async ({ page }) => {
-    await page.goto('/study/');
+  test('sign-in page renders form fields and submit button', async ({ page }) => {
+    await page.goto('/study/sign-in');
+    await page.waitForTimeout(500);
 
-    const btn = page.locator('.btn-accent').first();
-    await expect(btn).toBeVisible();
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.getByLabel('Password')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
+  });
 
-    const card = page.locator('.card').first();
-    await expect(card).toBeVisible();
+  test('sign-up page loads and shows confirmation form', async ({ page }) => {
+    await page.goto('/study/sign-up');
+    await page.waitForTimeout(2000);
 
-    const tag = page.locator('.tag').first();
-    await expect(tag).toBeVisible();
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.locator('#password')).toBeVisible();
+    await expect(page.getByLabel('Confirm password')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Create account' })).toBeVisible();
+  });
+
+  test('home page redirects unauthenticated to sign-in', async ({ page }) => {
+    await page.goto('/study/home');
+    await page.waitForTimeout(2000);
+
+    // Should redirect to sign-in
+    await expect(page).toHaveURL(/.*sign-in/);
+    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+  });
+
+  test('auth-confirmed page loads', async ({ page }) => {
+    const response = await page.goto('/study/auth-confirmed');
+    expect(response?.status()).toBe(200);
+    await page.waitForTimeout(2000);
+
+    await expect(page.getByRole('heading', { name: 'Email confirmed' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Sign in' })).toBeVisible();
+  });
+
+  test('reset-password page loads', async ({ page }) => {
+    await page.goto('/study/reset-password');
+    await page.waitForTimeout(2000);
+
+    await expect(page.getByLabel('Email')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Send reset link' })).toBeVisible();
   });
 });
