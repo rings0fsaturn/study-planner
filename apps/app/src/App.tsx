@@ -3,6 +3,7 @@ import { AuthProvider, useAuthContext } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { EventStoreProvider, useEventStoreContext } from './events/EventStoreProvider';
 import { SyncProvider } from './sync/SyncProvider';
+import type { SupabaseClientLike } from './sync/types';
 import { supabase, supabaseUrl } from './lib/supabase';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
@@ -30,7 +31,7 @@ function SyncRouter({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <SyncProvider supabase={supabase} supabaseUrl={supabaseUrl} userId={user.id} eventStore={eventStore}>
+    <SyncProvider supabase={supabase as unknown as SupabaseClientLike} supabaseUrl={supabaseUrl} userId={user.id} eventStore={eventStore}>
       {children}
     </SyncProvider>
   );

@@ -79,6 +79,17 @@ function createFakeSupabase(): SupabaseClientLike & {
                         .filter(e => e.id > (val as number))
                         .sort((a, b) => a.id - b.id);
                       return { data: filtered as unknown as Array<Record<string, unknown>>, error: null };
+                    },
+                    gte: async (_col: string, val: unknown) => {
+                      if (flags.shouldFailNextPull) {
+                        flags.shouldFailNextPull = false;
+                        return { data: null, error: new Error('Network error') };
+                      }
+                      const filtered = events
+                        .filter(e => e.user_id === value)
+                        .filter(e => e.id >= (val as number))
+                        .sort((a, b) => a.id - b.id);
+                      return { data: filtered as unknown as Array<Record<string, unknown>>, error: null };
                     }
                   };
                 }
