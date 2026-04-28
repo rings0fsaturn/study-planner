@@ -10,6 +10,15 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
 import { useEffect } from 'react';
 
+function EventStoreRouter({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthContext();
+  return (
+    <EventStoreProvider userId={user?.id ?? null}>
+      {children}
+    </EventStoreProvider>
+  );
+}
+
 function RootRedirect() {
   const { user, loading } = useAuthContext();
   const navigate = useNavigate();
@@ -118,11 +127,11 @@ function App() {
   return (
     <BrowserRouter basename="/study">
       <AuthProvider>
-        <EventStoreProvider>
+        <EventStoreRouter>
           <div className="app">
             <AppRoutes />
           </div>
-        </EventStoreProvider>
+        </EventStoreRouter>
       </AuthProvider>
     </BrowserRouter>
   );

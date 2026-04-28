@@ -1,38 +1,80 @@
-import { createContext, useContext, useMemo, type ReactNode } from 'react';
+import { createContext, useContext, useRef, useEffect, useState, type ReactNode } from 'react';
 import Dexie from 'dexie';
 import { EventStore } from './EventStore';
 
 interface EventStoreValue {
-  eventStore: EventStore;
+  eventStore: EventStore | null;
+  ready: boolean;
 }
 
-const EventStoreContext = createContext<EventStoreValue | null>(null);
+const EventStoreContext = createContext<EventStoreValue>({
+  eventStore: null,
+  ready: false
+});
 
-const DB_NAME = 'StudyTracker';
+function dbNameForUser(userId: string): string {
+  return `StudyTracker_${userId}`;
+}
 
-let globalEventStore: EventStore | null = null;
-
-function createEventStore(): EventStore {
-  const db = new Dexie(DB_NAME);
+function createEventStore(userId: string): EventStore {
+  const db = new Dexie(dbNameForUser(userId));
   db.version(1).stores({
     events: '++id, kind, createdAt'
   });
   return new EventStore(db);
 }
 
-export function getEventStoreWipe(): (() => Promise<void>) | null {
-  return globalEventStore ? globalEventStore.wipe.bind(globalEventStore) : null;
+interface EventStoreProviderProps {
+  children: ReactNode;
+  userId: string | null;
 }
 
-export function EventStoreProvider({ children }: { children: ReactNode }) {
-  const value = useMemo(() => {
-    const store = createEventStore();
-    globalEventStore = store;
-    return { eventStore: store };
-  }, []);
+export function EventStoreProvider({ children, userId }: EventStoreProviderProps) {
+  const [store, setStore] = useState<EventStore | null>(null);
+  const [ready, setReady] = useState(false);
+  const currentUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const previousUserId = currentUserIdRef.current;
+
+    if (previousUserId && previousUserId !== userId) {
+      const oldDbName = dbNameForUser(previousUserId);
+      const allDbs = Dexie.getDatabaseNames();
+      allDbs.then(names => {
+        if (names.includes(oldDbName)) {
+          const tempDb = new Dexie(oldDbName);
+          tempDb.open().then(() => {
+            tempDb.close();
+          }).catch(() => {
+            // DB might already be closed or unavailable
+          });
+        }
+      });
+    }
+
+    if (!userId) {
+      currentUserIdRef.current = null;
+      setStore(null);
+      setReady(false);
+      return;
+    }
+
+    if (previousUserId === userId && store) {
+      return;
+    }
+
+    const newStore = createEventStore(userId);
+    currentUserIdRef.current = userId;
+    setStore(newStore);
+    setReady(true);
+
+    return () => {
+      // Cleanup on unmount only
+    };
+  }, [userId]);
 
   return (
-    <EventStoreContext.Provider value={value}>
+    <EventStoreContext.Provider value={{ eventStore: store, ready }}>
       {children}
     </EventStoreContext.Provider>
   );

@@ -36,4 +36,8 @@ export class EventStore {
   async wipe(): Promise<void> {
     await this.db.table('events').clear();
   }
+
+  close(): void {
+    this.db.close();
+  }
 }

@@ -2,9 +2,6 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from '
 import type { User, Session } from '@supabase/supabase-js';
 import { AuthGate, type AuthGateDeps, type SignUpResult, type SignInResult } from './AuthGate';
 import { supabase } from '../lib/supabase';
-import { getEventStoreWipe } from '../events/EventStoreProvider';
-
-const LAST_USER_ID_KEY = 'study_tracker_last_user_id';
 
 interface AuthContextValue {
   user: User | null;
@@ -60,26 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    const { unsubscribe } = authGate.onAuthStateChange(async (_event, session) => {
+    const { unsubscribe } = authGate.onAuthStateChange((_event, session) => {
       if (!mounted) return;
-
-      const previousUserId = localStorage.getItem(LAST_USER_ID_KEY);
-      const newUser = session?.user ?? null;
-      const newUserId = newUser?.id ?? null;
-
-      if (newUserId && previousUserId && newUserId !== previousUserId) {
-        const wipe = getEventStoreWipe();
-        if (wipe) {
-          await wipe();
-        }
-      }
-
-      if (newUserId) {
-        localStorage.setItem(LAST_USER_ID_KEY, newUserId);
-      }
-
       setSession(session);
-      setUser(newUser);
+      setUser(session?.user ?? null);
     });
 
     return () => {
