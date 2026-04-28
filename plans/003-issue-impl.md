@@ -2,9 +2,9 @@
 
 ## Status: IN PROGRESS
 
-**Completed Phases:** 0, 1, 2, 3, 4  
-**Current Phase:** 5 (Snapshot/Restore)  
-**Pending Phases:** 6, 7, 8, 9, 10
+**Completed Phases:** 0, 1, 2, 3, 4, 5  
+**Current Phase:** 6 (SyncProvider + Lifecycle Hooks)  
+**Pending Phases:** 7, 8, 9, 10
 
 ---
 
@@ -36,8 +36,8 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 | `apps/app/src/events/EventStore.ts` | ✅ Done (enhanced) |
 | `apps/app/src/events/EventStore.test.ts` | ✅ Done (15 tests) |
 | `apps/app/src/sync/types.ts` | ✅ Done |
-| `apps/app/src/sync/SyncEngine.ts` | ✅ Done (core + pull + retry) |
-| `apps/app/src/sync/SyncEngine.test.ts` | ✅ Done (45 tests) |
+| `apps/app/src/sync/SyncEngine.ts` | ✅ Done (core + pull + retry + snapshot + restore) |
+| `apps/app/src/sync/SyncEngine.test.ts` | ✅ Done (53 tests - includes snapshot/restore tests) |
 
 ### Remaining Files
 
@@ -90,11 +90,13 @@ UI (Home.tsx) ← useLiveQuery(eventStore.getAll()) ← Dexie (local) ← SyncEn
 
 ## TDD Execution Order (Remaining)
 
-### Phase 5: Snapshot/Restore (IN PROGRESS)
-- Tests: round-trip snapshot save/load, schemaVersion check, missing snapshot graceful
+### Phase 5: Snapshot/Restore ✅
+- Tests: round-trip snapshot save/load, schemaVersion check, missing snapshot graceful, pull after restore, snapshot scheduling
 - Implementation: `saveSnapshot()`, `restoreFromCloud()`, snapshot scheduling
+- 8 new tests added: saveSnapshot (2), restoreFromCloud (4), snapshot scheduling (2)
+- All 53 tests passing
 
-### Phase 6: SyncProvider + Lifecycle Hooks
+### Phase 6: SyncProvider + Lifecycle Hooks (IN PROGRESS)
 - Tests: mount creates engine, user switch restores, visibility/pagehide wiring
 - Implementation: `SyncProvider.tsx`, `useSync` hook, lifecycle handlers
 

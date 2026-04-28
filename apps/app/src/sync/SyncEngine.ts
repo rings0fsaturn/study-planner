@@ -1,5 +1,5 @@
 import type { EventStore } from '../events/EventStore';
-import type { SupabaseClientLike, SyncState, SyncOptions, QueuedEvent, SyncMeta } from './types';
+import type { SupabaseClientLike, SyncState, SyncOptions, QueuedEvent, SyncMeta, SnapshotPayload } from './types';
 
 const DEFAULT_OPTIONS: Required<SyncOptions> = {
   snapshotInterval: 50,
@@ -10,10 +10,14 @@ const DEFAULT_OPTIONS: Required<SyncOptions> = {
   visibilityIdleThresholdMs: 5 * 60 * 1000,
 };
 
+const CURRENT_SCHEMA_VERSION = 1;
+
 export class SyncEngine {
   private state: SyncState;
   private opts: Required<SyncOptions>;
   private flushTimer: ReturnType<typeof setTimeout> | null = null;
+  private snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+  private writeCount = 0;
   private destroyed = false;
 
   constructor(
@@ -58,6 +62,12 @@ export class SyncEngine {
       retries: 0,
     });
 
+    this.writeCount++;
+
+    if (this.writeCount >= this.opts.snapshotInterval) {
+      this.scheduleSnapshot();
+    }
+
     this.notifyState({ pendingCount: await this.getPendingCount() });
     this.scheduleFlush();
 
@@ -68,7 +78,7 @@ export class SyncEngine {
     return await this.eventStore.table('sync_queue').count();
   }
 
-  private scheduleFlush() {
+  private scheduleFlush(delayMs = 200) {
     if (this.destroyed) return;
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
@@ -77,7 +87,19 @@ export class SyncEngine {
       this.flushQueue().catch(() => {
         // Errors are handled internally via state transitions
       });
-    }, 200);
+    }, delayMs);
+  }
+
+  private scheduleSnapshot() {
+    if (this.destroyed) return;
+    if (this.snapshotTimer) {
+      clearTimeout(this.snapshotTimer);
+    }
+    this.snapshotTimer = setTimeout(() => {
+      this.saveSnapshot().catch(() => {
+        // Errors handled internally
+      });
+    }, this.opts.snapshotDebounceMs);
   }
 
   async flushQueue(): Promise<void> {
@@ -93,7 +115,6 @@ export class SyncEngine {
 
     const maxRetriesInQueue = Math.max(...queue.map(item => item.retries));
 
-    // Guard: if max retries already exceeded, skip push and report error
     if (maxRetriesInQueue > this.opts.maxRetries) {
       this.notifyState({
         status: 'error',
@@ -121,7 +142,6 @@ export class SyncEngine {
         throw error;
       }
 
-      // Success: clear queue
       const idsToRemove = queue.map(item => item.id).filter((id): id is number => id !== undefined);
       if (idsToRemove.length > 0) {
         await this.eventStore.table('sync_queue').bulkDelete(idsToRemove);
@@ -135,7 +155,6 @@ export class SyncEngine {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
 
-      // Increment retry count for all queued items
       for (const item of queue) {
         if (item.id !== undefined) {
           await this.eventStore.table('sync_queue').update(item.id, { retries: item.retries + 1 });
@@ -145,7 +164,6 @@ export class SyncEngine {
       const updatedRetries = maxRetriesInQueue + 1;
 
       if (updatedRetries > this.opts.maxRetries) {
-        // Max retries exhausted
         this.notifyState({
           status: 'error',
           lastError: message,
@@ -154,7 +172,6 @@ export class SyncEngine {
         return;
       }
 
-      // Schedule retry with exponential backoff
       const backoffMs = this.opts.backoffBaseMs * Math.pow(2, maxRetriesInQueue);
       this.scheduleFlush(backoffMs);
 
@@ -194,7 +211,6 @@ export class SyncEngine {
         created_at: string;
       }>;
 
-      // Skip events from this device and dedup by lastPulledId
       const newEvents = remoteEvents.filter(e => e.client_id !== this.clientId);
 
       if (newEvents.length > 0) {
@@ -206,7 +222,6 @@ export class SyncEngine {
         await this.eventStore.bulkAppend(eventsToInsert);
       }
 
-      // Update lastPulledId to max remote id received (even if all were skipped)
       const maxRemoteId = remoteEvents.length > 0
         ? Math.max(...remoteEvents.map(e => e.id))
         : lastPulledId;
@@ -245,14 +260,113 @@ export class SyncEngine {
     await this.flushQueue();
   }
 
-  async restoreFromCloud(): Promise<void> {
-    if (this.destroyed) return;
-    // Stub for Phase 5
-  }
-
   async saveSnapshot(): Promise<void> {
     if (this.destroyed) return;
-    // Stub for Phase 5
+
+    const events = await this.eventStore.getAll();
+    const lastPulledId = await this.getLastPulledId();
+
+    const snapshot: SnapshotPayload = {
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      asOfRemoteId: lastPulledId,
+      asOfCreatedAt: new Date().toISOString(),
+      events: events.map(e => ({
+        kind: e.kind,
+        payload: e.payload,
+        createdAt: e.createdAt,
+        clientId: this.clientId,
+        deviceLocalId: e.id ?? 0,
+      })),
+    };
+
+    const blob = new Blob([JSON.stringify(snapshot)], { type: 'application/json' });
+    const path = `${this.userId}/snapshot.json`;
+
+    const { error } = await this.supabase.storage
+      .from('sync-snapshots')
+      .upload(path, blob, { upsert: true });
+
+    if (error) {
+      this.notifyState({
+        status: 'error',
+        lastError: `Snapshot save failed: ${error.message}`,
+      });
+      return;
+    }
+
+    this.writeCount = 0;
+
+    this.notifyState({
+      status: 'idle',
+      lastSyncedAt: new Date(),
+    });
+  }
+
+  async restoreFromCloud(): Promise<void> {
+    if (this.destroyed) return;
+
+    const path = `${this.userId}/snapshot.json`;
+
+    this.notifyState({ status: 'syncing', lastError: null });
+
+    try {
+      const { data: blob, error: downloadError } = await this.supabase.storage
+        .from('sync-snapshots')
+        .download(path);
+
+      if (downloadError) {
+        if (downloadError.message.includes('Not found') || downloadError.message.includes('404')) {
+          this.notifyState({ status: 'idle', lastError: null });
+          return;
+        }
+        throw downloadError;
+      }
+
+      if (!blob) {
+        this.notifyState({
+          status: 'error',
+          lastError: 'Snapshot download returned empty data',
+        });
+        return;
+      }
+
+      const text = await blob.text();
+      const snapshot: SnapshotPayload = JSON.parse(text);
+
+      if (snapshot.schemaVersion > CURRENT_SCHEMA_VERSION) {
+        this.notifyState({
+          status: 'error',
+          lastError: `Snapshot schemaVersion ${snapshot.schemaVersion} is newer than supported ${CURRENT_SCHEMA_VERSION}. Please update the app.`,
+        });
+        return;
+      }
+
+      await this.eventStore.wipe();
+
+      if (snapshot.events.length > 0) {
+        const eventsToRestore = snapshot.events.map(e => ({
+          kind: e.kind,
+          payload: e.payload,
+          createdAt: e.createdAt,
+        }));
+        await this.eventStore.bulkAppend(eventsToRestore);
+      }
+
+      await this.setLastPulledId(snapshot.asOfRemoteId);
+
+      await this.pullAndMerge();
+
+      this.notifyState({
+        status: 'idle',
+        lastSyncedAt: new Date(),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.notifyState({
+        status: 'error',
+        lastError: message,
+      });
+    }
   }
 
   handleVisibilityChange(_wasHidden: boolean, _hiddenDurationMs: number): void {
@@ -270,6 +384,10 @@ export class SyncEngine {
     if (this.flushTimer) {
       clearTimeout(this.flushTimer);
       this.flushTimer = null;
+    }
+    if (this.snapshotTimer) {
+      clearTimeout(this.snapshotTimer);
+      this.snapshotTimer = null;
     }
   }
 }

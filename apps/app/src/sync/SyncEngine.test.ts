@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import Dexie from 'dexie';
 import { EventStore } from '../events/EventStore';
 import { SyncEngine } from './SyncEngine';
-import type { SupabaseClientLike, SyncState } from './types';
+import type { SupabaseClientLike, SyncState, SyncOptions } from './types';
 
 interface FakeRemoteEvent {
   id: number;
@@ -55,13 +55,13 @@ function createFakeSupabase(): SupabaseClientLike & { _events: FakeRemoteEvent[]
             }
           };
         },
-        select: (columns?: string) => {
+        select: (_columns?: string) => {
           return {
-            eq: (column: string, value: unknown) => {
+            eq: (_column: string, value: unknown) => {
               return {
-                order: (column: string, options?: { ascending?: boolean }) => {
+                order: (_column: string, _options?: { ascending?: boolean }) => {
                   return {
-                    gt: async (col: string, val: unknown) => {
+                    gt: async (_col: string, val: unknown) => {
                       if (flags.shouldFailNextPull) {
                         flags.shouldFailNextPull = false;
                         return { data: null, error: new Error('Network error') };
@@ -72,7 +72,7 @@ function createFakeSupabase(): SupabaseClientLike & { _events: FakeRemoteEvent[]
                         .sort((a, b) => a.id - b.id);
                       return { data: filtered as unknown as Array<Record<string, unknown>>, error: null };
                     },
-                    gte: async (col: string, val: unknown) => {
+                    gte: async (_col: string, val: unknown) => {
                       if (flags.shouldFailNextPull) {
                         flags.shouldFailNextPull = false;
                         return { data: null, error: new Error('Network error') };
@@ -93,7 +93,7 @@ function createFakeSupabase(): SupabaseClientLike & { _events: FakeRemoteEvent[]
     },
 
     storage: {
-      from: (bucket: string) => {
+      from: (_bucket: string) => {
         return {
           upload: async (path: string, fileBody: Blob | File | FormData | ArrayBuffer | string) => {
             const blob = fileBody instanceof Blob ? fileBody : new Blob([fileBody as string]);
@@ -152,7 +152,7 @@ describe('SyncEngine', () => {
     stateChanges = [];
   });
 
-  function createEngine(opts?: Parameters<typeof SyncEngine.prototype.constructor>[4]) {
+  function createEngine(opts?: SyncOptions) {
     return new SyncEngine(
       fakeSupabase as unknown as SupabaseClientLike,
       eventStore,
@@ -200,7 +200,7 @@ describe('SyncEngine', () => {
       await engine1.logEvent('SessionLogged', { duration: 45 });
 
       // Simulate page refresh: create new engine with same store
-      const engine2 = createEngine();
+      createEngine();
       const queue = await eventStore.table('sync_queue').toArray();
       expect(queue).toHaveLength(1);
       expect(queue[0].kind).toBe('SessionLogged');
@@ -470,6 +470,160 @@ describe('SyncEngine', () => {
       await engine2.flushQueue();
 
       expect(fakeSupabase._events).toHaveLength(1);
+    });
+  });
+
+  describe('saveSnapshot', () => {
+    it('saves snapshot to storage with correct payload', async () => {
+      const engine = createEngine();
+      await engine.logEvent('SessionLogged', { duration: 30 });
+      await engine.logEvent('SessionLogged', { duration: 45 });
+
+      await engine.saveSnapshot();
+
+      const snapshotKey = `${userId}/snapshot.json`;
+      const blob = fakeSupabase._snapshots.get(snapshotKey);
+      expect(blob).toBeDefined();
+
+      const text = await blob!.text();
+      const payload = JSON.parse(text);
+
+      expect(payload.schemaVersion).toBe(1);
+      expect(payload.asOfRemoteId).toBe(0);
+      expect(payload.events).toHaveLength(2);
+      expect(payload.events[0].kind).toBe('SessionLogged');
+      expect(payload.events[0].payload.duration).toBe(30);
+      expect(payload.events[1].payload.duration).toBe(45);
+    });
+
+    it('tracks asOfRemoteId based on lastPulledId', async () => {
+      await eventStore.table('sync_meta').put({ key: 'lastPulledId', value: 5 });
+
+      const engine = createEngine();
+      await engine.logEvent('SessionLogged', { duration: 30 });
+
+      await engine.saveSnapshot();
+
+      const snapshotKey = `${userId}/snapshot.json`;
+      const blob = fakeSupabase._snapshots.get(snapshotKey)!;
+      const payload = JSON.parse(await blob.text());
+
+      expect(payload.asOfRemoteId).toBe(5);
+    });
+  });
+
+  describe('restoreFromCloud', () => {
+    it('restores local events from snapshot', async () => {
+      const snapshotData = {
+        schemaVersion: 1,
+        asOfRemoteId: 10,
+        asOfCreatedAt: '2024-01-15T10:00:00Z',
+        events: [
+          { kind: 'SessionLogged', payload: { duration: 30 }, createdAt: '2024-01-15T08:00:00Z', clientId: 'other', deviceLocalId: 1 },
+          { kind: 'RoadmapCreated', payload: { title: 'My Roadmap' }, createdAt: '2024-01-15T09:00:00Z', clientId: 'other', deviceLocalId: 2 }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
+      fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+
+      const engine = createEngine();
+      await engine.restoreFromCloud();
+
+      const localEvents = await eventStore.getAll();
+      expect(localEvents).toHaveLength(2);
+      expect(localEvents[0].kind).toBe('SessionLogged');
+      expect(localEvents[1].kind).toBe('RoadmapCreated');
+
+      const meta = await eventStore.table('sync_meta').get('lastPulledId');
+      expect(meta.value).toBe(10);
+    });
+
+    it('pulls newer remote events after restore', async () => {
+      fakeSupabase._events.push(
+        { id: 11, user_id: userId, kind: 'SessionLogged', payload: { duration: 60 }, client_id: 'other-client', device_local_id: 3, created_at: '2024-01-15T11:00:00Z' }
+      );
+
+      const snapshotData = {
+        schemaVersion: 1,
+        asOfRemoteId: 10,
+        asOfCreatedAt: '2024-01-15T10:00:00Z',
+        events: [
+          { kind: 'SessionLogged', payload: { duration: 30 }, createdAt: '2024-01-15T08:00:00Z', clientId: 'other', deviceLocalId: 1 }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
+      fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+
+      const engine = createEngine();
+      await engine.restoreFromCloud();
+
+      const localEvents = await eventStore.getAll();
+      expect(localEvents).toHaveLength(2);
+      expect(localEvents[1].payload.duration).toBe(60);
+    });
+
+    it('handles missing snapshot gracefully', async () => {
+      const engine = createEngine();
+      await engine.logEvent('SessionLogged', { duration: 30 });
+
+      await engine.restoreFromCloud();
+
+      const localEvents = await eventStore.getAll();
+      expect(localEvents).toHaveLength(1);
+    });
+
+    it('refuses snapshot with future schemaVersion', async () => {
+      const snapshotData = {
+        schemaVersion: 999,
+        asOfRemoteId: 10,
+        asOfCreatedAt: '2024-01-15T10:00:00Z',
+        events: [
+          { kind: 'SessionLogged', payload: { duration: 30 }, createdAt: '2024-01-15T08:00:00Z', clientId: 'other', deviceLocalId: 1 }
+        ]
+      };
+      const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
+      fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+
+      const engine = createEngine();
+      await engine.restoreFromCloud();
+
+      const localEvents = await eventStore.getAll();
+      expect(localEvents).toHaveLength(0);
+
+      const state = engine.getState();
+      expect(state.status).toBe('error');
+      expect(state.lastError).toContain('schemaVersion');
+    });
+  });
+
+  describe('snapshot scheduling', () => {
+    it('triggers snapshot after snapshotInterval writes', async () => {
+      const engine = createEngine({ snapshotInterval: 3, snapshotDebounceMs: 0 });
+
+      await engine.logEvent('SessionLogged', { duration: 30 });
+      await engine.logEvent('SessionLogged', { duration: 45 });
+      await engine.logEvent('SessionLogged', { duration: 60 });
+
+      // Wait for debounced snapshot timer to fire
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const snapshotKey = `${userId}/snapshot.json`;
+      const blob = fakeSupabase._snapshots.get(snapshotKey);
+      expect(blob).toBeDefined();
+    });
+
+    it('does not trigger snapshot before interval reached', async () => {
+      const engine = createEngine({ snapshotInterval: 5, snapshotDebounceMs: 0 });
+
+      await engine.logEvent('SessionLogged', { duration: 30 });
+      await engine.logEvent('SessionLogged', { duration: 45 });
+
+      // Wait to ensure no snapshot was triggered
+      await new Promise(resolve => setTimeout(resolve, 10));
+
+      const snapshotKey = `${userId}/snapshot.json`;
+      const blob = fakeSupabase._snapshots.get(snapshotKey);
+      expect(blob).toBeUndefined();
     });
   });
 });
