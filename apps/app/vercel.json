@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.com/vercel.json",
+  "framework": "vite",
+  "buildCommand": "pnpm --filter @study-tracker/app build",
+  "outputDirectory": "dist",
+  "installCommand": "pnpm install",
+  "rewrites": [
+    {
+      "source": "/study/:path*",
+      "destination": "/study/index.html"
+    }
+  ]
+}
