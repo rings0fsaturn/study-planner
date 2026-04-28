@@ -183,12 +183,13 @@ class AuthGate {
 
 ## Environment Variables
 
-Required in `apps/app/.env.local`:
+**Location:** `apps/app/.env.local`
 
 | Variable | Purpose |
 |---|---|
-| `VITE_SUPABASE_URL` | Supabase project URL (e.g., `https://xxxxx.supabase.co`) |
-| `VITE_SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
+| `SUPABASE_URL` | Supabase project URL (e.g., `https://xxxxx.supabase.co`) |
+| `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (for admin operations, E2E tests only) |
 
 Template provided in `apps/app/.env.example`.
 

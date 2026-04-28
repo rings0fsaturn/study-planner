@@ -1,3 +1,5 @@
+import { config } from 'dotenv';
+config({ path: 'apps/app/.env.local' });
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({

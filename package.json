@@ -16,9 +16,13 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0",
+    "dotenv": "^17.4.2",
     "typescript": "^5.4.0"
   },
   "engines": {
     "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.0"
   }
 }

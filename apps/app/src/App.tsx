@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuthContext } from './auth/AuthProvider';
 import { ProtectedRoute } from './auth/ProtectedRoute';
+import { EventStoreProvider } from './events/EventStoreProvider';
 import { SignIn } from './pages/SignIn';
 import { SignUp } from './pages/SignUp';
 import { Home } from './pages/Home';
 import { AuthConfirmed } from './pages/AuthConfirmed';
 import { ResetPassword } from './pages/ResetPassword';
+import { Log } from './pages/Log';
 import { useEffect } from 'react';
 
 function RootRedirect() {
@@ -99,6 +101,14 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/log"
+        element={
+          <ProtectedRoute>
+            <Log />
+          </ProtectedRoute>
+        }
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
@@ -108,9 +118,11 @@ function App() {
   return (
     <BrowserRouter basename="/study">
       <AuthProvider>
-        <div className="app">
-          <AppRoutes />
-        </div>
+        <EventStoreProvider>
+          <div className="app">
+            <AppRoutes />
+          </div>
+        </EventStoreProvider>
       </AuthProvider>
     </BrowserRouter>
   );
