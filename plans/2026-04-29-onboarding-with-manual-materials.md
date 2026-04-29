@@ -1085,7 +1085,7 @@ pnpm --filter app typecheck                    # no errors
 
 ### Phase 3: Steps 1+2 — Deadline + weekly hours
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 159479d
 **Depends on:** Phase 2
 **Estimated scope:** 4 files (2 new components, 1 new CSS file, 2 test files), ~250 lines
 

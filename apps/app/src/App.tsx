@@ -15,9 +15,8 @@ import { useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
-
-function Step1Deadline() { return <div>Step 1 — Deadline</div> }
-function Step2Hours() { return <div>Step 2 — Hours</div> }
+import { Step1Deadline } from './onboarding/steps/Step1Deadline';
+import { Step2Hours } from './onboarding/steps/Step2Hours';
 function Step3Materials() { return <div>Step 3 — Materials</div> }
 function Step3Preview() { return <div>Step 3 — Preview</div> }
 function Step4Confirm() { return <div>Step 4 — Confirm</div> }

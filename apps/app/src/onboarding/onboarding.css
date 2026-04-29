@@ -1,0 +1,12 @@
+/* Desktop: steps 1 and 2 are column-shaped, centered, max-width 480px */
+@media (min-width: 1024px) {
+  .onboarding-step-column {
+    max-width: 480px;
+    margin: 0 auto;
+    text-align: center;
+  }
+  .onboarding-step-column .screen-h1 {
+    font-size: 36px;
+    letter-spacing: -0.02em;
+  }
+}
