@@ -12,6 +12,15 @@ import { AuthConfirmed } from './pages/AuthConfirmed';
 import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
 import { useEffect } from 'react';
+import { OnboardingGate } from './onboarding/OnboardingGate';
+import { OnboardingProvider } from './onboarding/OnboardingProvider';
+import { OnboardingLayout } from './onboarding/OnboardingLayout';
+
+function Step1Deadline() { return <div>Step 1 — Deadline</div> }
+function Step2Hours() { return <div>Step 2 — Hours</div> }
+function Step3Materials() { return <div>Step 3 — Materials</div> }
+function Step3Preview() { return <div>Step 3 — Preview</div> }
+function Step4Confirm() { return <div>Step 4 — Confirm</div> }
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
@@ -136,6 +145,26 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+      <Route
+        path="/onboarding"
+        element={
+          <ProtectedRoute>
+            <OnboardingGate>
+              <OnboardingProvider>
+                <OnboardingLayout />
+              </OnboardingProvider>
+            </OnboardingGate>
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<Navigate to="/onboarding/1" replace />} />
+        <Route path="1" element={<Step1Deadline />} />
+        <Route path="2" element={<Step2Hours />} />
+        <Route path="3" element={<Step3Materials />}>
+          <Route path="preview" element={<Step3Preview />} />
+        </Route>
+        <Route path="4" element={<Step4Confirm />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

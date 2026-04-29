@@ -694,7 +694,7 @@ grep "getProjectedFinish" apps/app/src/events/ProgressEngine.ts   # exists
 
 ### Phase 2: Onboarding infrastructure — Provider, Gate, CheckpointGate, routes wiring
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete — bbf141c
 **Depends on:** Phase 1
 **Estimated scope:** 6 files (4 new, 2 modified), ~280 lines
 
@@ -1076,7 +1076,10 @@ pnpm --filter app typecheck                    # no errors
 - Run `pnpm --filter app test` to confirm no regressions
 
 #### Notes (filled in during implementation)
-*(empty)*
+- Created 4 onboarding infrastructure files: OnboardingProvider.tsx, OnboardingGate.tsx, CheckpointGate.tsx, OnboardingLayout.tsx
+- Added onboarding routes to App.tsx with placeholder step components (to be replaced in Phases 3-6)
+- Created test files: OnboardingProvider.test.tsx (6 tests), OnboardingGate.test.tsx (2 tests)
+- All 78 tests pass (8 test files)
 
 ---
 
