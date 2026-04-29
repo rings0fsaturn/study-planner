@@ -4,6 +4,8 @@
 
 This document is the canonical reference for the algorithm. It captures the research foundation, the 16 design decisions made during grilling, a step-by-step walkthrough using the canonical example, and the integration points with each slice that calls the engine.
 
+> **Revision note (2026-04-29).** This guide reflects the post-grilling Q21 redesign of the algorithm. If you're reading older code that still computes `slotsNeeded` per material in a Stage 3, that's the pre-Q21 design — see *Algorithm structure* and *Known limitations* for what changed and why. The public API (function signatures and type shapes) is unchanged across the redesign; only the internal stages and a few output details (multi-candidate `'__rest__'` sentinel, two new warning kinds) are new.
+
 ---
 
 ## Table of contents
@@ -65,15 +67,15 @@ Each decision was made deliberately during the grilling session. They're numbere
 | 5 | Excess-capacity prompt at preview (1.3× threshold) | `computeCapacityCheck` returns `under-capacity-buffer` |
 | 6 | Compress = fewer weeks (not fewer days/week) | UI in slice 4; engine just regenerates with new `weeks` |
 | 7 | Empty slots render as "Rest day" rows | Slot with `role: null` and `candidateMaterialIds: []` |
-| 8 | Material-to-slot fills slots to natural capacity, then stops | `assignMaterialsToSlots` decrements remaining minutes by `capacityMinutes` |
-| 9 | Material-driven slot tagging (compute `slotsNeeded` from material totals) | `slotsNeededByMaterial` map, then `tagSlotsWithRoles` |
-| 10 | Default session titles are generated; user can rename inline | `sessionTitle: "{title} · session N of M"` |
+| 8 | Material-to-slot fills slots to natural capacity, then stops (partial-slot when material runs out) | `assignMaterialsToSlots` uses `Math.min(slot.capacityMinutes, remaining)` |
+| 9 | Material-driven slot tagging (compute `slotsNeeded` per material, then tag) | **Superseded by Q21 redesign.** Replaced by candidate-based tagging — see Stage 4. |
+| 10 | Default session titles are generated; user can rename inline | `sessionTitle: "{title} · session N of M"` (M counted post-fill via `retrofitSessionTitles`) |
 | 11 | Onboarding step 3 captures `type` dropdown; `inferRole()` provides defaults | `inferRole()` exported; UI in slice 4 |
 | 12 | Round-robin for same-role materials, by `additionOrder` | Queue-based loop in `assignMaterialsToSlots` |
 | 13 | Over-capacity hard-blocks commit; v1 routes to onboarding step 1/2/3 | `over-capacity` warning; UI in slice 4 |
 | 14 | Material removal post-commit → future slots become rest days | `removeMaterialFromRoadmap()` |
-| 15 | Short-timeline (N<3) fallback: chronological role priority, no phasing | `tagShortTimeline()` branch in `tagSlotsWithRoles` |
-| 16 | True ties surface as user-resolvable multi-candidate slots | `candidateMaterialIds.length >= 2` in output |
+| 15 | Short-timeline (N<3) fallback: chronological role priority, no phasing | `tagShortTimeline()` branch in `tagRoleCandidates` |
+| 16 | Boundary tie surfaces as one user-resolvable multi-candidate slot per role | First slot encountered after queue-empty: `candidateMaterialIds: [...materialIds, '__rest__']`. All later leftover slots are plain rest days. |
 
 ---
 
@@ -97,22 +99,25 @@ Input
   │
   ▼
 ┌─────────────────────────────────┐
-│ Stage 3: compute slotsNeeded    │  → For each material:
-│ per material                    │    slotsNeeded = ceil(totalMinutes / avgCapacity)
+│ Stage 3: compute capacity check │  → Sum totals, classify status:
+│                                 │    fits / over-capacity / under-capacity-buffer
 └─────────────────────────────────┘
   │
   ▼
 ┌─────────────────────────────────┐
-│ Stage 4: tag slots with roles   │  → Anchor: even stride across weeks
-│ (anchor / foundation / practice)│    Foundation: front-loaded (weeks 0..N/3)
-│                                 │    Practice: back-loaded (weeks 2N/3..N)
+│ Stage 4: tag role candidates    │  → For each slot, gather plausible roles
+│ (phase-based, viability-filter) │    by phase (early/middle/late), filter to
+│                                 │    roles with materials, then resolve to one
+│                                 │    role via the phase priority table
 └─────────────────────────────────┘
   │
   ▼
 ┌─────────────────────────────────┐
-│ Stage 5: assign materials       │  → For each role-tagged slot:
-│ (round-robin per role)          │    Pop next material from role queue
-│                                 │    Assign, decrement remaining, requeue
+│ Stage 5: assign materials       │  → For each role, walk role-tagged slots
+│ (round-robin + partial-slot     │    chronologically. Pop next material from
+│  fill + Decision 16 boundary)   │    queue, allocate min(capacity, remaining),
+│                                 │    requeue if more remains. First slot after
+│                                 │    queue-empty becomes multi-candidate.
 └─────────────────────────────────┘
   │
   ▼
@@ -120,6 +125,8 @@ Output (weeks → slots → candidate materials + warnings)
 ```
 
 Each stage is a pure function. Output of stage N is input to stage N+1. No shared mutable state.
+
+**Note on the Q21 redesign.** An earlier version of the algorithm (Decision 9) computed a global `slotsNeeded` per material from `totalMinutes / globalAvgCapacity`, then placed exactly that many slots. This over-estimated the count whenever anchor consistently landed on big slots and foundation/practice on small slots — the global average is a fiction in non-uniform week shapes. The current design tags candidates first, then lets Stage 5 fill until the material exhausts, dropping the `slotsNeeded` step entirely. Decision 9 in the table above is marked superseded for this reason.
 
 ---
 
@@ -152,147 +159,134 @@ Week 1: [Mon-60m, Wed-60m, Sat-180m]
 ... (× 8 weeks)
 ```
 
-### Stage 3 — slotsNeeded per material
+### Stage 3 — capacity check
 
 ```
-avgCapacity = 2400 / 24 = 100 min/slot
-
-DDIA  (anchor):     ceil(600 / 100) = 6 slots
-CAP   (foundation): ceil(200 / 100) = 2 slots
-Mocks (practice):   ceil(300 / 100) = 3 slots
-
-Total tagged: 11 slots → 13 slots will become rest days
-```
-
-`capacityCheck` runs here:
-
-```
-totalMaterial = 1100 min
-totalCapacity = 2400 min
+totalMaterial = 600 + 200 + 300 = 1100 min
+totalCapacity = 8 × (60 + 60 + 180) = 2400 min
 1100 / 2400 = 0.46 — well below 1/1.3 = 0.77
 Status: under-capacity-buffer
-suggestedWeeks = ceil(1100 / 300) = 4   (per-week cap = 300m at this hour layout)
+suggestedWeeks = ceil(1100 / (2400/8)) = ceil(1100 / 300) = 4
 ```
 
-So a warning fires: "Your materials need 18.3 hours but you've planned 40 hours. Compress to 4 weeks?"
+A warning fires: "Your materials need ~18 hours but you've planned ~40 hours. Compress to 4 weeks?"
 
-### Stage 4 — tag slots with roles
+The capacity check produces three statuses: `fits`, `over-capacity`, `under-capacity-buffer`. There is no `slotsNeeded` computation in this stage anymore — that step from the original v1 design is gone (see the Q21 note in *Algorithm structure*).
 
-**Anchor (DDIA, 6 slots over 8 weeks):**
-Stride pattern picks weeks `[0, 1, 3, 4, 6, 7]` (the `pickEvenlySpacedWeeks(6, 8)` output). Within each chosen week, the engine picks the largest-capacity untagged slot. That's Sat-180m every time.
+### Stage 4 — tag role candidates
 
-```
-Week 0: [Mon, Wed, *Sat → anchor]
-Week 1: [Mon, Wed, *Sat → anchor]
-Week 2: [Mon, Wed, Sat]                ← skipped
-Week 3: [Mon, Wed, *Sat → anchor]
-Week 4: [Mon, Wed, *Sat → anchor]
-Week 5: [Mon, Wed, Sat]                ← skipped
-Week 6: [Mon, Wed, *Sat → anchor]
-Week 7: [Mon, Wed, *Sat → anchor]
-```
-
-**Foundation (CAP, 2 slots, front-loaded — weeks 0..floor(2*8/3)=5):**
-Earliest available untagged slots. Week 0's Mon and Wed are both untagged; the algorithm picks them in chronological order.
+This stage walks every slot and gathers a set of *role candidates* based on phase, then resolves each set to exactly one role. The phase boundaries (for N=8) are:
 
 ```
-Week 0: [*Mon → foundation, *Wed → foundation, Sat=anchor]
-Week 1: [Mon, Wed, Sat=anchor]
-...
+phase1End = floor(8 / 3) = 2     // weeks 0, 1 are "early"
+phase2End = floor(2 × 8 / 3) = 5 // weeks 5, 6, 7 are "late"
+                                 // weeks 2, 3, 4 are "middle"
 ```
 
-**Practice (Mocks, 3 slots, back-loaded — weeks floor(8/3)=2..7):**
-Latest available untagged slots, walking backward.
+**Candidate gathering rules:**
+- Foundation candidate when `weekIndex < phase2End` (weeks 0–4)
+- Practice candidate when `weekIndex >= phase1End` (weeks 2–7)
+- Anchor candidate when slot is the largest-capacity slot in its week. Two refinements:
+  - *Non-uniform week:* strictly-largest slot wins; ties broken by chronological order. For Mon/Wed/Sat with 60/60/180m, that's always Sat.
+  - *Uniform week* (capacities within 10% of each other): the chronologically-first selected day of the week wins, for habit-formation consistency (Lally et al. 2010 — habit automaticity depends on consistent timing).
+
+**Viability filter:** before resolving, the engine drops any candidate role whose set of input materials is empty. Without this, a DDIA-only input with no practice material would have late-week slots tagged `practice` (per phase rules) and then immediately cleared to rest days, leaving DDIA underfilled even though those slots were available.
+
+**Phase priority table** for resolving multi-candidate slots:
+
+| Phase | Priority order |
+|---|---|
+| Early (`week < phase1End`) | anchor > foundation > practice |
+| Middle (`phase1End <= week < phase2End`) | anchor > practice > foundation |
+| Late (`week >= phase2End`) | **practice > anchor** > foundation |
+
+The late-weeks `practice > anchor` rule is research-backed (Finding 6 — mocks ramp toward the deadline). When practice has materials, late-week largest-capacity slots go to practice rather than anchor.
+
+For the canonical example (all three roles have materials, no viability filtering needed):
 
 ```
-Week 7: [*Mon → practice (latest available), *Wed → practice, Sat=anchor]
-Week 6: [*Mon → practice, Wed, Sat=anchor]
+Week 0 (early):   Mon=foundation,        Wed=foundation,        Sat=anchor
+Week 1 (early):   Mon=foundation,        Wed=foundation,        Sat=anchor
+Week 2 (middle):  Mon=practice,          Wed=practice,          Sat=anchor
+Week 3 (middle):  Mon=practice,          Wed=practice,          Sat=anchor
+Week 4 (middle):  Mon=practice,          Wed=practice,          Sat=anchor
+Week 5 (late):    Mon=practice,          Wed=practice,          Sat=practice
+Week 6 (late):    Mon=practice,          Wed=practice,          Sat=practice
+Week 7 (late):    Mon=practice,          Wed=practice,          Sat=practice
 ```
 
-After Stage 4 the grid looks like:
-
-```
-Week 0: Mon=foundation, Wed=foundation, Sat=anchor
-Week 1: Mon=null, Wed=null, Sat=anchor
-Week 2: Mon=null, Wed=null, Sat=null
-Week 3: Mon=null, Wed=null, Sat=anchor
-Week 4: Mon=null, Wed=null, Sat=anchor
-Week 5: Mon=null, Wed=null, Sat=null
-Week 6: Mon=practice, Wed=null, Sat=anchor
-Week 7: Mon=practice, Wed=practice, Sat=anchor
-```
-
-Anchor stride check: gaps are at week 2 (between W1 and W3) and week 5 (between W4 and W6). Both are 1-week gaps, well under the 2-week max. No `anchor-stride-too-wide` warning.
+Anchor stride check: anchor weeks are `[0,1,2,3,4]` — contiguous, so max gap is 1 week, well under the 2-week threshold. No `anchor-stride-too-wide` warning.
 
 ### Stage 5 — assign materials
 
-**Foundation queue:** `[CAP]` (only one foundation material).
-Walk role-tagged slots chronologically: Week 0 Mon, Week 0 Wed.
+For each role, the engine walks the role-tagged slots chronologically with a round-robin queue. Per-slot allocation uses partial-slot filling: `min(slot.capacityMinutes, material.remainingMinutes)`. When the queue empties before all role-tagged slots are exhausted, the **first** leftover slot becomes a multi-candidate boundary slot (Decision 16); subsequent leftover slots become plain rest days.
+
+**Foundation queue:** `[CAP @ 200m]`. Walks W0-Mon, W0-Wed, W1-Mon, W1-Wed, W2-Mon, W2-Wed, W3-Mon, W3-Wed, W4-Mon, W4-Wed.
 
 ```
-Week 0 Mon → CAP, plannedMinutes=60, sessionTitle="CAP theorem · session 1 of 2"
-  CAP remaining: 200 - 60 = 140 → requeue
-
-Week 0 Wed → CAP, plannedMinutes=60, sessionTitle="CAP theorem · session 2 of 2"
-  CAP remaining: 140 - 60 = 80 → requeue (not zero)
-
-(but no more foundation slots — CAP exits role-tagged-slots loop with 80m left)
+W0-Mon → CAP 60m, remaining 140m, requeue
+W0-Wed → CAP 60m, remaining  80m, requeue
+W1-Mon → CAP 60m, remaining  20m, requeue
+W1-Wed → CAP min(60, 20) = 20m, remaining 0m, drop from queue
+W2-Mon → queue empty → BOUNDARY slot? No — but weeks 2–4 weekday slots are tagged `practice`, not `foundation`, so they're not in this queue's walk. Foundation walk ends here cleanly.
 ```
 
-CAP got 120m of its 200m total. The 80m shortfall is acceptable per the ±15% tolerance — actually 40% under, which exceeds tolerance. **This is a real edge case** the algorithm exposes: when capacity (per slot) is smaller than expected vs material total, the material under-fills. The engine could either:
+CAP fills exactly 200m across 4 sessions (60+60+60+20). No multi-candidate boundary because the queue empties exactly at the end of the foundation-tagged slot list.
 
-- **Promote unused foundation slots back to available** (current behavior — stays at 120m)
-- **Spill into anchor or practice slots** (more complex; not v1)
-- **Surface as a warning** (good idea — to add)
-
-For v1, the under-fill is honest: the user's slot capacities just don't have room for CAP's full 200m within the foundation phase, given the 60m weekday slot size. The remaining 80m would either become extra rest days or, in a future enhancement, get redistributed.
-
-**Anchor queue:** `[DDIA]`.
-Walk role-tagged slots chronologically: W0 Sat, W1 Sat, W3 Sat, W4 Sat, W6 Sat, W7 Sat — six 180m slots.
+**Anchor queue:** `[DDIA @ 600m]`. Walks W0-Sat, W1-Sat, W2-Sat, W3-Sat, W4-Sat.
 
 ```
-W0 Sat → DDIA, 180m, "DDIA · session 1 of N"
-  DDIA remaining: 600 - 180 = 420
-W1 Sat → DDIA, 180m, "DDIA · session 2 of N"
-  DDIA remaining: 240
-W3 Sat → DDIA, 180m, "DDIA · session 3 of N"
-  DDIA remaining: 60
-W4 Sat → DDIA, 180m, "DDIA · session 4 of N"
-  DDIA remaining: -120 ← OVER (slot capacity exceeded total)
+W0-Sat → DDIA 180m, remaining 420m
+W1-Sat → DDIA 180m, remaining 240m
+W2-Sat → DDIA 180m, remaining  60m
+W3-Sat → DDIA min(180, 60) = 60m, remaining 0m, drop
+W4-Sat → queue empty → BOUNDARY slot:
+         candidateMaterialIds = ['ddia', '__rest__']
+         plannedMinutes = 0
+         role = 'anchor' (preserved)
+         sessionTitle = null (user hasn't picked yet)
 ```
 
-DDIA fills 4 of its 6 anchor slots and runs out (4 × 180 = 720, vs 600 total — an over-fill of 120m, which is 20% over, also exceeds the ±15% tolerance).
+DDIA fills exactly 600m across 4 sessions. W4-Sat is the boundary multi-candidate — the user resolves it during preview.
 
-The two unused anchor slots (W6 Sat, W7 Sat) end up in the **multi-candidate / queue-empty branch (Decision 16)**: the queue empties before all role-tagged slots are filled. Those slots get `candidateMaterialIds: ['DDIA']` (extending DDIA via review) plus implicit "Rest day" candidate. **The user picks** during preview.
-
-> **Important — this exposes a real algorithm tension:** Stage 3 said DDIA needs 6 slots. Stage 5 fills only 4 because slot capacities (180m) are bigger than the avg used in Stage 3 (100m). The engine over-estimated `slotsNeeded` because anchor consistently lands on big Saturday slots. A v1.1 refinement would be to recompute `slotsNeeded` per-role using *actual* role-tagged capacity, not avg overall. For v1, the multi-candidate emission handles this gracefully — the user resolves which mostly-empty slots to keep.
-
-**Practice queue:** `[Mocks]`.
-Walk role-tagged slots: W6 Mon (60m), W7 Mon (60m), W7 Wed (60m).
+**Practice queue:** `[Mocks @ 300m]`. Walks W2-Mon, W2-Wed, W3-Mon, W3-Wed, W4-Mon, W4-Wed, then weeks 5–7 (all 9 slots there since late-phase is all practice).
 
 ```
-W6 Mon → Mocks, 60m, "Mock interviews · session 1 of 5"
-  remaining 240
-W7 Mon → Mocks, 60m, "Mock interviews · session 2 of 5"
-  remaining 180
-W7 Wed → Mocks, 60m, "Mock interviews · session 3 of 5"
-  remaining 120
+W2-Mon → Mocks 60m, remaining 240m
+W2-Wed → Mocks 60m, remaining 180m
+W3-Mon → Mocks 60m, remaining 120m
+W3-Wed → Mocks 60m, remaining  60m
+W4-Mon → Mocks 60m, remaining   0m, drop
+W4-Wed → queue empty → BOUNDARY slot:
+         candidateMaterialIds = ['mocks', '__rest__']
+         plannedMinutes = 0
+         role = 'practice'
+W4-Sat → already filled by anchor walk above
+W5-Mon..W7-Sat → queue empty AND boundary already emitted → plain rest days
+                 (role cleared to null, candidateMaterialIds = [])
 ```
 
-Mocks ends 120m short — ratio 60% allocated. Surfaces in tests as a tolerance-band failure (the engine should warn here in v1.1).
+Mocks fills exactly 300m across 5 sessions. W4-Wed is the boundary multi-candidate. All other practice-tagged slots in weeks 5–7 become rest days.
+
+**Session-title retrofit.** Each session is initially titled `"DDIA · session 1"`, `"… session 2"`, etc. — the total count isn't known until the role's queue finishes. After Stage 5, `retrofitSessionTitles` walks the slots, counts actual sessions per material, and rewrites titles to `"DDIA · session 1 of 4"`, `"… session 2 of 4"`, etc.
 
 ### Final shape (output)
 
 ```
-Week 0: CAP-60m, CAP-60m, DDIA-180m
-Week 1: rest, rest, DDIA-180m
-Week 2: rest, rest, rest
-Week 3: rest, rest, DDIA-180m
-Week 4: rest, rest, DDIA-180m
-Week 5: rest, rest, rest
-Week 6: Mocks-60m, rest, [DDIA review or rest day]
-Week 7: Mocks-60m, Mocks-60m, [DDIA review or rest day]
+Week 0: CAP-60m,    CAP-60m,                  DDIA-180m
+Week 1: CAP-60m,    CAP-20m,                  DDIA-180m
+Week 2: Mocks-60m,  Mocks-60m,                DDIA-180m
+Week 3: Mocks-60m,  Mocks-60m,                DDIA-60m
+Week 4: Mocks-60m,  MULTI[mocks, __rest__],   MULTI[ddia, __rest__]
+Week 5: rest,       rest,                     rest
+Week 6: rest,       rest,                     rest
+Week 7: rest,       rest,                     rest
 ```
+
+Material totals are exact:
+- DDIA: 180+180+180+60 = 600m of 600m declared ✓
+- CAP: 60+60+60+20 = 200m of 200m declared ✓
+- Mocks: 60×5 = 300m of 300m declared ✓
 
 Plus warnings:
 
@@ -303,7 +297,7 @@ Plus warnings:
 ]
 ```
 
-The user sees this in the preview, decides what to do with the buffer (compress or accept), resolves the two undecided slots (extend DDIA or rest), and commits.
+The user sees this in the preview, decides what to do with the buffer (compress to 4 weeks or keep as a buffer), resolves the two boundary slots (extend material via review or rest), and commits.
 
 ---
 
@@ -315,7 +309,7 @@ If `materials.length === 1`, the material is auto-assigned its inferred role (la
 
 ### N=1 (one-week timeline)
 
-The phasing branch in `tagSlotsWithRoles` skips to `tagShortTimeline` (Decision 15). All slots get role-ordered chronologically: foundation slots first (earliest in the week), anchor middle, practice last. Round-robin still applies if multiple same-role materials.
+The phasing branch in `tagRoleCandidates` skips to `tagShortTimeline` (Decision 15). All slots get role-ordered chronologically: foundation slots first (earliest in the week), anchor middle, practice last. Round-robin still applies if multiple same-role materials.
 
 ### N=2 (two-week timeline)
 
@@ -340,6 +334,15 @@ True alternation. When one material exhausts, the other fills the rest.
 ### All materials < tolerance (severe under-fill)
 
 Possible if every material is much smaller than typical slot capacity. Output is correct but visually bare. The under-capacity-buffer warning fires.
+
+### Material under-fill or over-fill (±15% tolerance)
+
+When a material's allocated minutes diverge from its declared `totalMinutes` by more than `cfg.materialTotalTolerance` (default ±15%), the engine emits a warning rather than silently distorting the plan:
+
+- `material-overfilled` — allocated > total × 1.15. Rare with partial-slot filling, but possible when the algorithm puts more sessions on a material than its declared budget supports (e.g., very small total in a large-capacity slot).
+- `material-underfilled` — allocated < total × 0.85 AND allocated > 0. Common when the available role-tagged slots can't accommodate the full material total — e.g., a 600m anchor in 4 weeks with only 2h Sat sessions has nowhere to put the last 120m.
+
+These warnings let slice 4 surface honest math to the user ("DDIA is allocated 480m of its declared 600m — consider extending the timeline or reducing scope") rather than pretending the plan fits.
 
 ### Pin overlap with new layout
 
@@ -374,15 +377,39 @@ const input: RoadmapInput = {
 
 const roadmap = generateRoadmap(input)
 
-// Use roadmap to render preview
-// Use roadmap.warnings for prompts:
-//   - over-capacity → block commit, show 3-button modal
-//   - under-capacity-buffer → soft prompt with Compress / Keep buffer
-//   - unresolved-tie-count → disable commit until resolved
+// Use roadmap to render preview.
+// Warning kinds slice 4 should handle:
+//   - over-capacity            → block commit, show 3-button modal (extend / hours / trim)
+//   - under-capacity-buffer    → soft prompt with Compress / Keep buffer
+//   - unresolved-tie-count     → disable commit until every multi-candidate slot is resolved
+//   - material-overfilled      → soft warning ("DDIA is allocated more than its declared total")
+//   - material-underfilled     → soft warning ("DDIA is short by 120m — consider extending")
+//   - anchor-stride-too-wide   → soft warning ("Some weeks have no anchor session")
 
 // On the type dropdown default, call inferRole:
 const defaultRole = inferRole(material.title, material.estimatedDuration, existingMaterials)
 ```
+
+**Multi-candidate slot rendering.** A slot with `candidateMaterialIds.length >= 2` is a Decision 16 boundary slot — the engine couldn't decide on its own and is asking the user. The array contains material IDs the user can pick (representing "extend this material via review") plus the special string `'__rest__'` representing "leave this as a rest day." Slice 4 must render these as tap-to-pick rows with one entry per candidate, treating `'__rest__'` as the rest-day option:
+
+```ts
+function renderSlot(slot: Slot, materials: Material[]) {
+  if (slot.candidateMaterialIds.length === 0) return <RestDayRow />
+  if (slot.candidateMaterialIds.length === 1) return <SessionRow slot={slot} />
+  // Multi-candidate — Decision 16 boundary
+  return (
+    <PickerRow>
+      {slot.candidateMaterialIds.map((id) => {
+        if (id === '__rest__') return <Option label="Rest day" onPick={() => resolve(slot, null)} />
+        const m = materials.find((mm) => mm.id === id)!
+        return <Option label={`Review ${m.title}`} onPick={() => resolve(slot, m.id)} />
+      })}
+    </PickerRow>
+  )
+}
+```
+
+The commit button is disabled while any `unresolved-tie-count` warning is present.
 
 **Integration tests in slice 4** should mock the engine output for predictability — slice 4's UI tests don't need to re-prove the algorithm.
 
@@ -449,17 +476,25 @@ The engine is a pure function — testing is straightforward. Three layers:
 
 ### 1. Unit tests per stage
 
-Each of the five stages has its own isolated tests:
+Each stage has its own isolated tests:
 
 ```
 test('Stage 2: buildSlotGrid produces N × |days| slots with correct capacity')
 test('Stage 2: weekend slots get weekendHours / weekendCount capacity')
-test('Stage 3: slotsNeeded uses ceiling division of totalMinutes / avgCapacity')
-test('Stage 4: anchor stride pattern places 6 slots in 8 weeks as [0,1,3,4,6,7]')
-test('Stage 4: foundation never tagged in last third for N >= 3')
+test('Stage 3: capacityCheck reports under-capacity-buffer with suggestedWeeks')
+test('Stage 3: capacityCheck reports over-capacity when material > capacity')
+test('Stage 4: foundation never tagged when weekIndex >= phase2End')
+test('Stage 4: practice never tagged when weekIndex < phase1End')
+test('Stage 4: anchor lands on largest-capacity slot (non-uniform week)')
+test('Stage 4: uniform-capacity week tags anchor on first selected day only')
+test('Stage 4: late-week priority gives practice over anchor when both candidates present')
 test('Stage 4: short-timeline branch (N < 3) ignores phase boundaries')
+test('Stage 4: viability filter — role with no materials is dropped from candidates')
 test('Stage 5: round-robin alternates same-role materials by additionOrder')
-test('Stage 5: queue-empty case produces multi-candidate slots')
+test('Stage 5: partial-slot fill uses min(capacity, remaining)')
+test('Stage 5: queue-empty produces one boundary multi-candidate slot per role')
+test('Stage 5: subsequent leftover slots become plain rest days')
+test('retrofitSessionTitles updates "of N" counts after assignment')
 ```
 
 ### 2. Property-based tests for invariants
@@ -525,35 +560,38 @@ Don't re-test the algorithm in those slices — mock the engine output and test 
 
 ### Tunable parameters (config block)
 
-Lift these to a runtime config object so they can be adjusted post-launch:
+These are exposed as `RoadmapConfig` in `constants.ts`. Each public engine function accepts an optional `config?: Partial<RoadmapConfig>` argument that deep-merges over `DEFAULT_ROADMAP_CONFIG`:
 
 ```ts
-const ROADMAP_CONFIG = {
-  underCapacityBufferThreshold: 1.3,   // Decision 5
-  materialTotalTolerance: 0.15,        // ±15% honor band
-  anchorStrideMax: 2,                  // Weeks
-  phaseBoundary1: 1/3,                 // Foundations end fraction
-  phaseBoundary2: 2/3,                 // Build end fraction
+export interface RoadmapConfig {
+  underCapacityBufferThreshold: number   // 1.3 — Decision 5
+  materialTotalTolerance: number         // 0.15 — emit material-overfilled / -underfilled outside band
+  anchorStrideMax: number                // 2 — emit anchor-stride-too-wide above this
   inferenceRules: {
-    practiceKeywords: /mock|leetcode|exercise|problem set/i,
-    interviewSizeThreshold: 200,       // minutes
-  },
+    practiceKeywords: RegExp             // /mock|leetcode|exercise|problem set/i
+    interviewKeyword: RegExp             // /interview/i
+    interviewSizeThreshold: number       // 200 — minutes; "interview" + < this = practice
+  }
 }
 ```
 
-A/B testing different values requires injecting this config into `generateRoadmap` rather than reading from a module constant.
+A/B testing different values requires injecting `config` into each call site that participates in the test. The `phaseBoundary1` and `phaseBoundary2` fractions (1/3 and 2/3) are currently **hardcoded** in `tagRoleCandidates` and not exposed as tunables — promoting them to `RoadmapConfig` is a deliberate future step.
 
-### Known limitations (v1 → v1.1)
+### Known limitations
 
-1. **`slotsNeeded` over-estimates when anchors land on big slots.** The 4-of-6 DDIA fill in the canonical example exposes this. Fix: compute `slotsNeeded` per role using actual role-tagged slot capacities, not the global average. Worth a v1.1 patch.
+1. ~~`slotsNeeded` over-estimates when anchors land on big slots.~~ **Resolved by the Q21 redesign.** The engine no longer computes `slotsNeeded`; it tags candidates first and lets Stage 5 fill until the material exhausts, eliminating the global-average fiction.
 
-2. **Under-fill warning missing.** When a material gets significantly less than its `totalMinutes` (e.g., CAP at 60% in the canonical example), no warning fires. Should add `material-underfilled` warning kind.
+2. ~~Under-fill warning missing.~~ **Resolved.** The engine now emits `material-underfilled` and `material-overfilled` warnings when a material's allocated total falls outside the ±15% tolerance band. Slice 4 surfaces these as soft warnings.
 
-3. **No spaced review.** The engine doesn't generate "review" sessions for completed material. Spaced repetition would require chapter-level material structure (which the user doesn't provide). Deferred to v2 with a richer material model.
+3. **Practice fills chronologically, not toward the deadline.** Stage 5 walks practice-tagged slots in chronological order, so a small practice material lands in the *earliest* late-phase weeks and leaves later weeks as rest days. In the canonical example, Mocks (300m) fills weeks 2–4 entirely and weeks 5–7 are rest days — the opposite of "ramp toward the deadline" (Finding 6). Pure reverse-chronological fill would over-correct (everything in week 7). A proper fix needs interleaved/round-robin distribution across the practice phase, which is a real design decision worth taking separately. The under-capacity-buffer prompt mitigates this in practice — it suggests compressing to a tighter timeline where the layout is naturally close-to-deadline.
 
-4. **Pin movement on regeneration.** If `regenerateRoadmap` is called with N reduced, pins beyond the new last week generate `pin-overflow` warnings but aren't placed anywhere. The consumer must handle these. A future enhancement could attempt pin-shifting (move week 8's pin to week 6).
+4. **No spaced review.** The engine doesn't generate "review" sessions for completed material. Spaced repetition would require chapter-level material structure (which the user doesn't provide). Deferred to v2 with a richer material model.
 
-5. **Multi-anchor stride coordination.** Two anchor materials each get their own stride pattern, computed independently. If both happen to choose the same weeks (unlikely with round-robin but possible), one will skip. Fine in practice, worth verifying in property tests.
+5. **Pin movement on regeneration.** If `regenerateRoadmap` is called with N reduced, pins beyond the new last week generate `pin-overflow` warnings but aren't placed anywhere. The consumer must handle these. A future enhancement could attempt pin-shifting (move week 8's pin to week 6).
+
+6. **Phase boundaries hardcoded.** `phaseBoundary1` (1/3) and `phaseBoundary2` (2/3) are baked into `tagRoleCandidates`. Promoting them to `RoadmapConfig` is straightforward; left for a follow-up because no current consumer needs to adjust them.
+
+7. **Multi-anchor stride coordination.** Two anchor materials each go through the same role-tagged slot list with round-robin. With non-uniform weeks the largest slot per week is anchor, so both materials interleave naturally. Worth verifying in property tests for unusual capacity layouts.
 
 ### v2 ideas
 
@@ -567,7 +605,7 @@ A/B testing different values requires injecting this config into `generateRoadma
 
 For implementers in a hurry:
 
-```
+```ts
 // Generate a fresh plan
 const roadmap = generateRoadmap({
   materials: [/* ...with role */],
@@ -580,13 +618,17 @@ const roadmap = generateRoadmap({
 
 // Check status before showing the user
 switch (roadmap.capacityCheck.status) {
-  case 'over-capacity':       // BLOCK COMMIT, show 3-option modal
+  case 'over-capacity':         // BLOCK COMMIT, show 3-option modal
   case 'under-capacity-buffer': // SOFT PROMPT with Compress/Keep
   case 'fits':                  // OK — show preview
 }
 
 // Disable commit while ties remain
 const tiesUnresolved = roadmap.warnings.find(w => w.kind === 'unresolved-tie-count')
+
+// Multi-candidate slot detection
+const isMultiCandidate = (s: Slot) => s.candidateMaterialIds.length >= 2
+const isRestOption = (id: string) => id === '__rest__'
 
 // Re-plan honoring pins
 const newPlan = regenerateRoadmap(updatedInput, currentPins)

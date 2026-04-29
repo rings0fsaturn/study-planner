@@ -1,7 +1,8 @@
-import { useNavigate, Outlet, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useOnboarding, type OnboardingMaterial } from '../OnboardingProvider'
 import { CheckpointGate } from '../CheckpointGate'
 import { MaterialRow } from '../components/MaterialRow'
+import { Step3Preview } from './Step3Preview'
 import '../onboarding.css'
 
 export function Step3Materials() {
@@ -76,7 +77,7 @@ export function Step3Materials() {
           <div>{formContent}</div>
           <div>
             <div className="mono-caps" style={{ marginBottom: '12px' }}>Live preview · updates as you add</div>
-            <Outlet />
+            <Step3Preview />
           </div>
         </div>
       </CheckpointGate>
@@ -85,7 +86,7 @@ export function Step3Materials() {
 
   return (
     <CheckpointGate step={3}>
-      {!isPreviewRoute ? formContent : <Outlet />}
+      {!isPreviewRoute ? formContent : <Step3Preview />}
     </CheckpointGate>
   )
 }

@@ -16,7 +16,9 @@ const STEP_PREREQS: Record<number, (state: ReturnType<typeof useOnboarding>['sta
 }
 
 export function CheckpointGate({ step, children }: CheckpointGateProps) {
-  const { state } = useOnboarding()
+  const { state, ready } = useOnboarding()
+
+  if (!ready) return null
 
   const earliestIncomplete = ((): number => {
     for (let s = 1; s < step; s++) {

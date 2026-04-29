@@ -26,6 +26,7 @@ export function Step3Preview() {
   const eventStore = useEventStore()
   const navigate = useNavigate()
   const [committing, setCommitting] = useState(false)
+  const [compressedWeeks, setCompressedWeeks] = useState<number | null>(null)
 
   const previewEdits = useMemo(() => {
     const edits = new Map<string, { materialId: string | null; sessionTitle: string | null }>()
@@ -39,7 +40,8 @@ export function Step3Preview() {
     if (!state.deadline || state.selectedStudyDays.length === 0 || state.materials.length === 0) return null
     const today = new Date().toISOString().split('T')[0]
     const days = differenceInCalendarDays(state.deadline, today)
-    const weeks = Math.max(1, Math.ceil(days / 7))
+    const computedWeeks = Math.max(1, Math.ceil(days / 7))
+    const weeks = compressedWeeks ?? computedWeeks
     return {
       materials: state.materials
         .filter(m => m.title && m.estimatedDuration > 0)
@@ -50,7 +52,7 @@ export function Step3Preview() {
       weekdayHours: state.weekdayHours,
       weekendHours: state.weekendHours,
     }
-  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials])
+  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials, compressedWeeks])
 
   const debouncedInput = useDebouncedValue(roadmapInput, 150)
   const roadmap = useMemo((): RoadmapOutput | null => {
@@ -107,9 +109,9 @@ export function Step3Preview() {
   }, [state.previewEdits, dispatch])
 
   const handleCompress = useCallback(() => {
-    if (!roadmapInput || !capacityCheck?.suggestedWeeks) return
-    generateRoadmap({ ...roadmapInput, weeks: capacityCheck.suggestedWeeks })
-  }, [roadmapInput, capacityCheck])
+    if (!capacityCheck?.suggestedWeeks) return
+    setCompressedWeeks(capacityCheck.suggestedWeeks)
+  }, [capacityCheck?.suggestedWeeks])
 
   const handleCommit = useCallback(async () => {
     if (!displayRoadmap || committing || unresolvedTieCount > 0) return
@@ -148,6 +150,8 @@ export function Step3Preview() {
       await eventStore.table('onboardingDraft').clear()
 
       navigate('/onboarding/4')
+    } catch (err) {
+      console.error('Onboarding commit failed', err)
     } finally {
       setCommitting(false)
     }
