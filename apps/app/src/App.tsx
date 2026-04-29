@@ -19,7 +19,7 @@ import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
 import { Step3Preview } from './onboarding/steps/Step3Preview';
-function Step4Confirm() { return <div>Step 4 — Confirm</div> }
+import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();

@@ -61,7 +61,7 @@ describe('Step2Hours', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('hours per week')).toBeInTheDocument()
+      expect(screen.getByText(/h \/ wk/)).toBeInTheDocument()
     })
     expect(screen.getByLabelText('Weekday hours')).toBeInTheDocument()
     expect(screen.getByLabelText('Weekend hours')).toBeInTheDocument()
@@ -76,7 +76,7 @@ describe('Step2Hours', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('hours per week')).toBeInTheDocument()
+      expect(screen.getByText(/h \/ wk/)).toBeInTheDocument()
     })
     const chip = screen.getByText('6h')
     fireEvent.click(chip)
@@ -92,7 +92,7 @@ describe('Step2Hours', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('hours per week')).toBeInTheDocument()
+      expect(screen.getByText(/h \/ wk/)).toBeInTheDocument()
     })
     const weekdayInput = screen.getByLabelText('Weekday hours') as HTMLInputElement
     const weekendInput = screen.getByLabelText('Weekend hours') as HTMLInputElement
@@ -112,7 +112,7 @@ describe('Step2Hours', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('hours per week')).toBeInTheDocument()
+      expect(screen.getByText(/h \/ wk/)).toBeInTheDocument()
     })
     const chip = screen.getByText('4h')
     fireEvent.click(chip)
@@ -138,7 +138,7 @@ describe('Step2Hours', () => {
       </MemoryRouter>
     )
     await waitFor(() => {
-      expect(screen.getByText('hours per week')).toBeInTheDocument()
+      expect(screen.getByText(/h \/ wk/)).toBeInTheDocument()
     })
     const chip = screen.getByText('4h')
     fireEvent.click(chip)
