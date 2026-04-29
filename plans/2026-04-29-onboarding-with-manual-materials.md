@@ -694,7 +694,7 @@ grep "getProjectedFinish" apps/app/src/events/ProgressEngine.ts   # exists
 
 ### Phase 2: Onboarding infrastructure — Provider, Gate, CheckpointGate, routes wiring
 
-**Status:** ☐ Not started
+**Status:** 🟡 In progress
 **Depends on:** Phase 1
 **Estimated scope:** 6 files (4 new, 2 modified), ~280 lines
 
