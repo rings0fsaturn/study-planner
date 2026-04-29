@@ -326,7 +326,7 @@ function tagRoleCandidates(
   slots: Slot[],
   materials: Material[],
   weeks: number,
-  cfg: RoadmapConfig,
+  _cfg: RoadmapConfig,
   occupiedSlots: Map<string, { materialId: string; plannedMinutes: number; sessionTitle: string | null }>,
 ): Slot[] {
   // Track which roles actually have materials. A role with no materials should
@@ -493,7 +493,7 @@ function tagShortTimeline(slots: Slot[]): Slot[] {
 // Anchor stride warning
 // ─────────────────────────────────────────────────────────────────────────────
 
-function checkAnchorStride(slots: Slot[], weeks: number, cfg: RoadmapConfig): Warning | null {
+function checkAnchorStride(slots: Slot[], _weeks: number, cfg: RoadmapConfig): Warning | null {
   const anchorWeeks = new Set<number>()
   for (const s of slots) if (s.role === 'anchor') anchorWeeks.add(s.weekIndex)
   if (anchorWeeks.size === 0) return null

@@ -50,21 +50,28 @@ function createFakeSupabase(): SupabaseClientLike & {
     from: (table: string) => {
       if (table === 'sync_checkpoints') {
         return {
-          upsert: (row: Omit<FakeCheckpointRow, 'created_at'>, _options?: { onConflict: string }) => {
+          insert: (_values: Record<string, unknown> | Record<string, unknown>[]) => ({ select: async () => ({ data: [], error: null }) }),
+          upsert: (row: Record<string, unknown>, _options?: Record<string, unknown>) => {
             const fullRow: FakeCheckpointRow = {
-              ...row,
+              user_id: row.user_id as string,
+              as_of_remote_id: row.as_of_remote_id as number,
+              schema_version: row.schema_version as number,
+              event_count: row.event_count as number,
               created_at: new Date().toISOString(),
             };
-            checkpoints.set(row.user_id, fullRow);
-            return { data: fullRow, error: null };
+            checkpoints.set(fullRow.user_id, fullRow);
+            return Promise.resolve({ data: [fullRow as unknown as Record<string, unknown>], error: null });
           },
           select: (_columns?: string) => {
             return {
               eq: (_column: string, value: unknown) => {
                 return {
+                  order: () => {
+                    throw new Error('order not used on sync_checkpoints');
+                  },
                   maybeSingle: async () => {
                     const row = checkpoints.get(value as string);
-                    return { data: row ?? null, error: null };
+                    return { data: (row as unknown as Record<string, unknown>) ?? null, error: null };
                   },
                 };
               },
@@ -98,6 +105,7 @@ function createFakeSupabase(): SupabaseClientLike & {
             }
           };
         },
+        upsert: () => Promise.resolve({ data: [], error: null }),
         select: (_columns?: string) => {
           return {
             eq: (_column: string, value: unknown) => {
@@ -127,6 +135,9 @@ function createFakeSupabase(): SupabaseClientLike & {
                       return { data: filtered as unknown as Array<Record<string, unknown>>, error: null };
                     }
                   };
+                },
+                maybeSingle: () => {
+                  throw new Error('maybeSingle not used on events');
                 }
               };
             }
@@ -161,6 +172,7 @@ function createFakeSupabase(): SupabaseClientLike & {
   return self as unknown as SupabaseClientLike & {
     _events: FakeRemoteEvent[];
     _snapshots: Map<string, Blob>;
+    _checkpoints: Map<string, FakeCheckpointRow>;
     _shouldFailNextPush: boolean;
     _shouldFailNextPull: boolean;
   };

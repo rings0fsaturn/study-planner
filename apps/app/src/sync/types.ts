@@ -69,12 +69,14 @@ export interface SupabaseClientLike {
     insert: (values: Record<string, unknown> | Record<string, unknown>[]) => {
       select: () => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
     };
+    upsert: (row: Record<string, unknown>, options?: Record<string, unknown>) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
     select: (columns?: string) => {
       eq: (column: string, value: unknown) => {
         order: (column: string, options?: { ascending?: boolean }) => {
           gt: (column: string, value: unknown) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
           gte: (column: string, value: unknown) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
         };
+        maybeSingle: () => PromiseLike<{ data: Record<string, unknown> | null; error: Error | null }>;
       };
     };
   };

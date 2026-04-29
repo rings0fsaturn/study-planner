@@ -37,7 +37,7 @@ function TestComponent() {
       <button data-testid="setDeadline" onClick={() => dispatch({ type: 'SET_DEADLINE', deadline: '2025-06-01', purpose: 'Test exam' })}>
         Set Deadline
       </button>
-      <button data-testid="setHours" onClick={() => dispatch({ type: 'SET_HOURS', weeklyHours: 10, weekdayHours: 6, weekendHours: 4, selectedStudyDays: ['monday', 'wednesday', 'friday'] })}>
+      <button data-testid="setHours" onClick={() => dispatch({ type: 'SET_HOURS', weeklyHours: 10, weekdayHours: 6, weekendHours: 4, selectedStudyDays: ['Mon', 'Wed', 'Fri'] })}>
         Set Hours
       </button>
       <button data-testid="reset" onClick={() => dispatch({ type: 'RESET' })}>
