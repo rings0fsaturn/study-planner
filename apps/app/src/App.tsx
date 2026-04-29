@@ -17,7 +17,7 @@ import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
-function Step3Materials() { return <div>Step 3 — Materials</div> }
+import { Step3Materials } from './onboarding/steps/Step3Materials';
 function Step3Preview() { return <div>Step 3 — Preview</div> }
 function Step4Confirm() { return <div>Step 4 — Confirm</div> }
 
