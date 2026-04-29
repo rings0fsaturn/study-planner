@@ -324,11 +324,18 @@ function computeCapacityCheck(
 
 function tagRoleCandidates(
   slots: Slot[],
-  _materials: Material[],
+  materials: Material[],
   weeks: number,
   cfg: RoadmapConfig,
   occupiedSlots: Map<string, { materialId: string; plannedMinutes: number; sessionTitle: string | null }>,
 ): Slot[] {
+  // Track which roles actually have materials. A role with no materials should
+  // never starve a role with materials — without this, a DDIA-only input
+  // with no practice material would have late-week slots tagged 'practice'
+  // (per phase rules) then cleared to rest days, leaving DDIA underfilled
+  // even though slots were available.
+  const rolesWithMaterials = new Set<MaterialRole>(materials.map((m) => m.role))
+
   const out = slots.map((s) => {
     const key = `${s.weekIndex}:${s.dayOfWeek}`
     const occupied = occupiedSlots.get(key)
@@ -371,19 +378,57 @@ function tagRoleCandidates(
       candidates.push('practice')
     }
 
-    // Anchor candidate: largest slot in week (ties → earliest day)
-    const weekSlots = out.filter(s => s.weekIndex === slot.weekIndex && s !== slot)
-    const allWeekSlots = [slot, ...weekSlots]
-    const maxCapacity = Math.max(...allWeekSlots.map(s => s.capacityMinutes))
-    if (slot.capacityMinutes >= maxCapacity) {
+    // Anchor candidate: largest slot in week.
+    // - Non-uniform week: strictly largest capacity gets anchor candidate.
+    //   (Strict > prevents two slots from both winning anchor when capacities
+    //   differ but happen to tie at the max.)
+    // - Uniform week (within 10% of each other): only the first selected
+    //   day-of-week gets anchor, for habit-formation consistency
+    //   (Lally et al. 2010 — habit automaticity depends on consistent timing).
+    if (slotIsAnchorCandidate(slot, out)) {
       candidates.push('anchor')
     }
 
-    // Resolve to single role by phase priority
-    slot.role = resolveRoleCandidate(slot.weekIndex, phase1End, phase2End, candidates)
+    // Resolve to single role by phase priority, ignoring roles that have no
+    // materials in the input (they would just become rest days anyway and
+    // shouldn't beat a role that does have a material to fill).
+    slot.role = resolveRoleCandidate(
+      slot.weekIndex,
+      phase1End,
+      phase2End,
+      candidates.filter((c) => rolesWithMaterials.has(c)),
+    )
   }
 
   return out
+}
+
+/**
+ * Decide whether `slot` should receive an anchor candidate tag.
+ * - Non-uniform week (capacity range > 10%): strictly-largest slot wins.
+ * - Uniform week: only the chronologically-first selected day wins, for
+ *   habit-formation consistency.
+ */
+function slotIsAnchorCandidate(slot: Slot, allSlots: Slot[]): boolean {
+  const weekSlots = allSlots.filter(s => s.weekIndex === slot.weekIndex)
+  const capacities = weekSlots.map(s => s.capacityMinutes)
+  const max = Math.max(...capacities)
+  const min = Math.min(...capacities)
+  const isUniform = min > 0 && (max - min) / min <= 0.1
+
+  if (isUniform) {
+    // Pick the chronologically-first slot of the week (deterministic).
+    const firstSlotOfWeek = [...weekSlots].sort(slotChronoCompare)[0]
+    return slot === firstSlotOfWeek
+  }
+
+  // Non-uniform: strict greater-than would still tie if two slots share max
+  // (e.g., two equal weekend days). Earliest in chronological order wins.
+  if (slot.capacityMinutes < max) return false
+  const slotsAtMax = weekSlots.filter(s => s.capacityMinutes === max)
+  if (slotsAtMax.length === 1) return true
+  const firstAtMax = [...slotsAtMax].sort(slotChronoCompare)[0]
+  return slot === firstAtMax
 }
 
 function resolveRoleCandidate(
@@ -395,26 +440,33 @@ function resolveRoleCandidate(
   if (candidates.length === 0) return null
   if (candidates.length === 1) return candidates[0]
 
-  // Anchor always wins when it's a candidate (largest slot in week)
-  // This ensures anchors are on the largest-capacity slots consistently
-  if (candidates.includes('anchor')) return 'anchor'
+  // Phase priority table (from grilling Question 4):
+  //   Early weeks (week < phase1End):       anchor > foundation > practice
+  //   Middle weeks (phase1End <= w < phase2End): anchor > practice > foundation
+  //   Late weeks (week >= phase2End):       practice > anchor > foundation
+  // Late-week practice-over-anchor is research-backed (mock interviews ramp
+  // toward the deadline). Letting anchor unconditionally win starves practice
+  // exactly when it should dominate.
 
-  // Priority by phase for non-anchor candidates
   const isEarly = weekIndex < phase1End
   const isLate = weekIndex >= phase2End
 
   if (isEarly) {
+    if (candidates.includes('anchor')) return 'anchor'
     if (candidates.includes('foundation')) return 'foundation'
-    return candidates[0]
+    return 'practice'
   }
+
   if (isLate) {
     if (candidates.includes('practice')) return 'practice'
-    return candidates[0]
+    if (candidates.includes('anchor')) return 'anchor'
+    return 'foundation'
   }
-  // Middle: anchor already handled above, try practice then foundation
+
+  // Middle phase
+  if (candidates.includes('anchor')) return 'anchor'
   if (candidates.includes('practice')) return 'practice'
-  if (candidates.includes('foundation')) return 'foundation'
-  return candidates[0]
+  return 'foundation'
 }
 
 function tagShortTimeline(slots: Slot[]): Slot[] {
@@ -489,19 +541,51 @@ function assignMaterialsToSlots(
   // For each role, walk role-tagged slots chronologically, popping from queue
   for (const role of ['foundation', 'anchor', 'practice'] as const) {
     const queue = [...byRole[role]]
-    if (queue.length === 0) continue
-
     const roleSlots = out
       .filter((s) => s.role === role)
       .sort(slotChronoCompare)
 
-    for (const slot of roleSlots) {
-      if (queue.length === 0) {
-        // Queue empty before slots exhausted — slot becomes a rest day
+    // Empty-queue role: no materials in this role at all → tagged slots become
+    // rest days (clear the role tag so addMaterialToRoadmap can find them).
+    if (queue.length === 0) {
+      for (const slot of roleSlots) {
         slot.role = null
         slot.candidateMaterialIds = []
         slot.plannedMinutes = 0
         slot.sessionTitle = null
+      }
+      continue
+    }
+
+    // Track whether we've already emitted the multi-candidate "boundary" slot
+    // for this role. Per Decision 16 (clarified by user: "only the final slot,
+    // not all"), only the FIRST slot encountered after queue-empty becomes a
+    // user-resolvable pick (review-or-rest). All subsequent leftover slots
+    // become plain rest days, avoiding the "10 ties to resolve" failure mode.
+    let boundaryEmitted = false
+
+    for (const slot of roleSlots) {
+      if (queue.length === 0) {
+        if (!boundaryEmitted) {
+          // Decision 16: emit one multi-candidate slot for the user to pick
+          // between extending an existing material via review or marking rest.
+          // Multi-candidate marker: include all materials originally in this
+          // role, plus the special '__rest__' candidate. Length >= 2 triggers
+          // the unresolved-tie-count warning that the consumer (slice 4)
+          // uses to disable the commit button until the user resolves.
+          const reviewCandidates = byRole[role].map((m) => m.id)
+          slot.candidateMaterialIds = [...reviewCandidates, '__rest__']
+          slot.plannedMinutes = 0 // user hasn't decided yet
+          slot.sessionTitle = null
+          // Keep slot.role as the tagged role so consumer renders it correctly
+          boundaryEmitted = true
+        } else {
+          // All subsequent leftover slots are plain rest days
+          slot.role = null
+          slot.candidateMaterialIds = []
+          slot.plannedMinutes = 0
+          slot.sessionTitle = null
+        }
         continue
       }
 
@@ -603,8 +687,11 @@ export function inferRole(
   existingMaterials: Material[],
   config?: Partial<RoadmapConfig>,
 ): MaterialRole {
-  const cfg = { ...DEFAULT_ROADMAP_CONFIG, ...config }
-  const rules = cfg.inferenceRules
+  // Deep-merge inferenceRules so partial configs don't lose nested defaults
+  const rules = {
+    ...DEFAULT_ROADMAP_CONFIG.inferenceRules,
+    ...(config?.inferenceRules ?? {}),
+  }
 
   // Rule 1: matches practice keywords → practice
   if (rules.practiceKeywords.test(title)) return 'practice'
@@ -646,7 +733,7 @@ export function addMaterialToRoadmap(
       kind: 'over-capacity' as WarningKind,
       detail: { materialId: newMaterial.id, slotsNeeded: 1, slotsAvailable: 0 },
     }]
-    return rebuildRoadmapOutput(flatSlots, warnings, roadmap.capacityCheck)
+    return rebuildRoadmapOutput(flatSlots, warnings, cfg)
   }
 
   // Compute average capacity of candidates
@@ -672,29 +759,23 @@ export function addMaterialToRoadmap(
     })
   }
 
-  // Assign
+  // Assign with partial-slot filling — symmetric with Stage 5 (Decision 8).
+  // Without this, adding a 30m material to a 60m slot would over-allocate.
   let session = 0
+  let remaining = newMaterial.totalMinutes
   for (const slot of toPlace) {
+    if (remaining <= 0) break
     session++
     slot.role = newMaterial.role
     slot.candidateMaterialIds = [newMaterial.id]
-    slot.plannedMinutes = slot.capacityMinutes
+    const allocated = Math.min(slot.capacityMinutes, remaining)
+    slot.plannedMinutes = allocated
+    remaining -= allocated
     slot.sessionTitle = `${newMaterial.title} · session ${session} of ${toPlace.length}`
   }
 
-  // Recompute capacityCheck
-  const totalCapacity = flatSlots.reduce((s, x) => s + x.capacityMinutes, 0)
-  const totalMaterial = flatSlots
-    .filter(s => s.candidateMaterialIds.length > 0)
-    .reduce((s, x) => s + x.plannedMinutes, 0)
-  const newCapacityCheck = computeCapacityCheck(
-    totalCapacity,
-    totalMaterial,
-    { weeks: roadmap.weeks.length, materials: [], startDate: '', selectedStudyDays: [], weekdayHours: 0, weekendHours: 0 },
-    cfg,
-  )
-
-  return rebuildRoadmapOutput(flatSlots, warnings, newCapacityCheck)
+  // capacityCheck is recomputed inside rebuildRoadmapOutput using cfg
+  return rebuildRoadmapOutput(flatSlots, warnings, cfg)
 }
 
 export function removeMaterialFromRoadmap(
@@ -720,19 +801,8 @@ export function removeMaterialFromRoadmap(
     }
   }
 
-  // Recompute capacityCheck
-  const totalCapacity = flatSlots.reduce((s, x) => s + x.capacityMinutes, 0)
-  const totalMaterial = flatSlots
-    .filter(s => s.candidateMaterialIds.length > 0)
-    .reduce((s, x) => s + x.plannedMinutes, 0)
-  const newCapacityCheck = computeCapacityCheck(
-    totalCapacity,
-    totalMaterial,
-    { weeks: roadmap.weeks.length, materials: [], startDate: '', selectedStudyDays: [], weekdayHours: 0, weekendHours: 0 },
-    cfg,
-  )
-
-  return rebuildRoadmapOutput(flatSlots, roadmap.warnings, newCapacityCheck)
+  // capacityCheck is recomputed inside rebuildRoadmapOutput using cfg
+  return rebuildRoadmapOutput(flatSlots, roadmap.warnings, cfg)
 }
 
 export function regenerateRoadmap(
@@ -790,25 +860,14 @@ export function regenerateRoadmap(
     warnings.push({ kind: 'pin-overflow', detail: { overflowMinutes: pinOverflowMinutes } })
   }
 
-  // Recompute capacityCheck
-  const totalCapacity = flat.reduce((s, x) => s + x.capacityMinutes, 0)
-  const totalMaterial = flat
-    .filter(s => s.candidateMaterialIds.length > 0)
-    .reduce((s, x) => s + x.plannedMinutes, 0)
-  const newCapacityCheck = computeCapacityCheck(
-    totalCapacity,
-    totalMaterial,
-    { weeks: input.weeks, materials: [], startDate: '', selectedStudyDays: [], weekdayHours: 0, weekendHours: 0 },
-    cfg,
-  )
-
-  return rebuildRoadmapOutput(flat, warnings, newCapacityCheck)
+  // capacityCheck is recomputed inside rebuildRoadmapOutput using cfg
+  return rebuildRoadmapOutput(flat, warnings, cfg)
 }
 
 function rebuildRoadmapOutput(
   flatSlots: Slot[],
   warnings: Warning[],
-  _capacityCheck: CapacityCheck,
+  cfg: RoadmapConfig,
 ): RoadmapOutput {
   const weekIndices = new Set(flatSlots.map((s) => s.weekIndex))
   const weeks: RoadmapWeek[] = []
@@ -823,14 +882,14 @@ function rebuildRoadmapOutput(
     })
   }
 
-  // Recompute capacityCheck from flatSlots
+  // Recompute capacityCheck from flatSlots using INJECTED config (not defaults)
   const totalCapacity = flatSlots.reduce((s, x) => s + x.capacityMinutes, 0)
   const totalMaterial = flatSlots
     .filter(s => s.candidateMaterialIds.length > 0)
     .reduce((s, x) => s + x.plannedMinutes, 0)
 
   const isOverCapacity = totalMaterial > totalCapacity
-  const isUnderCapacityBuffer = totalCapacity > totalMaterial * DEFAULT_ROADMAP_CONFIG.underCapacityBufferThreshold
+  const isUnderCapacityBuffer = totalCapacity > totalMaterial * cfg.underCapacityBufferThreshold
   const status: CapacityCheck['status'] = isOverCapacity ? 'over-capacity'
     : isUnderCapacityBuffer ? 'under-capacity-buffer'
     : 'fits'
