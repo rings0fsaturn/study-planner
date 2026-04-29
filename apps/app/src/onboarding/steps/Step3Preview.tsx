@@ -27,6 +27,7 @@ export function Step3Preview() {
   const navigate = useNavigate()
   const [committing, setCommitting] = useState(false)
   const [compressedWeeks, setCompressedWeeks] = useState<number | null>(null)
+  const [modalDismissed, setModalDismissed] = useState(false)
 
   const previewEdits = useMemo(() => {
     const edits = new Map<string, { materialId: string | null; sessionTitle: string | null }>()
@@ -83,6 +84,10 @@ export function Step3Preview() {
   }, [roadmap, previewEdits])
 
   const capacityCheck = displayRoadmap?.capacityCheck
+
+  useEffect(() => {
+    setModalDismissed(false)
+  }, [capacityCheck?.status])
 
   const unresolvedTieCount = displayRoadmap?.warnings.find(w => w.kind === 'unresolved-tie-count')?.detail?.count as number ?? 0
 
@@ -210,8 +215,10 @@ export function Step3Preview() {
           <>
             <UnderCapacityBanner capacityCheck={capacityCheck} warnings={displayRoadmap?.warnings ?? []}
               onCompress={handleCompress} onKeepBuffer={() => {}} />
-            <OverCapacityModal capacityCheck={capacityCheck} warnings={displayRoadmap?.warnings ?? []}
-              onCompress={handleCompress} onKeepBuffer={() => {}} />
+            {!modalDismissed && (
+              <OverCapacityModal capacityCheck={capacityCheck} warnings={displayRoadmap?.warnings ?? []}
+                onCompress={handleCompress} onKeepBuffer={() => {}} onDismiss={() => setModalDismissed(true)} />
+            )}
           </>
         )}
 
