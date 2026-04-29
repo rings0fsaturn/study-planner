@@ -18,7 +18,7 @@ import { OnboardingLayout } from './onboarding/OnboardingLayout';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
-function Step3Preview() { return <div>Step 3 — Preview</div> }
+import { Step3Preview } from './onboarding/steps/Step3Preview';
 function Step4Confirm() { return <div>Step 4 — Confirm</div> }
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {

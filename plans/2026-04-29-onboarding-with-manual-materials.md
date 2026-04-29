@@ -1372,7 +1372,7 @@ pnpm build:app                             # builds without errors
 
 ### Phase 4: Step 3 materials — entry rows, type dropdown, inferRole, add/remove
 
-**Status:** ☐ Not started
+**Status:** 🟡 Partially completed
 **Depends on:** Phase 3
 **Estimated scope:** 4 files (1 step component, 1 MaterialRow component, 1 test file, import update), ~200 lines
 
@@ -1599,7 +1599,7 @@ pnpm --filter app typecheck                # no errors
 
 ### Phase 5: Step 3 preview — schedule rendering, tie resolution, capacity prompts, commit
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 8cb72c96a3cc2a5410626820f1bb2cb1797ff16c
 **Depends on:** Phase 4
 **Estimated scope:** 7 files (3 new components, 1 step component, 1 integration test, 1 import update, 1 test), ~450 lines
 
