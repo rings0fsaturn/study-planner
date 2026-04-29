@@ -17,26 +17,61 @@ interface FakeRemoteEvent {
   created_at: string;
 }
 
+interface FakeCheckpointRow {
+  user_id: string;
+  as_of_remote_id: number;
+  schema_version: number;
+  event_count: number;
+  created_at: string;
+}
+
 function createFakeSupabase(): SupabaseClientLike & {
   _events: FakeRemoteEvent[];
   _snapshots: Map<string, Blob>;
+  _checkpoints: Map<string, FakeCheckpointRow>;
   _shouldFailNextPush: boolean;
   _shouldFailNextPull: boolean;
 } {
   let nextRemoteId = 1;
   const events: FakeRemoteEvent[] = [];
   const snapshots = new Map<string, Blob>();
+  const checkpoints = new Map<string, FakeCheckpointRow>();
   const flags = { shouldFailNextPush: false, shouldFailNextPull: false };
 
   const self = {
     get _events() { return events; },
     get _snapshots() { return snapshots; },
+    get _checkpoints() { return checkpoints; },
     get _shouldFailNextPush() { return flags.shouldFailNextPush; },
     set _shouldFailNextPush(v: boolean) { flags.shouldFailNextPush = v; },
     get _shouldFailNextPull() { return flags.shouldFailNextPull; },
     set _shouldFailNextPull(v: boolean) { flags.shouldFailNextPull = v; },
 
     from: (table: string) => {
+      if (table === 'sync_checkpoints') {
+        return {
+          upsert: (row: Omit<FakeCheckpointRow, 'created_at'>, _options?: { onConflict: string }) => {
+            const fullRow: FakeCheckpointRow = {
+              ...row,
+              created_at: new Date().toISOString(),
+            };
+            checkpoints.set(row.user_id, fullRow);
+            return { data: fullRow, error: null };
+          },
+          select: (_columns?: string) => {
+            return {
+              eq: (_column: string, value: unknown) => {
+                return {
+                  maybeSingle: async () => {
+                    const row = checkpoints.get(value as string);
+                    return { data: row ?? null, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      }
       if (table !== 'events') {
         throw new Error(`Unexpected table: ${table}`);
       }

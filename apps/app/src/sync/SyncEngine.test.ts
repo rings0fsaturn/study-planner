@@ -14,21 +14,55 @@ interface FakeRemoteEvent {
   created_at: string;
 }
 
-function createFakeSupabase(): SupabaseClientLike & { _events: FakeRemoteEvent[]; _shouldFailNextPush: boolean; _shouldFailNextPull: boolean; _snapshots: Map<string, Blob> } {
+interface FakeCheckpointRow {
+  user_id: string;
+  as_of_remote_id: number;
+  schema_version: number;
+  event_count: number;
+  created_at: string;
+}
+
+function createFakeSupabase(): SupabaseClientLike & { _events: FakeRemoteEvent[]; _shouldFailNextPush: boolean; _shouldFailNextPull: boolean; _snapshots: Map<string, Blob>; _checkpoints: Map<string, FakeCheckpointRow> } {
   let nextRemoteId = 1;
   const events: FakeRemoteEvent[] = [];
   const snapshots = new Map<string, Blob>();
+  const checkpoints = new Map<string, FakeCheckpointRow>();
   const flags = { shouldFailNextPush: false, shouldFailNextPull: false };
 
-  const self: SupabaseClientLike & { _events: FakeRemoteEvent[]; _shouldFailNextPush: boolean; _shouldFailNextPull: boolean; _snapshots: Map<string, Blob> } = {
+  const self: SupabaseClientLike & { _events: FakeRemoteEvent[]; _shouldFailNextPush: boolean; _shouldFailNextPull: boolean; _snapshots: Map<string, Blob>; _checkpoints: Map<string, FakeCheckpointRow> } = {
     get _events() { return events; },
     get _shouldFailNextPush() { return flags.shouldFailNextPush; },
     set _shouldFailNextPush(v: boolean) { flags.shouldFailNextPush = v; },
     get _shouldFailNextPull() { return flags.shouldFailNextPull; },
     set _shouldFailNextPull(v: boolean) { flags.shouldFailNextPull = v; },
     get _snapshots() { return snapshots; },
+    get _checkpoints() { return checkpoints; },
 
     from: (table: string) => {
+      if (table === 'sync_checkpoints') {
+        return {
+          upsert: (row: Omit<FakeCheckpointRow, 'created_at'>, _options?: { onConflict: string }) => {
+            const fullRow: FakeCheckpointRow = {
+              ...row,
+              created_at: new Date().toISOString(),
+            };
+            checkpoints.set(row.user_id, fullRow);
+            return { data: fullRow, error: null };
+          },
+          select: (_columns?: string) => {
+            return {
+              eq: (_column: string, value: unknown) => {
+                return {
+                  maybeSingle: async () => {
+                    const row = checkpoints.get(value as string);
+                    return { data: row ?? null, error: null };
+                  },
+                };
+              },
+            };
+          },
+        };
+      }
       if (table !== 'events') {
         throw new Error(`Unexpected table: ${table}`);
       }
@@ -526,6 +560,13 @@ describe('SyncEngine', () => {
       };
       const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
       fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+      fakeSupabase._checkpoints.set(userId, {
+        user_id: userId,
+        as_of_remote_id: 10,
+        schema_version: 1,
+        event_count: 2,
+        created_at: '2024-01-15T10:00:00Z',
+      });
 
       const engine = createEngine();
       await engine.restoreFromCloud();
@@ -554,6 +595,13 @@ describe('SyncEngine', () => {
       };
       const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
       fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+      fakeSupabase._checkpoints.set(userId, {
+        user_id: userId,
+        as_of_remote_id: 10,
+        schema_version: 1,
+        event_count: 1,
+        created_at: '2024-01-15T10:00:00Z',
+      });
 
       const engine = createEngine();
       await engine.restoreFromCloud();
@@ -584,6 +632,13 @@ describe('SyncEngine', () => {
       };
       const blob = new Blob([JSON.stringify(snapshotData)], { type: 'application/json' });
       fakeSupabase._snapshots.set(`${userId}/snapshot.json`, blob);
+      fakeSupabase._checkpoints.set(userId, {
+        user_id: userId,
+        as_of_remote_id: 10,
+        schema_version: 999,
+        event_count: 1,
+        created_at: '2024-01-15T10:00:00Z',
+      });
 
       const engine = createEngine();
       await engine.restoreFromCloud();
@@ -593,7 +648,7 @@ describe('SyncEngine', () => {
 
       const state = engine.getState();
       expect(state.status).toBe('error');
-      expect(state.lastError).toContain('schemaVersion');
+      expect(state.lastError).toContain('schema v999');
     });
   });
 
