@@ -218,3 +218,229 @@ describe('regenerateRoadmap', () => {
     expect(pinnedSlot?.candidateMaterialIds).toContain('ddia')
   })
 })
+
+import fc from 'fast-check'
+
+describe('property tests', () => {
+  const validInputArbitrary = fc.record({
+    materials: fc.array(
+      fc.record({
+        id: fc.string({ minLength: 1, maxLength: 10 }),
+        title: fc.string({ minLength: 1, maxLength: 30 }),
+        totalMinutes: fc.integer({ min: 30, max: 2000 }),
+        role: fc.constantFrom('anchor', 'foundation', 'practice'),
+        additionOrder: fc.integer({ min: 0, max: 100 }),
+      }),
+      { minLength: 1, maxLength: 5 }
+    ),
+    weeks: fc.integer({ min: 1, max: 16 }),
+    startDate: fc.constant('2026-04-29'),
+    selectedStudyDays: fc.subarray(
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const,
+      { minLength: 1, maxLength: 6 }
+    ),
+    weekdayHours: fc.integer({ min: 0, max: 8 }),
+    weekendHours: fc.integer({ min: 0, max: 8 }),
+  }).map(input => ({
+    ...input,
+    // Ensure at least one day has hours > 0
+    weekdayHours: input.weekdayHours === 0 && input.weekendHours === 0 ? 2 : input.weekdayHours,
+  }))
+
+  it('determinism: same input produces same output', () => {
+    fc.assert(fc.property(validInputArbitrary, (rawInput) => {
+      const input = rawInput as RoadmapInput
+      const a = generateRoadmap(input)
+      const b = generateRoadmap(input)
+      expect(a).toEqual(b)
+    }))
+  })
+
+  it('foundation never appears in last third for N >= 3', () => {
+    fc.assert(fc.property(validInputArbitrary, (rawInput) => {
+      const input = rawInput as RoadmapInput
+      if (input.weeks < 3) return true
+      const cutoff = Math.floor(2 * input.weeks / 3)
+      const result = generateRoadmap(input)
+      for (const week of result.weeks) {
+        if (week.weekIndex >= cutoff) {
+          for (const slot of week.slots) {
+            if (slot.role === 'foundation') {
+              return false
+            }
+          }
+        }
+      }
+      return true
+    }))
+  })
+
+  it('practice never appears in first third for N >= 3', () => {
+    fc.assert(fc.property(validInputArbitrary, (rawInput) => {
+      const input = rawInput as RoadmapInput
+      if (input.weeks < 3) return true
+      const cutoff = Math.floor(input.weeks / 3)
+      const result = generateRoadmap(input)
+      for (const week of result.weeks) {
+        if (week.weekIndex < cutoff) {
+          for (const slot of week.slots) {
+            if (slot.role === 'practice') {
+              return false
+            }
+          }
+        }
+      }
+      return true
+    }))
+  })
+})
+
+describe('snapshot tests', () => {
+  it('canonical: DDIA + CAP + Mocks, 8 weeks', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'Designing Data-Intensive Applications', totalMinutes: 600, role: 'anchor', additionOrder: 0 },
+        { id: 'cap', title: 'CAP theorem', totalMinutes: 200, role: 'foundation', additionOrder: 1 },
+        { id: 'mocks', title: 'Mock interviews', totalMinutes: 300, role: 'practice', additionOrder: 2 },
+      ],
+      weeks: 8,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed', 'Sat'],
+      weekdayHours: 2,
+      weekendHours: 3,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('single material, 4 weeks', () => {
+    const input: RoadmapInput = {
+      materials: [{ id: 'ddia', title: 'DDIA', totalMinutes: 600, role: 'anchor', additionOrder: 0 }],
+      weeks: 4,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('two anchors round-robin, 6 weeks', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 600, role: 'anchor', additionOrder: 0 },
+        { id: 'alex', title: 'Alex Xu System Design', totalMinutes: 400, role: 'anchor', additionOrder: 1 },
+      ],
+      weeks: 6,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed', 'Sat'],
+      weekdayHours: 2,
+      weekendHours: 3,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('N=1 emergency cram', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 200, role: 'anchor', additionOrder: 0 },
+        { id: 'cap', title: 'CAP', totalMinutes: 100, role: 'foundation', additionOrder: 1 },
+      ],
+      weeks: 1,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed', 'Sat'],
+      weekdayHours: 4,
+      weekendHours: 6,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('N=2 short prep', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 300, role: 'anchor', additionOrder: 0 },
+      ],
+      weeks: 2,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('over-capacity', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 3000, role: 'anchor', additionOrder: 0 },
+      ],
+      weeks: 2,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 1,
+      weekendHours: 0,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('under-capacity-buffer', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 60, role: 'anchor', additionOrder: 0 },
+      ],
+      weeks: 4,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    expect(generateRoadmap(input)).toMatchSnapshot()
+  })
+
+  it('regenerate with pins', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 600, role: 'anchor', additionOrder: 0 },
+        { id: 'cap', title: 'CAP', totalMinutes: 200, role: 'foundation', additionOrder: 1 },
+      ],
+      weeks: 4,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    const pins: import('./roadmap-engine').Pin[] = [
+      { weekIndex: 0, dayOfWeek: 'Mon', materialId: 'ddia', sessionTitle: 'DDIA · session 1', plannedMinutes: 60, reason: 'completed' },
+    ]
+    expect(regenerateRoadmap(input, pins)).toMatchSnapshot()
+  })
+
+  it('addMaterial fits into rest days', () => {
+    const input: RoadmapInput = {
+      materials: [{ id: 'ddia', title: 'DDIA', totalMinutes: 180, role: 'anchor', additionOrder: 0 }],
+      weeks: 4,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    const roadmap = generateRoadmap(input)
+    const newMaterial: Material = { id: 'cap', title: 'CAP', totalMinutes: 60, role: 'foundation', additionOrder: 1 }
+    expect(addMaterialToRoadmap(roadmap, newMaterial, [])).toMatchSnapshot()
+  })
+
+  it('removeMaterial clears rest days', () => {
+    const input: RoadmapInput = {
+      materials: [
+        { id: 'ddia', title: 'DDIA', totalMinutes: 180, role: 'anchor', additionOrder: 0 },
+        { id: 'cap', title: 'CAP', totalMinutes: 60, role: 'foundation', additionOrder: 1 },
+      ],
+      weeks: 4,
+      startDate: '2026-04-29',
+      selectedStudyDays: ['Mon', 'Wed'],
+      weekdayHours: 2,
+      weekendHours: 0,
+    }
+    const roadmap = generateRoadmap(input)
+    expect(removeMaterialFromRoadmap(roadmap, 'cap', [])).toMatchSnapshot()
+  })
+})

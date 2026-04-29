@@ -1,0 +1,1501 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshot tests > N=1 emergency cram 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 1,
+    "totalCapacityMinutes": 600,
+    "totalMaterialMinutes": 300,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 300,
+        "suggestedWeeks": 1,
+      },
+      "kind": "under-capacity-buffer",
+    },
+    {
+      "detail": {
+        "allocated": 120,
+        "materialId": "ddia",
+        "total": 200,
+      },
+      "kind": "material-underfilled",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 120,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 100,
+          "role": "foundation",
+          "sessionTitle": "CAP · session 1 of 1",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 120,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 120,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 1",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 360,
+          "date": "2026-05-04",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > N=2 short prep 1`] = `
+{
+  "capacityCheck": {
+    "status": "over-capacity",
+    "totalCapacityMinutes": 240,
+    "totalMaterialMinutes": 300,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "overflowMinutes": 60,
+      },
+      "kind": "over-capacity",
+    },
+    {
+      "detail": {
+        "allocated": 60,
+        "materialId": "ddia",
+        "total": 300,
+      },
+      "kind": "material-underfilled",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 1",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > addMaterial fits into rest days 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 240,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 300,
+        "suggestedWeeks": 2,
+      },
+      "kind": "under-capacity-buffer",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 3",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 2 of 3",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 3 of 3",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "foundation",
+          "sessionTitle": "CAP · session 1 of 1",
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > canonical: DDIA + CAP + Mocks, 8 weeks 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 4,
+    "totalCapacityMinutes": 2400,
+    "totalMaterialMinutes": 1100,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 1300,
+        "suggestedWeeks": 4,
+      },
+      "kind": "under-capacity-buffer",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "foundation",
+          "sessionTitle": "CAP theorem · session 1 of 4",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "foundation",
+          "sessionTitle": "CAP theorem · session 2 of 4",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-04",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "Designing Data-Intensive Applications · session 1 of 4",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "foundation",
+          "sessionTitle": "CAP theorem · session 3 of 4",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "cap",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 20,
+          "role": "foundation",
+          "sessionTitle": "CAP theorem · session 4 of 4",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-11",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "Designing Data-Intensive Applications · session 2 of 4",
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "mocks",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "practice",
+          "sessionTitle": "Mock interviews · session 1 of 5",
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [
+            "mocks",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "practice",
+          "sessionTitle": "Mock interviews · session 2 of 5",
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-18",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "Designing Data-Intensive Applications · session 3 of 4",
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "mocks",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "practice",
+          "sessionTitle": "Mock interviews · session 3 of 5",
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [
+            "mocks",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "practice",
+          "sessionTitle": "Mock interviews · session 4 of 5",
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-25",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "Designing Data-Intensive Applications · session 4 of 4",
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "mocks",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-27",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "practice",
+          "sessionTitle": "Mock interviews · session 5 of 5",
+          "weekIndex": 4,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-29",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 4,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 180,
+          "date": "2026-06-01",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 4,
+        },
+      ],
+      "startDate": "2026-05-27",
+      "weekIndex": 4,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-03",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 5,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-05",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 5,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 180,
+          "date": "2026-06-08",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 5,
+        },
+      ],
+      "startDate": "2026-06-03",
+      "weekIndex": 5,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-10",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 6,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-12",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 6,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 180,
+          "date": "2026-06-15",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 6,
+        },
+      ],
+      "startDate": "2026-06-10",
+      "weekIndex": 6,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-17",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 7,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-19",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 7,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 180,
+          "date": "2026-06-22",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 7,
+        },
+      ],
+      "startDate": "2026-06-17",
+      "weekIndex": 7,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > over-capacity 1`] = `
+{
+  "capacityCheck": {
+    "status": "over-capacity",
+    "totalCapacityMinutes": 120,
+    "totalMaterialMinutes": 3000,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "overflowMinutes": 2880,
+      },
+      "kind": "over-capacity",
+    },
+    {
+      "detail": {
+        "allocated": 30,
+        "materialId": "ddia",
+        "total": 3000,
+      },
+      "kind": "material-underfilled",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 30,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 30,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 30,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 1",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 30,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 30,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > regenerate with pins 1`] = `
+{
+  "capacityCheck": {
+    "status": "fits",
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 480,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "overflowMinutes": 260,
+      },
+      "kind": "over-capacity",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 2 of 8",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 3 of 8",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 4 of 8",
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 5 of 8",
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 6 of 8",
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 7 of 8",
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 8 of 8",
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > removeMaterial clears rest days 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 180,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 240,
+        "suggestedWeeks": 2,
+      },
+      "kind": "under-capacity-buffer",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 3",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 2 of 3",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 3 of 3",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > single material, 4 weeks 1`] = `
+{
+  "capacityCheck": {
+    "status": "over-capacity",
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 600,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "overflowMinutes": 120,
+      },
+      "kind": "over-capacity",
+    },
+    {
+      "detail": {
+        "allocated": 480,
+        "materialId": "ddia",
+        "total": 600,
+      },
+      "kind": "material-underfilled",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 8",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 2 of 8",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 3 of 8",
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 4 of 8",
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 5 of 8",
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 6 of 8",
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 7 of 8",
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 8 of 8",
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > two anchors round-robin, 6 weeks 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 4,
+    "totalCapacityMinutes": 1800,
+    "totalMaterialMinutes": 1000,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 800,
+        "suggestedWeeks": 4,
+      },
+      "kind": "under-capacity-buffer",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-04",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 3",
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "foundation",
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [
+            "alex",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-11",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "Alex Xu System Design · session 1 of 3",
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-18",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 2 of 3",
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [
+            "alex",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-05-25",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "Alex Xu System Design · session 2 of 3",
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-27",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 4,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-29",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 4,
+        },
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-06-01",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 180,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 3 of 3",
+          "weekIndex": 4,
+        },
+      ],
+      "startDate": "2026-05-27",
+      "weekIndex": 4,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-03",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 5,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-06-05",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": "practice",
+          "sessionTitle": null,
+          "weekIndex": 5,
+        },
+        {
+          "candidateMaterialIds": [
+            "alex",
+          ],
+          "capacityMinutes": 180,
+          "date": "2026-06-08",
+          "dayOfWeek": "Sat",
+          "plannedMinutes": 40,
+          "role": "anchor",
+          "sessionTitle": "Alex Xu System Design · session 3 of 3",
+          "weekIndex": 5,
+        },
+      ],
+      "startDate": "2026-06-03",
+      "weekIndex": 5,
+    },
+  ],
+}
+`;
+
+exports[`snapshot tests > under-capacity-buffer 1`] = `
+{
+  "capacityCheck": {
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 1,
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 60,
+  },
+  "warnings": [
+    {
+      "detail": {
+        "bufferMinutes": 420,
+        "suggestedWeeks": 1,
+      },
+      "kind": "under-capacity-buffer",
+    },
+  ],
+  "weeks": [
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [
+            "ddia",
+          ],
+          "capacityMinutes": 60,
+          "date": "2026-04-29",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 60,
+          "role": "anchor",
+          "sessionTitle": "DDIA · session 1 of 1",
+          "weekIndex": 0,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-01",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 0,
+        },
+      ],
+      "startDate": "2026-04-29",
+      "weekIndex": 0,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-06",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-08",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 1,
+        },
+      ],
+      "startDate": "2026-05-06",
+      "weekIndex": 1,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-13",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-15",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 2,
+        },
+      ],
+      "startDate": "2026-05-13",
+      "weekIndex": 2,
+    },
+    {
+      "slots": [
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-20",
+          "dayOfWeek": "Mon",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+        {
+          "candidateMaterialIds": [],
+          "capacityMinutes": 60,
+          "date": "2026-05-22",
+          "dayOfWeek": "Wed",
+          "plannedMinutes": 0,
+          "role": null,
+          "sessionTitle": null,
+          "weekIndex": 3,
+        },
+      ],
+      "startDate": "2026-05-20",
+      "weekIndex": 3,
+    },
+  ],
+}
+`;
