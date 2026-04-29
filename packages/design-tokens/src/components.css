@@ -297,3 +297,76 @@
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
 }
+
+/* ---- Auth wordmark ---- */
+.auth-mark {
+  text-align: center;
+  margin: var(--space-5) 0;
+}
+.auth-mark-name {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 28px;
+  color: var(--text-primary);
+  letter-spacing: -0.015em;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+.auth-mark-tag {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ---- Divider with label ---- */
+.divider-with-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-4) 0;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+.divider-with-label::before,
+.divider-with-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--rule-soft);
+}
+
+/* ---- Social auth button ---- */
+.auth-social {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: var(--surface-page);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-md);
+  padding: 11px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+  transition: border-color var(--duration-2) var(--ease-out);
+}
+.auth-social:hover { border-color: var(--ink-faint); }
+.auth-social:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.auth-social:disabled:hover { border-color: var(--rule); }
+.auth-social-glyph {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}

@@ -21,10 +21,13 @@ export function FieldLabel({ children, htmlFor }: FieldLabelProps) {
   );
 }
 
-type FieldInputProps = InputHTMLAttributes<HTMLInputElement>;
+interface FieldInputProps extends InputHTMLAttributes<HTMLInputElement> {
+  error?: boolean;
+}
 
-export function FieldInput(props: FieldInputProps) {
-  return <input className="field" {...props} />;
+export function FieldInput({ error, className, ...props }: FieldInputProps) {
+  const classes = ['field', error && 'has-error', className].filter(Boolean).join(' ');
+  return <input className={classes} {...props} />;
 }
 
 type FieldTextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;

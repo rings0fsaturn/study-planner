@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import GoogleIcon from '../components/GoogleIcon';
 import { FieldGroup, FieldLabel, FieldInput, FieldHelper } from '../components/Field';
 
 export function SignIn() {
@@ -33,9 +34,10 @@ export function SignIn() {
     <div className="app">
       <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 1rem' }}>
         <Card variant="elevated" style={{ maxWidth: '400px', width: '100%', padding: '2rem' }}>
-          <h1 className="t-display-3" style={{ marginBottom: '1.5rem', textAlign: 'center' }}>
-            Sign in
-          </h1>
+          <div className="auth-mark">
+            <div className="auth-mark-name">Study Tracker</div>
+            <div className="auth-mark-tag">A quiet companion</div>
+          </div>
 
           <form onSubmit={handleSubmit}>
             <FieldGroup>
@@ -47,6 +49,7 @@ export function SignIn() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
+                placeholder="you@example.com"
               />
             </FieldGroup>
 
@@ -59,27 +62,58 @@ export function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
+                placeholder="At least 8 characters"
+                error={!!error}
               />
             </FieldGroup>
 
             {error && (
-              <FieldHelper error>{error}</FieldHelper>
+              <FieldHelper error>
+                <svg className="icon icon-sm" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ verticalAlign: '-3px', marginRight: '4px' }}>
+                  <circle cx="12" cy="12" r="9" />
+                  <line x1="12" y1="8" x2="12" y2="12" />
+                  <line x1="12" y1="16" x2="12.01" y2="16" />
+                </svg>
+                {error}
+              </FieldHelper>
             )}
 
-            <Button type="submit" variant="accent" block disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
+            <Button type="submit" variant="primary" block disabled={loading}>
+              {loading ? 'Signing in...' : 'Continue'}
+            </Button>
+
+            <Button
+              type="button"
+              variant="ghost"
+              block
+              size="sm"
+              onClick={() => navigate('/reset-password')}
+              style={{ marginTop: '6px' }}
+            >
+              Forgot password?
             </Button>
           </form>
+
+          <div className="divider-with-label">or</div>
+
+          <button className="auth-social" disabled title="Coming soon">
+            <GoogleIcon className="auth-social-glyph" />
+            Continue with Google
+          </button>
 
           <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
             <p className="t-body" style={{ marginBottom: '0.5rem' }}>
               Don't have an account?{' '}
               <Link to="/sign-up">Sign up</Link>
             </p>
-            <p className="t-body">
-              <Link to="/reset-password">Forgot password?</Link>
-            </p>
           </div>
+
+          <p style={{ marginTop: '2rem', fontSize: '12px', color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: 1.5 }}>
+            By continuing you agree to our{' '}
+            <Link to="/terms" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>Terms</Link>
+            {' '}and{' '}
+            <Link to="/privacy" style={{ color: 'var(--text-secondary)', textDecoration: 'underline' }}>Privacy Policy</Link>.
+          </p>
         </Card>
       </div>
     </div>

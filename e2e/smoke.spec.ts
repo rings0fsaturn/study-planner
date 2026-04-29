@@ -56,9 +56,13 @@ test.describe('React app at /study/', () => {
 
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Forgot password?' })).toBeVisible();
+    await expect(page.locator('.auth-mark-name')).toContainText('Study Tracker');
+    await expect(page.locator('.auth-social')).toContainText('Continue with Google');
+    await expect(page.getByRole('link', { name: 'Terms' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Privacy Policy' })).toBeVisible();
   });
 
   test('sign-up page loads and shows confirmation form', async ({ page }) => {
@@ -77,7 +81,7 @@ test.describe('React app at /study/', () => {
 
     // Should redirect to sign-in
     await expect(page).toHaveURL(/.*sign-in/);
-    await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
+    await expect(page.locator('.auth-mark-name')).toContainText('Study Tracker');
   });
 
   test('auth-confirmed page loads', async ({ page }) => {
