@@ -3,6 +3,8 @@
  * Tunable parameters that may be A/B tested or adjusted post-launch.
  */
 
+import type { MaterialRole } from './roadmap-engine'
+
 export const DAY_OFFSETS: Record<string, number> = {
   Mon: 0,
   Tue: 1,
@@ -42,4 +44,16 @@ export const DEFAULT_ROADMAP_CONFIG: RoadmapConfig = {
     interviewKeyword: /interview/i,
     interviewSizeThreshold: 200,
   },
+}
+
+export const ROLE_TO_LABEL: Record<MaterialRole, string> = {
+  anchor: 'Main reading',
+  foundation: 'Foundations',
+  practice: 'Practice',
+}
+
+export const LABEL_TO_ROLE: Record<string, MaterialRole> = {
+  'Main reading': 'anchor',
+  'Foundations': 'foundation',
+  'Practice': 'practice',
 }

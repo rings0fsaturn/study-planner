@@ -10,6 +10,8 @@ export {
 // Config exports
 export {
   DEFAULT_ROADMAP_CONFIG,
+  ROLE_TO_LABEL,
+  LABEL_TO_ROLE,
   type RoadmapConfig,
 } from './constants'
 

@@ -41,6 +41,29 @@ export interface SyncMeta {
   value: unknown;
 }
 
+import type { DayOfWeek, Slot } from '@study-tracker/progress-engine'
+
+export interface MaterialAddedPayload {
+  materialId: string
+  title: string
+  estimatedDuration: number
+  url?: string
+  kind: 'manual'
+  role: 'anchor' | 'foundation' | 'practice'
+}
+
+export interface RoadmapCreatedPayload {
+  startDate: string
+  deadline: string
+  weeks: number
+  purpose?: string
+  selectedStudyDays: DayOfWeek[]
+  weekdayHours: number
+  weekendHours: number
+  weeklyHours: number
+  slots: Slot[]
+}
+
 export interface SupabaseClientLike {
   from: (table: string) => {
     insert: (values: Record<string, unknown> | Record<string, unknown>[]) => {

@@ -519,7 +519,7 @@ db.version(3).stores({
 
 ### Phase 1: Foundation — CSS, types, deps, schema, ROLE mapping
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete — 7fa7df5db316659ba5ca43a4f70eda8684e1c25a
 **Depends on:** none — can start immediately
 **Estimated scope:** 6 files modified, ~120 lines
 
