@@ -137,7 +137,7 @@ function generateRoadmapCore(
   cfg: RoadmapConfig,
   occupiedSlots: Map<string, { materialId: string; plannedMinutes: number; sessionTitle: string | null }>,
 ): RoadmapOutput {
-  const validation = validateInputs(input)
+  validateInputs(input)
   const grid = buildSlotGrid(input)
   const totalCapacityMinutes = sumCapacity(grid)
   const totalMaterialMinutes = input.materials.reduce(
@@ -468,7 +468,7 @@ function checkAnchorStride(slots: Slot[], weeks: number, cfg: RoadmapConfig): Wa
 function assignMaterialsToSlots(
   slots: Slot[],
   materials: Material[],
-  cfg: RoadmapConfig,
+  _cfg: RoadmapConfig,
 ): Slot[] {
   const out = slots.map((s) => ({ ...s }))
   const byRole: Record<MaterialRole, Material[]> = {
@@ -497,9 +497,10 @@ function assignMaterialsToSlots(
 
     for (const slot of roleSlots) {
       if (queue.length === 0) {
-        // Queue empty before slots exhausted — emit as multi-candidate
-        slot.candidateMaterialIds = byRole[role].map((m) => m.id)
-        slot.plannedMinutes = slot.capacityMinutes
+        // Queue empty before slots exhausted — slot becomes a rest day
+        slot.role = null
+        slot.candidateMaterialIds = []
+        slot.plannedMinutes = 0
         slot.sessionTitle = null
         continue
       }
@@ -741,8 +742,7 @@ export function regenerateRoadmap(
 ): RoadmapOutput {
   const cfg = { ...DEFAULT_ROADMAP_CONFIG, ...config }
 
-  // Build set of pin keys and compute remaining material minutes
-  const pinnedKeys = new Set(pins.map(p => `${p.weekIndex}:${p.dayOfWeek}`))
+  // Compute remaining material minutes (subtract pinned minutes)
   const pinnedMinutes = new Map<string, number>()
   for (const p of pins) {
     if (p.materialId) {
