@@ -240,3 +240,60 @@
   letter-spacing: 0.07em;
   color: var(--text-tertiary);
 }
+
+/* ---- Sync Indicator ---- */
+.sync-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: var(--paper-deep);
+  border: 1px solid var(--rule);
+  cursor: pointer;
+  transition: border-color var(--duration-2) var(--ease-out),
+              color var(--duration-2) var(--ease-out);
+  line-height: 1.4;
+}
+.sync-indicator:hover:not(.syncing) {
+  border-color: var(--ink-faint);
+  color: var(--text-secondary);
+}
+.sync-indicator:active:not(.syncing) {
+  transform: translateY(1px);
+}
+.sync-indicator:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.sync-indicator.syncing {
+  cursor: default;
+}
+.sync-indicator-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.sync-indicator.idle .sync-indicator-dot {
+  background: var(--moss);
+}
+.sync-indicator.syncing .sync-indicator-dot {
+  background: var(--terracotta);
+  animation: pulse-sync 1.2s var(--ease-out) infinite;
+}
+.sync-indicator.failed .sync-indicator-dot {
+  background: var(--rust);
+}
+.sync-indicator.offline .sync-indicator-dot {
+  background: var(--ink-faint);
+}
+
+@keyframes pulse-sync {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}

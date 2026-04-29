@@ -21,6 +21,11 @@ function createEventStore(userId: string): EventStore {
   db.version(1).stores({
     events: '++id, kind, createdAt'
   });
+  db.version(2).stores({
+    events: '++id, kind, createdAt',
+    sync_queue: '++id, kind, createdAt, retries',
+    sync_meta: 'key'
+  });
   return new EventStore(db);
 }
 
