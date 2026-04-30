@@ -7,6 +7,10 @@ import { useSync } from '../../sync/useSync'
 import { useEventStore } from '../../events/useEventStore'
 import { SchedulePreview } from '../components/SchedulePreview'
 import { OverCapacityModal, UnderCapacityBanner } from '../components/CapacityPrompt'
+import { SwapFab } from '../components/SwapFab'
+import { useSwapStateMachine, type SlotKey } from '../components/useSwapStateMachine'
+import { computeSwapEdits } from '../components/computeSwapEdits'
+import { useMatchMedia } from '../../lib/useMatchMedia'
 import type { MaterialAddedPayload, RoadmapCreatedPayload } from '../../sync/types'
 
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -26,9 +30,9 @@ export function Step3Preview() {
   const [committing, setCommitting] = useState(false)
 
   const previewEdits = useMemo(() => {
-    const edits = new Map<string, { materialId: string | null; sessionTitle: string | null }>()
+    const edits = new Map<string, { materialId: string | null; sessionTitle: string | null; plannedMinutes: number }>()
     for (const e of state.previewEdits) {
-      edits.set(`${e.weekIndex}:${e.dayOfWeek}`, { materialId: e.materialId, sessionTitle: e.sessionTitle })
+      edits.set(`${e.weekIndex}:${e.dayOfWeek}`, { materialId: e.materialId, sessionTitle: e.sessionTitle, plannedMinutes: e.plannedMinutes })
     }
     return edits
   }, [state.previewEdits])
@@ -64,13 +68,14 @@ export function Step3Preview() {
         const key = `${slot.weekIndex}:${slot.dayOfWeek}`
         const edit = previewEdits.get(key)
         if (edit) {
-          if (edit.materialId && slot.candidateMaterialIds.includes(edit.materialId)) {
-            slot.candidateMaterialIds = [edit.materialId]
-          } else if (edit.materialId === null) {
-            slot.candidateMaterialIds = []
+          if (edit.materialId !== undefined) {
+            slot.candidateMaterialIds = edit.materialId ? [edit.materialId] : []
           }
           if (edit.sessionTitle !== null) {
             slot.sessionTitle = edit.sessionTitle
+          }
+          if (edit.plannedMinutes > 0) {
+            slot.plannedMinutes = edit.plannedMinutes
           }
         }
       }
@@ -108,6 +113,31 @@ export function Step3Preview() {
     }
     dispatch({ type: 'SET_PREVIEW_EDITS', edits })
   }, [state.previewEdits, dispatch])
+
+  const isDesktop = useMatchMedia('(min-width: 1024px)')
+
+  const isSlotSwappable = useCallback((key: SlotKey): boolean => {
+    if (!displayRoadmap) return false
+    const slot = displayRoadmap.weeks
+      .flatMap(w => w.slots)
+      .find(s => s.weekIndex === key.weekIndex && s.dayOfWeek === key.dayOfWeek)
+    return !!slot && slot.candidateMaterialIds.length < 2
+  }, [displayRoadmap])
+
+  const handleSwap = useCallback((source: SlotKey, dest: SlotKey) => {
+    if (!displayRoadmap) return
+    const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+    const sourceSlot = allSlots.find(s => s.weekIndex === source.weekIndex && s.dayOfWeek === source.dayOfWeek)
+    const destSlot = allSlots.find(s => s.weekIndex === dest.weekIndex && s.dayOfWeek === dest.dayOfWeek)
+    if (!sourceSlot || !destSlot) return
+    const newEdits = computeSwapEdits(sourceSlot, destSlot, state.previewEdits)
+    dispatch({ type: 'SET_PREVIEW_EDITS', edits: newEdits })
+  }, [displayRoadmap, state.previewEdits, dispatch])
+
+  const swapMachine = useSwapStateMachine({
+    isSlotSwappable,
+    onExecuteSwap: handleSwap,
+  })
 
   const handleCompress = useCallback(() => {
     // Recompute with capacityCheck.suggestedWeeks. See OQ-03 for the
@@ -215,8 +245,21 @@ export function Step3Preview() {
           materials={state.materials.map(m => ({ id: m.id, title: m.title }))}
           onResolveTie={handleResolveTie}
           onRename={handleRename}
+          swapState={swapMachine.state}
+          onTapSlot={swapMachine.tapSlot}
+          onStartDrag={swapMachine.startDrag}
+          onDrop={swapMachine.drop}
+          onCancelDrag={swapMachine.cancelDrag}
+          isDesktop={isDesktop}
         />
       )}
+
+      <SwapFab
+        swapState={swapMachine.state}
+        onEnterSwapMode={swapMachine.enterSwapMode}
+        onExitSwapMode={swapMachine.exitSwapMode}
+        onProceed={swapMachine.proceed}
+      />
 
       <button className="btn btn-ghost btn-sm btn-block onboarding-preview-mobile-only">
         Show all {roadmapInput.weeks} weeks

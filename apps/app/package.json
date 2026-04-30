@@ -12,6 +12,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@dnd-kit/react": "^0.4.0",
     "@study-tracker/design-tokens": "workspace:*",
     "@study-tracker/progress-engine": "workspace:*",
     "@supabase/supabase-js": "^2.105.0",
