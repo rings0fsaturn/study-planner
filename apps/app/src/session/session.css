@@ -1,0 +1,173 @@
+/* =================================================================
+   SESSION — Layout and component styles
+   ================================================================= */
+
+/* ---- Layout container ---- */
+.session-layout {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 20px 24px;
+  flex: 1;
+  min-height: 0;
+}
+
+.session-layout-centered {
+  justify-content: center;
+}
+
+/* ---- Top bar ---- */
+.session-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+/* ---- Pause / Resume button ---- */
+.session-pause-resume {
+  padding: 6px 8px;
+  margin-left: -8px;
+  color: var(--text-secondary);
+}
+
+.session-pause-icon {
+  font-size: 12px;
+  margin-right: 4px;
+}
+
+/* ---- Eyebrow colors ---- */
+.eyebrow-moss { color: var(--moss); letter-spacing: 0.08em; }
+.eyebrow-clay { color: var(--clay); letter-spacing: 0.08em; }
+.eyebrow-terracotta { color: var(--terracotta); letter-spacing: 0.08em; }
+.eyebrow-faint { color: var(--ink-faint); letter-spacing: 0.08em; }
+
+/* ---- Pulse dot states ---- */
+.session-pulse-dot.paused {
+  background: var(--ink-faint);
+  animation: none;
+}
+
+.session-pulse-dot.break {
+  background: var(--clay);
+}
+
+/* ---- Timer large (desktop / manual material) ---- */
+.session-timer-large {
+  font-size: 72px;
+}
+
+/* ---- Timer of line — overrun variant ---- */
+.session-timer-of-overrun {
+  color: var(--terracotta-d);
+}
+
+/* ---- Pomodoro indicator ---- */
+.session-pomo-indicator {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: center;
+  margin-top: var(--space-1);
+  margin-bottom: var(--space-1);
+}
+
+.pomo-work { color: var(--moss); }
+.pomo-break { color: var(--clay); }
+.pomo-overtime { color: var(--moss); }
+
+/* ---- Session frame — break tint ---- */
+.session-frame-break {
+  background: rgba(194, 142, 90, 0.05);
+}
+
+/* ---- Open material button ---- */
+.session-open-material {
+  margin-top: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+/* ---- Action buttons spacing ---- */
+.session-actions {
+  margin-top: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.session-come-back {
+  color: var(--text-tertiary);
+}
+
+/* ---- Modal styles ---- */
+.modal-title-em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.session-recovery-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+.session-walkaway-confirm {
+  margin-top: var(--space-4);
+}
+
+/* ---- Banner dismiss button ---- */
+.banner-dismiss {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+/* ---- Desktop layout ---- */
+@media (min-width: 1024px) {
+  .session-layout {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: var(--space-6) var(--space-5);
+  }
+
+  .session-timer-large,
+  .session-timer-time {
+    font-size: 96px;
+  }
+
+  .session-fab-end {
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    z-index: 10;
+  }
+
+  .session-fab-end .btn {
+    box-shadow: var(--shadow-md);
+    padding: 14px 28px;
+    font-size: 15px;
+  }
+}
+
+/* ---- No-session empty state ---- */
+.session-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  text-align: center;
+  padding: var(--space-8) var(--space-5);
+  gap: var(--space-4);
+}
+
+.session-empty p {
+  color: var(--text-secondary);
+  max-width: 260px;
+}

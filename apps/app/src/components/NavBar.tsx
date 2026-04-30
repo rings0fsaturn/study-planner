@@ -30,6 +30,15 @@ function RoadmapIcon() {
   );
 }
 
+function SessionIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">
@@ -41,6 +50,7 @@ function SettingsIcon() {
 
 const NAV_ITEMS = [
   { to: '/home', label: 'Home', icon: HomeIcon, prefix: '/home' },
+  { to: '/session', label: 'Session', icon: SessionIcon, prefix: '/session' },
   { to: '/week', label: 'Week', icon: WeekIcon, prefix: '/week' },
   { to: '/roadmap', label: 'Roadmap', icon: RoadmapIcon, prefix: '/roadmap' },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, prefix: '/settings' },

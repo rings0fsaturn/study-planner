@@ -168,7 +168,8 @@ function createEventStore(userId: string): { db: Dexie; eventStore: EventStore }
   db.version(1).stores({
     events: '++id, kind, createdAt',
     sync_queue: '++id, kind, createdAt, retries',
-    sync_meta: 'key'
+    sync_meta: 'key',
+    activeSession: 'id',
   });
   return { db, eventStore: new EventStore(db) };
 }

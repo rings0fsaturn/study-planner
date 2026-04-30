@@ -15,6 +15,7 @@ import { Week } from './pages/Week';
 import { Roadmap } from './pages/Roadmap';
 import { Roadmaps } from './pages/Roadmaps';
 import { Settings } from './pages/Settings';
+import { Session } from './pages/Session';
 import { AppShell } from './components/AppShell';
 import { useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
@@ -144,6 +145,7 @@ function AppRoutes() {
         }
       >
         <Route path="/home" element={<Home />} />
+        <Route path="/session" element={<Session />} />
         <Route path="/log" element={<Log />} />
         <Route path="/week" element={<Week />} />
         <Route path="/roadmap" element={<Roadmap />} />
