@@ -16,20 +16,22 @@ const PAPER_SVG = (
 )
 
 export function PasteAnimation({ triggerKey, pastedUrl }: PasteAnimationProps) {
-  const [phase, setPhase] = useState<'idle' | 'sliding' | 'flying' | 'message'>('idle')
+  const [phase, setPhase] = useState<'idle' | 'visible' | 'sliding' | 'flying' | 'message'>('idle')
   const [displayUrl, setDisplayUrl] = useState('')
 
   useEffect(() => {
     if (triggerKey === 0) return
 
     setDisplayUrl(pastedUrl)
-    setPhase('sliding')
+    setPhase('visible')
 
-    const t1 = setTimeout(() => setPhase('flying'), 500)
-    const t2 = setTimeout(() => setPhase('message'), 1000)
-    const t3 = setTimeout(() => setPhase('idle'), 4000)
+    const t0 = setTimeout(() => setPhase('sliding'), 1000)
+    const t1 = setTimeout(() => setPhase('flying'), 1800)
+    const t2 = setTimeout(() => setPhase('message'), 2400)
+    const t3 = setTimeout(() => setPhase('idle'), 5400)
 
     return () => {
+      clearTimeout(t0)
       clearTimeout(t1)
       clearTimeout(t2)
       clearTimeout(t3)
@@ -39,33 +41,32 @@ export function PasteAnimation({ triggerKey, pastedUrl }: PasteAnimationProps) {
   if (phase === 'idle' && triggerKey === 0) return null
 
   return (
-    <div style={{ position: 'relative', pointerEvents: 'none' }}>
-      {/* Sliding URL text */}
-      <AnimatePresence>
-        {phase === 'sliding' && (
-          <motion.div
-            key={`slide-${triggerKey}`}
-            initial={{ x: 0, opacity: 1 }}
-            animate={{ x: 200, opacity: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.45, ease: 'easeIn' }}
-            style={{
-              position: 'absolute',
-              top: '-38px',
-              left: '12px',
-              right: '40px',
-              overflow: 'hidden',
-              fontSize: '14px',
-              color: 'var(--text-tertiary)',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {displayUrl}
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+      <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: 'var(--radius-md)' }}>
+        <AnimatePresence>
+          {(phase === 'visible' || phase === 'sliding') && (
+            <motion.div
+              key={`slide-${triggerKey}`}
+              initial={{ x: 0, opacity: 1 }}
+              animate={phase === 'visible' ? { x: 0, opacity: 1 } : { x: 200, opacity: 0 }}
+              exit={{ opacity: 0 }}
+              transition={phase === 'visible' ? { duration: 0 } : { duration: 0.8, ease: 'easeIn' }}
+              style={{
+                padding: '11px 14px',
+                fontSize: '15px',
+                lineHeight: 1.4,
+                fontFamily: 'var(--font-body)',
+                color: 'var(--text-tertiary)',
+                whiteSpace: 'nowrap',
+                background: 'var(--surface-page)',
+              }}
+            >
+              {displayUrl}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
-      {/* Paper icon growing then flying */}
       <AnimatePresence>
         {(phase === 'sliding' || phase === 'flying') && (
           <motion.div
@@ -84,8 +85,8 @@ export function PasteAnimation({ triggerKey, pastedUrl }: PasteAnimationProps) {
             }
             style={{
               position: 'absolute',
-              top: '-44px',
-              right: '8px',
+              top: '10px',
+              right: '10px',
               color: 'var(--terracotta)',
               zIndex: 10,
             }}
@@ -95,7 +96,6 @@ export function PasteAnimation({ triggerKey, pastedUrl }: PasteAnimationProps) {
         )}
       </AnimatePresence>
 
-      {/* Helper message */}
       <AnimatePresence>
         {phase === 'message' && (
           <motion.div
@@ -105,10 +105,14 @@ export function PasteAnimation({ triggerKey, pastedUrl }: PasteAnimationProps) {
             exit={{ opacity: 0, y: -4 }}
             transition={{ duration: 0.3 }}
             style={{
+              position: 'absolute',
+              top: 'calc(100% + 4px)',
+              left: 0,
+              right: 0,
               fontSize: '12px',
               color: 'var(--moss)',
               fontStyle: 'italic',
-              marginTop: '4px',
+              background: 'var(--surface-page)',
             }}
           >
             Received URL, fetching. You may paste the next URL.

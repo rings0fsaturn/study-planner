@@ -55,12 +55,6 @@ export function Step3Materials() {
       return
     }
 
-    if (urlInputRef.current) {
-      urlInputRef.current.value = text
-      setTimeout(() => {
-        if (urlInputRef.current) urlInputRef.current.value = ''
-      }, 600)
-    }
     setLastPastedUrl(text)
     setPasteAnimKey(k => k + 1)
 
@@ -162,21 +156,22 @@ export function Step3Materials() {
 
       <div className="field-group">
         <label className="field-label">Paste a URL</label>
-        <input
-          ref={urlInputRef}
-          className={`field${urlError ? ' has-error' : ''}`}
-          type="url"
-          placeholder="youtube.com/… or any article link"
-          onPaste={handlePaste}
-        />
+        <div style={{ position: 'relative', width: '100%' }}>
+          <input
+            ref={urlInputRef}
+            className={`field${urlError ? ' has-error' : ''}`}
+            type="url"
+            placeholder="youtube.com/… or any article link"
+            onPaste={handlePaste}
+          />
+          <PasteAnimation triggerKey={pasteAnimKey} pastedUrl={lastPastedUrl} />
+        </div>
         {urlError ? (
           <div className="field-helper error">{urlError}</div>
         ) : (
           <div className="field-helper">We'll fetch the title and length for you.</div>
         )}
       </div>
-
-      <PasteAnimation triggerKey={pasteAnimKey} pastedUrl={lastPastedUrl} />
 
       <button className="btn btn-secondary btn-sm onboarding-add-manually-btn" onClick={handleAdd}>
         <svg className="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
