@@ -32,6 +32,13 @@ function createEventStore(userId: string): EventStore {
     sync_meta: 'key',
     onboardingDraft: 'id',
   });
+  db.version(4).stores({
+    events: '++id, kind, createdAt',
+    sync_queue: '++id, kind, createdAt, retries',
+    sync_meta: 'key',
+    onboardingDraft: 'id',
+    activeSession: 'id',
+  });
   return new EventStore(db);
 }
 

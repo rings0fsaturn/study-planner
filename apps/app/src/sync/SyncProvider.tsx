@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { SyncEngine } from './SyncEngine';
 import type { SupabaseClientLike, SyncState } from './types';
 import type { EventStore } from '../events/EventStore';
+import { DurabilityHooks } from '../lib/DurabilityHooks';
 
 const DEFAULT_OPTIONS = {
   visibilityIdleThresholdMs: 5 * 60 * 1000,
@@ -61,7 +62,7 @@ export function SyncProvider({ children, supabase, supabaseUrl, userId, eventSto
   const clientIdRef = useRef<string>(getOrCreateClientId());
   const lastUserIdRef = useRef<string | null>(null);
   const lastEventStoreRef = useRef<EventStore | null>(null);
-  const hiddenTimeRef = useRef<number>(0);
+  const durabilityRef = useRef<DurabilityHooks | null>(null);
 
   useEffect(() => {
     if (lastUserIdRef.current && lastUserIdRef.current !== userId) {
@@ -103,26 +104,21 @@ export function SyncProvider({ children, supabase, supabaseUrl, userId, eventSto
   }, [supabase, userId, eventStore]);
 
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        hiddenTimeRef.current = Date.now();
-      } else {
-        const hiddenDuration = Date.now() - hiddenTimeRef.current;
-        engineRef.current?.handleVisibilityChange(true, hiddenDuration).catch(() => {});
-        hiddenTimeRef.current = 0;
+    const hooks = new DurabilityHooks();
+    durabilityRef.current = hooks;
+
+    const unsub = hooks.subscribe((event) => {
+      if (event.type === 'visibilitychange' && !event.isHidden) {
+        engineRef.current?.handleVisibilityChange(true, event.hiddenDurationMs).catch(() => {});
+      } else if (event.type === 'pagehide') {
+        engineRef.current?.flushOnPageHide().catch(() => {});
       }
-    };
-
-    const handlePageHide = () => {
-      engineRef.current?.flushOnPageHide().catch(() => {});
-    };
-
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    window.addEventListener('pagehide', handlePageHide);
+    });
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      window.removeEventListener('pagehide', handlePageHide);
+      unsub();
+      hooks.destroy();
+      durabilityRef.current = null;
     };
   }, []);
 

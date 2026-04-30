@@ -26,6 +26,7 @@
   -webkit-user-select: none;
   line-height: 1;
 }
+.btn:hover { color: inherit; }
 .btn:active:not(:disabled) { transform: translateY(1px); }
 .btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
