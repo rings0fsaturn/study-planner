@@ -41,17 +41,42 @@ export interface SyncMeta {
   value: unknown;
 }
 
+import type { DayOfWeek, Slot } from '@study-tracker/progress-engine'
+
+export interface MaterialAddedPayload {
+  materialId: string
+  title: string
+  estimatedDuration: number
+  url?: string
+  kind: 'manual'
+  role: 'anchor' | 'foundation' | 'practice'
+}
+
+export interface RoadmapCreatedPayload {
+  startDate: string
+  deadline: string
+  weeks: number
+  purpose?: string
+  selectedStudyDays: DayOfWeek[]
+  weekdayHours: number
+  weekendHours: number
+  weeklyHours: number
+  slots: Slot[]
+}
+
 export interface SupabaseClientLike {
   from: (table: string) => {
     insert: (values: Record<string, unknown> | Record<string, unknown>[]) => {
       select: () => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
     };
+    upsert: (row: Record<string, unknown>, options?: Record<string, unknown>) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
     select: (columns?: string) => {
       eq: (column: string, value: unknown) => {
         order: (column: string, options?: { ascending?: boolean }) => {
           gt: (column: string, value: unknown) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
           gte: (column: string, value: unknown) => PromiseLike<{ data: Array<Record<string, unknown>> | null; error: Error | null }>;
         };
+        maybeSingle: () => PromiseLike<{ data: Record<string, unknown> | null; error: Error | null }>;
       };
     };
   };

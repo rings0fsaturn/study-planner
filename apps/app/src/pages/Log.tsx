@@ -47,8 +47,7 @@ export function Log() {
   };
 
   return (
-    <div className="app">
-      <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 1rem' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 1rem' }}>
         <Card variant="elevated" style={{ maxWidth: '420px', width: '100%', padding: '2rem' }}>
           <h1 className="t-display-3" style={{ marginBottom: '0.5rem' }}>
             Log a past session
@@ -109,6 +108,5 @@ export function Log() {
           </div>
         </Card>
       </div>
-    </div>
   );
 }

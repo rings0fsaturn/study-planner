@@ -11,7 +11,21 @@ import { Home } from './pages/Home';
 import { AuthConfirmed } from './pages/AuthConfirmed';
 import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
+import { Week } from './pages/Week';
+import { Roadmap } from './pages/Roadmap';
+import { Roadmaps } from './pages/Roadmaps';
+import { Settings } from './pages/Settings';
+import { AppShell } from './components/AppShell';
 import { useEffect } from 'react';
+import { OnboardingGate } from './onboarding/OnboardingGate';
+import { RequireOnboarding } from './onboarding/RequireOnboarding';
+import { OnboardingProvider } from './onboarding/OnboardingProvider';
+import { OnboardingLayout } from './onboarding/OnboardingLayout';
+import { Step1Deadline } from './onboarding/steps/Step1Deadline';
+import { Step2Hours } from './onboarding/steps/Step2Hours';
+import { Step3Materials } from './onboarding/steps/Step3Materials';
+import { Step3Preview } from './onboarding/steps/Step3Preview';
+import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
@@ -121,21 +135,41 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/home"
         element={
           <ProtectedRoute>
-            <Home />
+            <RequireOnboarding>
+              <AppShell />
+            </RequireOnboarding>
           </ProtectedRoute>
         }
-      />
+      >
+        <Route path="/home" element={<Home />} />
+        <Route path="/log" element={<Log />} />
+        <Route path="/week" element={<Week />} />
+        <Route path="/roadmap" element={<Roadmap />} />
+        <Route path="/roadmaps" element={<Roadmaps />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
       <Route
-        path="/log"
+        path="/onboarding"
         element={
           <ProtectedRoute>
-            <Log />
+            <OnboardingGate>
+              <OnboardingProvider>
+                <OnboardingLayout />
+              </OnboardingProvider>
+            </OnboardingGate>
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<Navigate to="/onboarding/1" replace />} />
+        <Route path="1" element={<Step1Deadline />} />
+        <Route path="2" element={<Step2Hours />} />
+        <Route path="3" element={<Step3Materials />}>
+          <Route path="preview" element={<Step3Preview />} />
+        </Route>
+        <Route path="4" element={<Step4Confirm />} />
+      </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
