@@ -55,6 +55,25 @@ export function Step3Materials() {
       return
     }
 
+    if (kind === 'youtube-video') {
+      const videoId = extractYouTubeVideoId(text)
+      if (videoId && state.materials.some(m => m.youtubeVideoId === videoId)) {
+        setUrlError('This material has already been added.')
+        return
+      }
+    } else if (kind === 'youtube-playlist') {
+      const playlistId = extractYouTubePlaylistId(text)
+      if (playlistId && state.playlists.some(p => p.youtubePlaylistId === playlistId)) {
+        setUrlError('This material has already been added.')
+        return
+      }
+    } else if (kind === 'article') {
+      if (state.materials.some(m => m.url === text)) {
+        setUrlError('This material has already been added.')
+        return
+      }
+    }
+
     setLastPastedUrl(text)
     setPasteAnimKey(k => k + 1)
 
@@ -127,7 +146,7 @@ export function Step3Materials() {
         },
       })
     }
-  }, [dispatch, metadataFetcher, state.materials.length])
+  }, [dispatch, metadataFetcher, state.materials, state.playlists])
 
   const handleUpdate = (id: string, updates: Partial<OnboardingMaterial>) =>
     dispatch({ type: 'UPDATE_MATERIAL', id, updates })
