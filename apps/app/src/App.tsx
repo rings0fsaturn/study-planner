@@ -11,6 +11,11 @@ import { Home } from './pages/Home';
 import { AuthConfirmed } from './pages/AuthConfirmed';
 import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
+import { Week } from './pages/Week';
+import { Roadmap } from './pages/Roadmap';
+import { Roadmaps } from './pages/Roadmaps';
+import { Settings } from './pages/Settings';
+import { AppShell } from './components/AppShell';
 import { useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
 import { RequireOnboarding } from './onboarding/RequireOnboarding';
@@ -130,25 +135,21 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/home"
         element={
           <ProtectedRoute>
             <RequireOnboarding>
-              <Home />
+              <AppShell />
             </RequireOnboarding>
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/log"
-        element={
-          <ProtectedRoute>
-            <RequireOnboarding>
-              <Log />
-            </RequireOnboarding>
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="/home" element={<Home />} />
+        <Route path="/log" element={<Log />} />
+        <Route path="/week" element={<Week />} />
+        <Route path="/roadmap" element={<Roadmap />} />
+        <Route path="/roadmaps" element={<Roadmaps />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
       <Route
         path="/onboarding"
         element={

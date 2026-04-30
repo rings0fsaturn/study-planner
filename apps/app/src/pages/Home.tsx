@@ -5,7 +5,6 @@ import type { Event } from '../events/EventStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { SyncIndicator } from '../components/SyncIndicator';
 import { Link } from 'react-router-dom';
 import { ROLE_TO_LABEL } from '@study-tracker/progress-engine';
 import type { Slot } from '@study-tracker/progress-engine';
@@ -71,14 +70,10 @@ export function Home() {
   };
 
   return (
-    <div className="app">
-      <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h1 className="t-display-2" style={{ margin: 0 }}>
-            Hello, {user?.email}
-          </h1>
-          <SyncIndicator />
-        </div>
+    <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
+      <h1 className="t-display-2" style={{ marginBottom: '0.5rem' }}>
+        Hello, {user?.email}
+      </h1>
         <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
           Here's how your study time adds up
         </p>
@@ -182,6 +177,5 @@ export function Home() {
           Sign out
         </Button>
       </div>
-    </div>
   );
 }

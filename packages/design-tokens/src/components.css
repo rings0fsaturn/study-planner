@@ -609,3 +609,119 @@
 .banner.attention { border-left: 3px solid var(--terracotta); padding-left: calc(var(--space-4) - 2px); }
 .banner.success { border-left: 3px solid var(--moss); padding-left: calc(var(--space-4) - 2px); }
 .banner.warning { border-left: 3px solid var(--rust); padding-left: calc(var(--space-4) - 2px); }
+
+/* =================================================================
+   RESPONSIVE UTILITIES
+   Single source of truth for mobile/desktop breakpoint (1024px).
+   ================================================================= */
+.mobile-only { display: block; }
+.desktop-only { display: none; }
+
+@media (min-width: 1024px) {
+  .mobile-only { display: none !important; }
+  .desktop-only { display: flex !important; }
+}
+
+/* =================================================================
+   NAVIGATION — MOBILE BOTTOM TAB BAR
+   Fixed bottom bar with icon + label tabs.
+   ================================================================= */
+.navbar-mobile {
+  display: flex;
+  background: var(--surface-card);
+  border-top: 1px solid var(--border-default);
+  padding: 6px 0 8px;
+  flex-shrink: 0;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+}
+.navbar-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 6px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+.navbar-item.active { color: var(--text-primary); }
+.navbar-item.active .icon { color: var(--terracotta); }
+
+/* =================================================================
+   NAVIGATION — DESKTOP TOP NAV BAR
+   Sticky top bar with brand + text items + sync indicator.
+   ================================================================= */
+.navbar-desktop {
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+.navbar-desktop-brand {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 400;
+  font-size: 18px;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-right: var(--space-5);
+}
+.navbar-desktop-item {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: var(--font-body);
+  font-weight: 500;
+  text-decoration: none;
+  transition: background var(--duration-2) var(--ease-out),
+              color var(--duration-2) var(--ease-out);
+}
+.navbar-desktop-item:hover { background: var(--paper-deep); color: var(--text-primary); }
+.navbar-desktop-item.active { background: var(--ink); color: var(--paper); }
+.navbar-desktop-spacer { flex: 1; }
+
+/* =================================================================
+   NAVIGATION — MOBILE TOP STRIP
+   Slim bar for sync indicator on mobile.
+   ================================================================= */
+.mobile-top-bar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+/* =================================================================
+   APP SHELL
+   Layout wrapper for pages with navigation.
+   ================================================================= */
+.app-shell-content {
+  flex: 1;
+  overflow-y: auto;
+}
+@media (max-width: 1023px) {
+  .app-shell-content {
+    padding-bottom: 60px;
+  }
+}
