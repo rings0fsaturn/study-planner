@@ -1,12 +1,15 @@
 /* =================================================================
-   SESSION — Layout and component styles
+   /study/session — active session
+   Marginalia v1.0
    ================================================================= */
 
-/* ---- Layout container ---- */
+/* ---------------- Page shell ---------------- */
 .session-layout {
+  max-width: var(--container-narrow);     /* 640px on mobile/tablet */
+  margin: 0 auto;
+  padding: 20px 20px 96px;                /* extra bottom for desktop FAB */
   display: flex;
   flex-direction: column;
-  padding: 20px 20px 24px;
   flex: 1;
   min-height: 0;
 }
@@ -15,147 +18,269 @@
   justify-content: center;
 }
 
-/* ---- Top bar ---- */
+/* ---------------- Top bar — pause + sync ---------------- */
 .session-top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: var(--space-5);
 }
 
-/* ---- Pause / Resume button ---- */
 .session-pause-resume {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   padding: 6px 8px;
   margin-left: -8px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
 }
-
+.session-pause-resume:hover {
+  background: var(--paper-deep);
+  color: var(--text-primary);
+}
 .session-pause-icon {
-  font-size: 12px;
-  margin-right: 4px;
+  font-size: 11px;
+  line-height: 1;
 }
 
-/* ---- Eyebrow colors ---- */
-.eyebrow-moss { color: var(--moss); letter-spacing: 0.08em; }
-.eyebrow-clay { color: var(--clay); letter-spacing: 0.08em; }
-.eyebrow-terracotta { color: var(--terracotta); letter-spacing: 0.08em; }
-.eyebrow-faint { color: var(--ink-faint); letter-spacing: 0.08em; }
+/* ---------------- Session frame card ---------------- */
+.session-frame {
+  background: var(--surface-page);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+}
+.session-frame.is-overrun  { border-color: var(--terracotta); }
+.session-frame.is-break,
+.session-frame-break       { background: rgba(194, 142, 90, 0.05); }
 
-/* ---- Pulse dot states ---- */
-.session-pulse-dot.paused {
-  background: var(--ink-faint);
-  animation: none;
+/* Paused state — timer is asleep, material still visible */
+.session-frame.is-paused {
+  background: var(--paper-deep);
+  border-color: var(--border-subtle);
+  transition:
+    background-color var(--duration-3) var(--ease-out),
+    border-color var(--duration-3) var(--ease-out);
 }
 
-.session-pulse-dot.break {
-  background: var(--clay);
+.session-frame.is-paused .session-timer-time {
+  color: var(--text-secondary);
+  transition: color var(--duration-3) var(--ease-out);
 }
 
-/* ---- Timer large (desktop / manual material) ---- */
-.session-timer-large {
-  font-size: 72px;
+.session-frame.is-paused .session-pomo-indicator,
+.session-frame.is-paused .session-pomo-indicator.pomo-work,
+.session-frame.is-paused .session-pomo-indicator.pomo-break,
+.session-frame.is-paused .session-pomo-indicator.pomo-overtime {
+  color: var(--text-tertiary);
 }
 
-/* ---- Timer of line — overrun variant ---- */
-.session-timer-of-overrun {
-  color: var(--terracotta-d);
+.session-frame.is-paused .session-timer-of {
+  color: var(--text-tertiary);
 }
 
-/* ---- Pomodoro indicator ---- */
+/* ---------------- Eyebrow with pulse dot ---------------- */
+.session-eyebrow-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.eyebrow-moss        { color: var(--moss); }
+.eyebrow-clay        { color: var(--clay); }
+.eyebrow-terracotta  { color: var(--terracotta); }
+.eyebrow-faint       { color: var(--ink-faint); }
+
+.session-pulse-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--moss);
+  animation: session-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+.session-pulse-dot.attention { background: var(--terracotta); }
+.session-pulse-dot.break     { background: var(--clay); animation-duration: 3s; }
+.session-pulse-dot.paused    { background: var(--ink-faint); animation: none; }
+
+@keyframes session-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.85); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .session-pulse-dot { animation: none; }
+}
+
+/* ---------------- Title + subtitle — centered, Fraunces ---------------- */
+.session-title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.012em;
+  line-height: 1.2;
+  text-align: center;
+  text-wrap: balance;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.session-subtitle {
+  font-size: 13px;
+  text-align: center;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-5);
+}
+
+/* ---------------- Timer display ---------------- */
+.session-timer-display {
+  text-align: center;
+  margin-bottom: var(--space-5);
+}
+.session-timer-time {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  font-variation-settings: 'opsz' 144;
+  font-feature-settings: 'tnum';
+  line-height: 1;
+  color: var(--text-primary);
+}
+.session-timer-time.is-overrun { color: var(--terracotta); }
+
+.session-timer-large           { font-size: 72px; }
+
+.session-timer-of {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: var(--space-2);
+}
+.session-timer-of-overrun { color: var(--terracotta-d); }
+
+/* ---------------- Pomodoro work/break indicator ---------------- */
 .session-pomo-indicator {
   font-family: var(--font-mono);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   text-align: center;
-  margin-top: var(--space-1);
-  margin-bottom: var(--space-1);
-}
-
-.pomo-work { color: var(--moss); }
-.pomo-break { color: var(--clay); }
-.pomo-overtime { color: var(--moss); }
-
-/* ---- Session frame — break tint ---- */
-.session-frame-break {
-  background: rgba(194, 142, 90, 0.05);
-}
-
-/* ---- Open material button ---- */
-.session-open-material {
   margin-top: var(--space-3);
-  margin-bottom: var(--space-3);
 }
+.pomo-work     { color: var(--moss); }
+.pomo-break    { color: var(--clay); }
+.pomo-overtime { color: var(--terracotta); }
 
-/* ---- Action buttons spacing ---- */
-.session-actions {
-  margin-top: var(--space-5);
+/* ---------------- Material strip ---------------- */
+.material-strip {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
   display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--space-3);
 }
-
-.session-come-back {
+.material-strip-icon {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--paper-deep);
+  color: var(--rust);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+}
+.material-strip-body { flex: 1; min-width: 0; }
+.material-strip-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.material-strip-meta {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
   color: var(--text-tertiary);
 }
 
-/* ---- Modal styles ---- */
-.modal-title-em {
-  font-style: italic;
-  color: var(--terracotta);
-  font-weight: 400;
+/* Open material affordance */
+.session-open-material {
+  margin-top: var(--space-3);
+  width: 100%;
 }
 
-.session-recovery-actions {
+/* ---------------- Action buttons ---------------- */
+.session-actions {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  margin-top: var(--space-4);
+  margin-top: var(--space-5);
 }
+.session-actions .btn { width: 100%; }
+.session-come-back     { color: var(--text-tertiary); }
 
-.session-walkaway-confirm {
-  margin-top: var(--space-4);
-}
+/* Desktop FAB — hidden on mobile, swapped in on desktop */
+.session-fab-end { display: none; }
 
-/* ---- Banner dismiss button ---- */
+/* ---------------- Banners ---------------- */
 .banner-dismiss {
   background: none;
-  border: none;
+  border: 0;
   cursor: pointer;
   padding: 4px;
+  border-radius: var(--radius-sm);
   color: var(--text-tertiary);
   flex-shrink: 0;
   align-self: flex-start;
 }
-
-/* ---- Desktop layout ---- */
-@media (min-width: 1024px) {
-  .session-layout {
-    max-width: var(--container-narrow);
-    margin: 0 auto;
-    padding: var(--space-6) var(--space-5);
-  }
-
-  .session-timer-large,
-  .session-timer-time {
-    font-size: 96px;
-  }
-
-  .session-fab-end {
-    position: fixed;
-    bottom: var(--space-6);
-    right: var(--space-6);
-    z-index: 10;
-  }
-
-  .session-fab-end .btn {
-    box-shadow: var(--shadow-md);
-    padding: 14px 28px;
-    font-size: 15px;
-  }
+.banner-dismiss:hover {
+  background: var(--paper-deep);
+  color: var(--text-primary);
 }
 
-/* ---- No-session empty state ---- */
+/* ---------------- Modal helpers ---------------- */
+.modal-title-em {
+  font-style: italic;
+  font-weight: 400;
+  color: var(--terracotta);
+}
+.session-recovery-actions,
+.session-walkaway-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* ---------------- Empty state ---------------- */
 .session-empty {
   display: flex;
   flex-direction: column;
@@ -166,8 +291,44 @@
   padding: var(--space-8) var(--space-5);
   gap: var(--space-4);
 }
-
 .session-empty p {
   color: var(--text-secondary);
   max-width: 260px;
+}
+
+/* =================================================================
+   Desktop — 1024px and up
+   Same vertical shape, wider type, FAB instead of inline End button.
+   ================================================================= */
+@media (min-width: 1024px) {
+  .session-layout {
+    max-width: 720px;
+    padding: var(--space-7) var(--space-6) var(--space-9);
+  }
+
+  .session-frame {
+    padding: var(--space-6) var(--space-7);
+  }
+
+  .session-title       { font-size: 26px; }
+  .session-subtitle    { font-size: 14px; margin-bottom: var(--space-6); }
+
+  .session-timer-time  { font-size: 96px; }
+  .session-timer-large { font-size: 120px; }
+
+  /* Hide inline End on desktop — the FAB takes over */
+  .session-end-inline { display: none; }
+
+  .session-fab-end {
+    display: block;
+    position: fixed;
+    right: var(--space-6);
+    bottom: var(--space-6);
+    z-index: 10;
+  }
+  .session-fab-end .btn {
+    box-shadow: var(--shadow-md);
+    padding: 14px 28px;
+    font-size: 15px;
+  }
 }

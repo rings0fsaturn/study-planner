@@ -1,5 +1,5 @@
 export { PulseDot } from './PulseDot';
-export { SessionEyebrow } from './SessionEyebrow';
+export { SessionEyebrow, getEyebrowColorClass } from './SessionEyebrow';
 export { SessionTitle } from './SessionTitle';
 export { SessionSubtitle } from './SessionSubtitle';
 export { TimerDisplay } from './TimerDisplay';

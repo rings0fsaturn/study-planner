@@ -22,13 +22,9 @@ function formatTime(ms: number): string {
 export function TimerDisplay({ elapsedMs, overrun, large }: TimerDisplayProps) {
   const className = [
     'session-timer-time',
-    overrun && 'overrun',
+    overrun && 'is-overrun',
     large && 'session-timer-large',
   ].filter(Boolean).join(' ');
 
-  return (
-    <div className="session-timer-display">
-      <div className={className}>{formatTime(elapsedMs)}</div>
-    </div>
-  );
+  return <div className={className}>{formatTime(elapsedMs)}</div>;
 }

@@ -6,10 +6,10 @@ import { SessionLifecycle } from '../session/SessionLifecycle';
 import { DEFAULT_POMODORO_CONFIG } from '../session/types';
 import type { SessionState, SessionSlotData, WalkAwayResolution, RecoveryResolution } from '../session/types';
 import type { PomodoroPhase } from '../session/pomodoro';
-import { SyncIndicator } from '../components/SyncIndicator';
 import {
   PulseDot,
   SessionEyebrow,
+  getEyebrowColorClass,
   SessionTitle,
   SessionSubtitle,
   TimerDisplay,
@@ -193,11 +193,10 @@ export function Session() {
       <div className="session-layout session-layout-centered">
         <div className="session-top-bar">
           <PauseResumeButton isPaused={isPaused} onToggle={handlePauseResume} />
-          <SyncIndicator />
         </div>
 
-        <SessionFrame overrun={isOverrun} isBreak={isBreak}>
-          <div className="session-eyebrow-row">
+        <SessionFrame overrun={isOverrun} isBreak={isBreak} isPaused={isPaused}>
+          <div className={`session-eyebrow-row ${getEyebrowColorClass(sessionState, overrunMinutes, isBreak)}`}>
             <PulseDot state={sessionState} />
             <SessionEyebrow
               state={sessionState}
@@ -210,15 +209,15 @@ export function Session() {
           <SessionTitle title={record.sessionTitle} />
           <SessionSubtitle subtitle={record.materialUrl ? 'Linked material' : 'Manual · pen and paper'} />
 
-          <TimerDisplay elapsedMs={elapsedActiveMs} overrun={isOverrun} large />
-
-          <PomodoroIndicator phase={pomodoroPhase} />
-
-          <PlannedEndLine
-            plannedMinutes={record.plannedMinutes}
-            endsAt={plannedEndTime}
-            overrun={isOverrun}
-          />
+          <div className="session-timer-display">
+            <TimerDisplay elapsedMs={elapsedActiveMs} overrun={isOverrun} large />
+            <PomodoroIndicator phase={pomodoroPhase} />
+            <PlannedEndLine
+              plannedMinutes={record.plannedMinutes}
+              endsAt={plannedEndTime}
+              overrun={isOverrun}
+            />
+          </div>
 
           {record.materialUrl && (
             <OpenMaterialButton url={record.materialUrl} />
@@ -238,9 +237,6 @@ export function Session() {
         </div>
 
         {/* Desktop floating End button */}
-        <div className="session-fab-end desktop-only">
-          <EndSessionButton onEnd={handleEnd} />
-        </div>
       </div>
 
       {sessionState === 'walk_away' && (

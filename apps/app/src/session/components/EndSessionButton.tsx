@@ -6,7 +6,7 @@ interface EndSessionButtonProps {
 export function EndSessionButton({ onEnd, disabled }: EndSessionButtonProps) {
   return (
     <button
-      className="btn btn-accent btn-block btn-lg"
+      className="btn btn-accent btn-block btn-lg session-end-inline"
       onClick={onEnd}
       disabled={disabled}
     >

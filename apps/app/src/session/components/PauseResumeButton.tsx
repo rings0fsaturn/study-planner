@@ -5,7 +5,7 @@ interface PauseResumeButtonProps {
 
 export function PauseResumeButton({ isPaused, onToggle }: PauseResumeButtonProps) {
   return (
-    <button className="btn btn-ghost btn-sm session-pause-resume" onClick={onToggle}>
+    <button className="session-pause-resume" onClick={onToggle}>
       {isPaused ? (
         <>
           <span className="session-pause-icon">▶</span>

@@ -7,26 +7,29 @@ interface SessionEyebrowProps {
   isBreak?: boolean;
 }
 
+export function getEyebrowColorClass(
+  state: SessionState,
+  overrunMinutes: number,
+  isBreak: boolean,
+): string {
+  if (state === 'paused') return 'eyebrow-faint';
+  if (isBreak) return 'eyebrow-clay';
+  if (overrunMinutes > 0) return 'eyebrow-terracotta';
+  return 'eyebrow-moss';
+}
+
 export function SessionEyebrow({ state, weekIndex, overrunMinutes, isBreak }: SessionEyebrowProps) {
   let text: string;
-  let colorClass = 'eyebrow-moss';
 
   if (state === 'paused') {
     text = `Paused · Week ${weekIndex + 1}`;
-    colorClass = 'eyebrow-faint';
   } else if (isBreak) {
     text = `On break · Week ${weekIndex + 1}`;
-    colorClass = 'eyebrow-clay';
   } else if (overrunMinutes && overrunMinutes > 0) {
     text = `${overrunMinutes} min over plan`;
-    colorClass = 'eyebrow-terracotta';
   } else {
     text = `In session · Week ${weekIndex + 1}`;
   }
 
-  return (
-    <div className="session-eyebrow-row">
-      <span className={`mono-caps ${colorClass}`}>{text}</span>
-    </div>
-  );
+  return <span>{text}</span>;
 }
