@@ -1,34 +1,39 @@
 import { Outlet, useLocation } from 'react-router-dom'
 import { useOnboarding } from './OnboardingProvider'
+import { StepDots } from './components/StepDots'
+import './onboarding.css'
 
-function currentStepNumber(pathname: string): number {
-  if (pathname.includes('/onboarding/4')) return 4
-  if (pathname.includes('/onboarding/3')) return 3
-  if (pathname.includes('/onboarding/2')) return 2
-  return 1
+type LayoutShape = 'column' | 'fused'
+
+interface RouteInfo {
+  step: number
+  shape: LayoutShape
+}
+
+function routeInfo(pathname: string): RouteInfo {
+  if (pathname.includes('/onboarding/4')) return { step: 4, shape: 'column' }
+  if (pathname.includes('/onboarding/3')) return { step: 3, shape: 'fused' }
+  if (pathname.includes('/onboarding/2')) return { step: 2, shape: 'column' }
+  return { step: 1, shape: 'column' }
 }
 
 export function OnboardingLayout() {
   const location = useLocation()
-  const step = currentStepNumber(location.pathname)
+  const { step, shape } = routeInfo(location.pathname)
   const { state } = useOnboarding()
 
   return (
-    <div className="app">
-      <div style={{ padding: '16px 20px', maxWidth: '640px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px' }}>
-          <div className="stepdots">
-            {[1, 2, 3, 4].map(n => (
-              <div
-                key={n}
-                className={`stepdot ${n < step || (n === step && state.stepReached >= n) ? 'done' : ''} ${n === step ? 'active' : ''}`}
-              />
-            ))}
-          </div>
-          <div className="mono-caps">Step {step} of 4</div>
-        </div>
-        <Outlet />
+    <div className="onboarding-shell" data-shape={shape}>
+      <div className="onboarding-stepdots-wrap">
+        <StepDots currentStep={step} reachedStep={state.stepReached} totalSteps={4} />
+        <div className="mono-caps onboarding-mobile-caption">Step {step} of 4</div>
+        {shape === 'fused' && (
+          <div className="mono-caps onboarding-desktop-caption">Materials &amp; preview</div>
+        )}
       </div>
+      <main className="onboarding-content">
+        <Outlet />
+      </main>
     </div>
   )
 }

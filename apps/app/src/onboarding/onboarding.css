@@ -1,12 +1,398 @@
-/* Desktop: steps 1 and 2 are column-shaped, centered, max-width 480px */
+/* apps/app/src/onboarding/onboarding.css
+ *
+ * Onboarding-specific styles. Imported once by OnboardingLayout.tsx.
+ *
+ * All layout switching at the 1024px breakpoint happens in this file.
+ * The single permitted JS viewport read is in Step3Materials.tsx via
+ * useMatchMedia — and that's only for choosing a button, not for layout.
+ *
+ * Layout shape selectors:
+ *   .onboarding-shell[data-shape="column"]  → steps 1, 2, 4 (centered narrow column on desktop)
+ *   .onboarding-shell[data-shape="fused"]   → step 3 (two-column fused on desktop)
+ */
+
+/* ============================================================
+ * 1. Shell + content wrappers
+ * ============================================================ */
+
+.onboarding-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-page);
+}
+
+.onboarding-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 0 20px 16px;
+  max-width: 640px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.onboarding-step {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+ * 2. Stepdots wrap + captions
+ * ============================================================ */
+
+.onboarding-stepdots-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px 0;
+  max-width: 640px;
+  margin: 0 auto 32px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.onboarding-mobile-caption { display: block; }
+.onboarding-desktop-caption { display: none; }
+
+/* ============================================================
+ * 3. Heading + lead typography
+ * ============================================================ */
+
+.onboarding-h1 {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 500;
+  letter-spacing: -0.018em;
+  line-height: 1.1;
+  font-variation-settings: 'opsz' 96;
+  margin: 0 0 12px;
+  color: var(--text-primary);
+}
+
+.onboarding-h1 em {
+  font-style: italic;
+  color: var(--terracotta);
+  font-weight: 400;
+}
+
+.onboarding-lead {
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin: 0 0 24px;
+}
+
+.onboarding-step .chip-row {
+  margin-bottom: 24px;
+}
+
+/* ============================================================
+ * 4. Spacer + bottom action row
+ * ============================================================ */
+
+.onboarding-spacer {
+  flex: 1;
+  min-height: 24px;
+}
+
+.onboarding-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  align-items: stretch;
+}
+
+.onboarding-back-btn {
+  flex-shrink: 0;
+  padding: 0 14px;
+}
+
+.onboarding-continue-btn {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* ============================================================
+ * 5. Step 2 — hours display + split fields
+ * ============================================================ */
+
+.onboarding-hours-display {
+  text-align: center;
+  margin: 16px 0 24px;
+}
+
+.onboarding-hours-number {
+  font-family: var(--font-display);
+  font-size: 56px;
+  font-weight: 500;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  font-variation-settings: 'opsz' 96;
+  color: var(--text-primary);
+  display: inline-block;
+}
+
+.onboarding-hours-suffix {
+  font-size: 18px;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+
+.onboarding-hours-sublabel {
+  margin-top: 8px;
+  display: block;
+}
+
+.onboarding-hours-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+/* ============================================================
+ * 6. Step 3 — materials form + grid + slot
+ * ============================================================ */
+
+.onboarding-add-manually-btn {
+  align-self: flex-start;
+  margin: 12px 0 16px;
+}
+
+.onboarding-materials-count {
+  margin: 16px 0 8px;
+}
+
+/* Mobile: grid is "display: contents" so its children become flex items
+ * of the parent .onboarding-step. The form fills the column; the preview
+ * slot is hidden. */
+.onboarding-materials-grid {
+  display: contents;
+}
+
+.onboarding-materials-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.onboarding-materials-preview-slot {
+  display: none;
+}
+
+.onboarding-materials-preview-label {
+  margin-bottom: 12px;
+}
+
+/* ============================================================
+ * 7. Step 3 preview — visibility + stats + actions
+ * ============================================================ */
+
+.onboarding-preview-mobile-only { display: block; }
+.onboarding-preview-desktop-only { display: none; }
+
+.onboarding-preview-stats {
+  display: flex;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  margin-bottom: 16px;
+}
+
+.onboarding-preview-stats .stat {
+  flex: 1;
+}
+
+.onboarding-preview-actions {
+  margin-top: 16px;
+}
+
+.onboarding-empty-preview {
+  font-family: var(--font-body);
+  color: var(--text-secondary);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+/* ============================================================
+ * 8. Step 4 — success check
+ * ============================================================ */
+
+.onboarding-success-check {
+  display: inline-flex;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(74, 107, 58, 0.12);
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.onboarding-success-check svg {
+  width: 28px;
+  height: 28px;
+  color: var(--moss);
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ============================================================
+ * 9. Desktop overrides at 1024px
+ *
+ * Everything below this line activates only on desktop. The shape
+ * attribute on .onboarding-shell discriminates between column shells
+ * (steps 1, 2, 4) and the fused shell (step 3).
+ * ============================================================ */
+
 @media (min-width: 1024px) {
-  .onboarding-step-column {
-    max-width: 480px;
-    margin: 0 auto;
-    text-align: center;
+
+  /* --- Caption visibility ---------------------------------- */
+
+  .onboarding-shell[data-shape="column"] .onboarding-mobile-caption,
+  .onboarding-shell[data-shape="fused"]  .onboarding-mobile-caption {
+    display: none;
   }
-  .onboarding-step-column .screen-h1 {
+  .onboarding-shell[data-shape="fused"] .onboarding-desktop-caption {
+    display: block;
+  }
+
+  /* --- Column shape (steps 1, 2, 4) ------------------------ */
+
+  .onboarding-shell[data-shape="column"] .onboarding-stepdots-wrap {
+    justify-content: center;
+    padding: 32px 48px 0;
+    max-width: 1200px;
+    margin-bottom: 24px;
+  }
+
+  .onboarding-shell[data-shape="column"] .onboarding-content {
+    max-width: 1200px;
+    padding: 0 48px 40px;
+    text-align: center;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .onboarding-shell[data-shape="column"] .onboarding-step {
+    flex: initial;
+  }
+
+  .onboarding-shell[data-shape="column"] .onboarding-h1 {
     font-size: 36px;
     letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  .onboarding-shell[data-shape="column"] .onboarding-lead {
+    font-size: 15px;
+    margin-bottom: 32px;
+  }
+
+  /* Form fields stay left-aligned even though the body is centered. */
+  .onboarding-shell[data-shape="column"] .field-group,
+  .onboarding-shell[data-shape="column"] .onboarding-hours-split {
+    text-align: left;
+  }
+
+  /* Action row on desktop column: side-by-side, hugs content. */
+  .onboarding-shell[data-shape="column"] .onboarding-actions {
+    justify-content: space-between;
+    margin-top: 32px;
+  }
+
+  .onboarding-shell[data-shape="column"] .onboarding-continue-btn {
+    flex: initial;
+  }
+
+  /* Spacer is a no-op on desktop column (content vertically centered). */
+  .onboarding-shell[data-shape="column"] .onboarding-spacer {
+    display: none;
+  }
+
+  /* Step 2 hours display scales up on desktop column. */
+  .onboarding-shell[data-shape="column"] .onboarding-hours-number {
+    font-size: 88px;
+    font-variation-settings: 'opsz' 144;
+  }
+  .onboarding-shell[data-shape="column"] .onboarding-hours-suffix {
+    font-size: 28px;
+  }
+
+  /* --- Fused shape (step 3 only) --------------------------- */
+
+  .onboarding-shell[data-shape="fused"] .onboarding-stepdots-wrap {
+    padding: 24px 48px 0;
+    max-width: 1200px;
+    margin-bottom: 24px;
+  }
+
+  .onboarding-shell[data-shape="fused"] .onboarding-content {
+    max-width: 1200px;
+    padding: 0 48px 48px;
+  }
+
+  .onboarding-shell[data-shape="fused"] .onboarding-h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  /* Activate the two-column grid. */
+  .onboarding-shell[data-shape="fused"] .onboarding-materials-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    flex: 1;
+  }
+
+  .onboarding-shell[data-shape="fused"] .onboarding-materials-form {
+    display: flex;
+    flex-direction: column;
+    flex: initial;
+  }
+
+  /* Preview slot becomes visible. */
+  .onboarding-shell[data-shape="fused"] .onboarding-materials-preview-slot {
+    display: block;
+  }
+
+  /* Form's "Build my plan" button hidden — preview has the commit. */
+  .onboarding-shell[data-shape="fused"] .onboarding-form-build-btn {
+    display: none;
+  }
+
+  /* Flip preview visibility classes. */
+  .onboarding-shell[data-shape="fused"] .onboarding-preview-mobile-only {
+    display: none;
+  }
+  .onboarding-shell[data-shape="fused"] .onboarding-preview-desktop-only {
+    display: block;
+  }
+
+  /* Preview stats are slightly more padded on desktop. */
+  .onboarding-shell[data-shape="fused"] .onboarding-preview-stats {
+    padding: 16px;
+  }
+
+  /* Preview's back button is hidden on desktop fused (we're already at /3). */
+  .onboarding-shell[data-shape="fused"] .onboarding-preview-back-btn {
+    display: none;
+  }
+
+  /* Preview's continue button hugs content on desktop. */
+  .onboarding-shell[data-shape="fused"] .onboarding-preview-actions .onboarding-continue-btn {
+    flex: initial;
   }
 }

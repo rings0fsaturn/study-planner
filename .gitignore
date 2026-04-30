@@ -10,3 +10,4 @@ dist/
 .vercel/
 .output/
 test-results/
+.claude/settings.local.json

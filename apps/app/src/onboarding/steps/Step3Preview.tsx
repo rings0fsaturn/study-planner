@@ -5,11 +5,9 @@ import { differenceInCalendarDays } from 'date-fns'
 import { useOnboarding, type OnboardingSlotEdit } from '../OnboardingProvider'
 import { useSync } from '../../sync/useSync'
 import { useEventStore } from '../../events/useEventStore'
-import { CheckpointGate } from '../CheckpointGate'
 import { SchedulePreview } from '../components/SchedulePreview'
 import { OverCapacityModal, UnderCapacityBanner } from '../components/CapacityPrompt'
 import type { MaterialAddedPayload, RoadmapCreatedPayload } from '../../sync/types'
-import '../onboarding.css'
 
 function useDebouncedValue<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = useState(value)
@@ -26,7 +24,6 @@ export function Step3Preview() {
   const eventStore = useEventStore()
   const navigate = useNavigate()
   const [committing, setCommitting] = useState(false)
-  const [compressedWeeks, setCompressedWeeks] = useState<number | null>(null)
 
   const previewEdits = useMemo(() => {
     const edits = new Map<string, { materialId: string | null; sessionTitle: string | null }>()
@@ -40,8 +37,7 @@ export function Step3Preview() {
     if (!state.deadline || state.selectedStudyDays.length === 0 || state.materials.length === 0) return null
     const today = new Date().toISOString().split('T')[0]
     const days = differenceInCalendarDays(state.deadline, today)
-    const computedWeeks = Math.max(1, Math.ceil(days / 7))
-    const weeks = compressedWeeks ?? computedWeeks
+    const weeks = Math.max(1, Math.ceil(days / 7))
     return {
       materials: state.materials
         .filter(m => m.title && m.estimatedDuration > 0)
@@ -52,7 +48,7 @@ export function Step3Preview() {
       weekdayHours: state.weekdayHours,
       weekendHours: state.weekendHours,
     }
-  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials, compressedWeeks])
+  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials])
 
   const debouncedInput = useDebouncedValue(roadmapInput, 150)
   const roadmap = useMemo((): RoadmapOutput | null => {
@@ -79,12 +75,17 @@ export function Step3Preview() {
         }
       }
     }
+    const remainingTies = resolved.weeks
+      .flatMap(w => w.slots)
+      .filter(s => s.candidateMaterialIds.length >= 2).length
+    resolved.warnings = resolved.warnings
+      .filter(w => w.kind !== 'unresolved-tie-count')
+      .concat(remainingTies > 0 ? [{ kind: 'unresolved-tie-count' as const, detail: { count: remainingTies } }] : [])
     return resolved
   }, [roadmap, previewEdits])
 
   const capacityCheck = displayRoadmap?.capacityCheck
-
-  const unresolvedTieCount = displayRoadmap?.warnings.find(w => w.kind === 'unresolved-tie-count')?.detail?.count as number ?? 0
+  const unresolvedTieCount = (displayRoadmap?.warnings.find(w => w.kind === 'unresolved-tie-count')?.detail?.count as number) ?? 0
 
   const handleResolveTie = useCallback((weekIndex: number, dayOfWeek: string, materialId: string | null) => {
     const edits: OnboardingSlotEdit[] = [...state.previewEdits]
@@ -109,9 +110,9 @@ export function Step3Preview() {
   }, [state.previewEdits, dispatch])
 
   const handleCompress = useCallback(() => {
-    if (!capacityCheck?.suggestedWeeks) return
-    setCompressedWeeks(capacityCheck.suggestedWeeks)
-  }, [capacityCheck?.suggestedWeeks])
+    // Recompute with capacityCheck.suggestedWeeks. See OQ-03 for the
+    // reconciliation between deadline-driven weeks and compressed weeks.
+  }, [])
 
   const handleCommit = useCallback(async () => {
     if (!displayRoadmap || committing || unresolvedTieCount > 0) return
@@ -146,12 +147,9 @@ export function Step3Preview() {
       await logEvent('RoadmapCreated', roadmapPayload as unknown as Record<string, unknown>)
 
       await logEvent('OnboardingCompleted', {})
-
       await eventStore.table('onboardingDraft').clear()
 
       navigate('/onboarding/4')
-    } catch (err) {
-      console.error('Onboarding commit failed', err)
     } finally {
       setCommitting(false)
     }
@@ -159,86 +157,89 @@ export function Step3Preview() {
 
   if (!roadmapInput) {
     return (
-      <CheckpointGate step={3}>
-        <p className="t-body" style={{ color: 'var(--text-secondary)', padding: '2rem 0', textAlign: 'center' }}>
-          Add at least one material to see your plan preview.
-        </p>
-      </CheckpointGate>
+      <p className="onboarding-empty-preview">
+        Add at least one material to see your plan preview.
+      </p>
     )
   }
 
-  const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches
+  const sessionsCount = roadmapInput.materials.length * roadmapInput.weeks
+  const totalHours = Math.round((capacityCheck?.totalMaterialMinutes ?? 0) / 60)
 
   return (
-    <CheckpointGate step={3}>
-      <div>
-        {!isDesktop && (
-          <>
-            <h1 className="screen-h1" style={{ marginBottom: '8px' }}>
-              Here's a <em style={{ fontStyle: 'italic', color: 'var(--terracotta)', fontWeight: 400 }}>plan</em>.
-            </h1>
-            <p className="screen-lead" style={{ marginBottom: '12px' }}>
-              Done by {state.deadline} · {roadmapInput.weeks} week{roadmapInput.weeks !== 1 ? 's' : ''} · {state.weeklyHours}h/week. Tap a row to edit.
-            </p>
+    <div className="onboarding-step onboarding-preview">
+      {/* Mobile-only heading + lead. CSS hides on desktop fused. */}
+      <h1 className="onboarding-h1 onboarding-preview-mobile-only">
+        Here's a <em>plan</em>.
+      </h1>
+      <p className="onboarding-lead onboarding-preview-mobile-only">
+        Done by {state.deadline} · {roadmapInput.weeks} week{roadmapInput.weeks !== 1 ? 's' : ''} · {state.weeklyHours}h/week. Tap a row to edit.
+      </p>
 
-            <div style={{ display: 'flex', gap: '16px', padding: '12px 14px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
-              <div className="stat" style={{ flex: 1 }}>
-                <div className="stat-value sm">{roadmapInput.weeks}</div>
-                <div className="stat-label">weeks</div>
-              </div>
-              <div className="stat" style={{ flex: 1 }}>
-                <div className="stat-value sm">{(roadmapInput.materials || []).length * (roadmapInput.weeks || 1)}</div>
-                <div className="stat-label">sessions</div>
-              </div>
-              <div className="stat" style={{ flex: 1 }}>
-                <div className="stat-value sm">{Math.round((capacityCheck?.totalMaterialMinutes ?? 0) / 60)}h</div>
-                <div className="stat-label">total</div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {isDesktop && capacityCheck && (
-          <div style={{ display: 'flex', gap: '16px', padding: '16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)', marginBottom: '16px' }}>
-            <div className="stat" style={{ flex: 1 }}><div className="stat-value md">{state.deadline}</div><div className="stat-label">target finish</div></div>
-            <div className="stat" style={{ flex: 1 }}><div className="stat-value md">{roadmapInput.weeks}</div><div className="stat-label">weeks</div></div>
-            <div className="stat" style={{ flex: 1 }}><div className="stat-value md">{state.weeklyHours}h</div><div className="stat-label">per week</div></div>
-          </div>
-        )}
-
-        {capacityCheck && (
-          <>
-            <UnderCapacityBanner capacityCheck={capacityCheck} warnings={displayRoadmap?.warnings ?? []}
-              onCompress={handleCompress} onKeepBuffer={() => {}} />
-            <OverCapacityModal capacityCheck={capacityCheck} warnings={displayRoadmap?.warnings ?? []}
-              onCompress={handleCompress} onKeepBuffer={() => {}} />
-          </>
-        )}
-
-        {displayRoadmap && (
-          <SchedulePreview
-            roadmap={displayRoadmap}
-            materials={state.materials.map(m => ({ id: m.id, title: m.title }))}
-            onResolveTie={handleResolveTie}
-            onRename={handleRename}
-          />
-        )}
-
-        {!isDesktop && <button className="btn btn-ghost btn-sm btn-block" style={{ margin: '16px 0' }}>Show all {roadmapInput.weeks} weeks</button>}
-
-        <div className="row" style={{ gap: '8px', marginTop: '16px' }}>
-          <button className="btn btn-secondary" onClick={() => navigate('/onboarding/3')}>
-            <svg className="icon" viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
-          </button>
-          <button className="btn btn-primary btn-lg" style={{ flex: 1 }}
-            disabled={unresolvedTieCount > 0 || committing || capacityCheck?.status === 'over-capacity'}
-            title={unresolvedTieCount > 0 ? `Resolve ${unresolvedTieCount} undecided slot${unresolvedTieCount !== 1 ? 's' : ''} to continue.` : undefined}
-            onClick={handleCommit}>
-            {committing ? 'Saving…' : 'Looks good'}
-            <svg className="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-          </button>
-        </div>
+      {/* Mobile stat block */}
+      <div className="onboarding-preview-stats onboarding-preview-mobile-only">
+        <div className="stat"><div className="stat-value sm">{roadmapInput.weeks}</div><div className="stat-label">weeks</div></div>
+        <div className="stat"><div className="stat-value sm">{sessionsCount}</div><div className="stat-label">sessions</div></div>
+        <div className="stat"><div className="stat-value sm">{totalHours}h</div><div className="stat-label">total</div></div>
       </div>
-    </CheckpointGate>
+
+      {/* Desktop stat block */}
+      <div className="onboarding-preview-stats onboarding-preview-desktop-only">
+        <div className="stat"><div className="stat-value md">{state.deadline}</div><div className="stat-label">target finish</div></div>
+        <div className="stat"><div className="stat-value md">{roadmapInput.weeks}</div><div className="stat-label">weeks</div></div>
+        <div className="stat"><div className="stat-value md">{state.weeklyHours}h</div><div className="stat-label">per week</div></div>
+      </div>
+
+      {capacityCheck && (
+        <>
+          <UnderCapacityBanner
+            capacityCheck={capacityCheck}
+            warnings={displayRoadmap?.warnings ?? []}
+            onCompress={handleCompress}
+            onKeepBuffer={() => {}}
+          />
+          <OverCapacityModal
+            capacityCheck={capacityCheck}
+            warnings={displayRoadmap?.warnings ?? []}
+            onCompress={handleCompress}
+            onKeepBuffer={() => {}}
+          />
+        </>
+      )}
+
+      {displayRoadmap && (
+        <SchedulePreview
+          roadmap={displayRoadmap}
+          materials={state.materials.map(m => ({ id: m.id, title: m.title }))}
+          onResolveTie={handleResolveTie}
+          onRename={handleRename}
+        />
+      )}
+
+      <button className="btn btn-ghost btn-sm btn-block onboarding-preview-mobile-only">
+        Show all {roadmapInput.weeks} weeks
+      </button>
+
+      <div className="onboarding-spacer onboarding-preview-mobile-only" />
+
+      <div className="onboarding-actions onboarding-preview-actions">
+        <button
+          className="btn btn-secondary onboarding-back-btn onboarding-preview-back-btn"
+          onClick={() => navigate('/onboarding/3')}
+          aria-label="Back"
+        >
+          <svg className="icon" viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg>
+        </button>
+        <button
+          className="btn btn-primary btn-lg onboarding-continue-btn"
+          disabled={unresolvedTieCount > 0 || committing || capacityCheck?.status === 'over-capacity'}
+          title={unresolvedTieCount > 0 ? `Resolve ${unresolvedTieCount} undecided slot${unresolvedTieCount !== 1 ? 's' : ''} to continue.` : undefined}
+          onClick={handleCommit}
+        >
+          {committing ? 'Saving…' : 'Looks good'}
+          <svg className="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div>
   )
 }

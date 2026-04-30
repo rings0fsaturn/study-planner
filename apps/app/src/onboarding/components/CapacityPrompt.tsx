@@ -6,9 +6,10 @@ interface CapacityPromptProps {
   warnings: Warning[]
   onCompress: () => void
   onKeepBuffer: () => void
+  onDismiss?: () => void
 }
 
-export function OverCapacityModal({ capacityCheck, warnings: _warnings, onCompress: _onCompress, onKeepBuffer: _onKeepBuffer }: CapacityPromptProps) {
+export function OverCapacityModal({ capacityCheck, warnings: _warnings, onCompress: _onCompress, onKeepBuffer: _onKeepBuffer, onDismiss }: CapacityPromptProps) {
   const navigate = useNavigate()
 
   if (capacityCheck.status !== 'over-capacity') return null
@@ -36,6 +37,11 @@ export function OverCapacityModal({ capacityCheck, warnings: _warnings, onCompre
             Adjust scope
           </button>
         </div>
+        {onDismiss && (
+          <button className="btn btn-ghost btn-sm btn-block" style={{ marginTop: '8px' }} onClick={onDismiss}>
+            Close
+          </button>
+        )}
       </div>
     </div>
   )

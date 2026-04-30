@@ -1,12 +1,15 @@
 import { useAuth } from '../auth/useAuth';
 import { useEventStore } from '../events/useEventStore';
-import { totalMinutesLogged } from '../events/ProgressEngine';
+import { totalMinutesLogged, getProjectedFinish, getUpNextSlot } from '../events/ProgressEngine';
 import type { Event } from '../events/EventStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import { SyncIndicator } from '../components/SyncIndicator';
 import { Link } from 'react-router-dom';
+import { ROLE_TO_LABEL } from '@study-tracker/progress-engine';
+import type { Slot } from '@study-tracker/progress-engine';
+import type { RoadmapCreatedPayload } from '../sync/types';
+import { format, isToday, isTomorrow, differenceInCalendarDays } from 'date-fns';
 
 function formatMinutesToHoursAndMinutes(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
@@ -29,6 +32,19 @@ function formatDate(dateString: string): string {
   });
 }
 
+function formatDateNice(dateString: string): string {
+  const d = new Date(dateString);
+  if (isToday(d)) return 'Today';
+  if (isTomorrow(d)) return 'Tomorrow';
+  return format(d, 'MMM d');
+}
+
+function findRoadmap(events: Array<{ kind: string; payload: Record<string, unknown> }>): RoadmapCreatedPayload | null {
+  const roadmapEvents = events.filter(e => e.kind === 'RoadmapCreated' || e.kind === 'RoadmapReplanned');
+  if (roadmapEvents.length === 0) return null;
+  return roadmapEvents[roadmapEvents.length - 1].payload as unknown as RoadmapCreatedPayload;
+}
+
 export function Home() {
   const { user, signOut } = useAuth();
   const eventStore = useEventStore();
@@ -41,22 +57,74 @@ export function Home() {
 
   const totalMinutes = totalMinutesLogged(events as Event[]);
 
+  const roadmapPayload = findRoadmap(events);
+  const projectedFinish = roadmapPayload ? getProjectedFinish(roadmapPayload) : null;
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const upNextSlot: Slot | null = roadmapPayload ? getUpNextSlot(roadmapPayload, todayStr) : null;
+  const daysToDeadline = projectedFinish
+    ? differenceInCalendarDays(new Date(projectedFinish), new Date(todayStr))
+    : null;
+
   const handleSignOut = async () => {
     await signOut();
   };
 
   return (
-    <div className="app">
-      <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-          <h1 className="t-display-2" style={{ margin: 0 }}>
-            Hello, {user?.email}
-          </h1>
-          <SyncIndicator />
-        </div>
+    <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
+      <h1 className="t-display-2" style={{ marginBottom: '0.5rem' }}>
+        Hello, {user?.email}
+      </h1>
         <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
           Here's how your study time adds up
         </p>
+
+        {roadmapPayload && (
+          upNextSlot ? (
+            <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+              <div className="card-eyebrow">Up next · {formatDateNice(upNextSlot.date)}</div>
+              <div className="card-title">{upNextSlot.sessionTitle || 'Study session'}</div>
+              <div className="card-meta">
+                {upNextSlot.role && (
+                  <><span className={`tag tag-sm ${upNextSlot.role === 'anchor' ? 'tag-terracotta' : upNextSlot.role === 'practice' ? 'tag-moss' : ''}`}>
+                    {ROLE_TO_LABEL[upNextSlot.role]}
+                  </span>{' · '}</>
+                )}
+                ~{upNextSlot.plannedMinutes} min planned
+              </div>
+              <div className="upnext-actions">
+                <Link to="/log" className="btn btn-accent">Log session</Link>
+              </div>
+            </Card>
+          ) : (
+            <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+              <div className="card-eyebrow">No session today</div>
+              <div className="card-title">A planned rest day.</div>
+              <div className="card-meta">Or log a session you did elsewhere.</div>
+              <div className="upnext-actions">
+                <Link to="/log" className="btn btn-ghost-dark" style={{ flex: 1 }}>Log a session</Link>
+              </div>
+            </Card>
+          )
+        )}
+
+        {projectedFinish && roadmapPayload && (
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
+            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish</div>
+              <div className={`stat-value sm ${daysToDeadline! >= 0 ? 'moss' : 'terracotta'}`}>
+                {formatDateNice(projectedFinish)}
+              </div>
+              <div className="mono-caps" style={{ marginTop: '4px', color: daysToDeadline! >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
+                {daysToDeadline! > 0 ? `${daysToDeadline} days left` : daysToDeadline === 0 ? 'Due today' : `${Math.abs(daysToDeadline!)} days past`}
+              </div>
+            </div>
+            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <div className="stat-label" style={{ marginBottom: '6px' }}>Weekly goal</div>
+              <div className="stat-value sm">{roadmapPayload.weeklyHours}h</div>
+              <div className="mono-caps" style={{ marginTop: '4px' }}>per week target</div>
+            </div>
+          </div>
+        )}
 
         <Card variant="elevated" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
           <div className="stat">
@@ -109,6 +177,5 @@ export function Home() {
           Sign out
         </Button>
       </div>
-    </div>
   );
 }

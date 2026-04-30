@@ -11,15 +11,21 @@ import { Home } from './pages/Home';
 import { AuthConfirmed } from './pages/AuthConfirmed';
 import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
+import { Week } from './pages/Week';
+import { Roadmap } from './pages/Roadmap';
+import { Roadmaps } from './pages/Roadmaps';
+import { Settings } from './pages/Settings';
+import { AppShell } from './components/AppShell';
 import { useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
+import { RequireOnboarding } from './onboarding/RequireOnboarding';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
 import { Step3Preview } from './onboarding/steps/Step3Preview';
-function Step4Confirm() { return <div>Step 4 — Confirm</div> }
+import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
@@ -129,21 +135,21 @@ function AppRoutes() {
         }
       />
       <Route
-        path="/home"
         element={
           <ProtectedRoute>
-            <Home />
+            <RequireOnboarding>
+              <AppShell />
+            </RequireOnboarding>
           </ProtectedRoute>
         }
-      />
-      <Route
-        path="/log"
-        element={
-          <ProtectedRoute>
-            <Log />
-          </ProtectedRoute>
-        }
-      />
+      >
+        <Route path="/home" element={<Home />} />
+        <Route path="/log" element={<Log />} />
+        <Route path="/week" element={<Week />} />
+        <Route path="/roadmap" element={<Roadmap />} />
+        <Route path="/roadmaps" element={<Roadmaps />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
       <Route
         path="/onboarding"
         element={
