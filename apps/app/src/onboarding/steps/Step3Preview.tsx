@@ -75,6 +75,12 @@ export function Step3Preview() {
         }
       }
     }
+    const remainingTies = resolved.weeks
+      .flatMap(w => w.slots)
+      .filter(s => s.candidateMaterialIds.length >= 2).length
+    resolved.warnings = resolved.warnings
+      .filter(w => w.kind !== 'unresolved-tie-count')
+      .concat(remainingTies > 0 ? [{ kind: 'unresolved-tie-count' as const, detail: { count: remainingTies } }] : [])
     return resolved
   }, [roadmap, previewEdits])
 

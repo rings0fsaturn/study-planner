@@ -122,6 +122,10 @@
 }
 .card-inverted .card-meta { color: var(--text-on-inverted-dim); }
 
+/* ---- Up-next actions (card-inverted composite) ---- */
+.upnext-actions { display: flex; gap: 8px; margin-top: var(--space-3); }
+.upnext-actions .btn-accent { flex: 1; }
+
 /* ---- Tag ---- */
 .tag {
   display: inline-flex;
