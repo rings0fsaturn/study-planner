@@ -13,6 +13,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { Log } from './pages/Log';
 import { useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
+import { RequireOnboarding } from './onboarding/RequireOnboarding';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
@@ -132,7 +133,9 @@ function AppRoutes() {
         path="/home"
         element={
           <ProtectedRoute>
-            <Home />
+            <RequireOnboarding>
+              <Home />
+            </RequireOnboarding>
           </ProtectedRoute>
         }
       />
@@ -140,7 +143,9 @@ function AppRoutes() {
         path="/log"
         element={
           <ProtectedRoute>
-            <Log />
+            <RequireOnboarding>
+              <Log />
+            </RequireOnboarding>
           </ProtectedRoute>
         }
       />
