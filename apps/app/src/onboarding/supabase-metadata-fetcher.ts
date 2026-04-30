@@ -15,7 +15,14 @@ export class SupabaseMetadataFetcher implements MetadataFetcher {
       }
       return data as MetadataResult
     } catch (err) {
-      return { type: 'error', message: err instanceof Error ? err.message : 'Metadata fetch failed' }
+      const message = err instanceof Error ? err.message : 'Metadata fetch failed'
+      const isCorsOrNetwork = message.includes('Failed to fetch') || message.includes('NetworkError')
+      return {
+        type: 'error',
+        message: isCorsOrNetwork
+          ? 'Could not reach the metadata service. The edge function may not be deployed.'
+          : message,
+      }
     }
   }
 }

@@ -55,7 +55,12 @@ export function Step3Materials() {
       return
     }
 
-    if (urlInputRef.current) urlInputRef.current.value = ''
+    if (urlInputRef.current) {
+      urlInputRef.current.value = text
+      setTimeout(() => {
+        if (urlInputRef.current) urlInputRef.current.value = ''
+      }, 600)
+    }
     setLastPastedUrl(text)
     setPasteAnimKey(k => k + 1)
 
