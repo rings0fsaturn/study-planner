@@ -292,6 +292,8 @@ export class SyncEngine {
             createdAt: e.created_at,
           }))
         );
+
+        await this.reconcileSessionState(foreignEvents);
       }
 
       // Advance cursor even for own-client events so we don't re-fetch them.
@@ -538,6 +540,63 @@ export class SyncEngine {
 
   private async setLastPulledId(id: number): Promise<void> {
     await this.eventStore.table('sync_meta').put({ key: 'lastPulledId', value: id });
+  }
+
+  // ─── Session state reconciliation ─────────────────────────────────────────
+
+  private async reconcileSessionState(
+    foreignEvents: Array<{
+      kind: string;
+      payload: Record<string, unknown>;
+    }>
+  ): Promise<void> {
+    const sessionTable = this.eventStore.table('activeSession');
+
+    for (const event of foreignEvents) {
+      switch (event.kind) {
+        case 'SessionStarted': {
+          const existing = await sessionTable.get(1);
+          if (!existing) {
+            await sessionTable.put({
+              id: 1,
+              sessionId: event.payload.sessionId,
+              materialId: event.payload.materialId,
+              sessionTitle: event.payload.sessionTitle,
+              slotDate: event.payload.slotDate,
+              weekIndex: event.payload.weekIndex,
+              plannedMinutes: event.payload.plannedMinutes,
+              startedAt: event.payload.startedAt,
+              status: 'active',
+              pauseIntervals: [],
+              pomodoroConfig: event.payload.pomodoroConfig ?? { workMinutes: 50, breakMinutes: 10 },
+            });
+          }
+          break;
+        }
+        case 'SessionPaused': {
+          const current = await sessionTable.get(1);
+          if (current && current.sessionId === event.payload.sessionId) {
+            await sessionTable.update(1, { status: 'paused' });
+          }
+          break;
+        }
+        case 'SessionResumed': {
+          const current = await sessionTable.get(1);
+          if (current && current.sessionId === event.payload.sessionId) {
+            await sessionTable.update(1, { status: 'active' });
+          }
+          break;
+        }
+        case 'SessionLogged':
+        case 'SessionAbandoned': {
+          const current = await sessionTable.get(1);
+          if (current && current.sessionId === event.payload.sessionId) {
+            await sessionTable.delete(1);
+          }
+          break;
+        }
+      }
+    }
   }
 
   // ─── Public controls ──────────────────────────────────────────────────────
