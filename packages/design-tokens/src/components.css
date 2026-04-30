@@ -486,6 +486,68 @@
 }
 .material-row-action:hover { color: var(--ink); }
 
+/* ---- MATERIAL ICON: Playlist ---- */
+.material-icon.pl { background: rgba(95, 90, 155, 0.12); color: #5f5a9b; }
+
+/* ---- SHIMMER / LOADING STATE ---- */
+.material-row.loading .material-body { pointer-events: none; }
+.shimmer-line {
+  height: 14px; border-radius: var(--radius-sm);
+  background: linear-gradient(90deg, var(--paper-deep) 25%, rgba(194, 142, 90, 0.12) 50%, var(--paper-deep) 75%);
+  background-size: 200% 100%; animation: shimmer 1.5s ease-in-out infinite;
+}
+.shimmer-line.short { width: 60%; }
+.shimmer-line.medium { width: 80%; }
+@keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ---- MATERIAL: Needs attention badge ---- */
+.material-badge-attention {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+  border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  background: rgba(184, 92, 56, 0.1); color: var(--terracotta-d);
+  animation: badgePulse 2s ease-in-out infinite;
+}
+@keyframes badgePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+/* ---- PLAYLIST PICKER ---- */
+.playlist-picker-row {
+  display: flex; gap: 12px; align-items: center; padding: 10px 0;
+  border-bottom: 1px solid var(--rule);
+}
+.playlist-picker-row:last-child { border-bottom: none; }
+.playlist-picker-row.deselected .playlist-picker-title {
+  text-decoration: line-through; color: var(--text-tertiary);
+}
+.playlist-picker-title { flex: 1; font-size: 13px; color: var(--text-primary); min-width: 0; }
+.playlist-picker-author {
+  font-size: 12px; color: var(--text-secondary); width: 120px;
+  flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.playlist-picker-duration {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); width: 50px; text-align: right; flex-shrink: 0;
+}
+.playlist-picker-footer {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-top: var(--space-4); padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+.playlist-picker-summary {
+  font-family: var(--font-mono); font-size: 11px;
+  color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.04em;
+}
+.playlist-picker-nav {
+  display: flex; gap: 8px; align-items: center; margin: var(--space-3) 0;
+}
+.playlist-picker-page-info {
+  font-family: var(--font-mono); font-size: 10px;
+  color: var(--text-tertiary); letter-spacing: 0.04em;
+}
+
 /* ---- SCHEDULE ---- */
 .schedule-card {
   background: var(--surface-card); border: 1px solid var(--border-subtle);

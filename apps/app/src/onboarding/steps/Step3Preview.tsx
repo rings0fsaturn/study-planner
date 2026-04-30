@@ -127,8 +127,10 @@ export function Step3Preview() {
           title: mat.title,
           estimatedDuration: mat.estimatedDuration,
           url: mat.url,
-          kind: 'manual',
+          kind: mat.kind ?? 'manual',
           role: mat.role,
+          playlistId: mat.playlistId,
+          youtubeVideoId: mat.youtubeVideoId,
         }
         await logEvent('MaterialAdded', payload as unknown as Record<string, unknown>)
       }

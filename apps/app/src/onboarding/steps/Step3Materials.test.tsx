@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { Step3Materials } from './Step3Materials'
 import { OnboardingProvider } from '../OnboardingProvider'
+import { MetadataFetcherProvider } from '../MetadataFetcherContext'
+import { FakeMetadataFetcher } from '../fake-metadata-fetcher'
 import { useEventStore } from '../../events/useEventStore'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
 import type { EventStore } from '../../events/EventStore'
@@ -47,6 +49,23 @@ async function createTestEventStore() {
   return db
 }
 
+function renderStep3(fakeFetcher?: FakeMetadataFetcher) {
+  const fetcher = fakeFetcher ?? new FakeMetadataFetcher()
+  return render(
+    <MemoryRouter initialEntries={['/onboarding/3']}>
+      <Routes>
+        <Route path="/onboarding/3" element={
+          <MetadataFetcherProvider fetcher={fetcher}>
+            <OnboardingProvider>
+              <Step3Materials />
+            </OnboardingProvider>
+          </MetadataFetcherProvider>
+        } />
+      </Routes>
+    </MemoryRouter>,
+  )
+}
+
 describe('Step3Materials', () => {
   let testDb: Dexie
 
@@ -68,58 +87,25 @@ describe('Step3Materials', () => {
     mockUseEventStore.mockReturnValue(mockEventStore as never)
   })
 
-  it('renders URL input (disabled) and "Add manually" button', async () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/3']}>
-        <Routes>
-          <Route path="/onboarding/3" element={
-            <OnboardingProvider>
-              <Step3Materials />
-            </OnboardingProvider>
-          } />
-        </Routes>
-      </MemoryRouter>,
-    )
-
+  it('renders URL input (enabled) and "Add manually" button', async () => {
+    renderStep3()
     await screen.findByRole('heading', { name: /What are you/i })
-    expect(screen.getByPlaceholderText(/youtube.com/)).toBeDisabled()
+    expect(screen.getByPlaceholderText(/youtube.com/)).not.toBeDisabled()
     expect(screen.getByText('Add manually')).toBeInTheDocument()
   })
 
-  it('clicking "Add manually" adds a material row', async () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/3']}>
-        <Routes>
-          <Route path="/onboarding/3" element={
-            <OnboardingProvider>
-              <Step3Materials />
-            </OnboardingProvider>
-          } />
-        </Routes>
-      </MemoryRouter>,
-    )
-
+  it('clicking "Add manually" adds a material row with BK icon', async () => {
+    renderStep3()
     await screen.findByText('Add manually')
-    const addButton = screen.getByText('Add manually')
-    fireEvent.click(addButton)
+    fireEvent.click(screen.getByText('Add manually'))
 
     expect(screen.getByPlaceholderText('Material title')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Min')).toBeInTheDocument()
+    expect(screen.getByText('BK')).toBeInTheDocument()
   })
 
   it('type dropdown has 3 correct labels', async () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/3']}>
-        <Routes>
-          <Route path="/onboarding/3" element={
-            <OnboardingProvider>
-              <Step3Materials />
-            </OnboardingProvider>
-          } />
-        </Routes>
-      </MemoryRouter>,
-    )
-
+    renderStep3()
     await screen.findByText('Add manually')
     fireEvent.click(screen.getByText('Add manually'))
 
@@ -131,18 +117,7 @@ describe('Step3Materials', () => {
   })
 
   it('remove button removes the row', async () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/3']}>
-        <Routes>
-          <Route path="/onboarding/3" element={
-            <OnboardingProvider>
-              <Step3Materials />
-            </OnboardingProvider>
-          } />
-        </Routes>
-      </MemoryRouter>,
-    )
-
+    renderStep3()
     await screen.findByText('Add manually')
     fireEvent.click(screen.getByText('Add manually'))
 
@@ -155,20 +130,91 @@ describe('Step3Materials', () => {
   })
 
   it('back button exists and is clickable', async () => {
-    render(
-      <MemoryRouter initialEntries={['/onboarding/3']}>
-        <Routes>
-          <Route path="/onboarding/3" element={
-            <OnboardingProvider>
-              <Step3Materials />
-            </OnboardingProvider>
-          } />
-        </Routes>
-      </MemoryRouter>,
-    )
-
+    renderStep3()
     await screen.findByText('Add manually')
     const buttons = screen.getAllByRole('button')
     expect(buttons.length).toBeGreaterThan(0)
+  })
+
+  it('pasting a YouTube video URL creates a loading card with YT icon', async () => {
+    const fetcher = new FakeMetadataFetcher()
+    fetcher.setResponse('https://youtube.com/watch?v=abc123', {
+      type: 'youtube-video', title: 'Test Video', durationMinutes: 45, youtubeVideoId: 'abc123',
+    })
+
+    renderStep3(fetcher)
+    await screen.findByText('Add manually')
+
+    const input = screen.getByPlaceholderText(/youtube.com/)
+    fireEvent.paste(input, { clipboardData: { getData: () => 'https://youtube.com/watch?v=abc123' } })
+
+    expect(screen.getByText('YT')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Test Video')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('45')).toBeInTheDocument()
+    })
+  })
+
+  it('pasting an article URL creates a card with ART icon', async () => {
+    const fetcher = new FakeMetadataFetcher()
+    fetcher.setResponse('https://example.com/article', {
+      type: 'article', title: 'Article Title', durationMinutes: 10,
+    })
+
+    renderStep3(fetcher)
+    await screen.findByText('Add manually')
+
+    const input = screen.getByPlaceholderText(/youtube.com/)
+    fireEvent.paste(input, { clipboardData: { getData: () => 'https://example.com/article' } })
+
+    expect(screen.getByText('ART')).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Article Title')).toBeInTheDocument()
+    })
+  })
+
+  it('pasting an invalid URL shows error', async () => {
+    renderStep3()
+    await screen.findByText('Add manually')
+
+    const input = screen.getByPlaceholderText(/youtube.com/)
+    fireEvent.paste(input, { clipboardData: { getData: () => 'not a valid url' } })
+
+    expect(screen.getByText(/doesn't look like a valid URL/)).toBeInTheDocument()
+  })
+
+  it('fetch failure shows error message on card', async () => {
+    const fetcher = new FakeMetadataFetcher()
+    fetcher.setResponse('https://example.com/broken', { type: 'error', message: 'Failed' })
+
+    renderStep3(fetcher)
+    await screen.findByText('Add manually')
+
+    const input = screen.getByPlaceholderText(/youtube.com/)
+    fireEvent.paste(input, { clipboardData: { getData: () => 'https://example.com/broken' } })
+
+    await waitFor(() => {
+      expect(screen.getByText(/couldn't fetch details/)).toBeInTheDocument()
+    })
+  })
+
+  it('partial article fetch (no duration) shows partial helper', async () => {
+    const fetcher = new FakeMetadataFetcher()
+    fetcher.setResponse('https://example.com/paywalled', {
+      type: 'article', title: 'Paywalled Article', durationMinutes: null,
+    })
+
+    renderStep3(fetcher)
+    await screen.findByText('Add manually')
+
+    const input = screen.getByPlaceholderText(/youtube.com/)
+    fireEvent.paste(input, { clipboardData: { getData: () => 'https://example.com/paywalled' } })
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Paywalled Article')).toBeInTheDocument()
+      expect(screen.getByText(/fill in the missing field/)).toBeInTheDocument()
+    })
   })
 })

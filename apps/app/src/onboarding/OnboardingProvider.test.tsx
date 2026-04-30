@@ -166,6 +166,7 @@ describe('OnboardingProvider', () => {
         weekendHours: 3,
         selectedStudyDays: ['saturday', 'sunday'],
         materials: [],
+        playlists: [],
         previewEdits: [],
         stepReached: 2,
       },
@@ -183,5 +184,195 @@ describe('OnboardingProvider', () => {
 
     expect(screen.getByTestId('deadline')).toHaveTextContent('2025-07-01')
     expect(screen.getByTestId('purpose')).toHaveTextContent('Restored exam')
+  })
+})
+
+function ReducerTestComponent() {
+  const { state, dispatch, ready } = useOnboarding()
+  return (
+    <div>
+      <span data-testid="ready">{ready ? 'ready' : 'loading'}</span>
+      <span data-testid="materials">{JSON.stringify(state.materials)}</span>
+      <span data-testid="playlists">{JSON.stringify(state.playlists)}</span>
+      <span data-testid="materialCount">{state.materials.length}</span>
+      <span data-testid="playlistCount">{state.playlists.length}</span>
+      <button data-testid="addMaterial" onClick={() => dispatch({
+        type: 'ADD_MATERIAL',
+        material: { id: 'mat-1', title: '', estimatedDuration: 0, role: 'foundation', additionOrder: 0, userOverrodeType: false, kind: 'youtube', fetchStatus: 'idle' },
+      })}>Add</button>
+      <button data-testid="fetchStarted" onClick={() => dispatch({ type: 'FETCH_STARTED', id: 'mat-1' })}>FetchStart</button>
+      <button data-testid="fetchSucceeded" onClick={() => dispatch({
+        type: 'FETCH_SUCCEEDED', id: 'mat-1', updates: { title: 'Video Title', estimatedDuration: 90 },
+      })}>FetchOK</button>
+      <button data-testid="fetchPartial" onClick={() => dispatch({
+        type: 'FETCH_SUCCEEDED', id: 'mat-1', updates: { title: 'Article Title' },
+      })}>FetchPartial</button>
+      <button data-testid="fetchFailed" onClick={() => dispatch({ type: 'FETCH_FAILED', id: 'mat-1' })}>FetchFail</button>
+      <button data-testid="addPlaylist" onClick={() => dispatch({
+        type: 'ADD_PLAYLIST',
+        playlist: { id: 'pl-1', title: '', fetchStatus: 'loading', youtubePlaylistId: 'PLxyz', videos: [] },
+      })}>AddPlaylist</button>
+      <button data-testid="playlistFetchOk" onClick={() => dispatch({
+        type: 'PLAYLIST_FETCH_SUCCEEDED', playlistId: 'pl-1', title: 'My Playlist',
+        videos: [
+          { youtubeVideoId: 'v1', title: 'Video 1', author: 'Author', durationMinutes: 30, selected: true },
+          { youtubeVideoId: 'v2', title: 'Video 2', author: 'Author', durationMinutes: 45, selected: true },
+          { youtubeVideoId: 'v3', title: 'Video 3', author: 'Author', durationMinutes: 20, selected: true },
+        ],
+      })}>PlaylistFetchOK</button>
+      <button data-testid="playlistFetchFail" onClick={() => dispatch({ type: 'PLAYLIST_FETCH_FAILED', playlistId: 'pl-1' })}>PlaylistFetchFail</button>
+      <button data-testid="playlistConfirm" onClick={() => dispatch({
+        type: 'PLAYLIST_CONFIRM', playlistId: 'pl-1', selectedVideoIds: ['v1', 'v3'],
+      })}>PlaylistConfirm</button>
+      <button data-testid="removePlaylist" onClick={() => dispatch({ type: 'REMOVE_PLAYLIST', playlistId: 'pl-1' })}>RemovePlaylist</button>
+    </div>
+  )
+}
+
+describe('OnboardingProvider — fetch and playlist actions', () => {
+  let testDb: Dexie
+
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    testDb = await createTestEventStore()
+    await testDb.table('onboardingDraft').clear()
+
+    const mockEventStore = {
+      getAll: vi.fn().mockResolvedValue([]),
+      append: vi.fn(),
+      table: (name: string) => testDb.table(name),
+    } as unknown as EventStore
+
+    mockUseEventStoreContext.mockReturnValue({ eventStore: mockEventStore, ready: true })
+    mockUseEventStore.mockReturnValue(mockEventStore)
+  })
+
+  async function renderAndWait() {
+    render(<OnboardingProvider><ReducerTestComponent /></OnboardingProvider>)
+    await waitFor(() => expect(screen.getByTestId('ready')).toHaveTextContent('ready'))
+  }
+
+  it('FETCH_STARTED sets fetchStatus to loading', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('fetchStarted'))
+
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials[0].fetchStatus).toBe('loading')
+  })
+
+  it('FETCH_SUCCEEDED with full data sets fetchStatus to success', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('fetchSucceeded'))
+
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials[0].fetchStatus).toBe('success')
+    expect(materials[0].title).toBe('Video Title')
+    expect(materials[0].estimatedDuration).toBe(90)
+  })
+
+  it('FETCH_SUCCEEDED with partial data sets fetchStatus to partial', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('fetchPartial'))
+
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials[0].fetchStatus).toBe('partial')
+    expect(materials[0].title).toBe('Article Title')
+  })
+
+  it('FETCH_FAILED sets fetchStatus to error', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('fetchFailed'))
+
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials[0].fetchStatus).toBe('error')
+  })
+
+  it('ADD_PLAYLIST adds to playlists array', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+
+    expect(screen.getByTestId('playlistCount')).toHaveTextContent('1')
+    const playlists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(playlists[0].fetchStatus).toBe('loading')
+    expect(playlists[0].youtubePlaylistId).toBe('PLxyz')
+  })
+
+  it('PLAYLIST_FETCH_SUCCEEDED populates videos and sets success', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchOk'))
+
+    const playlists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(playlists[0].fetchStatus).toBe('success')
+    expect(playlists[0].title).toBe('My Playlist')
+    expect(playlists[0].videos).toHaveLength(3)
+  })
+
+  it('PLAYLIST_FETCH_FAILED sets error status', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchFail'))
+
+    const playlists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(playlists[0].fetchStatus).toBe('error')
+  })
+
+  it('PLAYLIST_CONFIRM explodes selected videos into materials and removes playlist', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchOk'))
+    fireEvent.click(screen.getByTestId('playlistConfirm'))
+
+    expect(screen.getByTestId('playlistCount')).toHaveTextContent('0')
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials).toHaveLength(2)
+    expect(materials[0].title).toBe('Video 1')
+    expect(materials[0].kind).toBe('youtube')
+    expect(materials[0].fetchStatus).toBe('success')
+    expect(materials[0].playlistId).toBe('pl-1')
+    expect(materials[0].youtubeVideoId).toBe('v1')
+    expect(materials[1].title).toBe('Video 3')
+    expect(materials[1].youtubeVideoId).toBe('v3')
+  })
+
+  it('REMOVE_PLAYLIST removes playlist from array', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    expect(screen.getByTestId('playlistCount')).toHaveTextContent('1')
+    fireEvent.click(screen.getByTestId('removePlaylist'))
+    expect(screen.getByTestId('playlistCount')).toHaveTextContent('0')
+  })
+
+  it('RESTORE resets stuck loading materials to error', async () => {
+    await testDb.table('onboardingDraft').put({
+      id: 1,
+      state: {
+        deadline: null,
+        purpose: '',
+        weeklyHours: 0,
+        weekdayHours: 0,
+        weekendHours: 0,
+        selectedStudyDays: [],
+        materials: [
+          { id: 'stuck-1', title: '', estimatedDuration: 0, role: 'foundation', additionOrder: 0, userOverrodeType: false, kind: 'youtube', fetchStatus: 'loading' },
+        ],
+        playlists: [
+          { id: 'pl-stuck', title: '', fetchStatus: 'loading', youtubePlaylistId: 'PLabc', videos: [] },
+        ],
+        previewEdits: [],
+        stepReached: 3,
+      },
+    })
+
+    await renderAndWait()
+
+    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
+    expect(materials[0].fetchStatus).toBe('error')
+    const playlists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(playlists[0].fetchStatus).toBe('error')
   })
 })

@@ -48,8 +48,10 @@ export interface MaterialAddedPayload {
   title: string
   estimatedDuration: number
   url?: string
-  kind: 'manual'
+  kind: 'youtube' | 'article' | 'manual'
   role: 'anchor' | 'foundation' | 'practice'
+  playlistId?: string
+  youtubeVideoId?: string
 }
 
 export interface RoadmapCreatedPayload {

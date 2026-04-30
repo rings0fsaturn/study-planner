@@ -22,6 +22,8 @@ import { OnboardingGate } from './onboarding/OnboardingGate';
 import { RequireOnboarding } from './onboarding/RequireOnboarding';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
+import { MetadataFetcherProvider } from './onboarding/MetadataFetcherContext';
+import { SupabaseMetadataFetcher } from './onboarding/supabase-metadata-fetcher';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
@@ -157,9 +159,11 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <OnboardingGate>
-              <OnboardingProvider>
-                <OnboardingLayout />
-              </OnboardingProvider>
+              <MetadataFetcherProvider fetcher={new SupabaseMetadataFetcher(supabase)}>
+                <OnboardingProvider>
+                  <OnboardingLayout />
+                </OnboardingProvider>
+              </MetadataFetcherProvider>
             </OnboardingGate>
           </ProtectedRoute>
         }
