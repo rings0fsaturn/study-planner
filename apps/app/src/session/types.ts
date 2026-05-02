@@ -279,3 +279,16 @@ export interface SessionSlotData {
   materialUrl?: string;
   role?: 'anchor' | 'foundation' | 'practice';
 }
+
+// ---------------------------------------------------------------------------
+// Planned-end notification strategy (v1: tab title flash + favicon dot + banner)
+// ---------------------------------------------------------------------------
+
+export interface PlannedEndNotifier {
+  setCallback(cb: () => void): void;
+  schedule(remainingMs: number): void;
+  cancel(): void;
+  dismiss(): void;
+  destroy(): void;
+  handleVisibilityChange(isHidden: boolean): void;
+}

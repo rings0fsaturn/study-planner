@@ -3,6 +3,7 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useEventStore } from '../events/useEventStore';
 import { DurabilityHooks } from '../lib/DurabilityHooks';
 import { SessionLifecycle } from '../session/SessionLifecycle';
+import { TabNotificationStrategy } from '../session/NotificationStrategy';
 import { DEFAULT_POMODORO_CONFIG } from '../session/types';
 import type { SessionState, SessionSlotData, WalkAwayResolution, RecoveryResolution } from '../session/types';
 import type { PomodoroPhase } from '../session/pomodoro';
@@ -23,6 +24,7 @@ import {
   SessionFrame,
   WalkAwayDialog,
   RecoveryDialog,
+  PlannedEndBanner,
 } from '../session/components';
 import '../session/session.css';
 
@@ -41,17 +43,40 @@ export function Session() {
   const [, setElapsedWallClockMs] = useState(0);
   const [pomodoroPhase, setPomodoroPhase] = useState<PomodoroPhase>({ phase: 'none', current: 0, total: 0, remainingMs: 0 });
   const [initialized, setInitialized] = useState(false);
+  const [plannedEndReached, setPlannedEndReached] = useState(false);
 
   // Initialize lifecycle
   useEffect(() => {
     const durability = new DurabilityHooks();
     durabilityRef.current = durability;
 
+    const notifier = new TabNotificationStrategy({
+      getTitle: () => document.title,
+      setTitle: (t) => { document.title = t; },
+      setFaviconHref: (href) => {
+        let link = document.querySelector('link[rel="icon"]') as HTMLLinkElement;
+        if (!link) {
+          link = document.createElement('link');
+          link.rel = 'icon';
+          link.type = 'image/svg+xml';
+          document.head.appendChild(link);
+        }
+        link.href = href;
+      },
+      getOriginalFaviconHref: () => '/study/favicon.svg',
+      isDocumentHidden: () => document.hidden,
+      setTimeout: (cb, ms) => window.setTimeout(cb, ms),
+      clearTimeout: (id) => window.clearTimeout(id),
+      setInterval: (cb, ms) => window.setInterval(cb, ms),
+      clearInterval: (id) => window.clearInterval(id),
+    });
+
     const lc = new SessionLifecycle({
       eventStore,
       durabilityHooks: durability,
       pomodoroConfig: DEFAULT_POMODORO_CONFIG,
-      audioContext: null, // Created on user gesture (start)
+      audioContext: null,
+      notifier,
     });
 
     lcRef.current = lc;
@@ -93,6 +118,7 @@ export function Session() {
       setElapsedActiveMs(lc.getElapsedActiveMs());
       setElapsedWallClockMs(lc.getElapsedWallClockMs());
       setPomodoroPhase(lc.getPomodoroPhase());
+      setPlannedEndReached(lc.isPlannedEndReached());
     }, 1000);
 
     return () => clearInterval(interval);
@@ -105,7 +131,25 @@ export function Session() {
     setElapsedActiveMs(lc.getElapsedActiveMs());
     setElapsedWallClockMs(lc.getElapsedWallClockMs());
     setPomodoroPhase(lc.getPomodoroPhase());
+    setPlannedEndReached(lc.isPlannedEndReached());
   }, [sessionState]);
+
+  // Instant banner update on tab return
+  useEffect(() => {
+    const handler = () => {
+      if (!document.hidden) {
+        const lc = lcRef.current;
+        if (lc) setPlannedEndReached(lc.isPlannedEndReached());
+      }
+    };
+    document.addEventListener('visibilitychange', handler);
+    return () => document.removeEventListener('visibilitychange', handler);
+  }, []);
+
+  const handleDismissPlannedEnd = useCallback(() => {
+    lcRef.current?.dismissPlannedEnd();
+    setPlannedEndReached(false);
+  }, []);
 
   const handlePauseResume = useCallback(async () => {
     const lc = lcRef.current;
@@ -194,6 +238,10 @@ export function Session() {
         <div className="session-top-bar">
           <PauseResumeButton isPaused={isPaused} onToggle={handlePauseResume} />
         </div>
+
+        {plannedEndReached && sessionState !== 'walk_away' && (
+          <PlannedEndBanner onDismiss={handleDismissPlannedEnd} />
+        )}
 
         <SessionFrame overrun={isOverrun} isBreak={isBreak} isPaused={isPaused}>
           <div className={`session-eyebrow-row ${getEyebrowColorClass(sessionState, overrunMinutes, isBreak)}`}>

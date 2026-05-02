@@ -14,3 +14,4 @@ export { SessionFrame } from './SessionFrame';
 export { WalkAwayDialog } from './WalkAwayDialog';
 export { RecoveryDialog } from './RecoveryDialog';
 export { AbandonedSessionBanner } from './AbandonedSessionBanner';
+export { PlannedEndBanner } from './PlannedEndBanner';
