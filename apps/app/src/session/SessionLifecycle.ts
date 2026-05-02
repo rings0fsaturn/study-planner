@@ -141,6 +141,9 @@ export class SessionLifecycle {
       pauseIntervals: [],
       pomodoroConfig: this.pomodoroConfig,
       materialUrl: slotData.materialUrl,
+      kind: slotData.kind,
+      youtubeVideoId: slotData.youtubeVideoId,
+      youtubeLastPosition: 0,
     };
 
     await this.persistToDb();
@@ -154,6 +157,8 @@ export class SessionLifecycle {
       plannedMinutes: slotData.plannedMinutes,
       startedAt,
       pomodoroConfig: this.pomodoroConfig,
+      kind: slotData.kind,
+      youtubeVideoId: slotData.youtubeVideoId,
     };
 
     await this.eventStore.append(
@@ -274,6 +279,12 @@ export class SessionLifecycle {
 
   getRecord(): ActiveSessionRecord | null {
     return this.record;
+  }
+
+  async updateYoutubePosition(seconds: number): Promise<void> {
+    if (!this.record) return;
+    this.record.youtubeLastPosition = seconds;
+    await this.persistToDb();
   }
 
   getElapsedActiveMs(): number {

@@ -139,6 +139,8 @@ export function Home() {
                       plannedMinutes: upNextSlot.plannedMinutes,
                       materialUrl: material?.payload.url as string | undefined,
                       role: upNextSlot.role as SessionSlotData['role'],
+                      kind: (material?.payload.kind as SessionSlotData['kind']) ?? 'manual',
+                      youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
                     };
                     navigate('/session', { state: sessionSlot });
                   }}

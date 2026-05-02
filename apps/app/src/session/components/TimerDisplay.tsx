@@ -1,10 +1,4 @@
-interface TimerDisplayProps {
-  elapsedMs: number;
-  overrun?: boolean;
-  large?: boolean;
-}
-
-function formatTime(ms: number): string {
+export function formatElapsedTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -19,12 +13,19 @@ function formatTime(ms: number): string {
   return `${minutes}:${ss}`;
 }
 
-export function TimerDisplay({ elapsedMs, overrun, large }: TimerDisplayProps) {
+interface TimerDisplayProps {
+  elapsedMs: number;
+  overrun?: boolean;
+  large?: boolean;
+  sizeClass?: string;
+}
+
+export function TimerDisplay({ elapsedMs, overrun, large, sizeClass }: TimerDisplayProps) {
   const className = [
     'session-timer-time',
     overrun && 'is-overrun',
-    large && 'session-timer-large',
+    sizeClass || (large && 'session-timer-large'),
   ].filter(Boolean).join(' ');
 
-  return <div className={className}>{formatTime(elapsedMs)}</div>;
+  return <div className={className}>{formatElapsedTime(elapsedMs)}</div>;
 }
