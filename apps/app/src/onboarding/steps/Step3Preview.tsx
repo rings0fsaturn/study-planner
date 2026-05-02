@@ -23,7 +23,7 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 export function Step3Preview() {
-  const { state, dispatch } = useOnboarding()
+  const { state, dispatch, expandedMaterials } = useOnboarding()
   const { logEvent } = useSync()
   const eventStore = useEventStore()
   const navigate = useNavigate()
@@ -38,12 +38,12 @@ export function Step3Preview() {
   }, [state.previewEdits])
 
   const roadmapInput = useMemo((): RoadmapInput | null => {
-    if (!state.deadline || state.selectedStudyDays.length === 0 || state.materials.length === 0) return null
+    if (!state.deadline || state.selectedStudyDays.length === 0 || expandedMaterials.length === 0) return null
     const today = new Date().toISOString().split('T')[0]
     const days = differenceInCalendarDays(state.deadline, today)
     const weeks = Math.max(1, Math.ceil(days / 7))
     return {
-      materials: state.materials
+      materials: expandedMaterials
         .filter(m => m.title && m.estimatedDuration > 0)
         .map((m, i) => ({ id: m.id, title: m.title, totalMinutes: m.estimatedDuration, role: m.role, additionOrder: i })),
       weeks,
@@ -52,7 +52,7 @@ export function Step3Preview() {
       weekdayHours: state.weekdayHours,
       weekendHours: state.weekendHours,
     }
-  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials])
+  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, expandedMaterials])
 
   const debouncedInput = useDebouncedValue(roadmapInput, 150)
   const roadmap = useMemo((): RoadmapOutput | null => {
@@ -150,7 +150,7 @@ export function Step3Preview() {
     try {
       const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
 
-      for (const mat of state.materials) {
+      for (const mat of expandedMaterials) {
         if (!mat.title || mat.estimatedDuration <= 0) continue
         const payload: MaterialAddedPayload = {
           materialId: mat.id,
@@ -185,7 +185,7 @@ export function Step3Preview() {
     } finally {
       setCommitting(false)
     }
-  }, [displayRoadmap, state, committing, unresolvedTieCount, logEvent, eventStore, navigate, roadmapInput])
+  }, [displayRoadmap, state, expandedMaterials, committing, unresolvedTieCount, logEvent, eventStore, navigate, roadmapInput])
 
   if (!roadmapInput) {
     return (
@@ -242,7 +242,7 @@ export function Step3Preview() {
       {displayRoadmap && (
         <SchedulePreview
           roadmap={displayRoadmap}
-          materials={state.materials.map(m => ({ id: m.id, title: m.title }))}
+          materials={expandedMaterials.map(m => ({ id: m.id, title: m.title }))}
           onResolveTie={handleResolveTie}
           onRename={handleRename}
           swapState={swapMachine.state}

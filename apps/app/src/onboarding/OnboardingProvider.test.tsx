@@ -188,7 +188,7 @@ describe('OnboardingProvider', () => {
 })
 
 function ReducerTestComponent() {
-  const { state, dispatch, ready } = useOnboarding()
+  const { state, dispatch, ready, expandedMaterials } = useOnboarding()
   return (
     <div>
       <span data-testid="ready">{ready ? 'ready' : 'loading'}</span>
@@ -196,9 +196,10 @@ function ReducerTestComponent() {
       <span data-testid="playlists">{JSON.stringify(state.playlists)}</span>
       <span data-testid="materialCount">{state.materials.length}</span>
       <span data-testid="playlistCount">{state.playlists.length}</span>
+      <span data-testid="expandedMaterials">{JSON.stringify(expandedMaterials)}</span>
       <button data-testid="addMaterial" onClick={() => dispatch({
         type: 'ADD_MATERIAL',
-        material: { id: 'mat-1', title: '', estimatedDuration: 0, role: 'foundation', additionOrder: 0, userOverrodeType: false, kind: 'youtube', fetchStatus: 'idle' },
+        material: { id: 'mat-1', title: '', estimatedDuration: 0, role: 'foundation', userOverrodeType: false, kind: 'youtube', fetchStatus: 'idle' },
       })}>Add</button>
       <button data-testid="fetchStarted" onClick={() => dispatch({ type: 'FETCH_STARTED', id: 'mat-1' })}>FetchStart</button>
       <button data-testid="fetchSucceeded" onClick={() => dispatch({
@@ -225,6 +226,7 @@ function ReducerTestComponent() {
         type: 'PLAYLIST_CONFIRM', playlistId: 'pl-1', selectedVideoIds: ['v1', 'v3'],
       })}>PlaylistConfirm</button>
       <button data-testid="removePlaylist" onClick={() => dispatch({ type: 'REMOVE_PLAYLIST', playlistId: 'pl-1' })}>RemovePlaylist</button>
+      <button data-testid="playlistSetRole" onClick={() => dispatch({ type: 'PLAYLIST_SET_ROLE', playlistId: 'pl-1', role: 'anchor' })}>SetRoleAnchor</button>
     </div>
   )
 }
@@ -321,22 +323,48 @@ describe('OnboardingProvider — fetch and playlist actions', () => {
     expect(playlists[0].fetchStatus).toBe('error')
   })
 
-  it('PLAYLIST_CONFIRM explodes selected videos into materials and removes playlist', async () => {
+  it('PLAYLIST_CONFIRM marks playlist as confirmed and updates video selection', async () => {
     await renderAndWait()
     fireEvent.click(screen.getByTestId('addPlaylist'))
     fireEvent.click(screen.getByTestId('playlistFetchOk'))
     fireEvent.click(screen.getByTestId('playlistConfirm'))
 
-    expect(screen.getByTestId('playlistCount')).toHaveTextContent('0')
-    const materials = JSON.parse(screen.getByTestId('materials').textContent!)
-    expect(materials).toHaveLength(2)
-    expect(materials[0].title).toBe('Video 1')
-    expect(materials[0].kind).toBe('youtube')
-    expect(materials[0].fetchStatus).toBe('success')
-    expect(materials[0].playlistId).toBe('pl-1')
-    expect(materials[0].youtubeVideoId).toBe('v1')
-    expect(materials[1].title).toBe('Video 3')
-    expect(materials[1].youtubeVideoId).toBe('v3')
+    expect(screen.getByTestId('playlistCount')).toHaveTextContent('1')
+    expect(screen.getByTestId('materialCount')).toHaveTextContent('0')
+
+    const playlists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(playlists[0].confirmed).toBe(true)
+    expect(playlists[0].videos.filter((v: { selected: boolean }) => v.selected).map((v: { youtubeVideoId: string }) => v.youtubeVideoId)).toEqual(['v1', 'v3'])
+
+    const expanded = JSON.parse(screen.getByTestId('expandedMaterials').textContent!)
+    expect(expanded).toHaveLength(2)
+    expect(expanded[0].title).toBe('Video 1')
+    expect(expanded[0].kind).toBe('youtube')
+    expect(expanded[0].fetchStatus).toBe('success')
+    expect(expanded[0].playlistId).toBe('pl-1')
+    expect(expanded[0].youtubeVideoId).toBe('v1')
+    expect(expanded[1].title).toBe('Video 3')
+    expect(expanded[1].youtubeVideoId).toBe('v3')
+  })
+
+  it('PLAYLIST_SET_ROLE updates role on the target playlist only', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchOk'))
+    fireEvent.click(screen.getByTestId('playlistConfirm'))
+
+    const beforePlaylists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(beforePlaylists[0].role).toBe('foundation')
+
+    fireEvent.click(screen.getByTestId('playlistSetRole'))
+
+    const afterPlaylists = JSON.parse(screen.getByTestId('playlists').textContent!)
+    expect(afterPlaylists[0].role).toBe('anchor')
+    expect(afterPlaylists[0].confirmed).toBe(true)
+
+    const expanded = JSON.parse(screen.getByTestId('expandedMaterials').textContent!)
+    expect(expanded[0].role).toBe('anchor')
+    expect(expanded[1].role).toBe('anchor')
   })
 
   it('REMOVE_PLAYLIST removes playlist from array', async () => {

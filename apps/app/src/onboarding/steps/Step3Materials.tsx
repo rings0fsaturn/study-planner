@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback } from 'react'
 import { useNavigate, Outlet, useLocation } from 'react-router-dom'
-import { useOnboarding, type OnboardingMaterial } from '../OnboardingProvider'
+import { useOnboarding, type OnboardingMaterial, type PlaylistEntry } from '../OnboardingProvider'
 import { CheckpointGate } from '../CheckpointGate'
 import { MaterialRow } from '../components/MaterialRow'
 import { Step3Preview } from './Step3Preview'
@@ -12,7 +12,7 @@ import { YouTubePopup } from '../components/YouTubePopup'
 import { PasteAnimation } from '../components/PasteAnimation'
 
 export function Step3Materials() {
-  const { state, dispatch } = useOnboarding()
+  const { state, dispatch, expandedMaterials } = useOnboarding()
   const navigate = useNavigate()
   const location = useLocation()
   const isDesktop = useMatchMedia('(min-width: 1024px)')
@@ -34,7 +34,6 @@ export function Step3Materials() {
         estimatedDuration: 0,
         role: 'foundation',
         url: undefined,
-        additionOrder: state.materials.length,
         userOverrodeType: false,
         kind: 'manual',
         fetchStatus: 'idle',
@@ -115,7 +114,6 @@ export function Step3Materials() {
         estimatedDuration: 0,
         role: 'foundation',
         url: text,
-        additionOrder: state.materials.length,
         userOverrodeType: false,
         kind: materialKind,
         fetchStatus: 'loading',
@@ -161,7 +159,7 @@ export function Step3Materials() {
     navigate('/onboarding/3/preview')
   }
 
-  const materialsWithTitle = state.materials.filter(m => m.title && m.estimatedDuration > 0)
+  const materialsWithTitle = expandedMaterials.filter(m => m.title && m.estimatedDuration > 0)
   const totalMinutes = materialsWithTitle.reduce((s, m) => s + m.estimatedDuration, 0)
   const totalHours = Math.floor(totalMinutes / 60)
   const totalMinsRemainder = totalMinutes % 60
@@ -203,7 +201,7 @@ export function Step3Materials() {
             {materialsWithTitle.length} added · ~{totalHours}h {totalMinsRemainder}m
           </div>
           <div className="material-list">
-            {state.playlists.map(pl => (
+            {state.playlists.filter(p => !p.confirmed).map(pl => (
               <PlaylistCard
                 key={pl.id}
                 playlist={pl}
@@ -211,18 +209,33 @@ export function Step3Materials() {
                 onRemove={handlePlaylistRemove}
               />
             ))}
-            {state.materials.map(mat => (
-              <MaterialRow
-                key={mat.id}
-                material={mat}
-                existingMaterials={state.materials}
-                onUpdate={updates => handleUpdate(mat.id, updates)}
-                onRemove={() => handleRemove(mat.id)}
-                onClickCard={mat.kind === 'youtube' && mat.youtubeVideoId && mat.fetchStatus === 'success'
-                  ? () => setYoutubePopupMaterialId(mat.id)
-                  : undefined}
-              />
-            ))}
+            {([
+              ...state.playlists.filter(p => p.confirmed).map(p => ({ type: 'playlist' as const, data: p, order: p.additionOrder })),
+              ...state.materials.map(m => ({ type: 'material' as const, data: m, order: m.additionOrder })),
+            ] as ({ type: 'playlist'; data: PlaylistEntry; order: number } | { type: 'material'; data: OnboardingMaterial; order: number })[])
+              .sort((a, b) => a.order - b.order)
+              .map(item =>
+                item.type === 'playlist' ? (
+                  <PlaylistCard
+                    key={item.data.id}
+                    playlist={item.data}
+                    onConfirm={handlePlaylistConfirm}
+                    onRemove={handlePlaylistRemove}
+                    onRoleChange={(role) => dispatch({ type: 'PLAYLIST_SET_ROLE', playlistId: item.data.id, role })}
+                  />
+                ) : (
+                  <MaterialRow
+                    key={item.data.id}
+                    material={item.data}
+                    existingMaterials={state.materials}
+                    onUpdate={updates => handleUpdate(item.data.id, updates)}
+                    onRemove={() => handleRemove(item.data.id)}
+                    onClickCard={item.data.kind === 'youtube' && item.data.youtubeVideoId && item.data.fetchStatus === 'success'
+                      ? () => setYoutubePopupMaterialId(item.data.id)
+                      : undefined}
+                  />
+                )
+              )}
           </div>
         </>
       )}
