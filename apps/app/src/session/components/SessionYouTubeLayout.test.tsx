@@ -125,6 +125,36 @@ describe('SessionYouTubeLayout', () => {
     expect(screen.getByText('Video finished')).toBeInTheDocument();
   });
 
+  describe('planned-end banner', () => {
+    it('renders PlannedEndBanner when plannedEndReached is true and not dismissed', () => {
+      render(<SessionYouTubeLayout {...makeProps({
+        plannedEndReached: true,
+        plannedEndDismissed: false,
+        onDismissPlannedEnd: vi.fn(),
+        onEndFromBanner: vi.fn(),
+      })} />);
+      expect(screen.getByText('Planned time reached')).toBeInTheDocument();
+    });
+
+    it('does not render PlannedEndBanner when plannedEndReached is false', () => {
+      render(<SessionYouTubeLayout {...makeProps({
+        plannedEndReached: false,
+        plannedEndDismissed: false,
+        onDismissPlannedEnd: vi.fn(),
+      })} />);
+      expect(screen.queryByText('Planned time reached')).not.toBeInTheDocument();
+    });
+
+    it('does not render PlannedEndBanner when dismissed', () => {
+      render(<SessionYouTubeLayout {...makeProps({
+        plannedEndReached: true,
+        plannedEndDismissed: true,
+        onDismissPlannedEnd: vi.fn(),
+      })} />);
+      expect(screen.queryByText('Planned time reached')).not.toBeInTheDocument();
+    });
+  });
+
   it('applies is-paused class when paused', () => {
     const { container } = render(<SessionYouTubeLayout {...makeProps({ isPaused: true })} />);
     expect(container.querySelector('.session-layout-youtube.is-paused')).toBeInTheDocument();

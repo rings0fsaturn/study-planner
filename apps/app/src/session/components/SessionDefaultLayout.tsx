@@ -15,6 +15,7 @@ import {
   ComeBackLaterButton,
   PauseResumeButton,
   SessionFrame,
+  PlannedEndBanner,
 } from './index';
 import { SessionBanner } from './SessionBanner';
 
@@ -31,6 +32,10 @@ export interface SessionDefaultLayoutProps {
   onEnd: () => void;
   onComeBackLater: () => void;
   articleAutoOpened?: boolean;
+  plannedEndReached?: boolean;
+  plannedEndDismissed?: boolean;
+  onDismissPlannedEnd?: () => void;
+  onEndFromBanner?: () => void;
 }
 
 function getMaterialMeta(record: ActiveSessionRecord): string {
@@ -68,6 +73,10 @@ export function SessionDefaultLayout({
   onEnd,
   onComeBackLater,
   articleAutoOpened,
+  plannedEndReached,
+  plannedEndDismissed,
+  onDismissPlannedEnd,
+  onEndFromBanner,
 }: SessionDefaultLayoutProps) {
   const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const materialMeta = getMaterialMeta(record);
@@ -77,6 +86,14 @@ export function SessionDefaultLayout({
       <div className="session-top-bar">
         <PauseResumeButton isPaused={isPaused} onToggle={onPauseResume} />
       </div>
+
+      {plannedEndReached && !plannedEndDismissed && onDismissPlannedEnd && (
+        <PlannedEndBanner
+          onDismiss={onDismissPlannedEnd}
+          actionLabel="End session"
+          onAction={onEndFromBanner}
+        />
+      )}
 
       {record.kind === 'article' && articleAutoOpened && (
         <SessionBanner

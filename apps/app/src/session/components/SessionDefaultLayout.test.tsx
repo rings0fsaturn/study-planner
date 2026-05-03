@@ -152,6 +152,49 @@ describe('SessionDefaultLayout', () => {
     });
   });
 
+  describe('planned-end banner', () => {
+    it('renders PlannedEndBanner when plannedEndReached is true and not dismissed', () => {
+      render(
+        <SessionDefaultLayout
+          {...makeProps({
+            plannedEndReached: true,
+            plannedEndDismissed: false,
+            onDismissPlannedEnd: vi.fn(),
+            onEndFromBanner: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.getByText('Planned time reached')).toBeInTheDocument();
+      expect(screen.getByText(/wrap up when you're ready/)).toBeInTheDocument();
+    });
+
+    it('does not render PlannedEndBanner when plannedEndReached is false', () => {
+      render(
+        <SessionDefaultLayout
+          {...makeProps({
+            plannedEndReached: false,
+            plannedEndDismissed: false,
+            onDismissPlannedEnd: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.queryByText('Planned time reached')).not.toBeInTheDocument();
+    });
+
+    it('does not render PlannedEndBanner when dismissed', () => {
+      render(
+        <SessionDefaultLayout
+          {...makeProps({
+            plannedEndReached: true,
+            plannedEndDismissed: true,
+            onDismissPlannedEnd: vi.fn(),
+          })}
+        />
+      );
+      expect(screen.queryByText('Planned time reached')).not.toBeInTheDocument();
+    });
+  });
+
   describe('backward compatibility', () => {
     it('renders correctly when kind is undefined (pre-existing sessions)', () => {
       render(
