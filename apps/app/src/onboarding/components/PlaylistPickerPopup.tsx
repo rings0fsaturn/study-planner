@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import type { PlaylistVideo } from '../OnboardingProvider'
 
 interface PlaylistPickerPopupProps {
@@ -31,6 +31,9 @@ export function PlaylistPickerPopup({
   )
   const [query, setQuery] = useState('')
   const [thumbErrors, setThumbErrors] = useState<Set<string>>(new Set())
+  const [page, setPage] = useState(0)
+
+  const PAGE_SIZE = 10
 
   const normalizedQuery = query.trim().toLowerCase()
   const isFiltered = normalizedQuery.length > 0
@@ -44,10 +47,17 @@ export function PlaylistPickerPopup({
     )
   }, [videos, isFiltered, normalizedQuery])
 
+  useEffect(() => {
+    setPage(0)
+  }, [normalizedQuery])
+
   const filteredVideoIds = useMemo(
     () => filteredVideos.map(v => v.youtubeVideoId),
     [filteredVideos],
   )
+
+  const totalPages = Math.ceil(filteredVideos.length / PAGE_SIZE)
+  const paginatedVideos = filteredVideos.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE)
 
   const allFilteredSelected =
     filteredVideoIds.length > 0 &&
@@ -152,7 +162,7 @@ export function PlaylistPickerPopup({
                 </button>
               </div>
             ) : (
-              filteredVideos.map(v => {
+              paginatedVideos.map(v => {
                 const isSelected = localSelection.has(v.youtubeVideoId)
                 const hasThumbError = thumbErrors.has(v.youtubeVideoId)
                 return (
@@ -189,6 +199,27 @@ export function PlaylistPickerPopup({
               })
             )}
           </div>
+          {totalPages > 1 && (
+            <div className="playlist-picker-pagination">
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={page === 0}
+                onClick={() => setPage(p => p - 1)}
+              >
+                Back
+              </button>
+              <span className="playlist-picker-page-indicator">
+                {page + 1} of {totalPages}
+              </span>
+              <button
+                className="btn btn-ghost btn-sm"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage(p => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="playlist-picker-footer">

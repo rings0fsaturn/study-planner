@@ -78,6 +78,13 @@ export function Step3Preview() {
             slot.plannedMinutes = edit.plannedMinutes
           }
         }
+        if (slot.candidateMaterialIds.length === 1 && !slot.role) {
+          const mat = expandedMaterials.find(m => m.id === slot.candidateMaterialIds[0])
+          if (mat) {
+            slot.role = mat.role
+            if (!slot.sessionTitle) slot.sessionTitle = mat.title
+          }
+        }
       }
     }
     const remainingTies = resolved.weeks
@@ -87,7 +94,7 @@ export function Step3Preview() {
       .filter(w => w.kind !== 'unresolved-tie-count')
       .concat(remainingTies > 0 ? [{ kind: 'unresolved-tie-count' as const, detail: { count: remainingTies } }] : [])
     return resolved
-  }, [roadmap, previewEdits])
+  }, [roadmap, previewEdits, expandedMaterials])
 
   const capacityCheck = displayRoadmap?.capacityCheck
   const unresolvedTieCount = (displayRoadmap?.warnings.find(w => w.kind === 'unresolved-tie-count')?.detail?.count as number) ?? 0

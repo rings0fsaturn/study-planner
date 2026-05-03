@@ -143,7 +143,8 @@ describe('OnboardingFlow (Integration)', () => {
     renderPreview()
 
     await waitFor(() => {
-      expect(screen.getByText(/Here's a plan/)).toBeInTheDocument()
+      const heading = screen.getByRole('heading', { level: 1 })
+      expect(heading).toHaveTextContent(/Here's a plan/)
       expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument()
       expect(screen.getByText('Main reading')).toBeInTheDocument()
       expect(screen.getByText('Rest day')).toBeInTheDocument()
@@ -155,12 +156,13 @@ describe('OnboardingFlow (Integration)', () => {
 
     renderPreview()
 
-    let commitButton: HTMLElement | undefined
     await waitFor(() => {
-      const buttons = screen.getAllByRole('button')
-      commitButton = buttons.find(b => b.textContent?.includes('Looks good'))
-      expect(commitButton).toBeDefined()
+      expect(screen.getByText('Designing Data-Intensive Applications')).toBeInTheDocument()
     })
+    let commitButton: HTMLElement | undefined
+    const buttons = screen.getAllByRole('button')
+    commitButton = buttons.find(b => b.textContent?.includes('Looks good'))
+    expect(commitButton).toBeDefined()
 
     fireEvent.click(commitButton!)
 
