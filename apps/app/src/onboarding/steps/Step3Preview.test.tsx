@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { Step3Preview } from './Step3Preview'
 import { OnboardingProvider } from '../OnboardingProvider'
@@ -84,16 +84,16 @@ function mockBalancedRoadmap() {
         weekIndex: 0,
         startDate: '2026-05-04',
         slots: [
-          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'Designing Data-Intensive Applications', plannedMinutes: 120 },
-          { weekIndex: 0, dayOfWeek: 'Tue' as const, date: '2026-05-05', candidateMaterialIds: [] as string[], role: null, sessionTitle: null, plannedMinutes: 0 },
+          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'Designing Data-Intensive Applications', plannedMinutes: 120, capacityMinutes: 120 },
+          { weekIndex: 0, dayOfWeek: 'Tue' as const, date: '2026-05-05', candidateMaterialIds: [] as string[], role: null, sessionTitle: null, plannedMinutes: 0, capacityMinutes: 120 },
         ],
       },
     ],
     capacityCheck: {
-      status: 'balanced' as const,
+      status: 'fits' as const,
       totalMaterialMinutes: 120,
       totalCapacityMinutes: 240,
-      suggestedWeeks: null,
+      suggestedWeeks: undefined,
     },
     warnings: [],
   }
@@ -106,17 +106,17 @@ function mockTieRoadmap() {
         weekIndex: 0,
         startDate: '2026-05-04',
         slots: [
-          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1', 'mat-2'], role: null, sessionTitle: null, plannedMinutes: 60 },
+          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1', 'mat-2'], role: null, sessionTitle: null, plannedMinutes: 60, capacityMinutes: 120 },
         ],
       },
     ],
     capacityCheck: {
-      status: 'balanced' as const,
+      status: 'fits' as const,
       totalMaterialMinutes: 60,
       totalCapacityMinutes: 120,
-      suggestedWeeks: null,
+      suggestedWeeks: undefined,
     },
-    warnings: [{ kind: 'unresolved-tie-count', detail: { count: 1 } }],
+    warnings: [{ kind: 'unresolved-tie-count' as const, detail: { count: 1 } }],
   }
 }
 
@@ -129,7 +129,7 @@ describe('Step3Preview', () => {
     testDb = await createTestEventStore()
     await testDb.table('onboardingDraft').clear()
 
-    logEventMock = vi.fn().mockResolvedValue(undefined)
+    logEventMock = vi.fn().mockResolvedValue(1)
 
     const mockEventStore = {
       getAll: vi.fn().mockResolvedValue([]),
@@ -142,7 +142,7 @@ describe('Step3Preview', () => {
       ready: true,
     })
     mockUseEventStore.mockReturnValue(mockEventStore as never)
-    mockUseSync.mockReturnValue({ logEvent: logEventMock })
+    mockUseSync.mockReturnValue({ logEvent: logEventMock, syncState: { status: 'idle', lastSyncedAt: null, pendingCount: 0, lastError: null }, forceSyncNow: vi.fn() } as never)
   })
 
   function renderPreview() {

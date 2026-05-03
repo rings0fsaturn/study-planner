@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi, type Mock } from 'vitest';
 import Dexie from 'dexie';
 import { EventStore } from '../events/EventStore';
 import { DurabilityHooks } from '../lib/DurabilityHooks';
 import { SessionLifecycle, type SessionLifecycleDeps } from './SessionLifecycle';
-import type { ActiveSessionRecord, SessionSlotData } from './types';
+import type { ActiveSessionRecord, SessionSlotData, PlannedEndNotifier } from './types';
 import { SESSION_EVENT_KINDS, DEFAULT_POMODORO_CONFIG } from './types';
 
 const DB_NAME = 'StudyTrackerTest-SessionLifecycle';
@@ -599,6 +599,246 @@ describe('SessionLifecycle', () => {
       expect(p.description).toBe('Practice problems · ch. 5');
       expect(p.date).toBe('2026-04-29');
 
+      lc.destroy();
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Planned-end notification integration
+  // -----------------------------------------------------------------------
+
+  describe('planned-end notifier', () => {
+    type MockNotifier = {
+      [K in keyof PlannedEndNotifier]: Mock;
+    };
+
+    function makeFakeNotifier(): MockNotifier {
+      return {
+        setCallback: vi.fn(),
+        schedule: vi.fn(),
+        cancel: vi.fn(),
+        dismiss: vi.fn(),
+        destroy: vi.fn(),
+        handleVisibilityChange: vi.fn(),
+      };
+    }
+
+    it('constructor binds callback via setCallback', () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      expect(notifier.setCallback).toHaveBeenCalledWith(expect.any(Function));
+      lc.destroy();
+    });
+
+    it('start schedules notification', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData); // 60 min
+      expect(notifier.schedule).toHaveBeenCalledWith(60 * 60_000);
+      lc.destroy();
+    });
+
+    it('pause cancels notification but NOT dismiss', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      currentTime = new Date('2026-04-29T09:20:00Z');
+      await lc.pause();
+      expect(notifier.cancel).toHaveBeenCalled();
+      expect(notifier.dismiss).not.toHaveBeenCalled();
+      lc.destroy();
+    });
+
+    it('resume reschedules with remaining time', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      currentTime = new Date('2026-04-29T09:20:00Z');
+      await lc.pause();
+      currentTime = new Date('2026-04-29T09:30:00Z');
+      await lc.resume();
+      // 20 min active (pause excluded), 40 min remaining
+      const lastCall = notifier.schedule.mock.calls[notifier.schedule.mock.calls.length - 1];
+      expect(lastCall[0]).toBe(40 * 60_000);
+      lc.destroy();
+    });
+
+    it('resume after planned end reached does not reschedule', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      currentTime = new Date('2026-04-29T10:01:00Z');
+      // Manually invoke the callback bound via setCallback to simulate notifier firing
+      const callback = notifier.setCallback.mock.calls[0][0] as () => void;
+      callback();
+      expect(lc.isPlannedEndReached()).toBe(true);
+      await lc.pause();
+      notifier.schedule.mockClear();
+      currentTime = new Date('2026-04-29T10:05:00Z');
+      await lc.resume();
+      expect(notifier.schedule).not.toHaveBeenCalled();
+      expect(lc.isPlannedEndReached()).toBe(true);
+      lc.destroy();
+    });
+
+    it('end clears notification via clearActiveSession', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      const callback = notifier.setCallback.mock.calls[0][0] as () => void;
+      callback();
+      currentTime = new Date('2026-04-29T09:45:00Z');
+      await lc.end();
+      expect(notifier.dismiss).toHaveBeenCalled();
+      expect(lc.isPlannedEndReached()).toBe(false);
+      lc.destroy();
+    });
+
+    it('dismissPlannedEnd clears flag and calls notifier.dismiss', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      const callback = notifier.setCallback.mock.calls[0][0] as () => void;
+      callback();
+      expect(lc.isPlannedEndReached()).toBe(true);
+      lc.dismissPlannedEnd();
+      expect(lc.isPlannedEndReached()).toBe(false);
+      expect(notifier.dismiss).toHaveBeenCalled();
+      lc.destroy();
+    });
+
+    it('tick fallback triggers schedule(0) through notifier', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      currentTime = new Date('2026-04-29T10:01:00Z');
+      notifier.schedule.mockClear();
+      lc.tick();
+      expect(notifier.schedule).toHaveBeenCalledWith(0);
+      lc.destroy();
+    });
+
+    it('initialize past planned end fires schedule(0)', async () => {
+      const record: ActiveSessionRecord = {
+        id: 1,
+        sessionId: 'session-past',
+        materialId: 'mat-1',
+        sessionTitle: 'Past planned end',
+        slotDate: '2026-04-29',
+        weekIndex: 0,
+        plannedMinutes: 60,
+        startedAt: '2026-04-29T08:00:00Z',
+        status: 'active',
+        pauseIntervals: [],
+        pomodoroConfig: DEFAULT_POMODORO_CONFIG,
+      };
+      await eventStore.table('activeSession').put(record);
+      currentTime = new Date('2026-04-29T09:10:00Z'); // 70 min later
+
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.initialize();
+      expect(notifier.schedule).toHaveBeenCalledWith(0);
+      lc.destroy();
+    });
+
+    it('initialize before planned end schedules remaining time', async () => {
+      const record: ActiveSessionRecord = {
+        id: 1,
+        sessionId: 'session-early',
+        materialId: 'mat-1',
+        sessionTitle: 'Early session',
+        slotDate: '2026-04-29',
+        weekIndex: 0,
+        plannedMinutes: 60,
+        startedAt: '2026-04-29T08:40:00Z',
+        status: 'active',
+        pauseIntervals: [],
+        pomodoroConfig: DEFAULT_POMODORO_CONFIG,
+      };
+      await eventStore.table('activeSession').put(record);
+      currentTime = new Date('2026-04-29T09:00:00Z'); // 20 min in
+
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.initialize();
+      expect(notifier.schedule).toHaveBeenCalledWith(40 * 60_000);
+      lc.destroy();
+    });
+
+    it('DurabilityHooks forwards visibilitychange to notifier', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      const callback = notifier.setCallback.mock.calls[0][0] as () => void;
+      callback();
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(notifier.handleVisibilityChange).toHaveBeenCalled();
+      lc.destroy();
+    });
+
+    it('DurabilityHooks does NOT forward pagehide to notifier', async () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      await lc.start(slotData);
+      const callback = notifier.setCallback.mock.calls[0][0] as () => void;
+      callback();
+      window.dispatchEvent(new Event('pagehide'));
+      expect(notifier.handleVisibilityChange).not.toHaveBeenCalled();
+      lc.destroy();
+    });
+
+    it('destroy calls notifier.destroy', () => {
+      const notifier = makeFakeNotifier();
+      const lc = new SessionLifecycle(makeDeps({ notifier }));
+      lc.destroy();
+      expect(notifier.destroy).toHaveBeenCalled();
+    });
+
+    it('no notifier — backward compat', async () => {
+      const lc = new SessionLifecycle(makeDeps());
+      await lc.start(slotData);
+      currentTime = new Date('2026-04-29T10:01:00Z');
+      lc.tick();
+      expect(lc.isPlannedEndReached()).toBe(true);
+      lc.destroy();
+    });
+  });
+
+  describe('material kind persistence', () => {
+    it('persists kind and youtubeVideoId from slot data', async () => {
+      const lc = new SessionLifecycle(makeDeps());
+      await lc.initialize();
+      await lc.start({
+        ...slotData,
+        kind: 'youtube',
+        youtubeVideoId: 'dQw4w9WgXcQ',
+      });
+      const record = lc.getRecord();
+      expect(record?.kind).toBe('youtube');
+      expect(record?.youtubeVideoId).toBe('dQw4w9WgXcQ');
+      lc.destroy();
+    });
+
+    it('defaults kind to undefined when not provided', async () => {
+      const lc = new SessionLifecycle(makeDeps());
+      await lc.initialize();
+      await lc.start(slotData);
+      const record = lc.getRecord();
+      expect(record?.kind).toBeUndefined();
+      lc.destroy();
+    });
+
+    it('persists kind to Dexie activeSession table', async () => {
+      const lc = new SessionLifecycle(makeDeps());
+      await lc.initialize();
+      await lc.start({
+        ...slotData,
+        kind: 'article',
+      });
+
+      const persisted = await eventStore.table('activeSession').get(1);
+      expect(persisted?.kind).toBe('article');
       lc.destroy();
     });
   });

@@ -1,8 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
 import { useEventStore } from '../events/useEventStore'
 import type { DayOfWeek, MaterialRole } from '@study-tracker/progress-engine'
-
-export type MaterialKind = 'youtube' | 'article' | 'manual'
+import type { MaterialKind } from '../session/types'
 export type FetchStatus = 'idle' | 'loading' | 'success' | 'partial' | 'error'
 
 export interface OnboardingMaterial {

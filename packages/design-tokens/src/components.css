@@ -515,26 +515,47 @@
 
 /* ---- PLAYLIST PICKER ---- */
 
-/* Modal frame */
-.playlist-picker-overlay {
-  /* Inherits .modal-overlay default align-items: flex-end on mobile (bottom-sheet). */
-  /* Re-centered on desktop via media query below. */
+/* Overlay — combo selector beats .modal-overlay defaults */
+.modal-overlay.playlist-picker-overlay {
+  /* Inherits flex-end alignment for mobile bottom sheet */
 }
+
 @media (min-width: 1024px) {
-  .playlist-picker-overlay {
+  .modal-overlay.playlist-picker-overlay {
     align-items: center;
   }
 }
 
-.playlist-picker-modal {
+/* Mobile: kill overlay padding so the sheet meets all three edges */
+@media (max-width: 1023px) {
+  .modal-overlay.playlist-picker-overlay {
+    padding: 0;
+  }
+}
+
+/* Modal frame — combo selector beats .modal-card defaults (padding, radius) */
+.modal-card.playlist-picker-modal {
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 640px;
-  max-height: 80vh;
-  max-height: 80dvh;
+  max-width: 756px;
+  max-height: 83vh;
+  max-height: 83dvh;
   padding: 0;
+  overflow: hidden;
 }
+
+@media (max-width: 1023px) {
+  .modal-card.playlist-picker-modal {
+    max-width: none;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+}
+
+/* Per-zone horizontal padding (replaces the modal-card outer padding we zeroed out) */
 .playlist-picker-modal > .playlist-picker-header,
 .playlist-picker-modal > .playlist-picker-list-wrap,
 .playlist-picker-modal > .playlist-picker-footer {
@@ -542,24 +563,31 @@
   padding-right: var(--space-5);
 }
 
-/* Header zone (eyebrow, title, search, toolbar) */
+@media (max-width: 1023px) {
+  .playlist-picker-modal > .playlist-picker-header,
+  .playlist-picker-modal > .playlist-picker-list-wrap,
+  .playlist-picker-modal > .playlist-picker-footer {
+    padding-left: var(--space-4);
+    padding-right: var(--space-4);
+  }
+}
+
+/* Header zone */
 .playlist-picker-header {
   flex-shrink: 0;
   padding-top: var(--space-5);
   padding-bottom: var(--space-3);
 }
-.playlist-picker-header .modal-eyebrow {
-  margin-bottom: 6px;
-}
-.playlist-picker-header .modal-title {
-  margin-bottom: var(--space-3);
-}
+.playlist-picker-header .modal-eyebrow { margin-bottom: 6px; }
+.playlist-picker-header .modal-title { margin-bottom: var(--space-3); }
+
 .playlist-picker-search {
   padding: 9px 12px;
-  font-size: 14px;
+  font-size: 16px;        /* 16px prevents iOS Safari auto-zoom on focus */
   margin-bottom: var(--space-3);
   max-width: none;
 }
+
 .playlist-picker-toolbar {
   display: flex;
   justify-content: space-between;
@@ -574,37 +602,49 @@
   letter-spacing: 0.06em;
 }
 
-/* List zone (scrolls internally) */
+/* List zone — flex child that scrolls internally */
 .playlist-picker-list-wrap {
   flex: 1 1 auto;
-  min-height: 0;
+  min-height: 0;          /* critical: lets flex child respect parent max-height */
   position: relative;
   border-top: 1px solid var(--rule);
   margin-top: var(--space-3);
 }
+
+/* Bottom fade hint — spans the full wrap, not inset */
 .playlist-picker-list-wrap::after {
   content: '';
   position: absolute;
-  left: var(--space-5);
-  right: var(--space-5);
+  left: 0;
+  right: 0;
   bottom: 0;
   height: 16px;
   background: linear-gradient(to bottom, transparent, var(--surface-card));
   pointer-events: none;
 }
+
 .playlist-picker-list {
   max-height: 360px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding-top: 4px;
   padding-bottom: 4px;
 }
+
 @media (max-width: 1023px) {
-  .playlist-picker-list {
-    max-height: none;
+  .playlist-picker-list-wrap {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .playlist-picker-list-wrap::after {
-    left: var(--space-4);
-    right: var(--space-4);
+    position: sticky;
+    display: block;
+    margin-top: -16px;
+    z-index: 1;
+  }
+  .playlist-picker-list {
+    max-height: none;
+    overflow-y: visible;
   }
 }
 
@@ -621,7 +661,7 @@
 .playlist-picker-row:last-child { border-bottom: none; }
 .playlist-picker-row:hover { background: var(--paper-deep); }
 
-/* Thumbnail (img or fallback block) */
+/* Thumbnail (image and fallback share dimensions) */
 .playlist-picker-thumb,
 .playlist-picker-thumb-fallback {
   width: 80px;
@@ -638,7 +678,7 @@
   color: var(--ink-faint);
 }
 
-/* Title + author (stacked column) */
+/* Title + author column */
 .playlist-picker-content {
   flex: 1;
   min-width: 0;
@@ -700,7 +740,7 @@
   font-size: 14px;
 }
 
-/* Footer zone (summary + actions) */
+/* Footer */
 .playlist-picker-footer {
   flex-shrink: 0;
   display: flex;
@@ -710,6 +750,7 @@
   padding-top: var(--space-3);
   padding-bottom: var(--space-5);
   border-top: 1px solid var(--rule);
+  flex-wrap: wrap;        /* allows summary + actions to stack on very narrow phones */
 }
 .playlist-picker-summary {
   font-family: var(--font-mono);
@@ -721,13 +762,18 @@
 .playlist-picker-actions {
   display: flex;
   gap: 8px;
+  margin-left: auto;      /* keep actions right-aligned when wrap kicks in */
 }
 
-/* Mobile responsive */
 @media (max-width: 1023px) {
-  .playlist-picker-modal {
-    max-width: none;
+  .playlist-picker-footer {
+    /* Respect notched-phone home indicator */
+    padding-bottom: calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
   }
+}
+
+/* Mobile responsive — row sizing tweaks */
+@media (max-width: 1023px) {
   .playlist-picker-thumb,
   .playlist-picker-thumb-fallback {
     width: 60px;
@@ -738,12 +784,6 @@
   }
   .playlist-picker-count {
     display: none;
-  }
-  .playlist-picker-modal > .playlist-picker-header,
-  .playlist-picker-modal > .playlist-picker-list-wrap,
-  .playlist-picker-modal > .playlist-picker-footer {
-    padding-left: var(--space-4);
-    padding-right: var(--space-4);
   }
 }
 

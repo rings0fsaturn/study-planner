@@ -148,10 +148,11 @@ export function Step3Preview() {
     if (!displayRoadmap || committing || unresolvedTieCount > 0) return
     setCommitting(true)
     try {
-      const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+      const committedIds = new Set<string>()
 
       for (const mat of expandedMaterials) {
         if (!mat.title || mat.estimatedDuration <= 0) continue
+        committedIds.add(mat.id)
         const payload: MaterialAddedPayload = {
           materialId: mat.id,
           title: mat.title,
@@ -164,6 +165,12 @@ export function Step3Preview() {
         }
         await logEvent('MaterialAdded', payload as unknown as Record<string, unknown>)
       }
+
+      const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+        .map(s => ({
+          ...s,
+          candidateMaterialIds: s.candidateMaterialIds.filter(id => committedIds.has(id)),
+        }))
 
       const roadmapPayload: RoadmapCreatedPayload = {
         startDate: roadmapInput!.startDate,

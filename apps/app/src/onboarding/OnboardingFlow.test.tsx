@@ -64,17 +64,17 @@ function mockBalancedRoadmap() {
         weekIndex: 0,
         startDate: '2026-05-04',
         slots: [
-          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'Designing Data-Intensive Applications', plannedMinutes: 120 },
-          { weekIndex: 0, dayOfWeek: 'Tue' as const, date: '2026-05-05', candidateMaterialIds: [] as string[], role: null, sessionTitle: null, plannedMinutes: 0 },
-          { weekIndex: 0, dayOfWeek: 'Wed' as const, date: '2026-05-06', candidateMaterialIds: ['mat-2'], role: 'practice' as const, sessionTitle: 'System Design Interview', plannedMinutes: 60 },
+          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'Designing Data-Intensive Applications', plannedMinutes: 120, capacityMinutes: 120 },
+          { weekIndex: 0, dayOfWeek: 'Tue' as const, date: '2026-05-05', candidateMaterialIds: [] as string[], role: null, sessionTitle: null, plannedMinutes: 0, capacityMinutes: 120 },
+          { weekIndex: 0, dayOfWeek: 'Wed' as const, date: '2026-05-06', candidateMaterialIds: ['mat-2'], role: 'practice' as const, sessionTitle: 'System Design Interview', plannedMinutes: 60, capacityMinutes: 120 },
         ],
       },
     ],
     capacityCheck: {
-      status: 'balanced' as const,
+      status: 'fits' as const,
       totalMaterialMinutes: 300,
       totalCapacityMinutes: 360,
-      suggestedWeeks: null,
+      suggestedWeeks: undefined,
     },
     warnings: [],
   }
@@ -104,7 +104,7 @@ describe('OnboardingFlow (Integration)', () => {
     testDb = await createTestEventStore()
     await testDb.table('onboardingDraft').clear()
 
-    logEventMock = vi.fn().mockResolvedValue(undefined)
+    logEventMock = vi.fn().mockResolvedValue(1)
 
     const mockEventStore = {
       getAll: vi.fn().mockResolvedValue([]),
@@ -117,7 +117,7 @@ describe('OnboardingFlow (Integration)', () => {
       ready: true,
     })
     mockUseEventStore.mockReturnValue(mockEventStore as never)
-    mockUseSync.mockReturnValue({ logEvent: logEventMock })
+    mockUseSync.mockReturnValue({ logEvent: logEventMock, syncState: { status: 'idle', lastSyncedAt: null, pendingCount: 0, lastError: null }, forceSyncNow: vi.fn() } as never)
 
     const { generateRoadmap } = await import('@study-tracker/progress-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
@@ -168,7 +168,7 @@ describe('OnboardingFlow (Integration)', () => {
       expect(logEventMock).toHaveBeenCalledTimes(4)
     })
 
-    const kinds = logEventMock.mock.calls.map((c: [string, unknown]) => c[0])
+    const kinds = logEventMock.mock.calls.map((c: unknown[]) => c[0] as string)
     expect(kinds.filter(k => k === 'MaterialAdded')).toHaveLength(2)
     expect(kinds.filter(k => k === 'RoadmapCreated')).toHaveLength(1)
     expect(kinds.filter(k => k === 'OnboardingCompleted')).toHaveLength(1)
@@ -195,9 +195,9 @@ describe('OnboardingFlow (Integration)', () => {
 
     const overCapacityRoadmap = {
       weeks: [
-        { weekIndex: 0, startDate: '2026-05-04', slots: [{ weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'DDIA', plannedMinutes: 600 }] },
+        { weekIndex: 0, startDate: '2026-05-04', slots: [{ weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'anchor' as const, sessionTitle: 'DDIA', plannedMinutes: 600, capacityMinutes: 60 }] },
       ],
-      capacityCheck: { status: 'over-capacity' as const, totalMaterialMinutes: 600, totalCapacityMinutes: 60, suggestedWeeks: null },
+      capacityCheck: { status: 'over-capacity' as const, totalMaterialMinutes: 600, totalCapacityMinutes: 60 },
       warnings: [],
     }
     const { generateRoadmap } = await import('@study-tracker/progress-engine')
@@ -227,10 +227,10 @@ describe('OnboardingFlow (Integration)', () => {
 
     const tieRoadmap = {
       weeks: [
-        { weekIndex: 0, startDate: '2026-05-04', slots: [{ weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1', 'mat-2'], role: null, sessionTitle: null, plannedMinutes: 60 }] },
+        { weekIndex: 0, startDate: '2026-05-04', slots: [{ weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1', 'mat-2'], role: null, sessionTitle: null, plannedMinutes: 60, capacityMinutes: 120 }] },
       ],
-      capacityCheck: { status: 'balanced' as const, totalMaterialMinutes: 60, totalCapacityMinutes: 120, suggestedWeeks: null },
-      warnings: [{ kind: 'unresolved-tie-count', detail: { count: 1 } }],
+      capacityCheck: { status: 'fits' as const, totalMaterialMinutes: 60, totalCapacityMinutes: 120 },
+      warnings: [{ kind: 'unresolved-tie-count' as const, detail: { count: 1 } }],
     }
     const { generateRoadmap } = await import('@study-tracker/progress-engine')
     vi.mocked(generateRoadmap).mockReturnValue(tieRoadmap)
