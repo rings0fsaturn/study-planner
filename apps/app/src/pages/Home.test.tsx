@@ -21,14 +21,19 @@ vi.mock('../components/SyncIndicator', () => ({
 }))
 
 let mockEvents: Array<{ id?: number; kind: string; payload: Record<string, unknown>; createdAt: string }> = []
+let mockActiveSession: unknown = undefined
 
 vi.mock('dexie-react-hooks', () => ({
-  useLiveQuery: () => mockEvents,
+  useLiveQuery: (querier: unknown, deps?: unknown[]) => {
+    if (Array.isArray(deps)) return mockActiveSession
+    return mockEvents
+  },
 }))
 
 describe('Home', () => {
   beforeEach(() => {
     mockEvents = []
+    mockActiveSession = undefined
   })
 
   it('shows only total time when no roadmap events exist', () => {
