@@ -119,3 +119,20 @@ export class TabNotificationStrategy implements PlannedEndNotifier {
     this.flashState = false;
   }
 }
+
+export function createBrowserDeps(): TabNotificationStrategyDeps {
+  const link = document.querySelector('link[rel="icon"]') as HTMLLinkElement | null;
+  const originalHref = link?.getAttribute('href') ?? '/favicon.svg';
+
+  return {
+    getTitle: () => document.title,
+    setTitle: (title: string) => { document.title = title; },
+    setFaviconHref: (href: string) => { if (link) link.setAttribute('href', href); },
+    getOriginalFaviconHref: () => originalHref,
+    isDocumentHidden: () => document.hidden,
+    setTimeout: (cb: () => void, ms: number) => window.setTimeout(cb, ms),
+    clearTimeout: (id: number) => window.clearTimeout(id),
+    setInterval: (cb: () => void, ms: number) => window.setInterval(cb, ms),
+    clearInterval: (id: number) => window.clearInterval(id),
+  };
+}

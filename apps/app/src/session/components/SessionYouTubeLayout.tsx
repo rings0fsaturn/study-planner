@@ -9,6 +9,7 @@ import {
   PlannedEndLine,
   ComeBackLaterButton,
   PauseResumeButton,
+  PlannedEndBanner,
 } from './index';
 import { YouTubeEmbed } from './YouTubeEmbed';
 import { VideoStatusStrip } from './VideoStatusStrip';
@@ -35,6 +36,10 @@ export interface SessionYouTubeLayoutProps {
   videoEndedPromptVisible: boolean;
   onPlayerStateChange: (state: YouTubePlayerState) => void;
   onPlayerReady: () => void;
+  plannedEndReached?: boolean;
+  plannedEndDismissed?: boolean;
+  onDismissPlannedEnd?: () => void;
+  onEndFromBanner?: () => void;
 }
 
 function formatElapsed(ms: number): string {
@@ -65,6 +70,10 @@ export function SessionYouTubeLayout({
   videoEndedPromptVisible,
   onPlayerStateChange,
   onPlayerReady,
+  plannedEndReached,
+  plannedEndDismissed,
+  onDismissPlannedEnd,
+  onEndFromBanner,
 }: SessionYouTubeLayoutProps) {
   const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const elapsedFormatted = formatElapsed(elapsedActiveMs);
@@ -74,6 +83,14 @@ export function SessionYouTubeLayout({
       <div className="session-top-bar">
         <PauseResumeButton isPaused={isPaused} onToggle={onPauseResume} />
       </div>
+
+      {plannedEndReached && !plannedEndDismissed && onDismissPlannedEnd && (
+        <PlannedEndBanner
+          onDismiss={onDismissPlannedEnd}
+          actionLabel="End session"
+          onAction={onEndFromBanner}
+        />
+      )}
 
       {resumeBannerVisible && (
         <SessionBanner

@@ -4,6 +4,7 @@ import { useEventStore } from '../events/useEventStore';
 import { DurabilityHooks } from '../lib/DurabilityHooks';
 import { useMatchMedia } from '../lib/useMatchMedia';
 import { SessionLifecycle } from '../session/SessionLifecycle';
+import { TabNotificationStrategy, createBrowserDeps } from '../session/NotificationStrategy';
 import { DEFAULT_POMODORO_CONFIG } from '../session/types';
 import type { SessionState, SessionSlotData, WalkAwayResolution, RecoveryResolution } from '../session/types';
 import type { PomodoroPhase } from '../session/pomodoro';
@@ -46,17 +47,22 @@ export function Session() {
   const [resumeBannerVisible, setResumeBannerVisible] = useState(false);
   const [videoEndedPromptVisible, setVideoEndedPromptVisible] = useState(false);
   const [escapeModalVisible, setEscapeModalVisible] = useState(false);
+  const [plannedEndReached, setPlannedEndReached] = useState(false);
+  const [plannedEndDismissed, setPlannedEndDismissed] = useState(false);
 
   // Initialize lifecycle
   useEffect(() => {
     const durability = new DurabilityHooks();
     durabilityRef.current = durability;
 
+    const notifier = new TabNotificationStrategy(createBrowserDeps());
+
     const lc = new SessionLifecycle({
       eventStore,
       durabilityHooks: durability,
       pomodoroConfig: DEFAULT_POMODORO_CONFIG,
       audioContext: null,
+      notifier,
     });
 
     lcRef.current = lc;
@@ -112,6 +118,7 @@ export function Session() {
       setElapsedActiveMs(lc.getElapsedActiveMs());
       setElapsedWallClockMs(lc.getElapsedWallClockMs());
       setPomodoroPhase(lc.getPomodoroPhase());
+      setPlannedEndReached(lc.isPlannedEndReached());
     }, 1000);
 
     return () => clearInterval(interval);
@@ -237,6 +244,14 @@ export function Session() {
     }
   }, []);
 
+  const handleDismissPlannedEnd = useCallback(() => {
+    const lc = lcRef.current;
+    if (!lc) return;
+    lc.dismissPlannedEnd();
+    setPlannedEndDismissed(true);
+    setPlannedEndReached(false);
+  }, []);
+
   if (!initialized) {
     return (
       <div className="session-layout session-layout-centered">
@@ -299,6 +314,10 @@ export function Session() {
           videoEndedPromptVisible={videoEndedPromptVisible}
           onPlayerStateChange={handlePlayerStateChange}
           onPlayerReady={handlePlayerReady}
+          plannedEndReached={plannedEndReached}
+          plannedEndDismissed={plannedEndDismissed}
+          onDismissPlannedEnd={handleDismissPlannedEnd}
+          onEndFromBanner={handleEnd}
         />
       ) : (
         <SessionDefaultLayout
@@ -314,6 +333,10 @@ export function Session() {
           onEnd={handleEnd}
           onComeBackLater={handleComeBackLater}
           articleAutoOpened={articleAutoOpened}
+          plannedEndReached={plannedEndReached}
+          plannedEndDismissed={plannedEndDismissed}
+          onDismissPlannedEnd={handleDismissPlannedEnd}
+          onEndFromBanner={handleEnd}
         />
       )}
 
