@@ -296,105 +296,9 @@
   max-width: 260px;
 }
 
-/* ---------------- Video embed ---------------- */
-.video-embed {
-  background: #1a1a1a;
-  border-radius: var(--radius-md);
-  aspect-ratio: 16/9;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  margin-bottom: var(--space-3);
-  width: 100%;
-}
-.video-embed iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  border-radius: var(--radius-md);
-}
-
-/* ---------------- Desktop session pane ---------------- */
-.desktop-session-pane {
-  max-width: 880px;
-  margin: 0 auto;
-  padding: var(--space-5) 0;
-}
-
-/* ---------------- Desktop timer strip ---------------- */
-.desktop-timer-strip {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-lg);
-  padding: var(--space-4) var(--space-5);
-  margin-bottom: var(--space-4);
-}
-.desktop-timer-strip.is-overrun {
-  border-color: var(--terracotta);
-  border-width: 1.5px;
-}
-.desktop-timer-num {
-  font-family: var(--font-display);
-  font-size: 48px;
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  font-feature-settings: 'tnum';
-  line-height: 1;
-  color: var(--text-primary);
-  flex-shrink: 0;
-}
-.desktop-timer-num.is-overrun { color: var(--terracotta); }
-.desktop-timer-divider {
-  width: 1px;
-  height: 40px;
-  background: var(--border-default);
-  flex-shrink: 0;
-}
-.desktop-timer-divider.is-overrun { background: var(--terracotta); }
-.desktop-timer-title {
-  font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 500;
-  letter-spacing: -0.012em;
-  line-height: 1.2;
-  color: var(--text-primary);
-  margin-bottom: 2px;
-}
-.desktop-timer-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  vertical-align: middle;
-  margin-right: 6px;
-}
-.desktop-timer-dot.moss { background: var(--moss); }
-.desktop-timer-dot.terracotta { background: var(--terracotta); }
-
-/* ---------------- Desktop article placeholder ---------------- */
-.desktop-article-placeholder {
-  background: var(--surface-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 80px 32px;
-  text-align: center;
-}
-
-/* ---------------- Desktop come-back row ---------------- */
-.desktop-come-back-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: var(--space-4);
-}
-
 /* =================================================================
    Desktop — 1024px and up
-   Timer strip + video/article + FAB instead of inline End button.
+   Same vertical shape, wider type, FAB instead of inline End button.
    ================================================================= */
 @media (min-width: 1024px) {
   .session-layout {
@@ -411,11 +315,6 @@
 
   .session-timer-time  { font-size: 96px; }
   .session-timer-large { font-size: 120px; }
-  .session-timer-giant {
-    font-size: 144px;
-    letter-spacing: -0.03em;
-    font-variation-settings: 'opsz' 144;
-  }
 
   /* Hide inline End on desktop — the FAB takes over */
   .session-end-inline { display: none; }

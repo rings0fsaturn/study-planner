@@ -72,9 +72,6 @@ export interface SessionStartedPayload {
    * changes their Pomodoro settings later (via PreferenceSet, issue 015).
    */
   pomodoroConfig: PomodoroConfig;
-  /** Material kind — optional for backward compatibility with existing events */
-  kind?: 'youtube' | 'article' | 'manual';
-  youtubeVideoId?: string;
 }
 
 /**
@@ -234,12 +231,6 @@ export interface ActiveSessionRecord {
   pomodoroConfig: PomodoroConfig;
   /** Optional URL for "Open material" button */
   materialUrl?: string;
-  /** Material kind for per-type session rendering */
-  kind?: 'youtube' | 'article' | 'manual';
-  /** YouTube video ID for embed */
-  youtubeVideoId?: string;
-  /** Playback position in seconds, for resume seek */
-  youtubeLastPosition?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,7 +278,4 @@ export interface SessionSlotData {
   plannedMinutes: number;
   materialUrl?: string;
   role?: 'anchor' | 'foundation' | 'practice';
-  /** Must match MaterialAddedPayload.kind — copied from onboarding events by Home.tsx */
-  kind?: 'youtube' | 'article' | 'manual';
-  youtubeVideoId?: string;
 }
