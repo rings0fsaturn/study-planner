@@ -10,8 +10,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ROLE_TO_LABEL } from '@study-tracker/progress-engine';
 import type { Slot } from '@study-tracker/progress-engine';
 import type { RoadmapCreatedPayload } from '../sync/types';
-import type { ActiveSessionRecord, SessionSlotData } from '../session/types';
+import type { ActiveSessionRecord, SessionSlotData, MaterialKind } from '../session/types';
 import { AbandonedSessionBanner } from '../session/components/AbandonedSessionBanner';
+import { PlannedEndBanner } from '../session/components';
 import { format, isToday, isTomorrow, differenceInCalendarDays } from 'date-fns';
 
 function formatMinutesToHoursAndMinutes(totalMinutes: number): string {
@@ -53,6 +54,7 @@ export function Home() {
   const eventStore = useEventStore();
   const navigate = useNavigate();
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [plannedEndBannerDismissed, setPlannedEndBannerDismissed] = useState(false);
 
   const events = useLiveQuery(() => eventStore.getAll()) ?? [];
 
@@ -60,6 +62,20 @@ export function Home() {
     () => eventStore.table('activeSession').get(1) as Promise<ActiveSessionRecord | undefined>,
     [],
   );
+
+  const isSessionPastPlannedEnd = (() => {
+    if (!activeSession) return false;
+    const startMs = new Date(activeSession.startedAt).getTime();
+    const nowMs = Date.now();
+    let totalPauseMs = 0;
+    for (const p of activeSession.pauseIntervals) {
+      const pStart = new Date(p.pausedAt).getTime();
+      const pEnd = p.resumedAt ? new Date(p.resumedAt).getTime() : nowMs;
+      totalPauseMs += pEnd - pStart;
+    }
+    const activeMs = nowMs - startMs - totalPauseMs;
+    return activeMs >= activeSession.plannedMinutes * 60_000;
+  })();
 
   const abandonedEvent = events
     .filter(e => e.kind === 'SessionAbandoned')
@@ -91,6 +107,14 @@ export function Home() {
         <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
           Here's how your study time adds up
         </p>
+
+        {isSessionPastPlannedEnd && !plannedEndBannerDismissed && (
+          <PlannedEndBanner
+            onDismiss={() => setPlannedEndBannerDismissed(true)}
+            actionLabel="Go to session"
+            onAction={() => navigate('/session')}
+          />
+        )}
 
         {abandonedEvent && !bannerDismissed && (
           <AbandonedSessionBanner
@@ -139,6 +163,8 @@ export function Home() {
                       plannedMinutes: upNextSlot.plannedMinutes,
                       materialUrl: material?.payload.url as string | undefined,
                       role: upNextSlot.role as SessionSlotData['role'],
+                      kind: (material?.payload.kind as MaterialKind | undefined) ?? 'manual',
+                      youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
                     };
                     navigate('/session', { state: sessionSlot });
                   }}

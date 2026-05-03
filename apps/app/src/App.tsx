@@ -22,11 +22,19 @@ import { OnboardingGate } from './onboarding/OnboardingGate';
 import { RequireOnboarding } from './onboarding/RequireOnboarding';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
 import { OnboardingLayout } from './onboarding/OnboardingLayout';
+import { MetadataFetcherProvider } from './onboarding/MetadataFetcherContext';
+import { SupabaseMetadataFetcher } from './onboarding/supabase-metadata-fetcher';
+import { DevMetadataFetcher } from './onboarding/dev-metadata-fetcher';
+import type { MetadataFetcher } from './onboarding/metadata-fetcher';
 import { Step1Deadline } from './onboarding/steps/Step1Deadline';
 import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
 import { Step3Preview } from './onboarding/steps/Step3Preview';
 import { Step4Confirm } from './onboarding/steps/Step4Confirm';
+
+const metadataFetcher: MetadataFetcher = import.meta.env.DEV
+  ? new DevMetadataFetcher(supabase)
+  : new SupabaseMetadataFetcher(supabase);
 
 function EventStoreRouter({ children }: { children: React.ReactNode }) {
   const { user } = useAuthContext();
@@ -157,9 +165,11 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <OnboardingGate>
-              <OnboardingProvider>
-                <OnboardingLayout />
-              </OnboardingProvider>
+              <MetadataFetcherProvider fetcher={metadataFetcher}>
+                <OnboardingProvider>
+                  <OnboardingLayout />
+                </OnboardingProvider>
+              </MetadataFetcherProvider>
             </OnboardingGate>
           </ProtectedRoute>
         }

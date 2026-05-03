@@ -1,3 +1,5 @@
+import type { MaterialKind } from '../session/types';
+
 export interface SyncState {
   status: 'idle' | 'syncing' | 'error' | 'offline';
   lastSyncedAt: Date | null;
@@ -48,8 +50,10 @@ export interface MaterialAddedPayload {
   title: string
   estimatedDuration: number
   url?: string
-  kind: 'manual'
+  kind: MaterialKind
   role: 'anchor' | 'foundation' | 'practice'
+  playlistId?: string
+  youtubeVideoId?: string
 }
 
 export interface RoadmapCreatedPayload {

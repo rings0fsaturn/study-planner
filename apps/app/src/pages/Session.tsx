@@ -2,45 +2,50 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useEventStore } from '../events/useEventStore';
 import { DurabilityHooks } from '../lib/DurabilityHooks';
+import { useMatchMedia } from '../lib/useMatchMedia';
 import { SessionLifecycle } from '../session/SessionLifecycle';
 import { DEFAULT_POMODORO_CONFIG } from '../session/types';
 import type { SessionState, SessionSlotData, WalkAwayResolution, RecoveryResolution } from '../session/types';
 import type { PomodoroPhase } from '../session/pomodoro';
+import type { YouTubePlayerAdapter, YouTubePlayerState } from '../session/YouTubePlayerAdapter';
 import {
-  PulseDot,
-  SessionEyebrow,
-  getEyebrowColorClass,
-  SessionTitle,
-  SessionSubtitle,
-  TimerDisplay,
-  PomodoroIndicator,
-  PlannedEndLine,
-  OpenMaterialButton,
-  MaterialStrip,
-  EndSessionButton,
-  ComeBackLaterButton,
-  PauseResumeButton,
-  SessionFrame,
   WalkAwayDialog,
   RecoveryDialog,
+  SessionDefaultLayout,
+  SessionYouTubeLayout,
+  EscapeConfirmModal,
 } from '../session/components';
 import '../session/session.css';
+
+function formatDuration(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = Math.floor(totalSeconds % 60);
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
 
 export function Session() {
   const location = useLocation();
   const navigate = useNavigate();
   const eventStore = useEventStore();
   const slotData = location.state as SessionSlotData | null;
+  const isDesktop = useMatchMedia('(min-width: 1024px)');
 
   const lcRef = useRef<SessionLifecycle | null>(null);
   const durabilityRef = useRef<DurabilityHooks | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
+  const playerAdapterRef = useRef<YouTubePlayerAdapter | null>(null);
 
   const [sessionState, setSessionState] = useState<SessionState>('idle');
   const [elapsedActiveMs, setElapsedActiveMs] = useState(0);
   const [, setElapsedWallClockMs] = useState(0);
   const [pomodoroPhase, setPomodoroPhase] = useState<PomodoroPhase>({ phase: 'none', current: 0, total: 0, remainingMs: 0 });
   const [initialized, setInitialized] = useState(false);
+  const [articleAutoOpened, setArticleAutoOpened] = useState(false);
+  const [playerState, setPlayerState] = useState<YouTubePlayerState>('unstarted');
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [resumeBannerVisible, setResumeBannerVisible] = useState(false);
+  const [videoEndedPromptVisible, setVideoEndedPromptVisible] = useState(false);
+  const [escapeModalVisible, setEscapeModalVisible] = useState(false);
 
   // Initialize lifecycle
   useEffect(() => {
@@ -51,7 +56,7 @@ export function Session() {
       eventStore,
       durabilityHooks: durability,
       pomodoroConfig: DEFAULT_POMODORO_CONFIG,
-      audioContext: null, // Created on user gesture (start)
+      audioContext: null,
     });
 
     lcRef.current = lc;
@@ -61,12 +66,26 @@ export function Session() {
       const state = await lc.initialize();
 
       if (state === 'idle' && slotData) {
+        if (slotData.kind === 'article' && slotData.materialUrl) {
+          window.open(slotData.materialUrl, '_blank');
+          window.focus();
+          setArticleAutoOpened(true);
+        }
+
         try {
           audioCtxRef.current = new AudioContext();
         } catch {
           // AudioContext not available
         }
         await lc.start(slotData);
+      }
+
+      if (state !== 'idle' && lc.getRecord()?.kind === 'article') {
+        setArticleAutoOpened(true);
+      }
+
+      if (state !== 'idle' && lc.getRecord()?.kind === 'youtube' && lc.getRecord()?.videoPlaybackPosition) {
+        setResumeBannerVisible(true);
       }
 
       setSessionState(lc.getState());
@@ -107,14 +126,58 @@ export function Session() {
     setPomodoroPhase(lc.getPomodoroPhase());
   }, [sessionState]);
 
+  // Escape key handler
+  useEffect(() => {
+    const record = lcRef.current?.getRecord();
+    if (!record || sessionState === 'idle') return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (document.fullscreenElement) return;
+      if (escapeModalVisible) return;
+
+      e.preventDefault();
+      setEscapeModalVisible(true);
+
+      // Pause session + video
+      const lc = lcRef.current;
+      if (lc && sessionState === 'active') {
+        lc.pause();
+        playerAdapterRef.current?.pause();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [sessionState, escapeModalVisible]);
+
+  // YouTube player state change handler
+  const handlePlayerStateChange = useCallback((state: YouTubePlayerState) => {
+    setPlayerState(state);
+    if (state === 'ended') {
+      setVideoEndedPromptVisible(true);
+    } else if (state === 'playing') {
+      setVideoEndedPromptVisible(false);
+    }
+  }, []);
+
+  const handlePlayerReady = useCallback(() => {
+    const adapter = playerAdapterRef.current;
+    if (adapter) {
+      setVideoDuration(adapter.getDuration());
+    }
+  }, []);
+
   const handlePauseResume = useCallback(async () => {
     const lc = lcRef.current;
     if (!lc) return;
 
     if (sessionState === 'paused') {
       await lc.resume();
+      playerAdapterRef.current?.play();
     } else {
       await lc.pause();
+      playerAdapterRef.current?.pause();
     }
   }, [sessionState]);
 
@@ -128,6 +191,14 @@ export function Session() {
   const handleComeBackLater = useCallback(async () => {
     const lc = lcRef.current;
     if (!lc) return;
+
+    // Save video playback position before pausing
+    const adapter = playerAdapterRef.current;
+    const record = lc.getRecord();
+    if (adapter && record) {
+      record.videoPlaybackPosition = adapter.getCurrentTime();
+    }
+
     await lc.pause();
     navigate('/home');
   }, [navigate]);
@@ -148,6 +219,24 @@ export function Session() {
     }
   }, [navigate]);
 
+  const handleEscapeConfirm = useCallback(async () => {
+    setEscapeModalVisible(false);
+    const lc = lcRef.current;
+    if (!lc) return;
+    await lc.end();
+    navigate('/home');
+  }, [navigate]);
+
+  const handleEscapeCancel = useCallback(async () => {
+    setEscapeModalVisible(false);
+    const lc = lcRef.current;
+    if (!lc) return;
+    if (lc.getState() === 'paused') {
+      await lc.resume();
+      playerAdapterRef.current?.play();
+    }
+  }, []);
+
   if (!initialized) {
     return (
       <div className="session-layout session-layout-centered">
@@ -158,7 +247,6 @@ export function Session() {
     );
   }
 
-  // No active session and no slot data to start one
   if (sessionState === 'idle') {
     return (
       <div className="session-empty">
@@ -179,65 +267,62 @@ export function Session() {
     ? Math.round((elapsedActiveMs - record.plannedMinutes * 60_000) / 60_000)
     : 0;
 
-  const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const startedAtLabel = new Date(record.startedAt).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
   });
 
-  const materialMeta = record.materialUrl ? 'MANUAL · LINKED' : 'MANUAL · NO EMBED';
+  const isYouTube = record.kind === 'youtube' && record.youtubeVideoId;
 
   return (
     <>
-      <div className="session-layout session-layout-centered">
-        <div className="session-top-bar">
-          <PauseResumeButton isPaused={isPaused} onToggle={handlePauseResume} />
-        </div>
+      {isYouTube ? (
+        <SessionYouTubeLayout
+          record={record}
+          sessionState={sessionState}
+          elapsedActiveMs={elapsedActiveMs}
+          pomodoroPhase={pomodoroPhase}
+          isPaused={isPaused}
+          isOverrun={isOverrun}
+          isBreak={isBreak}
+          overrunMinutes={overrunMinutes}
+          isDesktop={isDesktop}
+          onPauseResume={handlePauseResume}
+          onEnd={handleEnd}
+          onComeBackLater={handleComeBackLater}
+          playerAdapterRef={playerAdapterRef}
+          playerState={playerState}
+          videoDurationFormatted={formatDuration(videoDuration)}
+          resumeBannerVisible={resumeBannerVisible}
+          onDismissResumeBanner={() => setResumeBannerVisible(false)}
+          videoEndedPromptVisible={videoEndedPromptVisible}
+          onPlayerStateChange={handlePlayerStateChange}
+          onPlayerReady={handlePlayerReady}
+        />
+      ) : (
+        <SessionDefaultLayout
+          record={record}
+          sessionState={sessionState}
+          elapsedActiveMs={elapsedActiveMs}
+          pomodoroPhase={pomodoroPhase}
+          isPaused={isPaused}
+          isOverrun={isOverrun}
+          isBreak={isBreak}
+          overrunMinutes={overrunMinutes}
+          onPauseResume={handlePauseResume}
+          onEnd={handleEnd}
+          onComeBackLater={handleComeBackLater}
+          articleAutoOpened={articleAutoOpened}
+        />
+      )}
 
-        <SessionFrame overrun={isOverrun} isBreak={isBreak} isPaused={isPaused}>
-          <div className={`session-eyebrow-row ${getEyebrowColorClass(sessionState, overrunMinutes, isBreak)}`}>
-            <PulseDot state={sessionState} />
-            <SessionEyebrow
-              state={sessionState}
-              weekIndex={record.weekIndex}
-              overrunMinutes={overrunMinutes}
-              isBreak={isBreak}
-            />
-          </div>
-
-          <SessionTitle title={record.sessionTitle} />
-          <SessionSubtitle subtitle={record.materialUrl ? 'Linked material' : 'Manual · pen and paper'} />
-
-          <div className="session-timer-display">
-            <TimerDisplay elapsedMs={elapsedActiveMs} overrun={isOverrun} large />
-            <PomodoroIndicator phase={pomodoroPhase} />
-            <PlannedEndLine
-              plannedMinutes={record.plannedMinutes}
-              endsAt={plannedEndTime}
-              overrun={isOverrun}
-            />
-          </div>
-
-          {record.materialUrl && (
-            <OpenMaterialButton url={record.materialUrl} />
-          )}
-
-          <MaterialStrip
-            title={record.sessionTitle}
-            meta={materialMeta}
-          />
-        </SessionFrame>
-
-        <div className="session-actions">
-          <EndSessionButton onEnd={handleEnd} />
-          {!isPaused && (
-            <ComeBackLaterButton onComeBackLater={handleComeBackLater} />
-          )}
-        </div>
-
-        {/* Desktop floating End button */}
-      </div>
+      {escapeModalVisible && (
+        <EscapeConfirmModal
+          onConfirm={handleEscapeConfirm}
+          onCancel={handleEscapeCancel}
+        />
+      )}
 
       {sessionState === 'walk_away' && (
         <WalkAwayDialog

@@ -4,6 +4,7 @@ import type {
   SessionState,
   ActiveSessionRecord,
   PomodoroConfig,
+  PlannedEndNotifier,
   SessionStartedPayload,
   SessionPausedPayload,
   SessionResumedPayload,
@@ -30,6 +31,7 @@ export interface SessionLifecycleDeps {
   now?: () => Date;
   pomodoroConfig?: PomodoroConfig;
   audioContext?: AudioContext | null;
+  notifier?: PlannedEndNotifier | null;
 }
 
 export class SessionLifecycle {
@@ -44,6 +46,8 @@ export class SessionLifecycle {
   private unsubDurability: (() => void) | null = null;
   private chime: ReturnType<typeof createChime> | null = null;
   private lastPomodoroPhase: 'work' | 'break' | 'none' = 'none';
+  private readonly notifier: PlannedEndNotifier | null;
+  private plannedEndReached = false;
 
   constructor(deps: SessionLifecycleDeps) {
     this.eventStore = deps.eventStore;
@@ -55,9 +59,17 @@ export class SessionLifecycle {
       this.chime = createChime(deps.audioContext);
     }
 
+    this.notifier = deps.notifier ?? null;
+    if (this.notifier) {
+      this.notifier.setCallback(() => this.handlePlannedEndReached());
+    }
+
     this.unsubDurability = this.durabilityHooks.subscribe((event) => {
       if (event.isHidden) {
         this.persistToDb();
+      }
+      if (event.type === 'visibilitychange' && this.notifier && this.plannedEndReached) {
+        this.notifier.handleVisibilityChange(event.isHidden);
       }
     });
   }
@@ -106,6 +118,18 @@ export class SessionLifecycle {
     // For tab-close recovery, the caller provides hiddenDuration context
     this.state = 'active';
     this.notify();
+
+    if (this.notifier && this.record) {
+      const activeMs = this.getElapsedActiveMs();
+      const plannedMs = this.record.plannedMinutes * 60_000;
+      const remainingMs = plannedMs - activeMs;
+      if (remainingMs > 0) {
+        this.notifier.schedule(remainingMs);
+      } else {
+        this.notifier.schedule(0);
+      }
+    }
+
     return this.state;
   }
 
@@ -141,6 +165,8 @@ export class SessionLifecycle {
       pauseIntervals: [],
       pomodoroConfig: this.pomodoroConfig,
       materialUrl: slotData.materialUrl,
+      kind: slotData.kind,
+      youtubeVideoId: slotData.youtubeVideoId,
     };
 
     await this.persistToDb();
@@ -164,6 +190,10 @@ export class SessionLifecycle {
     this.lastPomodoroPhase = 'none';
     this.state = 'active';
     this.notify();
+
+    if (this.notifier) {
+      this.notifier.schedule(this.record!.plannedMinutes * 60_000);
+    }
   }
 
   async pause(): Promise<void> {
@@ -193,6 +223,8 @@ export class SessionLifecycle {
 
     this.state = 'paused';
     this.notify();
+
+    this.notifier?.cancel();
   }
 
   async resume(): Promise<void> {
@@ -223,6 +255,17 @@ export class SessionLifecycle {
 
     this.state = 'active';
     this.notify();
+
+    if (this.notifier && !this.plannedEndReached) {
+      const activeMs = this.getElapsedActiveMs();
+      const plannedMs = this.record!.plannedMinutes * 60_000;
+      const remainingMs = plannedMs - activeMs;
+      if (remainingMs > 0) {
+        this.notifier.schedule(remainingMs);
+      } else {
+        this.notifier.schedule(0);
+      }
+    }
   }
 
   async end(): Promise<void> {
@@ -329,6 +372,19 @@ export class SessionLifecycle {
   tick(): SessionState {
     if (this.state !== 'active') return this.state;
 
+    // Planned-end fallback — catches throttled/missed setTimeout
+    if (!this.plannedEndReached && this.record) {
+      const activeMs = this.getElapsedActiveMs();
+      const plannedMs = this.record.plannedMinutes * 60_000;
+      if (activeMs >= plannedMs) {
+        if (this.notifier) {
+          this.notifier.schedule(0);
+        } else {
+          this.handlePlannedEndReached();
+        }
+      }
+    }
+
     // Check Pomodoro transitions for chime
     const pomo = this.getPomodoroPhase();
     if (pomo.phase === 'work' && this.lastPomodoroPhase === 'break') {
@@ -349,12 +405,22 @@ export class SessionLifecycle {
     return this.state;
   }
 
+  isPlannedEndReached(): boolean {
+    return this.plannedEndReached;
+  }
+
+  dismissPlannedEnd(): void {
+    this.plannedEndReached = false;
+    this.notifier?.dismiss();
+  }
+
   subscribe(listener: SessionLifecycleListener): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
   }
 
   destroy(): void {
+    this.notifier?.destroy();
     this.unsubDurability?.();
     this.listeners.clear();
   }
@@ -362,6 +428,11 @@ export class SessionLifecycle {
   // -----------------------------------------------------------------------
   // Internals
   // -----------------------------------------------------------------------
+
+  private handlePlannedEndReached = (): void => {
+    this.plannedEndReached = true;
+    this.notify();
+  };
 
   private checkStale(record: ActiveSessionRecord): SessionAbandonedPayload['reason'] | null {
     const now = this.now();
@@ -470,6 +541,8 @@ export class SessionLifecycle {
   }
 
   private async clearActiveSession(): Promise<void> {
+    this.notifier?.dismiss();
+    this.plannedEndReached = false;
     try {
       await this.eventStore.table('activeSession').delete(1);
     } catch {

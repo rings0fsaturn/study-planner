@@ -297,6 +297,90 @@
 }
 
 /* =================================================================
+   YouTube layout — slim timer + embed
+   ================================================================= */
+.session-layout-youtube {
+  max-width: 880px;
+  padding: 20px 20px 96px;
+}
+
+.session-layout-youtube.is-paused {
+  transition: background-color var(--duration-3) var(--ease-out);
+}
+
+.session-layout-youtube.is-paused .session-timer-time {
+  color: var(--text-secondary);
+  transition: color var(--duration-3) var(--ease-out);
+}
+
+.session-yt-timer-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.session-yt-timer-left {
+  flex: 1;
+  min-width: 0;
+}
+
+.session-yt-timer-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.session-yt-timer-right .session-timer-time {
+  font-size: 36px;
+}
+
+.session-yt-embed-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 56.25%; /* 16:9 */
+  margin-bottom: var(--space-3);
+  background: var(--ink);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.session-yt-embed-container iframe,
+.session-yt-embed-container > div {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.session-yt-status-strip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-4);
+}
+
+.session-yt-bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.session-yt-esc-hint {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  display: none;
+}
+
+/* =================================================================
    Desktop — 1024px and up
    Same vertical shape, wider type, FAB instead of inline End button.
    ================================================================= */
@@ -330,5 +414,19 @@
     box-shadow: var(--shadow-md);
     padding: 14px 28px;
     font-size: 15px;
+  }
+
+  /* YouTube desktop overrides */
+  .session-layout-youtube {
+    max-width: 880px;
+    padding: var(--space-7) var(--space-6) var(--space-9);
+  }
+
+  .session-yt-timer-right .session-timer-time {
+    font-size: 48px;
+  }
+
+  .session-yt-esc-hint {
+    display: block;
   }
 }

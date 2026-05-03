@@ -30,6 +30,8 @@
 /** UUID linking all lifecycle events for a single session */
 export type SessionId = string;
 
+export type MaterialKind = 'youtube' | 'article' | 'manual';
+
 /** Pomodoro timer configuration snapshotted at session start */
 export interface PomodoroConfig {
   /** Duration of a work interval in minutes (default: 50) */
@@ -130,6 +132,8 @@ export interface SessionLoggedPayload {
   pauseCount?: number;
   /** Total minutes spent in paused state */
   totalPauseMinutes?: number;
+  /** Minutes of actual YouTube video playback (undefined for non-YouTube sessions) */
+  videoPlayTimeMinutes?: number;
   /** Number of full Pomodoro work intervals completed */
   pomodorosCompleted?: number;
   /** How the session ended — 'completed' (normal End tap) or 'trimmed' (walk-away trim) */
@@ -231,6 +235,12 @@ export interface ActiveSessionRecord {
   pomodoroConfig: PomodoroConfig;
   /** Optional URL for "Open material" button */
   materialUrl?: string;
+  /** Material kind for per-kind session rendering */
+  kind?: MaterialKind;
+  /** YouTube video ID for embed (only when kind === 'youtube') */
+  youtubeVideoId?: string;
+  /** Persisted video playback position in seconds (for resume) */
+  videoPlaybackPosition?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -278,4 +288,19 @@ export interface SessionSlotData {
   plannedMinutes: number;
   materialUrl?: string;
   role?: 'anchor' | 'foundation' | 'practice';
+  kind?: MaterialKind;
+  youtubeVideoId?: string;
+}
+
+// ---------------------------------------------------------------------------
+// Planned-end notification strategy
+// ---------------------------------------------------------------------------
+
+export interface PlannedEndNotifier {
+  setCallback(cb: () => void): void;
+  schedule(remainingMs: number): void;
+  cancel(): void;
+  dismiss(): void;
+  destroy(): void;
+  handleVisibilityChange(isHidden: boolean): void;
 }

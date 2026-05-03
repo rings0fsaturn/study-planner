@@ -7,6 +7,10 @@ import { useSync } from '../../sync/useSync'
 import { useEventStore } from '../../events/useEventStore'
 import { SchedulePreview } from '../components/SchedulePreview'
 import { OverCapacityModal, UnderCapacityBanner } from '../components/CapacityPrompt'
+import { SwapFab } from '../components/SwapFab'
+import { useSwapStateMachine, type SlotKey } from '../components/useSwapStateMachine'
+import { computeSwapEdits } from '../components/computeSwapEdits'
+import { useMatchMedia } from '../../lib/useMatchMedia'
 import type { MaterialAddedPayload, RoadmapCreatedPayload } from '../../sync/types'
 
 function useDebouncedValue<T>(value: T, delay: number): T {
@@ -19,27 +23,27 @@ function useDebouncedValue<T>(value: T, delay: number): T {
 }
 
 export function Step3Preview() {
-  const { state, dispatch } = useOnboarding()
+  const { state, dispatch, expandedMaterials } = useOnboarding()
   const { logEvent } = useSync()
   const eventStore = useEventStore()
   const navigate = useNavigate()
   const [committing, setCommitting] = useState(false)
 
   const previewEdits = useMemo(() => {
-    const edits = new Map<string, { materialId: string | null; sessionTitle: string | null }>()
+    const edits = new Map<string, { materialId: string | null; sessionTitle: string | null; plannedMinutes: number }>()
     for (const e of state.previewEdits) {
-      edits.set(`${e.weekIndex}:${e.dayOfWeek}`, { materialId: e.materialId, sessionTitle: e.sessionTitle })
+      edits.set(`${e.weekIndex}:${e.dayOfWeek}`, { materialId: e.materialId, sessionTitle: e.sessionTitle, plannedMinutes: e.plannedMinutes })
     }
     return edits
   }, [state.previewEdits])
 
   const roadmapInput = useMemo((): RoadmapInput | null => {
-    if (!state.deadline || state.selectedStudyDays.length === 0 || state.materials.length === 0) return null
+    if (!state.deadline || state.selectedStudyDays.length === 0 || expandedMaterials.length === 0) return null
     const today = new Date().toISOString().split('T')[0]
     const days = differenceInCalendarDays(state.deadline, today)
     const weeks = Math.max(1, Math.ceil(days / 7))
     return {
-      materials: state.materials
+      materials: expandedMaterials
         .filter(m => m.title && m.estimatedDuration > 0)
         .map((m, i) => ({ id: m.id, title: m.title, totalMinutes: m.estimatedDuration, role: m.role, additionOrder: i })),
       weeks,
@@ -48,7 +52,7 @@ export function Step3Preview() {
       weekdayHours: state.weekdayHours,
       weekendHours: state.weekendHours,
     }
-  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, state.materials])
+  }, [state.deadline, state.selectedStudyDays, state.weekdayHours, state.weekendHours, expandedMaterials])
 
   const debouncedInput = useDebouncedValue(roadmapInput, 150)
   const roadmap = useMemo((): RoadmapOutput | null => {
@@ -64,13 +68,14 @@ export function Step3Preview() {
         const key = `${slot.weekIndex}:${slot.dayOfWeek}`
         const edit = previewEdits.get(key)
         if (edit) {
-          if (edit.materialId && slot.candidateMaterialIds.includes(edit.materialId)) {
-            slot.candidateMaterialIds = [edit.materialId]
-          } else if (edit.materialId === null) {
-            slot.candidateMaterialIds = []
+          if (edit.materialId !== undefined) {
+            slot.candidateMaterialIds = edit.materialId ? [edit.materialId] : []
           }
           if (edit.sessionTitle !== null) {
             slot.sessionTitle = edit.sessionTitle
+          }
+          if (edit.plannedMinutes > 0) {
+            slot.plannedMinutes = edit.plannedMinutes
           }
         }
       }
@@ -109,6 +114,31 @@ export function Step3Preview() {
     dispatch({ type: 'SET_PREVIEW_EDITS', edits })
   }, [state.previewEdits, dispatch])
 
+  const isDesktop = useMatchMedia('(min-width: 1024px)')
+
+  const isSlotSwappable = useCallback((key: SlotKey): boolean => {
+    if (!displayRoadmap) return false
+    const slot = displayRoadmap.weeks
+      .flatMap(w => w.slots)
+      .find(s => s.weekIndex === key.weekIndex && s.dayOfWeek === key.dayOfWeek)
+    return !!slot && slot.candidateMaterialIds.length < 2
+  }, [displayRoadmap])
+
+  const handleSwap = useCallback((source: SlotKey, dest: SlotKey) => {
+    if (!displayRoadmap) return
+    const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+    const sourceSlot = allSlots.find(s => s.weekIndex === source.weekIndex && s.dayOfWeek === source.dayOfWeek)
+    const destSlot = allSlots.find(s => s.weekIndex === dest.weekIndex && s.dayOfWeek === dest.dayOfWeek)
+    if (!sourceSlot || !destSlot) return
+    const newEdits = computeSwapEdits(sourceSlot, destSlot, state.previewEdits)
+    dispatch({ type: 'SET_PREVIEW_EDITS', edits: newEdits })
+  }, [displayRoadmap, state.previewEdits, dispatch])
+
+  const swapMachine = useSwapStateMachine({
+    isSlotSwappable,
+    onExecuteSwap: handleSwap,
+  })
+
   const handleCompress = useCallback(() => {
     // Recompute with capacityCheck.suggestedWeeks. See OQ-03 for the
     // reconciliation between deadline-driven weeks and compressed weeks.
@@ -118,20 +148,29 @@ export function Step3Preview() {
     if (!displayRoadmap || committing || unresolvedTieCount > 0) return
     setCommitting(true)
     try {
-      const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+      const committedIds = new Set<string>()
 
-      for (const mat of state.materials) {
+      for (const mat of expandedMaterials) {
         if (!mat.title || mat.estimatedDuration <= 0) continue
+        committedIds.add(mat.id)
         const payload: MaterialAddedPayload = {
           materialId: mat.id,
           title: mat.title,
           estimatedDuration: mat.estimatedDuration,
           url: mat.url,
-          kind: 'manual',
+          kind: mat.kind ?? 'manual',
           role: mat.role,
+          playlistId: mat.playlistId,
+          youtubeVideoId: mat.youtubeVideoId,
         }
         await logEvent('MaterialAdded', payload as unknown as Record<string, unknown>)
       }
+
+      const allSlots = displayRoadmap.weeks.flatMap(w => w.slots)
+        .map(s => ({
+          ...s,
+          candidateMaterialIds: s.candidateMaterialIds.filter(id => committedIds.has(id)),
+        }))
 
       const roadmapPayload: RoadmapCreatedPayload = {
         startDate: roadmapInput!.startDate,
@@ -153,7 +192,7 @@ export function Step3Preview() {
     } finally {
       setCommitting(false)
     }
-  }, [displayRoadmap, state, committing, unresolvedTieCount, logEvent, eventStore, navigate, roadmapInput])
+  }, [displayRoadmap, state, expandedMaterials, committing, unresolvedTieCount, logEvent, eventStore, navigate, roadmapInput])
 
   if (!roadmapInput) {
     return (
@@ -210,11 +249,24 @@ export function Step3Preview() {
       {displayRoadmap && (
         <SchedulePreview
           roadmap={displayRoadmap}
-          materials={state.materials.map(m => ({ id: m.id, title: m.title }))}
+          materials={expandedMaterials.map(m => ({ id: m.id, title: m.title }))}
           onResolveTie={handleResolveTie}
           onRename={handleRename}
+          swapState={swapMachine.state}
+          onTapSlot={swapMachine.tapSlot}
+          onStartDrag={swapMachine.startDrag}
+          onDrop={swapMachine.drop}
+          onCancelDrag={swapMachine.cancelDrag}
+          isDesktop={isDesktop}
         />
       )}
+
+      <SwapFab
+        swapState={swapMachine.state}
+        onEnterSwapMode={swapMachine.enterSwapMode}
+        onExitSwapMode={swapMachine.exitSwapMode}
+        onProceed={swapMachine.proceed}
+      />
 
       <button className="btn btn-ghost btn-sm btn-block onboarding-preview-mobile-only">
         Show all {roadmapInput.weeks} weeks
