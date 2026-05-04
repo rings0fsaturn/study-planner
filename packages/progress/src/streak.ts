@@ -62,18 +62,18 @@ export function buildStreakGrid(
   dailyPlannedMinutes: Record<string, number>,
   globalAvgDailyMinutes: number,
 ): DayCell[] {
-  const todayDate = new Date(today)
-  const dayOfWeek = todayDate.getDay()
+  const todayDate = new Date(today + 'T12:00:00Z')
+  const dayOfWeek = todayDate.getUTCDay()
   // Monday = start of week (ISO)
   const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
   const monday = new Date(todayDate)
-  monday.setDate(todayDate.getDate() + mondayOffset)
+  monday.setUTCDate(todayDate.getUTCDate() + mondayOffset)
 
   const grid: DayCell[] = []
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
+    d.setUTCDate(monday.getUTCDate() + i)
     const dateStr = d.toISOString().slice(0, 10)
 
     const daySessions = sessions.filter((s) => s.date === dateStr)
