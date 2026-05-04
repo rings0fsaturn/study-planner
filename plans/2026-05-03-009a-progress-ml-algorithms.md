@@ -580,7 +580,7 @@ pnpm typecheck   # should pass
 
 ### Phase 2: Create `@study-tracker/progress` package skeleton with types and config
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 1 (namespace must be clear)
 **Estimated scope:** ~6 new files, ~350 lines
 
