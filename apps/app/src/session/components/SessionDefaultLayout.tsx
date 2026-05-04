@@ -36,6 +36,8 @@ export interface SessionDefaultLayoutProps {
   plannedEndDismissed?: boolean;
   onDismissPlannedEnd?: () => void;
   onEndFromBanner?: () => void;
+  unusual?: boolean;
+  onUnusualChange?: (value: boolean) => void;
 }
 
 function getMaterialMeta(record: ActiveSessionRecord): string {
@@ -77,6 +79,8 @@ export function SessionDefaultLayout({
   plannedEndDismissed,
   onDismissPlannedEnd,
   onEndFromBanner,
+  unusual,
+  onUnusualChange,
 }: SessionDefaultLayoutProps) {
   const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const materialMeta = getMaterialMeta(record);
@@ -158,6 +162,19 @@ export function SessionDefaultLayout({
           kind={record.kind}
         />
       </SessionFrame>
+
+      {onUnusualChange && (
+        <div
+          className={`checkbox-row${unusual ? ' checked' : ''}`}
+          style={{ margin: '0 auto', maxWidth: 320, marginBottom: 'var(--space-3)' }}
+          onClick={() => onUnusualChange(!unusual)}
+        >
+          <span className={`checkbox-box${unusual ? ' checked' : ''}`} />
+          <div className="checkbox-body">
+            <div className="checkbox-title">This was unusual</div>
+          </div>
+        </div>
+      )}
 
       <div className="session-actions">
         <EndSessionButton onEnd={onEnd} />

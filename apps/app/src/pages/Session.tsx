@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { useEventStore } from '../events/useEventStore';
+import { useSync } from '../sync/useSync';
 import { DurabilityHooks } from '../lib/DurabilityHooks';
 import { useMatchMedia } from '../lib/useMatchMedia';
 import { SessionLifecycle } from '../session/SessionLifecycle';
@@ -30,6 +31,7 @@ export function Session() {
   const eventStore = useEventStore();
   const slotData = location.state as SessionSlotData | null;
   const isDesktop = useMatchMedia('(min-width: 1024px)');
+  const { logEvent } = useSync();
 
   const lcRef = useRef<SessionLifecycle | null>(null);
   const durabilityRef = useRef<DurabilityHooks | null>(null);
@@ -49,6 +51,7 @@ export function Session() {
   const [escapeModalVisible, setEscapeModalVisible] = useState(false);
   const [plannedEndReached, setPlannedEndReached] = useState(false);
   const [plannedEndDismissed, setPlannedEndDismissed] = useState(false);
+  const [unusual, setUnusual] = useState(false);
 
   // Initialize lifecycle
   useEffect(() => {
@@ -191,9 +194,16 @@ export function Session() {
   const handleEnd = useCallback(async () => {
     const lc = lcRef.current;
     if (!lc) return;
+    const record = lc.getRecord();
     await lc.end();
+    if (unusual && record) {
+      await logEvent('SessionTaggedExceptional', {
+        sessionId: record.sessionId,
+        exceptional: true,
+      });
+    }
     navigate('/home');
-  }, [navigate]);
+  }, [navigate, unusual, logEvent]);
 
   const handleComeBackLater = useCallback(async () => {
     const lc = lcRef.current;
@@ -318,6 +328,8 @@ export function Session() {
           plannedEndDismissed={plannedEndDismissed}
           onDismissPlannedEnd={handleDismissPlannedEnd}
           onEndFromBanner={handleEnd}
+          unusual={unusual}
+          onUnusualChange={setUnusual}
         />
       ) : (
         <SessionDefaultLayout
@@ -337,6 +349,8 @@ export function Session() {
           plannedEndDismissed={plannedEndDismissed}
           onDismissPlannedEnd={handleDismissPlannedEnd}
           onEndFromBanner={handleEnd}
+          unusual={unusual}
+          onUnusualChange={setUnusual}
         />
       )}
 

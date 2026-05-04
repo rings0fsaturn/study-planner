@@ -40,6 +40,8 @@ export interface SessionYouTubeLayoutProps {
   plannedEndDismissed?: boolean;
   onDismissPlannedEnd?: () => void;
   onEndFromBanner?: () => void;
+  unusual?: boolean;
+  onUnusualChange?: (value: boolean) => void;
 }
 
 function formatElapsed(ms: number): string {
@@ -74,6 +76,8 @@ export function SessionYouTubeLayout({
   plannedEndDismissed,
   onDismissPlannedEnd,
   onEndFromBanner,
+  unusual,
+  onUnusualChange,
 }: SessionYouTubeLayoutProps) {
   const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const elapsedFormatted = formatElapsed(elapsedActiveMs);
@@ -164,6 +168,19 @@ export function SessionYouTubeLayout({
           <span className="session-yt-esc-hint">PRESS ESC TO END</span>
         )}
       </div>
+
+      {onUnusualChange && (
+        <div
+          className={`checkbox-row${unusual ? ' checked' : ''}`}
+          style={{ margin: '0 auto', maxWidth: 320, marginTop: 'var(--space-3)' }}
+          onClick={() => onUnusualChange(!unusual)}
+        >
+          <span className={`checkbox-box${unusual ? ' checked' : ''}`} />
+          <div className="checkbox-body">
+            <div className="checkbox-title">This was unusual</div>
+          </div>
+        </div>
+      )}
 
       {/* Mobile inline End button */}
       {!isDesktop && (

@@ -466,7 +466,7 @@ pnpm typecheck   # passes
 
 ### Phase 4: Session end exceptional toggle
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 1 (event kind constant)
 **Estimated scope:** ~3 files, ~80 lines
 
