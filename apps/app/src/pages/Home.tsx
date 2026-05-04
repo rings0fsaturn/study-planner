@@ -125,8 +125,9 @@ export function Home() {
 
   const projectedFinish = progress?.projection?.finishDate ?? null;
   const confidenceInterval = progress?.projection?.confidenceInterval ?? null;
-  const daysToDeadline = projectedFinish
-    ? differenceInCalendarDays(new Date(projectedFinish), new Date(todayStr))
+  const deadline = roadmapPayload?.deadline ?? null;
+  const daysEarlyOrLate = projectedFinish && deadline
+    ? differenceInCalendarDays(new Date(deadline), new Date(projectedFinish))
     : null;
 
   const handleSignOut = async () => {
@@ -273,28 +274,40 @@ export function Home() {
         />
       )}
 
-      {projectedFinish && roadmapPayload && (
+      {progress && roadmapPayload && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
-          <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-            <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish</div>
-            <div className={`stat-value sm ${daysToDeadline! >= 0 ? 'moss' : 'terracotta'}`}>
-              {confidenceInterval
-                ? `${format(new Date(confidenceInterval[0]), 'MMM d')}–${format(new Date(confidenceInterval[1]), 'MMM d')}`
-                : formatDateNice(projectedFinish)}
+          {projectedFinish ? (
+            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish</div>
+              <div className={`stat-value sm ${daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'moss' : 'terracotta'}`}>
+                {confidenceInterval
+                  ? `${format(new Date(confidenceInterval[0]), 'MMM d')}–${format(new Date(confidenceInterval[1]), 'MMM d')}`
+                  : formatDateNice(projectedFinish)}
+              </div>
+              <div className="mono-caps" style={{ marginTop: '4px', color: daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
+                {daysEarlyOrLate !== null
+                  ? daysEarlyOrLate > 0 ? `${daysEarlyOrLate} days early` : daysEarlyOrLate === 0 ? 'On target' : `${Math.abs(daysEarlyOrLate)} days late`
+                  : ''}
+              </div>
             </div>
-            <div className="mono-caps" style={{ marginTop: '4px', color: daysToDeadline! >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
-              {daysToDeadline! > 0 ? `${daysToDeadline} days left` : daysToDeadline === 0 ? 'Due today' : `${Math.abs(daysToDeadline!)} days past`}
+          ) : (
+            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+              <div className="stat-label" style={{ marginBottom: '6px' }}>Total logged</div>
+              <div className="stat-value sm">
+                {formatMinutesToHoursAndMinutes(progress.totalMinutes)}
+              </div>
+              <div className="mono-caps" style={{ marginTop: '4px' }}>
+                {Math.round(progress.completionPercentage)}% complete
+              </div>
             </div>
-          </div>
+          )}
           <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
             <div className="stat-label" style={{ marginBottom: '6px' }}>This week</div>
             <div className="stat-value sm">
-              {progress
-                ? formatMinutesToHoursAndMinutes(progress.weeklyStats.minutesThisWeek)
-                : formatMinutesToHoursAndMinutes(0)}
+              {formatMinutesToHoursAndMinutes(progress.weeklyStats.minutesThisWeek)}
             </div>
             <div className="mono-caps" style={{ marginTop: '4px' }}>
-              {roadmapPayload.weeklyHours}h target
+              of {roadmapPayload.weeklyHours}h goal
             </div>
           </div>
         </div>
