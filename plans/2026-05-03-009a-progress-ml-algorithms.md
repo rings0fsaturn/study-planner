@@ -958,7 +958,7 @@ pnpm --filter progress typecheck   # should pass (once stubs exist)
 
 ### Phase 3: Implement Hierarchical Bayesian model and CUSUM detector
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 2 (types and config must exist)
 **Estimated scope:** ~4 files, ~400 lines
 
