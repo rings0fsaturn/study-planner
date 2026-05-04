@@ -128,7 +128,24 @@ export function Week() {
             />
           </div>
 
-          <BurnUpChart data={burnUp} />
+          {burnUp.actual.length >= 3 && burnUp.actual.some(p => p.minutes > 0) ? (
+            <BurnUpChart data={burnUp} />
+          ) : (
+            <div
+              style={{
+                background: 'var(--surface-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: 'var(--radius-md)',
+                padding: '32px 20px',
+                textAlign: 'center',
+              }}
+            >
+              <div className="mono-caps" style={{ marginBottom: 8 }}>Hours studied vs plan</div>
+              <p className="t-body" style={{ color: 'var(--text-secondary)', margin: 0 }}>
+                Log a few more sessions to see your trend analysis.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

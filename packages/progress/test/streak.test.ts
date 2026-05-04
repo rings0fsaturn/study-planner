@@ -102,10 +102,10 @@ describe('buildStreakGrid', () => {
   })
 
   it('uses global average for rest days', () => {
-    const sessions = [makeSession({ date: '2026-01-18', duration: 60 })]
+    const sessions = [makeSession({ date: '2026-01-14', duration: 60 })]
     const grid = buildStreakGrid(sessions, today, {}, 60)
-    const sundayCell = grid.find((d) => d.date === '2026-01-18')
-    expect(sundayCell?.level).toBe(3)
+    const tuesdayCell = grid.find((d) => d.date === '2026-01-14')
+    expect(tuesdayCell?.level).toBe(3)
   })
 
   it('manual log without duration counts as level 1', () => {
@@ -116,5 +116,17 @@ describe('buildStreakGrid', () => {
     const todayCell = grid.find((d) => d.date === '2026-01-15')
     expect(todayCell?.level).toBe(1)
     expect(todayCell?.minutes).toBe(1)
+  })
+
+  it('future days always show level 0 even if sessions exist', () => {
+    const sessions = [
+      makeSession({ date: '2026-01-16', duration: 60 }),
+      makeSession({ date: '2026-01-17', duration: 90 }),
+    ]
+    const grid = buildStreakGrid(sessions, today, { '2026-01-16': 60, '2026-01-17': 60 }, 60)
+    const fri = grid.find((d) => d.date === '2026-01-16')
+    const sat = grid.find((d) => d.date === '2026-01-17')
+    expect(fri?.level).toBe(0)
+    expect(sat?.level).toBe(0)
   })
 })

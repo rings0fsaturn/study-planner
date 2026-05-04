@@ -79,11 +79,18 @@ export function Home() {
 
   const exceptionalIds = useLiveQuery(async () => {
     const all = await eventStore.getAll();
-    const set = new Set<string>();
+    const latestBySession = new Map<string, boolean>();
     for (const e of all) {
-      if (e.kind === 'SessionTaggedExceptional' && e.payload.exceptional) {
-        set.add(e.payload.sessionId as string);
+      if (e.kind === 'SessionTaggedExceptional') {
+        latestBySession.set(
+          e.payload.sessionId as string,
+          e.payload.exceptional as boolean,
+        );
       }
+    }
+    const set = new Set<string>();
+    for (const [sid, isExc] of latestBySession) {
+      if (isExc) set.add(sid);
     }
     return set;
   }, [eventStore]) ?? new Set<string>();

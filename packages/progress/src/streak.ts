@@ -99,6 +99,8 @@ export function buildStreakGrid(
       level = 3
     }
 
+    if (dateStr > today) level = 0
+
     grid.push({
       date: dateStr,
       level,
