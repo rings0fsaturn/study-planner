@@ -1,4 +1,4 @@
-import type { Slot } from '@study-tracker/progress-engine'
+import type { Slot } from '@study-tracker/roadmap-engine'
 import type { OnboardingSlotEdit } from '../OnboardingProvider'
 
 function upsertEdit(edits: OnboardingSlotEdit[], edit: OnboardingSlotEdit): void {

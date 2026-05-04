@@ -15,8 +15,8 @@ vi.mock('../../sync/useSync')
 vi.mock('../CheckpointGate', () => ({
   CheckpointGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock('@study-tracker/progress-engine', async () => {
-  const actual = await vi.importActual('@study-tracker/progress-engine')
+vi.mock('@study-tracker/roadmap-engine', async () => {
+  const actual = await vi.importActual('@study-tracker/roadmap-engine')
   return {
     ...actual,
     generateRoadmap: vi.fn(),
@@ -161,7 +161,7 @@ describe('Step3Preview', () => {
 
   it('renders schedule with session title and duration', async () => {
     await seedOnboardingState(testDb)
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
 
     renderPreview()
@@ -174,7 +174,7 @@ describe('Step3Preview', () => {
 
   it('displays rest day rows for slots with no candidate materials', async () => {
     await seedOnboardingState(testDb)
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
 
     renderPreview()
@@ -191,7 +191,7 @@ describe('Step3Preview', () => {
         { id: 'mat-2', title: 'Clean Code', estimatedDuration: 60, role: 'foundation', additionOrder: 1, userOverrodeType: false },
       ],
     })
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockTieRoadmap())
 
     renderPreview()
@@ -205,7 +205,7 @@ describe('Step3Preview', () => {
 
   it('pencil icon is present next to session titles for inline rename', async () => {
     await seedOnboardingState(testDb)
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
 
     renderPreview()
@@ -225,7 +225,7 @@ describe('Step3Preview', () => {
         { id: 'mat-2', title: 'Clean Code', estimatedDuration: 60, role: 'foundation', additionOrder: 1, userOverrodeType: false },
       ],
     })
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockTieRoadmap())
 
     renderPreview()
@@ -238,7 +238,7 @@ describe('Step3Preview', () => {
 
   it('commit button is enabled when no unresolved ties', async () => {
     await seedOnboardingState(testDb)
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
 
     renderPreview()

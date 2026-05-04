@@ -1,6 +1,6 @@
 import type { Event } from './EventStore';
 import type { RoadmapCreatedPayload } from '../sync/types'
-import type { Slot } from '@study-tracker/progress-engine'
+import type { Slot } from '@study-tracker/roadmap-engine'
 
 export function totalMinutesLogged(events: Event[]): number {
   return events

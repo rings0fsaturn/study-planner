@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import type { CapacityCheck, Warning } from '@study-tracker/progress-engine'
+import type { CapacityCheck, Warning } from '@study-tracker/roadmap-engine'
 
 interface CapacityPromptProps {
   capacityCheck: CapacityCheck

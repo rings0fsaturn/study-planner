@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
-import { ROLE_TO_LABEL, LABEL_TO_ROLE } from '@study-tracker/progress-engine'
-import type { MaterialRole } from '@study-tracker/progress-engine'
+import { ROLE_TO_LABEL, LABEL_TO_ROLE } from '@study-tracker/roadmap-engine'
+import type { MaterialRole } from '@study-tracker/roadmap-engine'
 import type { PlaylistEntry } from '../OnboardingProvider'
 import { PlaylistPickerPopup } from './PlaylistPickerPopup'
 import { PlaylistLoadingPopup } from './PlaylistLoadingPopup'

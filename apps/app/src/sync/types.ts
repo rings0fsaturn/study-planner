@@ -43,7 +43,7 @@ export interface SyncMeta {
   value: unknown;
 }
 
-import type { DayOfWeek, Slot } from '@study-tracker/progress-engine'
+import type { DayOfWeek, Slot } from '@study-tracker/roadmap-engine'
 
 export interface MaterialAddedPayload {
   materialId: string

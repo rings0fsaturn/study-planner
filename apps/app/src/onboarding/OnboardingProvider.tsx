@@ -1,6 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useState, useMemo, type ReactNode } from 'react'
 import { useEventStore } from '../events/useEventStore'
-import type { DayOfWeek, MaterialRole } from '@study-tracker/progress-engine'
+import type { DayOfWeek, MaterialRole } from '@study-tracker/roadmap-engine'
 import type { MaterialKind } from '../session/types'
 export type FetchStatus = 'idle' | 'loading' | 'success' | 'partial' | 'error'
 

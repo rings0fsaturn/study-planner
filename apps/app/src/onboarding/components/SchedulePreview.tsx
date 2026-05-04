@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
-import type { RoadmapOutput } from '@study-tracker/progress-engine'
-import { ROLE_TO_LABEL } from '@study-tracker/progress-engine'
+import type { RoadmapOutput } from '@study-tracker/roadmap-engine'
+import { ROLE_TO_LABEL } from '@study-tracker/roadmap-engine'
 import { InlineEditTitle } from './InlineEditTitle'
 import { SwappableSlotRow } from './SwappableSlotRow'
 import { SwapGuidanceBanner } from './SwapGuidanceBanner'

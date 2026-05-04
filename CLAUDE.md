@@ -19,7 +19,7 @@ pnpm dev:app                           # Vite only → http://localhost:5173/stu
 pnpm build                             # Both apps
 pnpm test:e2e                          # Playwright (4 suites)
 pnpm --filter app test                 # Vitest unit tests (app)
-pnpm --filter progress-engine test     # Vitest unit tests (progress-engine)
+pnpm --filter roadmap-engine test       # Vitest unit tests (roadmap-engine)
 pnpm lint && pnpm typecheck            # Lint + typecheck all packages
 ```
 
@@ -37,7 +37,7 @@ pnpm lint && pnpm typecheck            # Lint + typecheck all packages
 | `apps/app/src/pages/` | SignIn, SignUp, Home, Log, Week, Roadmap, Roadmaps, Settings |
 | `apps/app/supabase/migrations/` | SQL migrations (events table, storage buckets) |
 | `packages/design-tokens/` | CSS tokens, component classes, reset/typography |
-| `packages/progress-engine/` | Pure roadmap generation algorithm (no framework deps) |
+| `packages/roadmap-engine/` | Pure roadmap generation algorithm (no framework deps) |
 | `e2e/` | Playwright: smoke, session-log, sync, onboarding specs |
 
 ## Routing
@@ -58,7 +58,7 @@ Deep-dive docs live in `.claude/rules/`:
 | [`eventstore-architecture.md`](.claude/rules/eventstore-architecture.md) | Dexie schema (v3), tables, event shape, per-user isolation |
 | [`onboarding-architecture.md`](.claude/rules/onboarding-architecture.md) | 4-step wizard, state persistence, completion events |
 | [`sync-architecture.md`](.claude/rules/sync-architecture.md) | Write-ahead queue, snapshots, browser lifecycle, retry |
-| [`progress-engine.md`](.claude/rules/progress-engine.md) | Roadmap generation API, types, role inference |
+| [`roadmap-engine.md`](.claude/rules/roadmap-engine.md) | Roadmap generation API, types, role inference |
 | [`supabase-schema.md`](.claude/rules/supabase-schema.md) | Events table, RLS policies, storage buckets |
 
 ## Project Rules
@@ -84,3 +84,7 @@ Deep-dive docs live in `.claude/rules/`:
 ## Related Docs
 
 [`DEPLOYMENT.md`](DEPLOYMENT.md) | [`design/marginalia.html`](design/marginalia.html) | [`design/algo/ROADMAP_ENGINE_GUIDE.md`](design/algo/ROADMAP_ENGINE_GUIDE.md) | [`design/2026-04-29-onboarding-ui-ux-guide.md`](design/2026-04-29-onboarding-ui-ux-guide.md)
+
+## E2E test
+
+E2E test cannot be performed due to Environment issues, So only write the test dont try to run.

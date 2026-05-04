@@ -15,8 +15,8 @@ vi.mock('../sync/useSync')
 vi.mock('./CheckpointGate', () => ({
   CheckpointGate: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock('@study-tracker/progress-engine', async () => {
-  const actual = await vi.importActual('@study-tracker/progress-engine')
+vi.mock('@study-tracker/roadmap-engine', async () => {
+  const actual = await vi.importActual('@study-tracker/roadmap-engine')
   return {
     ...actual,
     generateRoadmap: vi.fn(),
@@ -119,7 +119,7 @@ describe('OnboardingFlow (Integration)', () => {
     mockUseEventStore.mockReturnValue(mockEventStore as never)
     mockUseSync.mockReturnValue({ logEvent: logEventMock, syncState: { status: 'idle', lastSyncedAt: null, pendingCount: 0, lastError: null }, forceSyncNow: vi.fn() } as never)
 
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(mockBalancedRoadmap())
   })
 
@@ -202,7 +202,7 @@ describe('OnboardingFlow (Integration)', () => {
       capacityCheck: { status: 'over-capacity' as const, totalMaterialMinutes: 600, totalCapacityMinutes: 60 },
       warnings: [],
     }
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(overCapacityRoadmap)
 
     renderPreview()
@@ -234,7 +234,7 @@ describe('OnboardingFlow (Integration)', () => {
       capacityCheck: { status: 'fits' as const, totalMaterialMinutes: 60, totalCapacityMinutes: 120 },
       warnings: [{ kind: 'unresolved-tie-count' as const, detail: { count: 1 } }],
     }
-    const { generateRoadmap } = await import('@study-tracker/progress-engine')
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
     vi.mocked(generateRoadmap).mockReturnValue(tieRoadmap)
 
     renderPreview()

@@ -1,4 +1,4 @@
-import type { Slot } from '@study-tracker/progress-engine'
+import type { Slot } from '@study-tracker/roadmap-engine'
 
 interface TieResolverProps {
   slot: Slot

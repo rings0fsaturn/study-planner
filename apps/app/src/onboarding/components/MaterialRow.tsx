@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { inferRole, ROLE_TO_LABEL, LABEL_TO_ROLE } from '@study-tracker/progress-engine'
+import { inferRole, ROLE_TO_LABEL, LABEL_TO_ROLE } from '@study-tracker/roadmap-engine'
 import type { OnboardingMaterial } from '../OnboardingProvider'
 
 const ROLE_LABEL_OPTIONS: string[] = ['Main reading', 'Foundations', 'Practice']

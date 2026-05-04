@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { generateRoadmap, type RoadmapInput, type RoadmapOutput } from '@study-tracker/progress-engine'
+import { generateRoadmap, type RoadmapInput, type RoadmapOutput } from '@study-tracker/roadmap-engine'
 import { differenceInCalendarDays } from 'date-fns'
 import { useOnboarding, type OnboardingSlotEdit } from '../OnboardingProvider'
 import { useSync } from '../../sync/useSync'

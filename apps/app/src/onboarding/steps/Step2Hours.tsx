@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import type { DayOfWeek } from '@study-tracker/progress-engine'
+import type { DayOfWeek } from '@study-tracker/roadmap-engine'
 import { useOnboarding } from '../OnboardingProvider'
 import { CheckpointGate } from '../CheckpointGate'
 
