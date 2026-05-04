@@ -185,6 +185,8 @@ export const SESSION_EVENT_KINDS = {
   RESUMED: 'SessionResumed',
   LOGGED: 'SessionLogged',
   ABANDONED: 'SessionAbandoned',
+  TAGGED_EXCEPTIONAL: 'SessionTaggedExceptional',
+  RECALIBRATION_RESOLVED: 'RecalibrationPromptResolved',
 } as const;
 
 // ---------------------------------------------------------------------------

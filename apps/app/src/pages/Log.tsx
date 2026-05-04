@@ -4,6 +4,7 @@ import { useSync } from '../sync/useSync';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { FieldGroup, FieldLabel, FieldInput, FieldTextarea, FieldHelper } from '../components/Field';
+import type { TimeOfDay } from '@study-tracker/progress';
 
 function formatDateForInput(date: Date): string {
   const year = date.getFullYear();
@@ -12,12 +13,27 @@ function formatDateForInput(date: Date): string {
   return `${year}-${month}-${day}`;
 }
 
+function getDefaultTimeOfDay(): TimeOfDay {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+const TIME_OF_DAY_OPTIONS: { value: TimeOfDay; label: string }[] = [
+  { value: 'morning', label: 'Morning' },
+  { value: 'afternoon', label: 'Afternoon' },
+  { value: 'evening', label: 'Evening' },
+];
+
 export function Log() {
   const navigate = useNavigate();
   const { logEvent } = useSync();
   const [duration, setDuration] = useState('');
   const [date, setDate] = useState(formatDateForInput(new Date()));
   const [description, setDescription] = useState('');
+  const [timeOfDay, setTimeOfDay] = useState<TimeOfDay>(getDefaultTimeOfDay);
+  const [isUnusual, setIsUnusual] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -34,11 +50,21 @@ export function Log() {
     setLoading(true);
 
     try {
+      const sessionId = crypto.randomUUID();
       await logEvent('SessionLogged', {
+        source: 'manual',
+        sessionId,
         duration: durationNum,
         date,
-        description: description.trim() || null
+        description: description.trim() || null,
+        timeOfDay,
       });
+      if (isUnusual) {
+        await logEvent('SessionTaggedExceptional', {
+          sessionId,
+          exceptional: true,
+        });
+      }
       navigate('/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to log session');
@@ -82,6 +108,22 @@ export function Log() {
             </FieldGroup>
 
             <FieldGroup>
+              <FieldLabel>Time of day</FieldLabel>
+              <div className="chip-row">
+                {TIME_OF_DAY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`chip${timeOfDay === opt.value ? ' selected' : ''}`}
+                    onClick={() => setTimeOfDay(opt.value)}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </FieldGroup>
+
+            <FieldGroup>
               <FieldLabel htmlFor="description">What did you study?</FieldLabel>
               <FieldTextarea
                 id="description"
@@ -91,6 +133,20 @@ export function Log() {
                 rows={3}
               />
             </FieldGroup>
+
+            <div
+              className={`checkbox-row${isUnusual ? ' checked' : ''}`}
+              style={{ marginBottom: 'var(--space-4)' }}
+              onClick={() => setIsUnusual(!isUnusual)}
+            >
+              <span className={`checkbox-box${isUnusual ? ' checked' : ''}`} />
+              <div className="checkbox-body">
+                <div className="checkbox-title">This was unusual</div>
+                <div className="checkbox-desc">
+                  Sick day, marathon session, etc. — keeps it out of your typical pattern.
+                </div>
+              </div>
+            </div>
 
             {error && (
               <FieldHelper error>{error}</FieldHelper>
