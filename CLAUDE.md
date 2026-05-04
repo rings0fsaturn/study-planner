@@ -20,6 +20,7 @@ pnpm build                             # Both apps
 pnpm test:e2e                          # Playwright (4 suites)
 pnpm --filter app test                 # Vitest unit tests (app)
 pnpm --filter roadmap-engine test       # Vitest unit tests (roadmap-engine)
+pnpm --filter progress test             # Vitest unit tests (progress)
 pnpm lint && pnpm typecheck            # Lint + typecheck all packages
 ```
 
@@ -29,7 +30,8 @@ pnpm lint && pnpm typecheck            # Lint + typecheck all packages
 |---|---|
 | `apps/marketing/` | Astro marketing site; `vercel.json` rewrites `/study/*` → React app |
 | `apps/app/src/auth/` | Auth deep module (AuthGate with DI), AuthProvider, ProtectedRoute |
-| `apps/app/src/events/` | EventStore (Dexie per-user DB, v3 schema), ProgressEngine |
+| `apps/app/src/events/` | EventStore (Dexie per-user DB, v3 schema), ProgressEngine (deprecated) |
+| `apps/app/src/progress/` | Progress hooks (useCalibrationState, useProgressSnapshot, usePromptDetail) |
 | `apps/app/src/onboarding/` | 4-step onboarding wizard with draft persistence |
 | `apps/app/src/sync/` | Cloud sync engine (write-ahead queue, snapshots, restore) |
 | `apps/app/src/components/` | AppShell, NavBar, SyncIndicator, Field, Button, Card, Tag |
@@ -37,6 +39,7 @@ pnpm lint && pnpm typecheck            # Lint + typecheck all packages
 | `apps/app/src/pages/` | SignIn, SignUp, Home, Log, Week, Roadmap, Roadmaps, Settings |
 | `apps/app/supabase/migrations/` | SQL migrations (events table, storage buckets) |
 | `packages/design-tokens/` | CSS tokens, component classes, reset/typography |
+| `packages/progress/` | Pure progress tracking — Bayesian calibration, GP regression, streak, burn-up |
 | `packages/roadmap-engine/` | Pure roadmap generation algorithm (no framework deps) |
 | `e2e/` | Playwright: smoke, session-log, sync, onboarding specs |
 

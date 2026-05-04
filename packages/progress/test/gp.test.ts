@@ -104,6 +104,23 @@ describe('fitBurnUpGP', () => {
     }
   })
 
+  it('detrending works — cumulative data produces smooth curve, not wiggly', () => {
+    const trainX = Array.from({ length: 14 }, (_, i) => i)
+    const trainY = trainX.map((x) => x * 50 + Math.sin(x) * 15)
+    const testX = Array.from({ length: 14 }, (_, i) => i)
+
+    const { mean } = gpRegression(trainX, trainY, testX)
+
+    // Without detrending, RBF would fight the cumulative trend and produce wiggles.
+    // With detrending, the GP fits residuals smoothly, so successive means should
+    // increase monotonically (within small tolerance for the sinusoidal noise).
+    let violations = 0
+    for (let i = 1; i < mean.length; i++) {
+      if (mean[i] < mean[i - 1] - 10) violations++
+    }
+    expect(violations).toBe(0)
+  })
+
   it('produces smooth curve through data', () => {
     const actualPoints = Array.from({ length: 14 }, (_, i) => ({
       date: `2026-01-${String(i + 1).padStart(2, '0')}`,
