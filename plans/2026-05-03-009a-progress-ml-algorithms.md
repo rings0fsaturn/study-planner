@@ -1049,7 +1049,7 @@ grep "detectRegimeShifts" packages/progress/src/cusum.ts   # should return the f
 
 ### Phase 4: Implement Piecewise Kalman Filter and trend analysis
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 3 (CUSUM breakpoints are input to Kalman)
 **Estimated scope:** ~4 files, ~300 lines
 
