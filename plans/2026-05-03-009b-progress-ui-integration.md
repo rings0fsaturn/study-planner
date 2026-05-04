@@ -625,7 +625,7 @@ pnpm --filter app test   # all tests pass
 
 ### Phase 6: E2E test — session log to streak and projection update
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** All previous phases + Plan A fully complete
 **Estimated scope:** ~1 file, ~100 lines
 
