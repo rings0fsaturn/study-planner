@@ -1,4 +1,7 @@
+import { useMemo } from 'react';
 import { useCalibrationState, useProgressSnapshot } from '../progress';
+import { useEventStore } from '../events/useEventStore';
+import { useLiveQuery } from 'dexie-react-hooks';
 import Card from '../components/Card';
 import { BurnUpChart } from '../components/BurnUpChart';
 import { DailyMinutesChart } from '../components/DailyMinutesChart';
@@ -19,6 +22,28 @@ function verdictDisplay(verdict: Verdict): { title: string; subtitle: string; co
 export function Week() {
   const calibration = useCalibrationState();
   const progress = useProgressSnapshot(calibration);
+  const eventStore = useEventStore();
+
+  const events = useLiveQuery(() => eventStore.getAll(), [eventStore]) ?? [];
+
+  const exceptionalDates = useMemo(() => {
+    const exceptionalSessionIds = new Set<string>();
+    for (const e of events) {
+      if (e.kind === 'SessionTaggedExceptional' && e.payload.exceptional) {
+        exceptionalSessionIds.add(e.payload.sessionId as string);
+      }
+    }
+    const dates = new Set<string>();
+    for (const e of events) {
+      if (e.kind === 'SessionLogged') {
+        const sid = e.payload.sessionId as string | undefined;
+        if (sid && exceptionalSessionIds.has(sid)) {
+          dates.add(e.payload.date as string);
+        }
+      }
+    }
+    return dates;
+  }, [events]);
 
   if (!progress) {
     return (
@@ -99,6 +124,7 @@ export function Week() {
               minutesByDay={weeklyStats.minutesByDay}
               weekStartDate={weeklyStats.weekStartDate}
               plannedMinutesThisWeek={weeklyStats.plannedMinutesThisWeek}
+              exceptionalDates={exceptionalDates}
             />
           </div>
 

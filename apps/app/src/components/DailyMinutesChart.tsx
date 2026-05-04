@@ -4,6 +4,7 @@ interface DailyMinutesChartProps {
   minutesByDay: Record<string, number>;
   weekStartDate: string;
   plannedMinutesThisWeek: number;
+  exceptionalDates?: Set<string>;
 }
 
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -18,14 +19,16 @@ export function DailyMinutesChart({
   minutesByDay,
   weekStartDate,
   plannedMinutesThisWeek,
+  exceptionalDates,
 }: DailyMinutesChartProps) {
   const bars = useMemo(() => {
     return DAY_LABELS.map((label, i) => {
       const date = addDaysToDate(weekStartDate, i);
       const minutes = minutesByDay[date] ?? 0;
-      return { label, date, minutes };
+      const isExceptional = exceptionalDates?.has(date) ?? false;
+      return { label, date, minutes, isExceptional };
     });
-  }, [minutesByDay, weekStartDate]);
+  }, [minutesByDay, weekStartDate, exceptionalDates]);
 
   const maxMinutes = Math.max(...bars.map((b) => b.minutes), 1);
   const dailyTarget = plannedMinutesThisWeek > 0
@@ -52,6 +55,11 @@ export function DailyMinutesChart({
         {bars.map((bar) => {
           const heightPct = maxMinutes > 0 ? (bar.minutes / maxMinutes) * 100 : 0;
           const isAboveTarget = dailyTarget > 0 && bar.minutes >= dailyTarget;
+          const barColor = bar.isExceptional
+            ? 'var(--terracotta)'
+            : isAboveTarget
+              ? 'var(--moss)'
+              : 'var(--ink-faint)';
 
           return (
             <div
@@ -78,7 +86,7 @@ export function DailyMinutesChart({
                   width: '100%',
                   maxWidth: 32,
                   height: `${Math.max(heightPct, bar.minutes > 0 ? 4 : 0)}%`,
-                  background: isAboveTarget ? 'var(--moss)' : 'var(--terracotta)',
+                  background: barColor,
                   borderRadius: '4px 4px 0 0',
                   minHeight: bar.minutes > 0 ? 4 : 0,
                   transition: 'height var(--duration-3) var(--ease-out)',

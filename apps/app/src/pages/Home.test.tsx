@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Home } from './Home'
 
@@ -17,9 +17,11 @@ vi.mock('../events/useEventStore', () => ({
   }),
 }))
 
+const mockLogEvent = vi.fn().mockResolvedValue(1)
+
 vi.mock('../sync/useSync', () => ({
   useSync: () => ({
-    logEvent: vi.fn().mockResolvedValue(1),
+    logEvent: mockLogEvent,
   }),
 }))
 
@@ -48,6 +50,7 @@ describe('Home', () => {
   beforeEach(() => {
     mockEvents = []
     mockActiveSession = undefined
+    mockLogEvent.mockClear()
   })
 
   it('shows greeting and total time when no roadmap events exist', () => {
@@ -141,5 +144,36 @@ describe('Home', () => {
 
     expect(screen.getByText('Chapter 3 review')).toBeInTheDocument()
     expect(screen.getAllByText('45 min').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('flag icon toggles exceptional status', async () => {
+    mockEvents = [
+      {
+        id: 1,
+        kind: 'SessionLogged',
+        payload: {
+          duration: 45,
+          date: '2026-05-01',
+          description: 'Chapter 3 review',
+          source: 'manual',
+          sessionId: 'sess-abc',
+        },
+        createdAt: new Date().toISOString(),
+      },
+    ]
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <Home />
+      </MemoryRouter>,
+    )
+
+    const flagButton = screen.getByTitle('Mark as unusual')
+    fireEvent.click(flagButton)
+
+    expect(mockLogEvent).toHaveBeenCalledWith('SessionTaggedExceptional', {
+      sessionId: 'sess-abc',
+      exceptional: true,
+    })
   })
 })
