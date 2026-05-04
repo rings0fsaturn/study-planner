@@ -15,7 +15,9 @@ import type { RoadmapCreatedPayload } from '../sync/types';
 import type { ActiveSessionRecord, SessionSlotData, MaterialKind } from '../session/types';
 import { AbandonedSessionBanner } from '../session/components/AbandonedSessionBanner';
 import { PlannedEndBanner } from '../session/components';
-import { useCalibrationState, useProgressSnapshot } from '../progress';
+import { useCalibrationState, useProgressSnapshot, usePromptDetail } from '../progress';
+import { RecalibrationBanner } from '../components/RecalibrationBanner';
+import { RecalibrationModal } from '../components/RecalibrationModal';
 import { format, isToday, isTomorrow, differenceInCalendarDays } from 'date-fns';
 
 function formatMinutesToHoursAndMinutes(totalMinutes: number): string {
@@ -62,9 +64,11 @@ export function Home() {
   const { logEvent } = useSync();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [plannedEndBannerDismissed, setPlannedEndBannerDismissed] = useState(false);
+  const [recalModalOpen, setRecalModalOpen] = useState(false);
 
   const calibration = useCalibrationState();
   const progress = useProgressSnapshot(calibration);
+  const promptDetail = usePromptDetail(calibration);
 
   const events = useLiveQuery(() => eventStore.getAll()) ?? [];
 
@@ -122,6 +126,37 @@ export function Home() {
     await signOut();
   };
 
+  const handleReplan = useCallback(async () => {
+    await logEvent('RecalibrationPromptResolved', {
+      resolution: 'replan',
+      resolvedAt: new Date().toISOString(),
+    });
+    setRecalModalOpen(false);
+    navigate('/roadmap');
+  }, [logEvent, navigate]);
+
+  const handleAcknowledge = useCallback(async () => {
+    await logEvent('RecalibrationPromptResolved', {
+      resolution: 'acknowledged',
+      resolvedAt: new Date().toISOString(),
+    });
+    setRecalModalOpen(false);
+  }, [logEvent]);
+
+  const handleTemporary = useCallback(async (sessionIds: string[]) => {
+    await logEvent('RecalibrationPromptResolved', {
+      resolution: 'temporary',
+      resolvedAt: new Date().toISOString(),
+    });
+    for (const sid of sessionIds) {
+      await logEvent('SessionTaggedExceptional', {
+        sessionId: sid,
+        exceptional: true,
+      });
+    }
+    setRecalModalOpen(false);
+  }, [logEvent]);
+
   const handleToggleExceptional = useCallback(async (sessionId: string, currentlyExceptional: boolean) => {
     await logEvent('SessionTaggedExceptional', {
       sessionId,
@@ -155,6 +190,10 @@ export function Home() {
           activeMinutes={(abandonedEvent.payload.activeMinutesAtAbandon as number) ?? 0}
           onDismiss={() => setBannerDismissed(true)}
         />
+      )}
+
+      {calibration?.promptNeeded && (
+        <RecalibrationBanner onReview={() => setRecalModalOpen(true)} />
       )}
 
       {roadmapPayload && (
@@ -326,6 +365,16 @@ export function Home() {
       <Button variant="ghost" onClick={handleSignOut}>
         Sign out
       </Button>
+
+      {recalModalOpen && (
+        <RecalibrationModal
+          promptDetail={promptDetail}
+          onReplan={handleReplan}
+          onAcknowledge={handleAcknowledge}
+          onTemporary={handleTemporary}
+          onClose={() => setRecalModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

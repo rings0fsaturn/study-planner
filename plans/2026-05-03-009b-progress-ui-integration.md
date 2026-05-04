@@ -542,7 +542,7 @@ pnpm --filter app test   # all tests pass
 
 ### Phase 5: Recalibration prompt — banner and modal
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 1 (event kind), Phase 3 (Home page wired with hooks), Plan A Phase 6 (`getPromptDetail`)
 **Estimated scope:** ~4 new files, ~400 lines
 

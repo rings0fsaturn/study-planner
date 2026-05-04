@@ -30,6 +30,7 @@ vi.mock('../components/SyncIndicator', () => ({
 vi.mock('../progress', () => ({
   useCalibrationState: () => null,
   useProgressSnapshot: () => null,
+  usePromptDetail: () => null,
 }))
 
 let mockEvents: Array<{ id?: number; kind: string; payload: Record<string, unknown>; createdAt: string }> = []
