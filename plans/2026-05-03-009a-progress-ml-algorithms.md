@@ -1129,7 +1129,7 @@ grep "runKalmanOnPhase" packages/progress/src/kalman.ts   # should return the fu
 
 ### Phase 5: Implement GP regression and streak calculation
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 2 (types and config only — GP and streak are independent of Bayesian/CUSUM/Kalman)
 **Estimated scope:** ~4 files, ~400 lines
 
