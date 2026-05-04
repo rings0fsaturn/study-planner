@@ -1,3 +1,5 @@
+// Deprecated: use @study-tracker/progress instead.
+// These functions are kept for backward compat until Plan B migrates Home.tsx.
 import type { Event } from './EventStore';
 import type { RoadmapCreatedPayload } from '../sync/types'
 import type { Slot } from '@study-tracker/roadmap-engine'

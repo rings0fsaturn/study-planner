@@ -1323,7 +1323,7 @@ grep "export.*computeProgress" packages/progress/src/index.ts   # exported
 
 ### Phase 7: Wire into app — hooks, providers, and replace existing ProgressEngine
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 6 (computeCalibration and computeProgress must be working)
 **Estimated scope:** ~6 files, ~200 lines
 

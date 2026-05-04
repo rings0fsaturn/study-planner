@@ -8,7 +8,7 @@ import type {
 import { computeHierarchicalModel, inferTimeOfDay } from './bayesian'
 import { detectRegimeShifts } from './cusum'
 import { analyzeTrend } from './trend'
-import { BAYESIAN_PRIOR_MEAN, BAYESIAN_PRIOR_VARIANCE } from './config'
+import { BAYESIAN_PRIOR_MEAN } from './config'
 
 export function computeCalibration(
   sessions: SessionEvent[],

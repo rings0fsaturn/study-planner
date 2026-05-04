@@ -168,7 +168,7 @@ function computeWeeklyStats(
 export function computeProgress(
   sessions: SessionEvent[],
   roadmap: RoadmapInput,
-  calibration: CalibrationState,
+  _calibration: CalibrationState,
   today: string,
 ): ProgressSnapshot {
   const totalPlannedMinutes = roadmap.slots.reduce(

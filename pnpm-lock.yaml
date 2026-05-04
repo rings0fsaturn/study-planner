@@ -30,6 +30,9 @@ importers:
       '@study-tracker/design-tokens':
         specifier: workspace:*
         version: link:../../packages/design-tokens
+      '@study-tracker/progress':
+        specifier: workspace:*
+        version: link:../../packages/progress
       '@study-tracker/roadmap-engine':
         specifier: workspace:*
         version: link:../../packages/roadmap-engine

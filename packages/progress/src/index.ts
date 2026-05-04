@@ -40,3 +40,4 @@ export {
 
 export { computeCalibration, getPromptDetail } from './calibration'
 export { computeProgress } from './progress'
+export { detectRegimeShifts } from './cusum'
