@@ -372,7 +372,7 @@ pnpm typecheck   # passes
 
 ### Phase 3: Home page overhaul — streak card, updated stats, exceptional flags
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 1 (exceptional event kind), Plan A Phase 7 (hooks)
 **Estimated scope:** ~4 files, ~500 lines
 

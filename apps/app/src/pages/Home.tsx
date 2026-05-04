@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useAuth } from '../auth/useAuth';
 import { useEventStore } from '../events/useEventStore';
-import { totalMinutesLogged, getProjectedFinish, getUpNextSlot } from '../events/ProgressEngine';
+import { totalMinutesLogged, getUpNextSlot } from '../events/ProgressEngine';
 import type { Event } from '../events/EventStore';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { useSync } from '../sync/useSync';
 import Card from '../components/Card';
 import Button from '../components/Button';
+import { StreakCard } from '../components/StreakCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { ROLE_TO_LABEL } from '@study-tracker/roadmap-engine';
 import type { Slot } from '@study-tracker/roadmap-engine';
@@ -13,17 +15,14 @@ import type { RoadmapCreatedPayload } from '../sync/types';
 import type { ActiveSessionRecord, SessionSlotData, MaterialKind } from '../session/types';
 import { AbandonedSessionBanner } from '../session/components/AbandonedSessionBanner';
 import { PlannedEndBanner } from '../session/components';
+import { useCalibrationState, useProgressSnapshot } from '../progress';
 import { format, isToday, isTomorrow, differenceInCalendarDays } from 'date-fns';
 
 function formatMinutesToHoursAndMinutes(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
-  if (hours === 0) {
-    return `${minutes} min`;
-  }
-  if (minutes === 0) {
-    return `${hours} hr`;
-  }
+  if (hours === 0) return `${minutes} min`;
+  if (minutes === 0) return `${hours} hr`;
   return `${hours} hr ${minutes} min`;
 }
 
@@ -43,6 +42,13 @@ function formatDateNice(dateString: string): string {
   return format(d, 'MMM d');
 }
 
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function findRoadmap(events: Array<{ kind: string; payload: Record<string, unknown> }>): RoadmapCreatedPayload | null {
   const roadmapEvents = events.filter(e => e.kind === 'RoadmapCreated' || e.kind === 'RoadmapReplanned');
   if (roadmapEvents.length === 0) return null;
@@ -53,8 +59,12 @@ export function Home() {
   const { user, signOut } = useAuth();
   const eventStore = useEventStore();
   const navigate = useNavigate();
+  const { logEvent } = useSync();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [plannedEndBannerDismissed, setPlannedEndBannerDismissed] = useState(false);
+
+  const calibration = useCalibrationState();
+  const progress = useProgressSnapshot(calibration);
 
   const events = useLiveQuery(() => eventStore.getAll()) ?? [];
 
@@ -62,6 +72,17 @@ export function Home() {
     () => eventStore.table('activeSession').get(1) as Promise<ActiveSessionRecord | undefined>,
     [],
   );
+
+  const exceptionalIds = useLiveQuery(async () => {
+    const all = await eventStore.getAll();
+    const set = new Set<string>();
+    for (const e of all) {
+      if (e.kind === 'SessionTaggedExceptional' && e.payload.exceptional) {
+        set.add(e.payload.sessionId as string);
+      }
+    }
+    return set;
+  }, [eventStore]) ?? new Set<string>();
 
   const isSessionPastPlannedEnd = (() => {
     if (!activeSession) return false;
@@ -88,9 +109,11 @@ export function Home() {
   const totalMinutes = totalMinutesLogged(events as Event[]);
 
   const roadmapPayload = findRoadmap(events);
-  const projectedFinish = roadmapPayload ? getProjectedFinish(roadmapPayload) : null;
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const upNextSlot: Slot | null = roadmapPayload ? getUpNextSlot(roadmapPayload, todayStr) : null;
+
+  const projectedFinish = progress?.projection?.finishDate ?? null;
+  const confidenceInterval = progress?.projection?.confidenceInterval ?? null;
   const daysToDeadline = projectedFinish
     ? differenceInCalendarDays(new Date(projectedFinish), new Date(todayStr))
     : null;
@@ -99,141 +122,174 @@ export function Home() {
     await signOut();
   };
 
+  const handleToggleExceptional = useCallback(async (sessionId: string, currentlyExceptional: boolean) => {
+    await logEvent('SessionTaggedExceptional', {
+      sessionId,
+      exceptional: !currentlyExceptional,
+    });
+  }, [logEvent]);
+
+  const dateHeader = format(new Date(), 'EEE · MMM d');
+  const emailPrefix = user?.email?.split('@')[0] ?? '';
+
   return (
     <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
+      <div className="mono-caps" style={{ marginBottom: 4 }}>{dateHeader}</div>
       <h1 className="t-display-2" style={{ marginBottom: '0.5rem' }}>
-        Hello, {user?.email}
+        {getGreeting()}, {emailPrefix}.
       </h1>
-        <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
-          Here's how your study time adds up
-        </p>
+      <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+        Here's how your study time adds up
+      </p>
 
-        {isSessionPastPlannedEnd && !plannedEndBannerDismissed && (
-          <PlannedEndBanner
-            onDismiss={() => setPlannedEndBannerDismissed(true)}
-            actionLabel="Go to session"
-            onAction={() => navigate('/session')}
-          />
-        )}
+      {isSessionPastPlannedEnd && !plannedEndBannerDismissed && (
+        <PlannedEndBanner
+          onDismiss={() => setPlannedEndBannerDismissed(true)}
+          actionLabel="Go to session"
+          onAction={() => navigate('/session')}
+        />
+      )}
 
-        {abandonedEvent && !bannerDismissed && (
-          <AbandonedSessionBanner
-            activeMinutes={(abandonedEvent.payload.activeMinutesAtAbandon as number) ?? 0}
-            onDismiss={() => setBannerDismissed(true)}
-          />
-        )}
+      {abandonedEvent && !bannerDismissed && (
+        <AbandonedSessionBanner
+          activeMinutes={(abandonedEvent.payload.activeMinutesAtAbandon as number) ?? 0}
+          onDismiss={() => setBannerDismissed(true)}
+        />
+      )}
 
-        {roadmapPayload && (
-          activeSession ? (
-            <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
-              <div className="card-eyebrow">
-                In progress · started {new Date(activeSession.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
-              </div>
-              <div className="card-title">{activeSession.sessionTitle}</div>
-              <div className="card-meta">
-                ~{activeSession.plannedMinutes} min planned · {activeSession.status === 'paused' ? 'paused' : 'running'}
-              </div>
-              <div className="upnext-actions">
-                <Link to="/session" className="btn btn-accent">Continue session</Link>
-              </div>
-            </Card>
-          ) : upNextSlot ? (
-            <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
-              <div className="card-eyebrow">Up next · {formatDateNice(upNextSlot.date)}</div>
-              <div className="card-title">{upNextSlot.sessionTitle || 'Study session'}</div>
-              <div className="card-meta">
-                {upNextSlot.role && (
-                  <><span className={`tag tag-sm ${upNextSlot.role === 'anchor' ? 'tag-terracotta' : upNextSlot.role === 'practice' ? 'tag-moss' : ''}`}>
-                    {ROLE_TO_LABEL[upNextSlot.role]}
-                  </span>{' · '}</>
-                )}
-                ~{upNextSlot.plannedMinutes} min planned
-              </div>
-              <div className="upnext-actions">
-                <button
-                  className="btn btn-accent"
-                  onClick={() => {
-                    const materials = events.filter(e => e.kind === 'MaterialAdded');
-                    const material = materials.find(m => (m.payload.materialId as string) === upNextSlot.candidateMaterialIds[0]);
-                    const sessionSlot: SessionSlotData = {
-                      materialId: upNextSlot.candidateMaterialIds[0] ?? '',
-                      sessionTitle: upNextSlot.sessionTitle ?? 'Study session',
-                      slotDate: upNextSlot.date,
-                      weekIndex: upNextSlot.weekIndex,
-                      plannedMinutes: upNextSlot.plannedMinutes,
-                      materialUrl: material?.payload.url as string | undefined,
-                      role: upNextSlot.role as SessionSlotData['role'],
-                      kind: (material?.payload.kind as MaterialKind | undefined) ?? 'manual',
-                      youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
-                    };
-                    navigate('/session', { state: sessionSlot });
-                  }}
-                >
-                  Start session
-                </button>
-              </div>
-            </Card>
-          ) : (
-            <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
-              <div className="card-eyebrow">No session today</div>
-              <div className="card-title">A planned rest day.</div>
-              <div className="card-meta">Or log a session you did elsewhere.</div>
-              <div className="upnext-actions">
-                <Link to="/log" className="btn btn-ghost-dark" style={{ flex: 1 }}>Log a session</Link>
-              </div>
-            </Card>
-          )
-        )}
-
-        {projectedFinish && roadmapPayload && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
-            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-              <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish</div>
-              <div className={`stat-value sm ${daysToDeadline! >= 0 ? 'moss' : 'terracotta'}`}>
-                {formatDateNice(projectedFinish)}
-              </div>
-              <div className="mono-caps" style={{ marginTop: '4px', color: daysToDeadline! >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
-                {daysToDeadline! > 0 ? `${daysToDeadline} days left` : daysToDeadline === 0 ? 'Due today' : `${Math.abs(daysToDeadline!)} days past`}
-              </div>
+      {roadmapPayload && (
+        activeSession ? (
+          <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+            <div className="card-eyebrow">
+              In progress · started {new Date(activeSession.startedAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })}
             </div>
-            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-              <div className="stat-label" style={{ marginBottom: '6px' }}>Weekly goal</div>
-              <div className="stat-value sm">{roadmapPayload.weeklyHours}h</div>
-              <div className="mono-caps" style={{ marginTop: '4px' }}>per week target</div>
+            <div className="card-title">{activeSession.sessionTitle}</div>
+            <div className="card-meta">
+              ~{activeSession.plannedMinutes} min planned · {activeSession.status === 'paused' ? 'paused' : 'running'}
+            </div>
+            <div className="upnext-actions">
+              <Link to="/session" className="btn btn-accent">Continue session</Link>
+            </div>
+          </Card>
+        ) : upNextSlot ? (
+          <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+            <div className="card-eyebrow">Up next · {formatDateNice(upNextSlot.date)}</div>
+            <div className="card-title">{upNextSlot.sessionTitle || 'Study session'}</div>
+            <div className="card-meta">
+              {upNextSlot.role && (
+                <><span className={`tag tag-sm ${upNextSlot.role === 'anchor' ? 'tag-terracotta' : upNextSlot.role === 'practice' ? 'tag-moss' : ''}`}>
+                  {ROLE_TO_LABEL[upNextSlot.role]}
+                </span>{' · '}</>
+              )}
+              ~{upNextSlot.plannedMinutes} min planned
+            </div>
+            <div className="upnext-actions">
+              <button
+                className="btn btn-accent"
+                onClick={() => {
+                  const materials = events.filter(e => e.kind === 'MaterialAdded');
+                  const material = materials.find(m => (m.payload.materialId as string) === upNextSlot.candidateMaterialIds[0]);
+                  const sessionSlot: SessionSlotData = {
+                    materialId: upNextSlot.candidateMaterialIds[0] ?? '',
+                    sessionTitle: upNextSlot.sessionTitle ?? 'Study session',
+                    slotDate: upNextSlot.date,
+                    weekIndex: upNextSlot.weekIndex,
+                    plannedMinutes: upNextSlot.plannedMinutes,
+                    materialUrl: material?.payload.url as string | undefined,
+                    role: upNextSlot.role as SessionSlotData['role'],
+                    kind: (material?.payload.kind as MaterialKind | undefined) ?? 'manual',
+                    youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
+                  };
+                  navigate('/session', { state: sessionSlot });
+                }}
+              >
+                Start session
+              </button>
+            </div>
+          </Card>
+        ) : (
+          <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+            <div className="card-eyebrow">No session today</div>
+            <div className="card-title">A planned rest day.</div>
+            <div className="card-meta">Or log a session you did elsewhere.</div>
+            <div className="upnext-actions">
+              <Link to="/log" className="btn btn-ghost-dark" style={{ flex: 1 }}>Log a session</Link>
+            </div>
+          </Card>
+        )
+      )}
+
+      {progress && (
+        <StreakCard
+          current={progress.streak.current}
+          weeklyMinutes={progress.weeklyStats.minutesThisWeek}
+          grid={progress.streak.grid}
+        />
+      )}
+
+      {projectedFinish && roadmapPayload && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
+          <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+            <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish</div>
+            <div className={`stat-value sm ${daysToDeadline! >= 0 ? 'moss' : 'terracotta'}`}>
+              {confidenceInterval
+                ? `${format(new Date(confidenceInterval[0]), 'MMM d')}–${format(new Date(confidenceInterval[1]), 'MMM d')}`
+                : formatDateNice(projectedFinish)}
+            </div>
+            <div className="mono-caps" style={{ marginTop: '4px', color: daysToDeadline! >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
+              {daysToDeadline! > 0 ? `${daysToDeadline} days left` : daysToDeadline === 0 ? 'Due today' : `${Math.abs(daysToDeadline!)} days past`}
             </div>
           </div>
-        )}
+          <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
+            <div className="stat-label" style={{ marginBottom: '6px' }}>This week</div>
+            <div className="stat-value sm">
+              {progress
+                ? formatMinutesToHoursAndMinutes(progress.weeklyStats.minutesThisWeek)
+                : formatMinutesToHoursAndMinutes(0)}
+            </div>
+            <div className="mono-caps" style={{ marginTop: '4px' }}>
+              {roadmapPayload.weeklyHours}h target
+            </div>
+          </div>
+        </div>
+      )}
 
+      {!progress && (
         <Card variant="elevated" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
           <div className="stat">
             <span className="stat-value md">{formatMinutesToHoursAndMinutes(totalMinutes)}</span>
             <span className="stat-label">Total time logged</span>
           </div>
         </Card>
+      )}
 
-        <Card variant="elevated" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h2 className="t-display-3" style={{ margin: 0 }}>Recent activity</h2>
-            <Link to="/log" className="btn btn-secondary btn-sm">
-              Log session
-            </Link>
-          </div>
+      <Card variant="elevated" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h2 className="t-display-3" style={{ margin: 0 }}>Recent activity</h2>
+          <Link to="/log" className="btn btn-secondary btn-sm">
+            Log session
+          </Link>
+        </div>
 
-          {sessionEvents.length === 0 ? (
-            <p className="t-body" style={{ color: 'var(--text-secondary)' }}>
-              No sessions logged yet.{' '}
-              <Link to="/log">Log your first session</Link>
-            </p>
-          ) : (
-            <div>
-              {sessionEvents.map((event, index) => (
+        {sessionEvents.length === 0 ? (
+          <p className="t-body" style={{ color: 'var(--text-secondary)' }}>
+            No sessions logged yet.{' '}
+            <Link to="/log">Log your first session</Link>
+          </p>
+        ) : (
+          <div>
+            {sessionEvents.map((event, index) => {
+              const sessionId = event.payload.sessionId as string | undefined;
+              const isExceptional = sessionId ? exceptionalIds.has(sessionId) : false;
+
+              return (
                 <div key={event.id}>
                   {index > 0 && <div className="divider-rule-soft" />}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
                     <div style={{ flex: 1 }}>
                       <span className="card-eyebrow">{formatDate(event.createdAt)}</span>
                       <p className="card-title" style={{ marginBottom: '0.25rem' }}>
-                        {(event.payload.description as string) || 'Study session'}
+                        {(event.payload.description as string) || (event.payload.sessionTitle as string) || 'Study session'}
                       </p>
                       {Boolean(event.payload.date) && (
                         <p className="card-meta">
@@ -241,19 +297,35 @@ export function Home() {
                         </p>
                       )}
                     </div>
-                    <span className="t-mono" style={{ flexShrink: 0 }}>
-                      {event.payload.duration as number} min
-                    </span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                      {isExceptional && (
+                        <span className="tag tag-sm tag-terracotta">Unusual</span>
+                      )}
+                      <span className="t-mono" style={{ flexShrink: 0 }}>
+                        {event.payload.duration as number} min
+                      </span>
+                      {sessionId && (
+                        <button
+                          className="btn btn-ghost btn-sm"
+                          style={{ padding: '2px 4px', minWidth: 0, fontSize: 14, lineHeight: 1 }}
+                          title={isExceptional ? 'Unmark as unusual' : 'Mark as unusual'}
+                          onClick={() => handleToggleExceptional(sessionId, isExceptional)}
+                        >
+                          {isExceptional ? '⚑' : '⚐'}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </Card>
+              );
+            })}
+          </div>
+        )}
+      </Card>
 
-        <Button variant="ghost" onClick={handleSignOut}>
-          Sign out
-        </Button>
-      </div>
+      <Button variant="ghost" onClick={handleSignOut}>
+        Sign out
+      </Button>
+    </div>
   );
 }
