@@ -301,7 +301,7 @@ pnpm --filter app test   # all tests pass
 
 ### Phase 2: BurnUpChart refinement and Week page implementation
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Plan A Phase 2 (types), Plan A Phase 7 (hooks)
 **Estimated scope:** ~4 files, ~400 lines
 

@@ -912,6 +912,16 @@
 .banner.success { border-left: 3px solid var(--moss); padding-left: calc(var(--space-4) - 2px); }
 .banner.warning { border-left: 3px solid var(--rust); padding-left: calc(var(--space-4) - 2px); }
 
+/* ---- WEEK PAGE LAYOUT ---- */
+.week-layout {
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+@media (min-width: 1024px) {
+  .week-layout {
+    display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--space-6); align-items: start;
+  }
+}
+
 /* =================================================================
    RESPONSIVE UTILITIES
    Single source of truth for mobile/desktop breakpoint (1024px).
