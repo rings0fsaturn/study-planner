@@ -31,6 +31,8 @@ import { Step2Hours } from './onboarding/steps/Step2Hours';
 import { Step3Materials } from './onboarding/steps/Step3Materials';
 import { Step3Preview } from './onboarding/steps/Step3Preview';
 import { Step4Confirm } from './onboarding/steps/Step4Confirm';
+import BurnUpChartTest from './components/BurnUpChartTest';
+import { DevSeeder } from './dev/DevSeeder';
 
 const metadataFetcher: MetadataFetcher = import.meta.env.DEV
   ? new DevMetadataFetcher(supabase)
@@ -135,6 +137,7 @@ function AppRoutes() {
         }
       />
       <Route path="/auth-confirmed" element={<AuthConfirmed />} />
+      <Route path="/chart-test" element={<BurnUpChartTest />} />
       <Route
         path="/reset-password"
         element={
@@ -192,6 +195,7 @@ function App() {
     <BrowserRouter basename="/study">
       <AuthProvider>
         <EventStoreRouter>
+          {import.meta.env.DEV && <DevSeeder />}
           <SyncRouter>
             <div className="app">
               <AppRoutes />
