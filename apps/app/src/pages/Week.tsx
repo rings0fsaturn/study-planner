@@ -1,11 +1,14 @@
 import { useMemo } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
 import { useCalibrationState, useProgressSnapshot } from '../progress';
 import { useEventStore } from '../events/useEventStore';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { findRoadmap } from '../progress/mapEvents';
+import { startOfISOWeek, addDays, addWeeks, differenceInCalendarISOWeeks, format, parseISO } from 'date-fns';
 import Card from '../components/Card';
+import Tag from '../components/Tag';
 import { BurnUpChart } from '../components/BurnUpChart';
 import { DailyMinutesChart } from '../components/DailyMinutesChart';
-import { Link } from 'react-router-dom';
 import type { Verdict } from '@study-tracker/progress';
 
 function verdictDisplay(verdict: Verdict): { title: string; subtitle: string; color: string } {
@@ -20,11 +23,46 @@ function verdictDisplay(verdict: Verdict): { title: string; subtitle: string; co
 }
 
 export function Week() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const calibration = useCalibrationState();
-  const progress = useProgressSnapshot(calibration);
   const eventStore = useEventStore();
 
   const events = useLiveQuery(() => eventStore.getAll(), [eventStore]) ?? [];
+
+  const roadmapBounds = useMemo(() => {
+    const roadmap = findRoadmap(events);
+    if (!roadmap) return null;
+    const planStart = parseISO(roadmap.startDate);
+    const planStartWeek = startOfISOWeek(planStart);
+    const today = new Date();
+    const currentWeekIndex = Math.max(
+      0,
+      differenceInCalendarISOWeeks(today, planStartWeek),
+    );
+    const maxWeekIndex = Math.min(currentWeekIndex, roadmap.weeks - 1);
+    return { planStartWeek, currentWeekIndex, maxWeekIndex };
+  }, [events]);
+
+  const wParam = searchParams.get('w');
+  const selectedWeekIndex = useMemo(() => {
+    if (!roadmapBounds) return 0;
+    if (wParam !== null) {
+      const parsed = parseInt(wParam, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= roadmapBounds.maxWeekIndex + 1) {
+        return parsed - 1;
+      }
+    }
+    return roadmapBounds.currentWeekIndex;
+  }, [wParam, roadmapBounds]);
+
+  const isPastWeek = roadmapBounds !== null && selectedWeekIndex < roadmapBounds.currentWeekIndex;
+
+  const referenceDate = useMemo(() => {
+    if (!isPastWeek || !roadmapBounds) return undefined;
+    return format(addDays(addWeeks(roadmapBounds.planStartWeek, selectedWeekIndex), 6), 'yyyy-MM-dd');
+  }, [isPastWeek, roadmapBounds, selectedWeekIndex]);
+
+  const progress = useProgressSnapshot(calibration, referenceDate);
 
   const exceptionalDates = useMemo(() => {
     const exceptionalSessionIds = new Set<string>();
@@ -45,6 +83,17 @@ export function Week() {
     return dates;
   }, [events]);
 
+  const truncatedBurnUp = useMemo(() => {
+    if (!progress || !isPastWeek || !roadmapBounds) return progress?.burnUp ?? null;
+    const weekEnd = format(addDays(addWeeks(roadmapBounds.planStartWeek, selectedWeekIndex), 6), 'yyyy-MM-dd');
+    return {
+      ...progress.burnUp,
+      planned: progress.burnUp.planned.filter(p => p.date <= weekEnd),
+      actual: progress.burnUp.actual.filter(p => p.date <= weekEnd),
+      gpCurve: progress.burnUp.gpCurve.filter(p => p.date <= weekEnd),
+    };
+  }, [progress, isPastWeek, roadmapBounds, selectedWeekIndex]);
+
   if (!progress) {
     return (
       <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto', textAlign: 'center' }}>
@@ -60,15 +109,68 @@ export function Week() {
   const vd = verdictDisplay(verdict);
   const hoursLogged = Math.round((weeklyStats.minutesThisWeek / 60) * 10) / 10;
   const hoursPlanned = Math.round((weeklyStats.plannedMinutesThisWeek / 60) * 10) / 10;
+  const displayWeekNumber = selectedWeekIndex + 1;
+
+  const isAtStart = selectedWeekIndex <= 0;
+  const isAtEnd = !roadmapBounds || selectedWeekIndex >= roadmapBounds.currentWeekIndex;
+
+  const navigateWeek = (delta: number) => {
+    const newWeek = selectedWeekIndex + delta;
+    if (!roadmapBounds) return;
+    if (newWeek >= roadmapBounds.currentWeekIndex) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('w');
+        return next;
+      });
+    } else if (newWeek >= 0) {
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.set('w', String(newWeek + 1));
+        return next;
+      });
+    }
+  };
+
+  const tintClass = isPastWeek
+    ? verdict === 'slipping' ? 'week-tint-rust' : 'week-tint-moss'
+    : '';
+
+  const chartBurnUp = truncatedBurnUp ?? burnUp;
 
   return (
-    <div style={{ padding: '2rem 1rem', maxWidth: '880px', margin: '0 auto' }}>
-      <div className="mono-caps" style={{ marginBottom: 4, color: 'var(--text-tertiary)' }}>
-        Week {weeklyStats.weekIndex + 1} · {weeklyStats.weekStartDate}
+    <div
+      className={tintClass}
+      style={{ padding: '2rem 1rem', maxWidth: '880px', margin: '0 auto', minHeight: '100vh' }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+        <div className="mono-caps" style={{ color: 'var(--text-tertiary)' }}>
+          Week {displayWeekNumber} · {weeklyStats.weekStartDate}
+        </div>
+        {isPastWeek && <Tag size="sm">Past</Tag>}
       </div>
-      <h1 className="t-display-2" style={{ marginBottom: '1.5rem' }}>
-        Your week
-      </h1>
+
+      <div className="week-nav" style={{ marginBottom: '1.5rem' }}>
+        <button
+          className="week-nav-btn"
+          disabled={isAtStart}
+          onClick={() => navigateWeek(-1)}
+          aria-label="Previous week"
+        >
+          ‹
+        </button>
+        <h1 className="t-display-2" style={{ margin: 0 }}>
+          Your week
+        </h1>
+        <button
+          className="week-nav-btn"
+          disabled={isAtEnd}
+          onClick={() => navigateWeek(1)}
+          aria-label="Next week"
+        >
+          ›
+        </button>
+      </div>
 
       <div className="week-layout">
         {/* Left column: verdict + summary */}
@@ -105,7 +207,7 @@ export function Week() {
             </div>
           </div>
 
-          {verdict === 'slipping' && (
+          {!isPastWeek && verdict === 'slipping' && (
             <div style={{ display: 'flex', gap: 8, marginBottom: '1rem' }}>
               <Link to="/roadmap" className="btn btn-accent" style={{ flex: 1 }}>
                 Replan the rest
@@ -128,8 +230,8 @@ export function Week() {
             />
           </div>
 
-          {burnUp.actual.length >= 3 && burnUp.actual.some(p => p.minutes > 0) ? (
-            <BurnUpChart data={burnUp} />
+          {chartBurnUp.actual.length >= 3 && chartBurnUp.actual.some(p => p.minutes > 0) ? (
+            <BurnUpChart data={chartBurnUp} />
           ) : (
             <div
               style={{

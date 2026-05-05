@@ -125,6 +125,7 @@ function computeWeeklyStats(
   sessions: SessionEvent[],
   slots: RoadmapSlot[],
   today: string,
+  roadmapStartDate: string,
 ): WeeklyStats {
   const weekStart = getISOWeekStart(today)
   const weekEnd = new Date(weekStart)
@@ -146,8 +147,9 @@ function computeWeeklyStats(
     if (s.sessionId) materialsTouched.add(s.sessionId)
   }
 
+  const planStartWeek = getISOWeekStart(roadmapStartDate)
   const weekIndex = Math.floor(
-    (new Date(today).getTime() - new Date(weekStart).getTime()) /
+    (new Date(weekStart).getTime() - new Date(planStartWeek).getTime()) /
       (7 * 24 * 60 * 60 * 1000),
   )
 
@@ -268,7 +270,7 @@ export function computeProgress(
   const upNext = findUpNext(roadmap.slots, sessions, today)
 
   // Weekly stats
-  const weeklyStats = computeWeeklyStats(sessions, roadmap.slots, today)
+  const weeklyStats = computeWeeklyStats(sessions, roadmap.slots, today, roadmap.startDate)
 
   // Week summary for narrative
   const weekSummary: WeekSummaryForNarrative = {

@@ -238,4 +238,28 @@ describe('computeProgress', () => {
     expect(result.weeklyStats.minutesThisWeek).toBe(160)
     expect(result.weeklyStats.weekStartDate).toBe('2026-01-12')
   })
+
+  it('computes correct weekIndex relative to roadmap start', () => {
+    // Roadmap starts 2026-01-01 (Wednesday). ISO week of Jan 1 = Dec 30 (Mon).
+    // Jan 15 (Thursday) is in ISO week starting Jan 13 (Mon).
+    // Weeks: Dec 29 = week 0, Jan 5 = week 1, Jan 12 = week 2.
+    const slots = Array.from({ length: 20 }, (_, i) =>
+      makeSlot(`2026-01-${String(i + 1).padStart(2, '0')}`, 60),
+    )
+    const roadmap = makeRoadmap(slots)
+    const sessions = [
+      makeSession({ date: '2026-01-13', duration: 60, sessionId: 's-1' }),
+      makeSession({ date: '2026-01-14', duration: 45, sessionId: 's-2' }),
+      makeSession({ date: '2026-01-15', duration: 55, sessionId: 's-3' }),
+    ]
+
+    const result = computeProgress(
+      sessions,
+      roadmap,
+      defaultCalibration(),
+      '2026-01-15',
+    )
+    expect(result.weeklyStats.weekIndex).toBe(2)
+    expect(result.weeklyStats.weekStartDate).toBe('2026-01-12')
+  })
 })

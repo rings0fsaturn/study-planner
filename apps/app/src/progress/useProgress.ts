@@ -6,9 +6,10 @@ import { mapSessions, findRoadmap } from './mapEvents'
 
 export function useProgressSnapshot(
   calibration: CalibrationState | null,
+  referenceDate?: string,
 ): ProgressSnapshot | null {
   const eventStore = useEventStore()
-  const today = new Date().toISOString().slice(0, 10)
+  const today = referenceDate ?? new Date().toISOString().slice(0, 10)
 
   return (
     useLiveQuery(async () => {
@@ -16,7 +17,10 @@ export function useProgressSnapshot(
       const events = await eventStore.getAll()
       const roadmap = findRoadmap(events)
       if (!roadmap) return null
-      const sessions = mapSessions(events)
+      let sessions = mapSessions(events)
+      if (referenceDate) {
+        sessions = sessions.filter(s => s.date <= referenceDate)
+      }
       return computeProgress(sessions, roadmap, calibration, today)
     }, [eventStore, calibration, today]) ?? null
   )

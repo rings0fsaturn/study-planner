@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { Week } from './Week'
@@ -23,6 +23,14 @@ vi.mock('dexie-react-hooks', () => ({
     if (typeof querier === 'function') return []
     return []
   },
+}))
+
+const { mockFindRoadmap } = vi.hoisted(() => ({
+  mockFindRoadmap: vi.fn().mockReturnValue(null),
+}))
+
+vi.mock('../progress/mapEvents', () => ({
+  findRoadmap: mockFindRoadmap,
 }))
 
 function makeProgress(overrides: Partial<ProgressSnapshot> = {}): ProgressSnapshot {
@@ -71,7 +79,21 @@ function makeProgress(overrides: Partial<ProgressSnapshot> = {}): ProgressSnapsh
   }
 }
 
+function mockRoadmapWithPastWeeks() {
+  mockFindRoadmap.mockReturnValue({
+    startDate: '2025-01-06',
+    deadline: '2026-12-31',
+    weeks: 104,
+    weeklyHours: 10,
+    slots: [],
+  })
+}
+
 describe('Week', () => {
+  beforeEach(() => {
+    mockFindRoadmap.mockReturnValue(null)
+  })
+
   it('shows fallback when no progress data', () => {
     mockProgress = null
     mockCalibration = null
@@ -137,5 +159,70 @@ describe('Week', () => {
 
     expect(screen.getByText(/3h against a 4h target/)).toBeInTheDocument()
     expect(screen.getByText(/Active on 4 days/)).toBeInTheDocument()
+  })
+
+  it('renders navigation arrows', () => {
+    mockProgress = makeProgress()
+
+    render(
+      <MemoryRouter initialEntries={['/week']}>
+        <Week />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByLabelText('Previous week')).toBeInTheDocument()
+    expect(screen.getByLabelText('Next week')).toBeInTheDocument()
+  })
+
+  it('disables next arrow on current week', () => {
+    mockProgress = makeProgress()
+    mockRoadmapWithPastWeeks()
+
+    render(
+      <MemoryRouter initialEntries={['/week']}>
+        <Week />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByLabelText('Next week')).toBeDisabled()
+  })
+
+  it('shows Past tag when viewing a past week', () => {
+    mockProgress = makeProgress()
+    mockRoadmapWithPastWeeks()
+
+    render(
+      <MemoryRouter initialEntries={['/week?w=1']}>
+        <Week />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText('Past')).toBeInTheDocument()
+  })
+
+  it('hides action buttons for past week even when slipping', () => {
+    mockProgress = makeProgress({ verdict: 'slipping' })
+    mockRoadmapWithPastWeeks()
+
+    render(
+      <MemoryRouter initialEntries={['/week?w=1']}>
+        <Week />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Replan the rest')).not.toBeInTheDocument()
+  })
+
+  it('does not show Past tag on current week', () => {
+    mockProgress = makeProgress()
+    mockRoadmapWithPastWeeks()
+
+    render(
+      <MemoryRouter initialEntries={['/week']}>
+        <Week />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByText('Past')).not.toBeInTheDocument()
   })
 })
