@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import Dexie from 'dexie';
 import { EventStore } from '../events/EventStore';
 import { SyncEngine } from './SyncEngine';
@@ -187,6 +187,7 @@ describe('SyncEngine', () => {
   const userId = 'test-user-123';
   const clientId = 'test-client-456';
   let stateChanges: SyncState[] = [];
+  let engines: SyncEngine[] = [];
 
   beforeEach(async () => {
     fakeSupabase = createFakeSupabase();
@@ -198,8 +199,14 @@ describe('SyncEngine', () => {
     stateChanges = [];
   });
 
+  afterEach(() => {
+    engines.forEach(e => e.destroy());
+    engines = [];
+    db.close();
+  });
+
   function createEngine(opts?: SyncOptions) {
-    return new SyncEngine(
+    const engine = new SyncEngine(
       fakeSupabase as unknown as SupabaseClientLike,
       eventStore,
       userId,
@@ -208,6 +215,8 @@ describe('SyncEngine', () => {
       '',
       opts
     );
+    engines.push(engine);
+    return engine;
   }
 
   describe('logEvent', () => {
