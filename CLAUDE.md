@@ -88,6 +88,15 @@ Deep-dive docs live in `.claude/rules/`:
 
 [`DEPLOYMENT.md`](DEPLOYMENT.md) | [`design/marginalia.html`](design/marginalia.html) | [`design/algo/ROADMAP_ENGINE_GUIDE.md`](design/algo/ROADMAP_ENGINE_GUIDE.md) | [`design/2026-04-29-onboarding-ui-ux-guide.md`](design/2026-04-29-onboarding-ui-ux-guide.md)
 
+## Codebase Index Maintenance
+
+Memory contains a codebase index (14 module files tracking 162+ source files). At session start, check for staleness:
+
+1. Read `index-metadata.md` from memory for the last-indexed commit hash
+2. Run: `git diff --name-only <hash>..HEAD -- 'apps/' 'packages/' 'e2e/'`
+3. If output is non-empty, invoke `/update-index` to update affected module indexes
+4. If the metadata file is missing, invoke `/update-index --full` for a full rescan
+
 ## E2E test
 
 E2E test cannot be performed due to Environment issues, So only write the test dont try to run.
