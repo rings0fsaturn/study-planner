@@ -430,3 +430,38 @@
     display: block;
   }
 }
+
+/* Playlist interstitial */
+.session-yt-interstitial {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  background: var(--surface-invert);
+  color: var(--text-on-invert);
+  border-radius: var(--radius-md);
+  gap: var(--space-2);
+}
+
+.session-yt-interstitial-label {
+  font-size: var(--text-sm);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.7;
+}
+
+.session-yt-interstitial-title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+  text-align: center;
+  padding: 0 var(--space-4);
+}
+
+.session-yt-video-progress {
+  text-align: center;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+}

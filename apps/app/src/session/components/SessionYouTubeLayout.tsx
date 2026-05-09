@@ -42,6 +42,11 @@ export interface SessionYouTubeLayoutProps {
   onEndFromBanner?: () => void;
   unusual?: boolean;
   onUnusualChange?: (value: boolean) => void;
+  activeVideoId?: string;
+  videoProgress?: { current: number; total: number } | null;
+  interstitialVisible?: boolean;
+  nextVideoTitle?: string;
+  onSkipInterstitial?: () => void;
 }
 
 function formatElapsed(ms: number): string {
@@ -78,6 +83,11 @@ export function SessionYouTubeLayout({
   onEndFromBanner,
   unusual,
   onUnusualChange,
+  activeVideoId,
+  videoProgress,
+  interstitialVisible,
+  nextVideoTitle,
+  onSkipInterstitial,
 }: SessionYouTubeLayoutProps) {
   const plannedEndTime = new Date(new Date(record.startedAt).getTime() + record.plannedMinutes * 60_000);
   const elapsedFormatted = formatElapsed(elapsedActiveMs);
@@ -149,18 +159,34 @@ export function SessionYouTubeLayout({
         </div>
       </div>
 
-      <YouTubeEmbed
-        videoId={record.youtubeVideoId!}
-        startSeconds={record.videoPlaybackPosition}
-        onStateChange={onPlayerStateChange}
-        onReady={onPlayerReady}
-        adapterRef={playerAdapterRef}
-      />
+      {interstitialVisible ? (
+        <div className="session-yt-interstitial">
+          <div className="session-yt-interstitial-label">Up next</div>
+          <div className="session-yt-interstitial-title">{nextVideoTitle}</div>
+          <button className="btn btn-ghost btn-sm" onClick={onSkipInterstitial}>
+            Skip
+          </button>
+        </div>
+      ) : (
+        <YouTubeEmbed
+          videoId={activeVideoId ?? record.youtubeVideoId!}
+          startSeconds={record.videoPlaybackPosition}
+          onStateChange={onPlayerStateChange}
+          onReady={onPlayerReady}
+          adapterRef={playerAdapterRef}
+        />
+      )}
 
       <VideoStatusStrip
         durationFormatted={videoDurationFormatted}
         playerState={playerState}
       />
+
+      {videoProgress && videoProgress.total > 1 && (
+        <div className="session-yt-video-progress">
+          Video {videoProgress.current + 1} of {videoProgress.total}
+        </div>
+      )}
 
       <div className="session-yt-bottom-row">
         <ComeBackLaterButton onComeBackLater={onComeBackLater} />

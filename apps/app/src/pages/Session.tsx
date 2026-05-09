@@ -52,6 +52,9 @@ export function Session() {
   const [plannedEndReached, setPlannedEndReached] = useState(false);
   const [plannedEndDismissed, setPlannedEndDismissed] = useState(false);
   const [unusual, setUnusual] = useState(false);
+  const [interstitialVisible, setInterstitialVisible] = useState(false);
+  const [nextVideoTitle, setNextVideoTitle] = useState('');
+  const interstitialTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Initialize lifecycle
   useEffect(() => {
@@ -165,9 +168,25 @@ export function Session() {
   const handlePlayerStateChange = useCallback((state: YouTubePlayerState) => {
     setPlayerState(state);
     if (state === 'ended') {
+      const lc = lcRef.current;
+      if (lc?.isPlaylistSession()) {
+        const progress = lc.getVideoProgress();
+        if (progress && progress.current < progress.total - 1) {
+          const nextVideo = lc.getRecord()?.videos?.[progress.current + 1];
+          setNextVideoTitle(nextVideo?.title ?? 'Next video');
+          setInterstitialVisible(true);
+          interstitialTimerRef.current = setTimeout(() => {
+            lc.advanceVideo();
+            setInterstitialVisible(false);
+            setSessionState(lc.getState());
+          }, 4000);
+          return;
+        }
+      }
       setVideoEndedPromptVisible(true);
     } else if (state === 'playing') {
       setVideoEndedPromptVisible(false);
+      setInterstitialVisible(false);
     }
   }, []);
 
@@ -176,6 +195,18 @@ export function Session() {
     if (adapter) {
       setVideoDuration(adapter.getDuration());
     }
+  }, []);
+
+  const handleSkipInterstitial = useCallback(() => {
+    if (interstitialTimerRef.current) {
+      clearTimeout(interstitialTimerRef.current);
+      interstitialTimerRef.current = null;
+    }
+    const lc = lcRef.current;
+    if (!lc) return;
+    lc.advanceVideo();
+    setInterstitialVisible(false);
+    setSessionState(lc.getState());
   }, []);
 
   const handlePauseResume = useCallback(async () => {
@@ -298,7 +329,9 @@ export function Session() {
     hour12: true,
   });
 
-  const isYouTube = record.kind === 'youtube' && record.youtubeVideoId;
+  const currentVideo = lcRef.current?.getCurrentVideo();
+  const activeVideoId = currentVideo?.youtubeVideoId ?? record.youtubeVideoId;
+  const isYouTube = record.kind === 'youtube' && activeVideoId;
 
   return (
     <>
@@ -330,6 +363,11 @@ export function Session() {
           onEndFromBanner={handleEnd}
           unusual={unusual}
           onUnusualChange={setUnusual}
+          activeVideoId={activeVideoId}
+          videoProgress={lcRef.current?.getVideoProgress() ?? null}
+          interstitialVisible={interstitialVisible}
+          nextVideoTitle={nextVideoTitle}
+          onSkipInterstitial={handleSkipInterstitial}
         />
       ) : (
         <SessionDefaultLayout
