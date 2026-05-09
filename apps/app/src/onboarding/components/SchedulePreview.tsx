@@ -11,7 +11,7 @@ import './swap.css'
 interface SchedulePreviewProps {
   roadmap: RoadmapOutput
   materials: Array<{ id: string; title: string }>
-  onResolveTie: (weekIndex: number, dayOfWeek: string, materialId: string | null) => void
+  onResolveTie: (weekIndex: number, dayOfWeek: string, materialId: string | null, capacityMinutes: number) => void
   onRename: (weekIndex: number, dayOfWeek: string, newTitle: string) => void
   swapState?: SwapState
   onTapSlot?: (key: SlotKey) => void
@@ -94,14 +94,14 @@ export function SchedulePreview({ roadmap, materials, onResolveTie, onRename, sw
                         {slot.candidateMaterialIds.map(id => {
                           if (id === '__rest__') {
                             return (
-                              <button key="__rest__" className="chip" onClick={(e) => { e.stopPropagation(); onResolveTie(slot.weekIndex, slot.dayOfWeek, null) }}>
+                              <button key="__rest__" className="chip" onClick={(e) => { e.stopPropagation(); onResolveTie(slot.weekIndex, slot.dayOfWeek, null, slot.capacityMinutes) }}>
                                 Rest day
                               </button>
                             )
                           }
                           const mat = materials.find(m => m.id === id)
                           return (
-                            <button key={id} className="chip" onClick={(e) => { e.stopPropagation(); onResolveTie(slot.weekIndex, slot.dayOfWeek, id) }}>
+                            <button key={id} className="chip" onClick={(e) => { e.stopPropagation(); onResolveTie(slot.weekIndex, slot.dayOfWeek, id, slot.capacityMinutes) }}>
                               Review {mat?.title ?? id}
                             </button>
                           )

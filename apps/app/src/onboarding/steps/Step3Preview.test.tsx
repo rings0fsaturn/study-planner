@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, beforeAll } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { Step3Preview } from './Step3Preview'
 import { OnboardingProvider } from '../OnboardingProvider'
@@ -114,6 +114,28 @@ function mockTieRoadmap() {
       status: 'fits' as const,
       totalMaterialMinutes: 60,
       totalCapacityMinutes: 120,
+      suggestedWeeks: undefined,
+    },
+    warnings: [{ kind: 'unresolved-tie-count' as const, detail: { count: 1 } }],
+  }
+}
+
+function mockBoundaryRoadmap() {
+  return {
+    weeks: [
+      {
+        weekIndex: 0,
+        startDate: '2026-05-04',
+        slots: [
+          { weekIndex: 0, dayOfWeek: 'Mon' as const, date: '2026-05-04', candidateMaterialIds: ['mat-1'], role: 'foundation' as const, sessionTitle: 'DDIA · session 1 of 1', plannedMinutes: 60, capacityMinutes: 120 },
+          { weekIndex: 0, dayOfWeek: 'Wed' as const, date: '2026-05-06', candidateMaterialIds: ['mat-1', '__rest__'], role: 'foundation' as const, sessionTitle: null, plannedMinutes: 0, capacityMinutes: 120 },
+        ],
+      },
+    ],
+    capacityCheck: {
+      status: 'fits' as const,
+      totalMaterialMinutes: 60,
+      totalCapacityMinutes: 240,
       suggestedWeeks: undefined,
     },
     warnings: [{ kind: 'unresolved-tie-count' as const, detail: { count: 1 } }],
@@ -246,6 +268,29 @@ describe('Step3Preview', () => {
     await waitFor(() => {
       const button = screen.getByRole('button', { name: /Looks good/ })
       expect(button).toBeEnabled()
+    })
+  })
+
+  it('resolving a boundary tie sets session title and planned minutes', async () => {
+    await seedOnboardingState(testDb, {
+      materials: [
+        { id: 'mat-1', title: 'DDIA', estimatedDuration: 60, role: 'foundation', additionOrder: 0, userOverrodeType: false },
+      ],
+    })
+    const { generateRoadmap } = await import('@study-tracker/roadmap-engine')
+    vi.mocked(generateRoadmap).mockReturnValue(mockBoundaryRoadmap())
+
+    renderPreview()
+
+    await waitFor(() => {
+      expect(screen.getByText('Review DDIA')).toBeInTheDocument()
+    })
+
+    fireEvent.click(screen.getByText('Review DDIA'))
+
+    await waitFor(() => {
+      expect(screen.getByText('Review · DDIA')).toBeInTheDocument()
+      expect(screen.getByText('2h 0m')).toBeInTheDocument()
     })
   })
 })

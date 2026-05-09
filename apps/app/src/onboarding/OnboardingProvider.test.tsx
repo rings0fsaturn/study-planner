@@ -197,6 +197,10 @@ function ReducerTestComponent() {
       <span data-testid="materialCount">{state.materials.length}</span>
       <span data-testid="playlistCount">{state.playlists.length}</span>
       <span data-testid="expandedMaterials">{JSON.stringify(expandedMaterials)}</span>
+      <span data-testid="previewEdits">{JSON.stringify(state.previewEdits)}</span>
+      <button data-testid="seedEdits" onClick={() => dispatch({ type: 'SET_PREVIEW_EDITS', edits: [{ weekIndex: 0, dayOfWeek: 'Mon', materialId: 'mat-1', sessionTitle: 'Test', plannedMinutes: 60 }] })}>SeedEdits</button>
+      <button data-testid="updateMaterialRole" onClick={() => dispatch({ type: 'UPDATE_MATERIAL', id: 'mat-1', updates: { role: 'practice' } })}>UpdateRole</button>
+      <button data-testid="removeMaterial" onClick={() => dispatch({ type: 'REMOVE_MATERIAL', id: 'mat-1' })}>RemoveMat</button>
       <button data-testid="addMaterial" onClick={() => dispatch({
         type: 'ADD_MATERIAL',
         material: { id: 'mat-1', title: '', estimatedDuration: 0, role: 'foundation', userOverrodeType: false, kind: 'youtube', fetchStatus: 'idle' },
@@ -374,6 +378,77 @@ describe('OnboardingProvider — fetch and playlist actions', () => {
     expect(screen.getByTestId('playlistCount')).toHaveTextContent('1')
     fireEvent.click(screen.getByTestId('removePlaylist'))
     expect(screen.getByTestId('playlistCount')).toHaveTextContent('0')
+  })
+
+  it('UPDATE_MATERIAL clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('updateMaterialRole'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('REMOVE_MATERIAL clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('removeMaterial'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('ADD_MATERIAL clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('addMaterial'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('PLAYLIST_SET_ROLE clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchOk'))
+    fireEvent.click(screen.getByTestId('playlistConfirm'))
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('playlistSetRole'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('REMOVE_PLAYLIST clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('removePlaylist'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('ADD_PLAYLIST clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
+  })
+
+  it('PLAYLIST_CONFIRM clears previewEdits', async () => {
+    await renderAndWait()
+    fireEvent.click(screen.getByTestId('addPlaylist'))
+    fireEvent.click(screen.getByTestId('playlistFetchOk'))
+    fireEvent.click(screen.getByTestId('seedEdits'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(1)
+
+    fireEvent.click(screen.getByTestId('playlistConfirm'))
+    expect(JSON.parse(screen.getByTestId('previewEdits').textContent!)).toHaveLength(0)
   })
 
   it('RESTORE resets stuck loading materials to error', async () => {

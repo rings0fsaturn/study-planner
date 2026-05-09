@@ -152,11 +152,11 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
     case 'SET_HOURS':
       return { ...state, weeklyHours: action.weeklyHours, weekdayHours: action.weekdayHours, weekendHours: action.weekendHours, selectedStudyDays: action.selectedStudyDays, stepReached: Math.max(state.stepReached, 2) }
     case 'ADD_MATERIAL':
-      return { ...state, materials: [...state.materials, { ...action.material, additionOrder: state.nextAdditionOrder }], nextAdditionOrder: state.nextAdditionOrder + 1, stepReached: Math.max(state.stepReached, 3) }
+      return { ...state, materials: [...state.materials, { ...action.material, additionOrder: state.nextAdditionOrder }], nextAdditionOrder: state.nextAdditionOrder + 1, previewEdits: [], stepReached: Math.max(state.stepReached, 3) }
     case 'UPDATE_MATERIAL':
-      return { ...state, materials: state.materials.map(m => m.id === action.id ? { ...m, ...action.updates } : m) }
+      return { ...state, materials: state.materials.map(m => m.id === action.id ? { ...m, ...action.updates } : m), previewEdits: [] }
     case 'REMOVE_MATERIAL':
-      return { ...state, materials: state.materials.filter(m => m.id !== action.id) }
+      return { ...state, materials: state.materials.filter(m => m.id !== action.id), previewEdits: [] }
     case 'FETCH_STARTED':
       return { ...state, materials: state.materials.map(m => m.id === action.id ? { ...m, fetchStatus: 'loading' } : m) }
     case 'FETCH_SUCCEEDED': {
@@ -172,10 +172,11 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
         ...state,
         playlists: [...state.playlists, { ...action.playlist, confirmed: false, additionOrder: state.nextAdditionOrder, role: 'foundation' as const }],
         nextAdditionOrder: state.nextAdditionOrder + 1,
+        previewEdits: [],
         stepReached: Math.max(state.stepReached, 3),
       }
     case 'REMOVE_PLAYLIST':
-      return { ...state, playlists: state.playlists.filter(p => p.id !== action.playlistId) }
+      return { ...state, playlists: state.playlists.filter(p => p.id !== action.playlistId), previewEdits: [] }
     case 'PLAYLIST_FETCH_SUCCEEDED':
       return { ...state, playlists: state.playlists.map(p => p.id === action.playlistId ? { ...p, title: action.title, fetchStatus: 'success', videos: action.videos } : p) }
     case 'PLAYLIST_FETCH_FAILED':
@@ -197,10 +198,11 @@ function onboardingReducer(state: OnboardingState, action: OnboardingAction): On
               }
             : p
         ),
+        previewEdits: [],
       }
     }
     case 'PLAYLIST_SET_ROLE':
-      return { ...state, playlists: state.playlists.map(p => p.id === action.playlistId ? { ...p, role: action.role } : p) }
+      return { ...state, playlists: state.playlists.map(p => p.id === action.playlistId ? { ...p, role: action.role } : p), previewEdits: [] }
     case 'SET_PREVIEW_EDITS':
       return { ...state, previewEdits: action.edits }
     case 'SET_STEP_REACHED':

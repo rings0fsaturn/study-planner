@@ -70,6 +70,7 @@ export function Step3Preview() {
         if (edit) {
           if (edit.materialId !== undefined) {
             slot.candidateMaterialIds = edit.materialId ? [edit.materialId] : []
+            if (!edit.materialId) slot.role = null
           }
           if (edit.sessionTitle !== null) {
             slot.sessionTitle = edit.sessionTitle
@@ -99,16 +100,25 @@ export function Step3Preview() {
   const capacityCheck = displayRoadmap?.capacityCheck
   const unresolvedTieCount = (displayRoadmap?.warnings.find(w => w.kind === 'unresolved-tie-count')?.detail?.count as number) ?? 0
 
-  const handleResolveTie = useCallback((weekIndex: number, dayOfWeek: string, materialId: string | null) => {
+  const handleResolveTie = useCallback((weekIndex: number, dayOfWeek: string, materialId: string | null, capacityMinutes: number) => {
     const edits: OnboardingSlotEdit[] = [...state.previewEdits]
     const existingIdx = edits.findIndex(e => e.weekIndex === weekIndex && e.dayOfWeek === dayOfWeek)
+
+    let sessionTitle: string | null = null
+    let plannedMinutes = 0
+    if (materialId) {
+      const mat = expandedMaterials.find(m => m.id === materialId)
+      sessionTitle = `Review · ${mat?.title ?? materialId}`
+      plannedMinutes = capacityMinutes
+    }
+
     if (existingIdx >= 0) {
-      edits[existingIdx] = { ...edits[existingIdx], materialId }
+      edits[existingIdx] = { ...edits[existingIdx], materialId, sessionTitle, plannedMinutes }
     } else {
-      edits.push({ weekIndex, dayOfWeek, materialId, sessionTitle: null, plannedMinutes: 0 })
+      edits.push({ weekIndex, dayOfWeek, materialId, sessionTitle, plannedMinutes })
     }
     dispatch({ type: 'SET_PREVIEW_EDITS', edits })
-  }, [state.previewEdits, dispatch])
+  }, [state.previewEdits, dispatch, expandedMaterials])
 
   const handleRename = useCallback((weekIndex: number, dayOfWeek: string, sessionTitle: string) => {
     const edits: OnboardingSlotEdit[] = [...state.previewEdits]
