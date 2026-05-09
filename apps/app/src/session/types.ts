@@ -134,6 +134,10 @@ export interface SessionLoggedPayload {
   totalPauseMinutes?: number;
   /** Minutes of actual YouTube video playback (undefined for non-YouTube sessions) */
   videoPlayTimeMinutes?: number;
+  /** Number of playlist videos completed during this session */
+  videosCompleted?: number;
+  /** Index of last completed video in playlist (0-based) */
+  lastVideoIndex?: number;
   /** Number of full Pomodoro work intervals completed */
   pomodorosCompleted?: number;
   /** How the session ended — 'completed' (normal End tap) or 'trimmed' (walk-away trim) */
@@ -243,6 +247,10 @@ export interface ActiveSessionRecord {
   youtubeVideoId?: string;
   /** Persisted video playback position in seconds (for resume) */
   videoPlaybackPosition?: number;
+  /** Ordered video list for playlist sessions */
+  videos?: Array<{ youtubeVideoId: string; title: string; durationMinutes: number }>;
+  /** Index into videos[] for currently playing video (0-based) */
+  currentVideoIndex?: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +300,7 @@ export interface SessionSlotData {
   role?: 'anchor' | 'foundation' | 'practice';
   kind?: MaterialKind;
   youtubeVideoId?: string;
+  videos?: Array<{ youtubeVideoId: string; title: string; durationMinutes: number }>;
 }
 
 // ---------------------------------------------------------------------------

@@ -246,6 +246,7 @@ export function Home() {
                     role: upNextSlot.role as SessionSlotData['role'],
                     kind: (material?.payload.kind as MaterialKind | undefined) ?? 'manual',
                     youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
+                    videos: material?.payload.videos as SessionSlotData['videos'],
                   };
                   navigate('/session', { state: sessionSlot });
                 }}

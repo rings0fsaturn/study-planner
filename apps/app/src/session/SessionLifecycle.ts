@@ -167,6 +167,8 @@ export class SessionLifecycle {
       materialUrl: slotData.materialUrl,
       kind: slotData.kind,
       youtubeVideoId: slotData.youtubeVideoId,
+      videos: slotData.videos,
+      currentVideoIndex: slotData.videos ? 0 : undefined,
     };
 
     await this.persistToDb();
@@ -194,6 +196,29 @@ export class SessionLifecycle {
     if (this.notifier) {
       this.notifier.schedule(this.record!.plannedMinutes * 60_000);
     }
+  }
+
+  advanceVideo(): void {
+    if (!this.record || !this.record.videos || this.record.currentVideoIndex == null) return;
+    if (this.record.currentVideoIndex < this.record.videos.length - 1) {
+      this.record.currentVideoIndex++;
+      this.record.videoPlaybackPosition = 0;
+      this.persistToDb();
+    }
+  }
+
+  getCurrentVideo(): { youtubeVideoId: string; title: string; durationMinutes: number } | null {
+    if (!this.record?.videos || this.record.currentVideoIndex == null) return null;
+    return this.record.videos[this.record.currentVideoIndex] ?? null;
+  }
+
+  getVideoProgress(): { current: number; total: number } | null {
+    if (!this.record?.videos || this.record.currentVideoIndex == null) return null;
+    return { current: this.record.currentVideoIndex, total: this.record.videos.length };
+  }
+
+  isPlaylistSession(): boolean {
+    return !!(this.record?.videos && this.record.videos.length > 0);
   }
 
   async pause(): Promise<void> {
@@ -514,6 +539,8 @@ export class SessionLifecycle {
       pauseCount: this.record.pauseIntervals.length,
       totalPauseMinutes: Math.round(totalPauseMs / 60_000),
       pomodorosCompleted: completedPomos,
+      videosCompleted: this.record.currentVideoIndex != null ? this.record.currentVideoIndex : undefined,
+      lastVideoIndex: this.record.currentVideoIndex != null && this.record.currentVideoIndex > 0 ? this.record.currentVideoIndex - 1 : undefined,
       source: 'active',
       resolution,
       duration: activeMinutes,
