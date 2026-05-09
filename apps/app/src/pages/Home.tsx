@@ -51,6 +51,15 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
+function computePlaylistCursor(
+  events: Array<{ kind: string; payload: Record<string, unknown> }>,
+  materialId: string,
+): number {
+  return events
+    .filter(e => e.kind === 'SessionLogged' && e.payload.materialId === materialId)
+    .reduce((sum, e) => sum + ((e.payload.videosCompleted as number) ?? 0), 0);
+}
+
 function findRoadmap(events: Array<{ kind: string; payload: Record<string, unknown> }>): RoadmapCreatedPayload | null {
   const roadmapEvents = events.filter(e => e.kind === 'RoadmapCreated' || e.kind === 'RoadmapReplanned');
   if (roadmapEvents.length === 0) return null;
@@ -236,6 +245,12 @@ export function Home() {
                 onClick={() => {
                   const materials = events.filter(e => e.kind === 'MaterialAdded');
                   const material = materials.find(m => (m.payload.materialId as string) === upNextSlot.candidateMaterialIds[0]);
+                  const allVideos = material?.payload.videos as SessionSlotData['videos'];
+                  const cursor = allVideos
+                    ? computePlaylistCursor(events, upNextSlot.candidateMaterialIds[0])
+                    : 0;
+                  const remainingVideos = allVideos ? allVideos.slice(cursor) : undefined;
+
                   const sessionSlot: SessionSlotData = {
                     materialId: upNextSlot.candidateMaterialIds[0] ?? '',
                     sessionTitle: upNextSlot.sessionTitle ?? 'Study session',
@@ -246,7 +261,7 @@ export function Home() {
                     role: upNextSlot.role as SessionSlotData['role'],
                     kind: (material?.payload.kind as MaterialKind | undefined) ?? 'manual',
                     youtubeVideoId: material?.payload.youtubeVideoId as string | undefined,
-                    videos: material?.payload.videos as SessionSlotData['videos'],
+                    videos: remainingVideos,
                   };
                   navigate('/session', { state: sessionSlot });
                 }}
