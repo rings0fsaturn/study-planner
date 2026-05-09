@@ -16,6 +16,7 @@ export interface OnboardingMaterial {
   fetchStatus: FetchStatus
   playlistId?: string
   youtubeVideoId?: string
+  playlistVideos?: Array<{ youtubeVideoId: string; title: string; durationMinutes: number }>
 }
 
 export interface PlaylistVideo {
@@ -120,21 +121,27 @@ function recoverStuckLoading(restored: OnboardingState): OnboardingState {
 export function expandPlaylistsToMaterials(playlists: PlaylistEntry[]): OnboardingMaterial[] {
   return playlists
     .filter(p => p.confirmed)
-    .flatMap(p => {
+    .filter(p => p.videos.some(v => v.selected))
+    .map(p => {
       const selectedVideos = p.videos.filter(v => v.selected)
-      return selectedVideos.map((v, i) => ({
-        id: `${p.id}_${v.youtubeVideoId}`,
-        title: v.title,
-        estimatedDuration: v.durationMinutes,
+      const totalDuration = selectedVideos.reduce((sum, v) => sum + v.durationMinutes, 0)
+      return {
+        id: p.id,
+        title: p.title,
+        estimatedDuration: totalDuration,
         role: p.role,
-        url: `https://youtube.com/watch?v=${v.youtubeVideoId}`,
-        additionOrder: p.additionOrder + (i + 1) * 0.001,
+        url: `https://youtube.com/playlist?list=${p.youtubePlaylistId}`,
+        additionOrder: p.additionOrder,
         userOverrodeType: false,
         kind: 'youtube' as const,
         fetchStatus: 'success' as const,
         playlistId: p.id,
-        youtubeVideoId: v.youtubeVideoId,
-      }))
+        playlistVideos: selectedVideos.map(v => ({
+          youtubeVideoId: v.youtubeVideoId,
+          title: v.title,
+          durationMinutes: v.durationMinutes,
+        })),
+      }
     })
 }
 

@@ -337,14 +337,15 @@ describe('OnboardingProvider — fetch and playlist actions', () => {
     expect(playlists[0].videos.filter((v: { selected: boolean }) => v.selected).map((v: { youtubeVideoId: string }) => v.youtubeVideoId)).toEqual(['v1', 'v3'])
 
     const expanded = JSON.parse(screen.getByTestId('expandedMaterials').textContent!)
-    expect(expanded).toHaveLength(2)
-    expect(expanded[0].title).toBe('Video 1')
+    expect(expanded).toHaveLength(1)
+    expect(expanded[0].title).toBe('My Playlist')
     expect(expanded[0].kind).toBe('youtube')
     expect(expanded[0].fetchStatus).toBe('success')
     expect(expanded[0].playlistId).toBe('pl-1')
-    expect(expanded[0].youtubeVideoId).toBe('v1')
-    expect(expanded[1].title).toBe('Video 3')
-    expect(expanded[1].youtubeVideoId).toBe('v3')
+    expect(expanded[0].estimatedDuration).toBe(50)
+    expect(expanded[0].playlistVideos).toHaveLength(2)
+    expect(expanded[0].playlistVideos[0].youtubeVideoId).toBe('v1')
+    expect(expanded[0].playlistVideos[1].youtubeVideoId).toBe('v3')
   })
 
   it('PLAYLIST_SET_ROLE updates role on the target playlist only', async () => {
@@ -363,8 +364,8 @@ describe('OnboardingProvider — fetch and playlist actions', () => {
     expect(afterPlaylists[0].confirmed).toBe(true)
 
     const expanded = JSON.parse(screen.getByTestId('expandedMaterials').textContent!)
+    expect(expanded).toHaveLength(1)
     expect(expanded[0].role).toBe('anchor')
-    expect(expanded[1].role).toBe('anchor')
   })
 
   it('REMOVE_PLAYLIST removes playlist from array', async () => {

@@ -45,6 +45,12 @@ export interface SyncMeta {
 
 import type { DayOfWeek, Slot } from '@study-tracker/roadmap-engine'
 
+export interface PlaylistVideoInfo {
+  youtubeVideoId: string
+  title: string
+  durationMinutes: number
+}
+
 export interface MaterialAddedPayload {
   materialId: string
   title: string
@@ -54,6 +60,7 @@ export interface MaterialAddedPayload {
   role: 'anchor' | 'foundation' | 'practice'
   playlistId?: string
   youtubeVideoId?: string
+  videos?: PlaylistVideoInfo[]
 }
 
 export interface RoadmapCreatedPayload {

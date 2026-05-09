@@ -169,6 +169,11 @@ export function Step3Preview() {
           role: mat.role,
           playlistId: mat.playlistId,
           youtubeVideoId: mat.youtubeVideoId,
+          videos: mat.playlistVideos?.map(v => ({
+            youtubeVideoId: v.youtubeVideoId,
+            title: v.title,
+            durationMinutes: v.durationMinutes,
+          })),
         }
         await logEvent('MaterialAdded', payload as unknown as Record<string, unknown>)
       }
