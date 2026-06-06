@@ -1,0 +1,43 @@
+\contentsline {chapter}{\numberline {1}Introduction}{9}{chapter.1}%
+\contentsline {section}{\numberline {1.1}Problem Statement}{9}{section.1.1}%
+\contentsline {section}{\numberline {1.2}Objectives}{9}{section.1.2}%
+\contentsline {section}{\numberline {1.3}Scope of the Project}{9}{section.1.3}%
+\contentsline {section}{\numberline {1.4}Organization of the Report}{10}{section.1.4}%
+\contentsline {chapter}{\numberline {2}Literature Survey}{11}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Existing Systems}{11}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Pillar A: Adaptive Pace Modelling and Scheduling}{11}{subsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.1.1}Learner Pace Modelling and Bayesian Calibration}{11}{subsubsection.2.1.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.1.2}Behavioural-Change Detection}{12}{subsubsection.2.1.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.1.3}Progress Prediction with Gaussian Processes}{12}{subsubsection.2.1.1.3}%
+\contentsline {subsubsection}{\numberline {2.1.1.4}Adaptive Scheduling and Study-Plan Generation}{12}{subsubsection.2.1.1.4}%
+\contentsline {subsubsection}{\numberline {2.1.1.5}Self-Regulated-Learning Analytics}{13}{subsubsection.2.1.1.5}%
+\contentsline {subsection}{\numberline {2.1.2}Pillar B: Assessment Generation, Knowledge Tracing, and Verification}{13}{subsection.2.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.2.1}Knowledge Tracing and the Cold-Start Problem}{13}{subsubsection.2.1.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.2.2}Automatic Question and Item Generation with Large Language Models}{14}{subsubsection.2.1.2.2}%
+\contentsline {subsubsection}{\numberline {2.1.2.3}Concept and Knowledge-Component Extraction}{14}{subsubsection.2.1.2.3}%
+\contentsline {subsubsection}{\numberline {2.1.2.4}Automated Answer Evaluation and Grading}{15}{subsubsection.2.1.2.4}%
+\contentsline {subsubsection}{\numberline {2.1.2.5}Assessment Integrity and Gaming Detection}{15}{subsubsection.2.1.2.5}%
+\contentsline {subsubsection}{\numberline {2.1.2.6}Retention and Review Scheduling}{15}{subsubsection.2.1.2.6}%
+\contentsline {subsection}{\numberline {2.1.3}Summary of Approaches}{15}{subsection.2.1.3}%
+\contentsline {section}{\numberline {2.2}Limitations of Existing Systems}{17}{section.2.2}%
+\contentsline {section}{\numberline {2.3}Proposed Solution}{17}{section.2.3}%
+\contentsline {chapter}{\numberline {3}System Requirements Specification}{18}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Hardware Requirements}{18}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Software Requirements}{18}{section.3.2}%
+\contentsline {section}{\numberline {3.3}Functional Requirements}{18}{section.3.3}%
+\contentsline {section}{\numberline {3.4}Non-Functional Requirements}{18}{section.3.4}%
+\contentsline {chapter}{\numberline {4}Proposed Methodology}{19}{chapter.4}%
+\contentsline {section}{\numberline {4.1}System Architecture}{19}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Algorithm and Model Description}{19}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Expected Outcomes and Evaluation Methodology}{19}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Workflow Diagram}{22}{section.4.4}%
+\contentsline {chapter}{\numberline {5}Implementation Details}{23}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Development Environment}{23}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Dataset Description}{23}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Model Implementation}{23}{section.5.3}%
+\contentsline {section}{\numberline {5.4}Evaluation Metrics}{23}{section.5.4}%
+\contentsline {chapter}{\numberline {6}Results and Discussion}{24}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Result Analysis}{24}{section.6.1}%
+\contentsline {chapter}{\numberline {7}Conclusion and Future Work}{25}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Conclusion}{25}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Future Work}{25}{section.7.2}%

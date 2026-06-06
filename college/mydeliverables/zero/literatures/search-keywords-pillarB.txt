@@ -1,0 +1,58 @@
+Google Scholar Search Keywords — PILLAR B: Assessment-Based Verification
+Filter: since 2024 strongly preferred (LLM-era), 2022+ acceptable for foundational work
+Pillar B = honest-signal verification: ingest material -> generate assessment ->
+measure genuine learning (mastery) -> detect gaming/fake sessions -> decide when to assess.
+
+=== 1. Knowledge Tracing for Mastery / Verification (the learning signal) ===
+"knowledge tracing" "concept mastery" 2024
+"Bayesian knowledge tracing" "mastery estimation"
+"deep knowledge tracing" "student response" prediction
+"item response theory" "skill mastery" learner
+"knowledge tracing" "cold start" OR "single learner"
+"interpretable knowledge tracing" "Deep-IRT"
+
+=== 2. Automatic Question Generation from Material (LLM-based) ===
+"automatic question generation" "large language model" education 2024
+"LLM" "question generation" "learning material" OR "lecture"
+"multiple choice question generation" distractor
+"automatic item generation" assessment
+"question generation" "reading comprehension" educational
+"GPT" "quiz generation" course
+
+=== 3. Automated Answer Evaluation / Grading (theory + code) ===
+"automated short answer grading" LLM 2024
+"automatic essay scoring" "large language model"
+"LLM" "answer evaluation" OR "answer grading" assessment
+"automated assessment" "programming" OR "code" grading
+"automatic feedback" "open-ended" response education
+
+=== 4. Assessment Integrity / Gaming Detection / Honest Signal ===
+"gaming the system" "intelligent tutoring" detection
+"academic integrity" "online assessment" detection
+"cheating detection" "e-learning" OR "online learning"
+"self-report" "study time" validity OR reliability
+"learning verification" "knowledge check" assessment
+"engagement detection" "online learning" behavior
+
+=== 5. Retention, Forgetting & Review Scheduling (WHEN to assess) ===
+"forgetting curve" "spaced repetition" model 2024
+"optimal review scheduling" "memory model"
+"half-life regression" "retention prediction"
+"adaptive review" "knowledge retention" scheduling
+"spacing effect" "review timing" algorithm
+
+=== 6. Concept / Knowledge-Component Extraction from Content ===
+"knowledge component" extraction "learning content"
+"concept extraction" "educational text" OR "course material"
+"skill tagging" question automatic
+"topic modeling" "learning material" concept
+"LLM" "knowledge concept" tagging education
+"q-matrix" OR "curriculum mapping" automatic
+
+Target venues: BEA (Building Educational Applications), AIED, EDM, LAK, L@S
+(Learning at Scale), IEEE TLT, IJAIED, Computers & Education, NeurIPS/ICLR
+(for KT/AQG methods), arXiv (cs.CL / cs.CY for recent LLM-AQG work)
+
+Note: themes 1 and 5 partly overlap the Pillar A survey (knowledge tracing,
+forgetting/retention) — that overlap is fine; it's the bridge between pillars.
+The novel-to-this-survey themes are 2 (AQG), 3 (grading), 4 (integrity), 6 (KC extraction).

@@ -79,6 +79,7 @@ Deep-dive docs live in `.claude/rules/`:
 | [`dexie-test-setup.md`](.claude/rules/dexie-test-setup.md) | Dexie test failures |
 | [`dexie-schema-migration.md`](.claude/rules/dexie-schema-migration.md) | Data loss on schema changes |
 | [`sync-provider-testing.md`](.claude/rules/sync-provider-testing.md) | Lifecycle hook test failures |
+| [`latex-report-build.md`](.claude/rules/latex-report-build.md) | "latexmk not found"; broken dissertation builds |
 
 ## Environment Variables
 

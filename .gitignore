@@ -11,3 +11,9 @@ dist/
 .output/
 test-results/
 .claude/settings.local.json
+# code-memory: agent-only index, do not commit
+.claude/memory/
+
+# transient agent worktrees
+.claude/worktrees/
+handovers/
