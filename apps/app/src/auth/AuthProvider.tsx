@@ -7,10 +7,12 @@ interface AuthContextValue {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  recoveryMode: boolean;
   signUp: (email: string, password: string) => Promise<SignUpResult>;
   signIn: (email: string, password: string) => Promise<SignInResult>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  updatePassword: (password: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -23,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recoveryMode, setRecoveryMode] = useState(false);
 
   const authGate = createAuthGate(supabase);
 
@@ -57,10 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     initAuth();
 
-    const { unsubscribe } = authGate.onAuthStateChange((_event, session) => {
+    const { unsubscribe } = authGate.onAuthStateChange((event, session) => {
       if (!mounted) return;
       setSession(session);
       setUser(session?.user ?? null);
+      if (event === 'PASSWORD_RECOVERY') {
+        setRecoveryMode(true);
+      } else if (event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+        setRecoveryMode(false);
+      }
     });
 
     return () => {
@@ -74,10 +82,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     user,
     session,
     loading,
+    recoveryMode,
     signUp: authGate.signUp.bind(authGate),
     signIn: authGate.signIn.bind(authGate),
     signOut: authGate.signOut.bind(authGate),
-    resetPassword: authGate.resetPassword.bind(authGate),
+    resetPassword: (email: string) =>
+      authGate.resetPassword(email, `${window.location.origin}/study/reset-password`),
+    updatePassword: authGate.updatePassword.bind(authGate),
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -14,6 +14,10 @@ export interface AuthGateDeps {
     resetPasswordForEmail: (email: string, options?: { redirectTo?: string }) => Promise<{
       error: Error | null;
     }>;
+    updateUser: (attributes: { password?: string; email?: string }) => Promise<{
+      data: { user: User | null };
+      error: Error | null;
+    }>;
     getSession: () => Promise<{ data: { session: Session | null }; error: Error | null }>;
     getUser: () => Promise<{ data: { user: User | null }; error: Error | null }>;
     onAuthStateChange: (callback: (event: string, session: Session | null) => void) => {
@@ -61,8 +65,13 @@ export class AuthGate {
     await this.supabase.auth.signOut();
   }
 
-  async resetPassword(email: string): Promise<{ error: Error | null }> {
-    const { error } = await this.supabase.auth.resetPasswordForEmail(email);
+  async resetPassword(email: string, redirectTo?: string): Promise<{ error: Error | null }> {
+    const { error } = await this.supabase.auth.resetPasswordForEmail(email, redirectTo ? { redirectTo } : undefined);
+    return { error };
+  }
+
+  async updatePassword(password: string): Promise<{ error: Error | null }> {
+    const { error } = await this.supabase.auth.updateUser({ password });
     return { error };
   }
 

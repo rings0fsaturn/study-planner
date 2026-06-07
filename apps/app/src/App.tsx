@@ -138,14 +138,7 @@ function AppRoutes() {
       />
       <Route path="/auth-confirmed" element={<AuthConfirmed />} />
       <Route path="/chart-test" element={<BurnUpChartTest />} />
-      <Route
-        path="/reset-password"
-        element={
-          <PublicRouteWithAuthCheck>
-            <ResetPassword />
-          </PublicRouteWithAuthCheck>
-        }
-      />
+      <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
           <ProtectedRoute>

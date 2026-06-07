@@ -1,14 +1,13 @@
-import { useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/useAuth';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { FieldGroup, FieldLabel, FieldInput, FieldHelper } from '../components/Field';
 
 export function ResetPassword() {
-  const [searchParams] = useSearchParams();
-  const { resetPassword } = useAuth();
-  const isRecoveryMode = searchParams.get('type') === 'recovery';
+  const { resetPassword, updatePassword, recoveryMode } = useAuth();
+  const isRecoveryMode = recoveryMode;
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -16,6 +15,17 @@ export function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (!hash) return;
+    const params = new URLSearchParams(hash.slice(1));
+    const errorDescription = params.get('error_description');
+    if (errorDescription) {
+      setError(errorDescription.replace(/\+/g, ' '));
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const handleRequestReset = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,10 +60,16 @@ export function ResetPassword() {
 
     setLoading(true);
 
-    setTimeout(() => {
-      setSuccess(true);
+    const result = await updatePassword(password);
+
+    if (result.error) {
+      setError(result.error.message);
       setLoading(false);
-    }, 1000);
+      return;
+    }
+
+    setSuccess(true);
+    setLoading(false);
   };
 
   if (success) {
