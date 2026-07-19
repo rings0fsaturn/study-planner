@@ -1,0 +1,35 @@
+{
+  "fn": "generateRoadmap",
+  "materials": [
+    {
+      "id": "ddia",
+      "title": "Designing Data-Intensive Applications",
+      "totalMinutes": 600,
+      "role": "anchor",
+      "additionOrder": 0
+    },
+    {
+      "id": "cap",
+      "title": "CAP theorem",
+      "totalMinutes": 200,
+      "role": "foundation",
+      "additionOrder": 1
+    },
+    {
+      "id": "mocks",
+      "title": "Mock interviews",
+      "totalMinutes": 300,
+      "role": "practice",
+      "additionOrder": 2
+    }
+  ],
+  "weeks": 8,
+  "startDate": "2026-04-29",
+  "selectedStudyDays": [
+    "Mon",
+    "Wed",
+    "Sat"
+  ],
+  "weekdayHours": 2,
+  "weekendHours": 3
+}

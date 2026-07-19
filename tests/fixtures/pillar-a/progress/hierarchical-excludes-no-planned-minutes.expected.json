@@ -1,0 +1,10 @@
+{
+  "globalPosterior": {
+    "mean": 1,
+    "variance": 0.1,
+    "sessionCount": 0
+  },
+  "globalMultiplier": 1,
+  "roleMultipliers": {},
+  "insights": []
+}

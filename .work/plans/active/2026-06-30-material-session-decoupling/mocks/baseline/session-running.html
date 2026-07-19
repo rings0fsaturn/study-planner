@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline · Running session (current)</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/session.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  /* show the inline End on desktop for the mock (real app swaps to a FAB ≥1024) */
+  .session-end-inline { display: block !important; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Baseline (current) · Running session · default (non-YouTube) layout</div>
+
+<div class="session-layout session-layout-centered">
+  <div class="session-top-bar">
+    <button class="session-pause-resume"><span class="session-pause-icon">❚❚</span> Pause</button>
+  </div>
+
+  <div class="session-frame">
+    <div class="session-eyebrow-row eyebrow-moss">
+      <span class="session-pulse-dot"></span> In session · Week 2
+    </div>
+    <div class="session-title">Strang — Notes on Eigenvalues</div>
+    <div class="session-subtitle">Article · reading in new tab</div>
+
+    <div class="session-timer-display">
+      <div class="session-timer-time session-timer-large">12:30</div>
+      <div class="session-timer-of">of 35m planned · ends ~3:40 PM</div>
+    </div>
+
+    <a class="btn btn-secondary btn-block session-open-material">
+      <svg class="icon" viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      Reopen article
+    </a>
+
+    <div class="material-strip" style="margin-top:var(--space-3);">
+      <div class="material-strip-icon">AR</div>
+      <div class="material-strip-body">
+        <div class="material-strip-title">Strang — Notes on Eigenvalues</div>
+        <div class="material-strip-meta">ARTICLE · LINKED</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="checkbox-row" style="margin:0 auto; max-width:320px; margin-bottom:var(--space-3);">
+    <span class="checkbox-box"></span>
+    <div class="checkbox-body"><div class="checkbox-title">This was unusual</div></div>
+  </div>
+
+  <div class="session-actions">
+    <button class="btn btn-accent btn-block btn-lg session-end-inline">End session</button>
+    <button class="btn btn-ghost btn-block session-come-back">Come back later</button>
+  </div>
+</div>
+</body>
+</html>

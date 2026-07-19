@@ -1,0 +1,79 @@
+{
+  "weeks": [
+    {
+      "weekIndex": 0,
+      "startDate": "2026-04-29",
+      "slots": [
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Mon",
+          "date": "2026-04-29",
+          "capacityMinutes": 30,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-01",
+          "capacityMinutes": 30,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 30,
+          "sessionTitle": "DDIA · session 1 of 1"
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "startDate": "2026-05-06",
+      "slots": [
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-06",
+          "capacityMinutes": 30,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-08",
+          "capacityMinutes": 30,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "over-capacity",
+      "detail": {
+        "overflowMinutes": 2880
+      }
+    },
+    {
+      "kind": "material-underfilled",
+      "detail": {
+        "materialId": "ddia",
+        "allocated": 30,
+        "total": 3000
+      }
+    }
+  ],
+  "capacityCheck": {
+    "totalCapacityMinutes": 120,
+    "totalMaterialMinutes": 3000,
+    "status": "over-capacity"
+  }
+}

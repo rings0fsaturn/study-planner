@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Option C · Onboarding page 3 — mini calendar</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/onboarding.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  body { min-height: 100vh; }
+  .mock-banner { font-family: var(--font-mono); font-size: 11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .verdict-card { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 14px 16px; margin-bottom:16px; }
+  .verdict-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  /* compact the calendar for the onboarding preview column */
+  .mini-cal .roadmap-day { min-height: 56px; padding: 6px; }
+  .mini-cal .roadmap-bubble-minutes { font-size: 10px; }
+  .provisional { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--clay); }
+  .dir-chip { display:inline-flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Option C — mini calendar of bookings (book-to-exhaustion + buffer) · /onboarding/3</div>
+
+<div class="onboarding-shell" data-shape="fused">
+  <div class="onboarding-stepdots-wrap">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:22px;height:8px;border-radius:999px;background:var(--ink);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+    </div>
+    <span class="t-mono onboarding-desktop-caption">Step 3 of 4 · Your materials</span>
+  </div>
+
+  <div class="onboarding-content">
+    <div class="onboarding-step onboarding-materials-grid">
+
+      <!-- LEFT: materials form (unchanged) -->
+      <div class="onboarding-materials-form">
+        <h1 class="onboarding-h1">What are you <em>studying</em>?</h1>
+        <p class="onboarding-lead">Paste links, or add things by hand.</p>
+        <div class="field-group">
+          <label class="field-label">Paste a URL</label>
+          <input class="field" type="url" placeholder="youtube.com/… or any article link" />
+          <div class="field-helper">We'll fetch the title and length for you.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm onboarding-add-manually-btn">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add manually
+        </button>
+        <div class="mono-caps onboarding-materials-count">3 added · ~2h 10m</div>
+        <div class="material-list">
+          <div class="material-row"><div class="material-icon yt">YT</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Linear Algebra — Lecture 4" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="50"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option>Main reading</option><option>Foundations</option><option>Practice</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~50min · Main reading</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+          <div class="material-row"><div class="material-icon art">ART</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Strang — Notes on Eigenvalues" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="35"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option selected>Foundations</option><option>Main reading</option><option>Practice</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~35min · Foundations</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+          <div class="material-row"><div class="material-icon bk">BK</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Problem set 4 — practice" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="45"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option selected>Practice</option><option>Main reading</option><option>Foundations</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~45min · Practice</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: mini-calendar preview -->
+      <div class="onboarding-materials-preview-slot">
+        <div class="mono-caps onboarding-materials-preview-label">Your plan · July</div>
+
+        <div class="verdict-card">
+          <div class="verdict-row">
+            <span class="t-body">Finishes <strong style="color:var(--moss);">Jul 14</strong></span>
+            <span class="tag tag-sm tag-moss">7 days before deadline</span>
+          </div>
+          <div class="mono-caps" style="margin-top:6px; color:var(--text-tertiary);"><span class="provisional">estimate</span> · ● booked session · ▔ deadline</div>
+        </div>
+
+        <div class="mini-cal" style="margin-bottom:16px;">
+          <div class="roadmap-calendar-shell">
+            <div class="roadmap-weekdays">
+              <div class="roadmap-weekday">Sun</div><div class="roadmap-weekday">Mon</div><div class="roadmap-weekday">Tue</div>
+              <div class="roadmap-weekday">Wed</div><div class="roadmap-weekday">Thu</div><div class="roadmap-weekday">Fri</div><div class="roadmap-weekday">Sat</div>
+            </div>
+            <!-- Week of Jun 29 -->
+            <div class="roadmap-week-row">
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+              <div class="roadmap-day roadmap-day-today"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">1h</span></div></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">1h</span></div></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">3</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">4</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">1h</span></div></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">5</span></div></div>
+            </div>
+            <!-- Week of Jul 6 -->
+            <div class="roadmap-week-row">
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">6</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">7</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">1h</span></div></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">8</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">9</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">1h</span></div></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">10</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">11</span></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">12</span></div></div>
+            </div>
+            <!-- Week of Jul 13 — finish Jul 14, then buffer -->
+            <div class="roadmap-week-row">
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">13</span></div></div>
+              <div class="roadmap-day"><div class="roadmap-day-head"><span class="roadmap-day-number">14</span></div>
+                <div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">done</span></div></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">15</span></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">16</span></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">17</span></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">18</span></div></div>
+              <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">19</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="t-body-sm" style="color:var(--text-tertiary); margin-bottom:12px;">
+          Sessions are booked on your study days (Mon/Wed/Fri) until your materials are done — Jul 14. Days after that stay open as buffer before your Aug 1 deadline.
+        </div>
+
+        <div class="mono-caps" style="margin:6px 0 8px;">What you'll study</div>
+        <div class="chip-row" style="margin-bottom:16px;">
+          <span class="chip dir-chip">▶ Linear Algebra — L4</span>
+          <span class="chip dir-chip">◆ Strang — Eigenvalues</span>
+          <span class="chip dir-chip">✎ Problem set 4</span>
+        </div>
+
+        <div class="onboarding-actions onboarding-preview-actions">
+          <button class="btn btn-primary btn-lg onboarding-continue-btn">
+            Looks good
+            <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

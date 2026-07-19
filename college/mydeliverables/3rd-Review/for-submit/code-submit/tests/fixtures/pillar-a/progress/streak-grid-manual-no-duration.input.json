@@ -1,0 +1,20 @@
+{
+  "fn": "buildStreakGrid",
+  "sessions": [
+    {
+      "date": "2026-01-15",
+      "source": "manual",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 0,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    }
+  ],
+  "today": "2026-01-15",
+  "plannedByDate": {
+    "2026-01-15": 60
+  },
+  "defaultPlanned": 60
+}

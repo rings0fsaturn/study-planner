@@ -1,0 +1,28 @@
+{
+  "fn": "runKalmanOnPhase",
+  "ratios": [
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9,
+    0.9
+  ],
+  "initialLevel": 1,
+  "initialVariance": 0.1,
+  "observationVariance": 0.01
+}

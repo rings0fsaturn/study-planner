@@ -1,0 +1,177 @@
+\documentclass[12pt]{report}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, calc}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepgfplotslibrary{fillbetween}
+\usepackage{listings}
+\lstset{basicstyle=\ttfamily\footnotesize, breaklines=true, frame=single, showstringspaces=false,
+        columns=fullflexible, keepspaces=true, aboveskip=6pt, belowskip=4pt}
+% Placeholder box for app screenshots pending capture (D8). #1 = height, #2 = label.
+\newcommand{\screenshotplaceholder}[2]{\fbox{\begin{minipage}[c][#1][c]{0.82\linewidth}\centering\itshape\footnotesize Screenshot placeholder\\[3pt]#2\end{minipage}}}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+\setcounter{secnumdepth}{3} % number sub-subsections (e.g. 2.1.1)
+
+% =====================================================================
+% 3rd-Review report (Phase 1, Pillar A). MODULAR layout (D12): front matter
+% and bibliography live here; each chapter is its own file under chapters/
+% (edit those). Decisions in DECISIONS.md (D1-D12). Voice per
+% college/mydeliverables/REPORT_WRITING_GUIDE.md. Figures per
+% TIKZ_DIAGRAM_GUIDE.md. Build in /tmp (repo mount is create-only).
+% =====================================================================
+
+\begin{document}
+
+\begin{center}
+\includegraphics[width=5cm]{PESU-new-logo.png} \\[0.5cm]
+\textbf{\Large Dissertation on}\\[1cm]
+\textbf{\Huge ``Adaptive Study Planning for\\ Self-Directed Learners''}\\[1cm]
+
+Submitted in partial fulfilment of the requirements for the award of degree of\\[1cm]
+\textbf{\Large Master of Technology in}\\[1cm]
+\textbf{\Large Data Science and Artificial Intelligence}\\[1cm]
+\textbf{UE20CS971 Project Phase - 1}\\[1cm]
+
+\textbf{Submitted by:}\\
+\textbf{Rohit Saji}\\
+\textbf{PES2PGE24DS201}\\[1cm]
+
+Under the guidance of\\
+Prof. Ramesh Prakash Guledgudd\\
+PES University\\[1cm]
+
+May -- October 2026\\[1cm]
+
+M.TECH IN DATA SCIENCE AND ARTIFICIAL INTELLIGENCE\\
+FACULTY OF ENGINEERING\\
+PES UNIVERSITY\\[1cm]
+(Established under Karnataka Act No. 16 of 2013)\\
+Electronic City, Hosur Road, Bengaluru -- 560 100, Karnataka, India
+\end{center}
+
+\newpage
+
+\section*{Certificate}
+This is to certify that the dissertation entitled ``Adaptive Study Planning for Self-Directed Learners'' is a bonafide work carried out by \textbf{Rohit Saji (PES2PGE24DS201)} in partial fulfilment for the completion of Project Phase - 1 in the Program of Study -- Master of Technology in Data Science and Artificial Intelligence under the rules and regulations of PES University, Bengaluru.
+
+\vspace{2cm}
+\begin{flushright}
+Prof. Ramesh Prakash Guledgudd\\
+PES University
+\end{flushright}
+
+\newpage
+
+\section*{Declaration}
+I hereby declare that the Project Phase - 1 entitled ``Adaptive Study Planning for Self-Directed Learners'' has been carried out under the guidance of Prof. Ramesh Prakash Guledgudd, and submitted in partial fulfilment of the course requirements for the award of the degree of Master of Technology in Data Science and Artificial Intelligence of PES University, Bengaluru, during the academic semester May -- October 2026.
+
+\newpage
+
+\section*{Acknowledgement}
+I would like to express my gratitude to my guide for continuous guidance and support throughout this project, and to the project coordinators for their help. I thank the Chairperson and faculty of the Department, PES University, for their support, and the university leadership for the opportunities provided. Finally, I extend heartfelt thanks to my family and friends for their constant encouragement.
+
+\newpage
+
+\section*{Abstract}
+% Pillar-A, forward narrative, honest (D2/D3/D4/D11). Refined during drafting.
+Self-directed learners routinely commit to a fixed study plan and fall behind or move ahead within days, yet the plan does not adapt and the learner has no reliable signal of how far off-track they are. This work develops an adaptive study-planning system for a single self-directed learner and evaluates the algorithms behind it. The system estimates a learner's true study pace from their own session history using hierarchical Bayesian calibration with a shrinkage-regularized context model, detects behavioural shifts in that pace using CUSUM change-point detection, and projects the completion date with a calibrated uncertainty band using Gaussian-process regression, regenerating the plan when the learner's realised pace diverges from the schedule. Each component is compared against established baselines on a literature-grounded synthetic dataset with known ground truth, using held-out evaluation with bootstrap confidence intervals and Holm/Benjamini--Hochberg correction. Phase~I delivers and evaluates this open-loop system and reports the comparison; Phase~II will close the loop with assessment-based verification of genuine learning. The selected models are realised in a working local-first web application.
+
+\newpage
+\tableofcontents
+\newpage
+\listoffigures
+\newpage
+\listoftables
+\newpage
+
+% ---- Chapters (modular; one file each under chapters/) ----
+\input{chapters/01-introduction}
+\input{chapters/02-literature-survey}
+\input{chapters/03-requirements}
+\input{chapters/04-methodology}
+\input{chapters/05-implementation}
+\input{chapters/06-results}
+\input{chapters/07-conclusion}
+
+\newpage
+% ---- Bibliography (kept in main; completed in Phase 2, D4/D11) ----
+\begin{thebibliography}{99}
+% Pillar-A bibliography, ordered by first citation in Ch2 (D4/D11).
+% Pillar-B references are added in Ch7 Future Work only (Phase 8).
+
+\bibitem{chen2024} Chen, et al., ``A Hierarchical Bayesian Model of Adaptive Teaching,'' \textit{Cognitive Science}, 2024.
+
+\bibitem{zanellati2024} Zanellati, A., et al., ``Hybrid Models for Knowledge Tracing: A Systematic Review,'' \textit{IEEE Transactions on Learning Technologies}, 2024.
+
+\bibitem{zambrano2024} Zambrano, A.~F., et al., ``Investigating Algorithmic Bias in Bayesian Knowledge Tracing,'' \textit{Proc. Learning Analytics and Knowledge (LAK)}, ACM, 2024.
+
+\bibitem{mai2025} Mai, N.~T., Cao, W., Liu, W., ``Interpretable Knowledge Tracing via Transformer--Bayesian Hybrid Networks,'' \textit{Applied Sciences}, doi:10.3390/app15179605, 2025.
+
+\bibitem{saqr2026} Saqr, M., et al., ``Early Warning Signals Before Dropping Out: Critical Slowing Down Indicators,'' \textit{Proc. Learning Analytics and Knowledge (LAK)}, ACM, 2026.
+
+\bibitem{qiao2026} Qiao, et al., ``Machine-Learning Approaches for Statistical Process Control: A Systematic Review,'' \textit{Entropy}, 2026.
+
+\bibitem{boca2024} Boca de Giuli, et al., ``Monitoring and Continual Learning of Dynamical Models,'' \textit{Proc. European Control Conference (ECC)}, IEEE, 2024.
+
+\bibitem{cheng2024} Cheng, J., Yang, Z.-Q., Cao, J., ``Modeling Behavior Change for Multi-model At-Risk Students Early Prediction,'' \textit{Proc. International Symposium on Educational Technology (ISET)}, IEEE, doi:10.1109/iset61814.2024.00020, 2024.
+
+\bibitem{perezsuay2024} P\'erez-Suay, A., et al., ``Predicting Student Performance from Moodle Logs with Gaussian Processes,'' \textit{IEEE-RITA}, 2024.
+
+\bibitem{chenyao2025} Chen, and Yao, ``Predicting Academic Achievement with Black-Hole-Optimized Gaussian Process Regression,'' \textit{Scientific Reports}, 2025.
+
+\bibitem{lin2024} Lin, et al., ``Scaling Gaussian Processes for Learning-Curve Prediction with Latent Kronecker Structure,'' arXiv preprint, 2024.
+
+\bibitem{huang2025} Huang, K., Wang, C., ``A Gaussian Process Classifier Integrating Meta-Heuristic Optimisers to Predict Student Performance,'' \textit{International Journal of Information and Management Sciences}, doi:10.1504/ijims.2025.149393, 2025.
+
+\bibitem{kayande2025} Kayande, D., Kukreja, S., ``An Integrated Multi-Modal Machine-Learning Framework for Real-Time Student Engagement Evaluation,'' \textit{MethodsX}, doi:10.1016/j.mex.2025.103588, 2025.
+
+\bibitem{islam2024} Islam, M., et al., ``Predicting Student Performance and Optimizing Study Schedule using Deep Learning and Dynamic Programming,'' \textit{Proc. International Conference on Computer and Information Technology (ICCIT)}, IEEE, 2024.
+
+\bibitem{fabregar2025} Fabregar, and Amorado, ``A Study Plan Recommender Based on a Greedy Algorithm,'' \textit{Proc. International Conference on Electrical Engineering and Informatics (EECSI)}, IEEE, 2025.
+
+\bibitem{pagano2026} Pagano, et al., ``Efficiency of Adaptive Learning Paths,'' \textit{Interactive Technology and Smart Education}, 2026.
+
+\bibitem{liu2025} Liu, X., Li, X., Chen, J., ``Adaptive Learning Path Planning System Based on Knowledge Graph and AI Integration,'' \textit{Proc. International Conference on Educational Technology (ICET)}, IEEE, doi:10.1109/icet67421.2025.11380560, 2025.
+
+\bibitem{alhazbi2024} Alhazbi, S., et al., ``Using Learning Analytics to Measure Self-Regulated Learning: A Systematic Review,'' \textit{Journal of Computer Assisted Learning}, 2024.
+
+\bibitem{debarba2025} de Barba, P.~G., Oliveira, E.~A., English, N., ``Development and Validation of a Learning Analytics Rubric for Self-Regulated Learning,'' \textit{Educational Technology Research and Development}, doi:10.1007/s11423-025-10521-x, 2025.
+
+\bibitem{uzun2025} Uzun, Y., Suraworachet, W., Zhou, Q., ``Engagement with Analytics Feedback and Its Relationship to Self-Regulated Learning Competence and Course Performance,'' \textit{International Journal of Educational Technology in Higher Education}, doi:10.1186/s41239-025-00515-3, 2025.
+
+\bibitem{butt2025} Butt, A.~U.~R., Ali, H., Asif, M., ``Enhancing Student Management Through Hybrid Machine Learning and Rough Set Models,'' \textit{IEEE Access}, doi:10.1109/access.2025.3565585, 2025.
+
+% --- Pillar-B references (Phase II; cited in Chapter 7 Future Work only) ---
+\bibitem{clst2024} ``CLST: Cold-Start Mitigation in Knowledge Tracing by Aligning a Generative Language Model as a Students' Knowledge Tracer,'' arXiv:2406.10296, 2024.
+
+\bibitem{maml2026} ``MAML-KT: Addressing the Cold-Start Problem in Knowledge Tracing for New Students via Few-Shot Model-Agnostic Meta-Learning,'' arXiv:2603.00137, 2026.
+
+\bibitem{itemgen2024} ``Automatic Item Generation in Various STEM Subjects Using Large Language Model Prompting,'' \textit{Computers and Education: Artificial Intelligence}, doi:10.1016/j.caeai.2024.100344, 2024.
+
+\bibitem{lecturequiz2026} ``Self-hosted Lecture-to-Quiz: Local LLM MCQ Generation with Deterministic Quality Control,'' arXiv:2603.08729, 2026.
+
+\bibitem{kctag2024} ``Automated Generation and Tagging of Knowledge Components from Multiple-Choice Questions,'' doi:10.1145/3657604.3662030, 2024.
+
+\bibitem{llmgrade2024} ``Automatic Grading of Short Answers Using Large Language Models in Software Engineering Courses,'' \textit{Proc. EDUCON}, IEEE, doi:10.1109/educon60312.2024.10578839, 2024.
+
+\bibitem{gaming2026} ``Understanding Gaming the System by Analysing Self-Regulated Learning in Think-Aloud Protocols,'' doi:10.1145/3785022.3785025, 2026.
+
+\bibitem{conceptkt2026} ``Personalised Forgetting Mechanism with Concept-Driven Knowledge Tracing,'' doi:10.1145/3810940, 2026.
+
+\bibitem{spaced2025} ``Personalised Language Learning Using Spaced Repetition Scheduling,'' doi:10.1007/978-3-031-98459-4\_19, 2025.
+
+\end{thebibliography}
+\end{document}

@@ -1,318 +1,112 @@
 # Study Tracker Web
 
-## Overview
+## Purpose
 
-A mobile-first responsive web app for self-directed learners. The app mirrors the user's discipline — quietly, respectfully — without enforcing it.
+This repository contains a mobile-first study planning product and its supporting research workspace.
+The product combines an Astro marketing site, a React application mounted at `/study`, and a Python Intelligence Service.
 
-**PRD:** [`prd/PRD-study-tracker-web.md`](prd/PRD-study-tracker-web.md)
-**Issues:** [`issues/`](issues/)
+## Start Here
 
-## Architecture
+Before planning, editing, reviewing, or running project workflows:
 
-```
-study-planner-web/
-├── pnpm-workspace.yaml          # workspace: apps/* + packages/*
-├── package.json                  # root scripts + devDeps
-├── apps/
-│   ├── marketing/                # Astro static site (apex domain)
-│   │   ├── astro.config.mjs
-│   │   ├── vercel.json          # rewrites /study/* → React app
-│   │   └── src/
-│   │       ├── layouts/
-│   │       └── pages/
-│   └── app/                      # Vite + React 19 SPA (/study/*)
-│       ├── vite.config.ts        # base: '/study/'
-│       ├── vercel.json           # SPA rewrite
-│       └── src/
-│           ├── main.tsx
-│           ├── App.tsx           # BrowserRouter basename="/study"
-│           ├── pages/
-│           └── components/
-└── packages/
-    └── design-tokens/            # @study-tracker/design-tokens
-        └── src/
-            ├── tokens.css       # CSS custom properties
-            ├── components.css   # Primitive component classes
-            ├── global.css      # Reset, typography, fonts
-            └── index.ts
-```
+1. Read [`.work/STATUS.md`](.work/STATUS.md) for the current project state and active work.
+2. Read [`.agents/rules/README.agents.md`](.agents/rules/README.agents.md), then read every rule selected by its index for the task.
+3. Read the relevant contract under [`.work/specs/`](.work/specs/) and any active plan under [`.work/plans/active/`](.work/plans/active/).
+4. Inspect the live implementation and tests before relying on architecture summaries or prior-session notes.
+5. Check `git status --short` and preserve unrelated worktree changes.
 
-**Two deployments under one apex domain:**
-- Marketing site → Vercel project 1 (Astro) → serves `studytracker.app/*`
-- App → Vercel project 2 (Vite) → serves `studytracker.app/study/*`
-- Routing: Marketing's `vercel.json` rewrites `/study/*` to React app's URL
+The live checkout is the source of truth.
+If a rule or planning document conflicts with the code, verify the behavior and record the discrepancy instead of guessing.
 
-## Tech Stack
+## Project-Local Agent Resources
 
-| Category | Version |
+Use only the repository-local rules and skills for work in this checkout:
+
+- Rules: [`.agents/rules/`](.agents/rules/)
+- Skills: [`.agents/skills/`](.agents/skills/)
+
+When a skill is named or triggered, read `.agents/skills/<skill>/SKILL.md` and follow that local copy.
+Do not use `.opencode/`, `.codex/`, `.claude/`, plugin-cache, user-home, or sibling-checkout copies unless the user explicitly requests an external fallback.
+Use `$add-project-rule` for any addition, update, rename, split, or reorganization under `.agents/rules/`.
+
+## Repository Map
+
+| Path | Responsibility |
 |---|---|
-| Package Manager | pnpm 10 |
-| Static Site | Astro 4 |
-| Build Tool | Vite 5 |
-| UI Framework | React 19 |
-| Language | TypeScript 5.4 |
-| Auth Backend | Supabase |
-| E2E Testing | Playwright |
-| Unit Testing | Vitest |
-| Deployment | Vercel |
-| Design System | Marginalia (custom) |
+| `apps/marketing/` | Astro marketing site served at the apex domain. |
+| `apps/app/` | Vite and React application mounted under `/study`. |
+| `services/intelligence/` | FastAPI service for calibration, projection, and roadmap intelligence. |
+| `packages/design-tokens/` | Shared Marginalia design tokens and component primitives. |
+| `packages/progress/` | TypeScript progress and projection logic. |
+| `packages/roadmap-engine/` | TypeScript roadmap and booking engine. |
+| `packages/py-progress/` | Python progress-engine counterpart. |
+| `packages/py-roadmap-engine/` | Python roadmap-engine counterpart. |
+| `e2e/` | Playwright configuration, browser tests, and visual evidence. |
+| `research/` | Research code, datasets, results, and durable research documentation. |
+| `college/mydeliverables/` | Dissertation reports, papers, decks, and submission artifacts. |
+| `.work/` | Tracked project state, specs, plans, verification logs, prompts, and handovers. |
 
-## Directory Map
+For deeper structure, use [`design/architecture.md`](design/architecture.md), [`design/algo/ROADMAP_ENGINE_GUIDE.md`](design/algo/ROADMAP_ENGINE_GUIDE.md), and the live package entrypoints.
 
-| Path | Purpose |
-|---|---|
-| `apps/marketing/` | Astro marketing site (homepage, about, privacy, terms) |
-| `apps/app/` | Vite + React 19 SPA (auth-protected at `/study/`) |
-| `apps/app/src/auth/` | Auth deep module (AuthGate with DI), AuthProvider, ProtectedRoute, useAuth |
-| `apps/app/src/lib/supabase.ts` | Supabase client singleton |
-| `apps/app/src/components/` | Shared components (Field.tsx) |
-| `apps/app/src/events/` | EventStore (Dexie-backed per-user DB), ProgressEngine, EventStoreProvider |
-| `apps/app/src/pages/` | Route pages (SignIn, SignUp, Home, Log, AuthConfirmed, ResetPassword) |
-| `apps/app/src/test/` | Vitest test setup |
-| `apps/app/.env.example` | Required env vars template |
-| `packages/design-tokens/` | Shared design tokens package |
-| `e2e/` | Playwright smoke tests |
-| `prd/` | Product Requirements Document |
-| `issues/` | Implementation issue tickets (vertical slices) |
-| `design/` | Marginalia design system HTML document |
-| `DEPLOYMENT.md` | Vercel + DNS setup guide |
+## Working Contracts
 
-## Project Rules
+The main product contract is [`.work/specs/prd/PRD-study-tracker-web.md`](.work/specs/prd/PRD-study-tracker-web.md).
+Vertical-slice issue contracts live under [`.work/specs/issues/`](.work/specs/issues/).
+Active implementation plans and their verification logs live under [`.work/plans/active/`](.work/plans/active/).
+The Marginalia visual reference is [`design/marginalia.html`](design/marginalia.html).
+Application test credentials are stored in `.work/specs/test-login-cred.txt` and must not be copied into source, tests, logs, or responses.
 
-Patterns, rules, and learnings from past development sessions. **Always check these before making changes** to avoid repeating mistakes.
-
-See [`.opencode/rules/`](.opencode/rules/):
-
-| Rule File | Prevents |
-|---|---|
-| [`css-workspace-packages.md`](.opencode/rules/css-workspace-packages.md) | CSS imports failing to resolve in workspace packages |
-| [`playwright-config.md`](.opencode/rules/playwright-config.md) | E2E tests failing due to config issues |
-| [`astro-selectors.md`](.opencode/rules/astro-selectors.md) | Selector strict mode violations in Astro dev mode |
-| [`react-router-v7-basename.md`](.opencode/rules/react-router-v7-basename.md) | Double basename prefixes in navigation |
-| [`auth-testing-fakes.md`](.opencode/rules/auth-testing-fakes.md) | Brittle Supabase mock tests |
-| [`form-design-spacing.md`](.opencode/rules/form-design-spacing.md) | Collapsed form field groups |
-| [`auth-init-timeout.md`](.opencode/rules/auth-init-timeout.md) | React hanging on slow auth init |
-| [`eventstore-per-user-db.md`](.opencode/rules/eventstore-per-user-db.md) | Cross-account data bleed and data loss in shared IndexedDB |
-| [`dexie-test-setup.md`](.opencode/rules/dexie-test-setup.md) | Dexie tests failing due to fake-indexeddb or stale DB state |
-
-## Commands
+## Common Commands
 
 ```bash
-# Development
-pnpm dev              # Both apps in parallel (Astro :4321, Vite :5173)
-pnpm dev:marketing   # Astro only → http://localhost:4321
-pnpm dev:app         # Vite only → http://localhost:5173/study/
+# Managed product runtime
+./full-app status full
+./full-app start full
+./full-app stop full
 
-# Build
-pnpm build              # Both apps
-pnpm build:marketing    # Astro → apps/marketing/dist
-pnpm build:app          # Vite → apps/app/dist
+# Frontend development
+pnpm dev
+pnpm dev:marketing
+pnpm dev:app
+pnpm dev:intelligence
 
-# Testing
-pnpm test:e2e           # Run Playwright smoke tests
-pnpm --filter app test           # Run Vitest unit tests
-pnpm --filter app test:watch     # Run Vitest in watch mode
-pnpm lint              # Lint all packages
-pnpm typecheck          # TypeScript check all packages
+# Verification
+pnpm --filter app test
+uv run pytest
+pnpm typecheck
+pnpm lint
+pnpm test:e2e
+pnpm build
 ```
 
-## Routing
+Use the applicable runtime, Playwright, registry, Docker, and document rules before running sensitive workflows.
+Run the smallest relevant check first, then broaden verification in proportion to the change.
+For UI changes, verify the real browser flow at relevant desktop and mobile viewports and inspect the rendered result, console, and layout behavior.
 
-### Vercel (Production)
+## Stable Architecture Boundaries
 
-Marketing `vercel.json`:
-```json
-{
-  "rewrites": [
-    { "source": "/study/:path*", "destination": "https://study-tracker-app.vercel.app/study/:path*" }
-  ]
-}
-```
+- Keep Supabase access behind the existing dependency-injected auth and sync boundaries.
+- Keep browser persistence local-first and isolated per signed-in user.
+- Treat the event log as the durable product history and preserve backward compatibility for existing events.
+- Keep roadmap and progress algorithms in their packages instead of duplicating them in page components.
+- Keep the React Router basename as a deployment concern and write application routes without the `/study` prefix.
+- Keep shared visual primitives in `packages/design-tokens/` and preserve the Marginalia design language.
+- Keep TypeScript and Python engine behavior aligned when a contract is implemented in both stacks.
 
-### Local Development
+Read the indexed rule files before changing any of these boundaries.
 
-- Marketing: `http://localhost:4321`
-- App: `http://localhost:5173/study/`
+## `.work/` Safety and Lifecycle
 
-### React Router
+`.work/` is tracked intentionally.
+Never add `.work/` to `.gitignore`.
+Never run `git clean -fdx` at the repository root.
 
-```tsx
-<BrowserRouter basename="/study">
-  <Routes>
-    <Route path="/" element={<Home />} />
-  </Routes>
-</BrowserRouter>
-```
-
-Vite `vite.config.ts`:
-```ts
-base: '/study/'
-```
-
-## Auth Architecture
-
-### Overview
-
-The auth layer uses a dependency-injected deep module pattern to keep Supabase logic isolated and testable.
-
-| File | Purpose |
-|---|---|
-| `apps/app/src/auth/AuthGate.ts` | Deep module wrapping Supabase Auth. Accepts client via constructor for DI. |
-| `apps/app/src/auth/AuthGate.test.ts` | 6 unit tests using hand-written fake client |
-| `apps/app/src/auth/AuthProvider.tsx` | React context with 500ms init timeout (prevents React hang) |
-| `apps/app/src/auth/ProtectedRoute.tsx` | Auth guard — redirects unauthenticated to `/sign-in` |
-| `apps/app/src/auth/useAuth.ts` | Hook exposing `{ user, loading, signIn, signUp, signOut }` |
-
-### Routes
-
-| Path | Component | Auth Required |
-|---|---|---|
-| `/sign-in` | SignIn | No (redirects if authenticated) |
-| `/sign-up` | SignUp | No (redirects if authenticated) |
-| `/auth-confirmed` | AuthConfirmed | No |
-| `/reset-password` | ResetPassword | No (redirects if authenticated) |
-| `/home` | Home | Yes (ProtectedRoute) |
-| `/log` | Log | Yes (ProtectedRoute) |
-| `/` | RootRedirect | Yes (auto-redirects to /home or /sign-in) |
-
-### DI Pattern
-
-```ts
-// AuthGate accepts client via constructor — enables hand-written fakes in tests
-class AuthGate {
-  constructor(private supabase: SupabaseClient) {}
-  async signIn(email: string, password: string) { ... }
-}
-```
-
-## EventStore Architecture
-
-### Overview
-
-Local-first event storage using Dexie (IndexedDB). Each signed-in user gets their own isolated database — no shared tables, no cross-account bleed, no wipe-on-switch logic.
-
-| File | Purpose |
-|---|---|
-| `apps/app/src/events/EventStore.ts` | Deep module: append, getAll, liveQuery, wipe, close. Accepts Dexie DB via constructor for DI. |
-| `apps/app/src/events/EventStoreProvider.tsx` | React context that creates a per-user EventStore (`StudyTracker_<userId>`). Tracks `ready` state. |
-| `apps/app/src/events/useEventStore.ts` | Hook returning the current user's EventStore. Throws if called without an active user. |
-| `apps/app/src/events/ProgressEngine.ts` | Pure function: `totalMinutesLogged(events)` aggregates session durations. |
-
-### Per-user database isolation
-
-```tsx
-// EventStoreProvider creates a new Dexie DB for each user
-function createEventStore(userId: string): EventStore {
-  const db = new Dexie(`StudyTracker_${userId}`);
-  db.version(1).stores({
-    events: '++id, kind, createdAt'
-  });
-  return new EventStore(db);
-}
-```
-
-When `userId` changes (sign out → sign in as different user), the provider closes the old DB connection and creates a new one. Returning users find their previous data intact.
-
-### Event shape
-
-```ts
-interface Event {
-  id?: number;
-  kind: string;          // e.g., 'SessionLogged'
-  payload: Record<string, unknown>;
-  createdAt: string;     // ISO 8601
-}
-```
-
-### Wiring in App.tsx
-
-```tsx
-// App.tsx — EventStoreRouter reads user from AuthContext and passes userId to provider
-function EventStoreRouter({ children }) {
-  const { user } = useAuthContext();
-  return (
-    <EventStoreProvider userId={user?.id ?? null}>
-      {children}
-    </EventStoreProvider>
-  );
-}
-```
-
-AuthProvider has **zero knowledge** of EventStore. No imports, no wipe calls, no localStorage tracking.
-
-## Environment Variables
-
-**Location:** `apps/app/.env.local`
-
-| Variable | Purpose |
-|---|---|
-| `SUPABASE_URL` | Supabase project URL (e.g., `https://xxxxx.supabase.co`) |
-| `SUPABASE_PUBLISHABLE_KEY` | Supabase anon/public key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (for admin operations, E2E tests only) |
-
-Template provided in `apps/app/.env.example`.
-
-## Design System: Marginalia
-
-Tokens live in `packages/design-tokens/src/`:
-
-| File | Contents |
-|---|---|
-| `tokens.css` | Raw colors (`--paper`, `--ink`), semantic tokens (`--text-primary`), spacing, radii, elevation, motion, z-index |
-| `components.css` | Primitive classes: `.btn`, `.btn-accent`, `.card`, `.card-elevated`, `.tag`, `.tag-moss`, `.field`, `.progress`, `.stat` |
-| `global.css` | Font imports (Fraunces, Inter Tight, JetBrains Mono), reset, named type roles (`.t-display-1`, `.t-body`, `.t-mono`) |
-
-**Usage:**
-
-```tsx
-// React
-import '@study-tracker/design-tokens/global.css';
-import '@study-tracker/design-tokens/tokens.css';
-import '@study-tracker/design-tokens/components.css';
-```
-
-```astro
-<!-- Astro -->
-import '@study-tracker/design-tokens/global.css';
-import '@study-tracker/design-tokens/tokens.css';
-import '@study-tracker/design-tokens/components.css';
-```
-
-## Testing
-
-**E2E Tests:**
-
-Current coverage (22 tests):
-- Marketing: homepage loads with design tokens, components render, privacy/terms pages load
-- React: sign-in/sign-up/home/log/auth-confirmed/reset-password pages load and render correctly
-- Auth: unauthenticated users redirected to sign-in
-- Session log lifecycle: sign in → log session → see on Home → refresh → persists → sign out → sign in as different user → not visible
-
-**Unit Tests:**
-
-| File | Tests | Coverage |
-|---|---|---|
-| `auth/AuthGate.test.ts` | 6 | sign-in lifecycle, sign-out lifecycle, route protection, unconfirmed-email rejection |
-| `events/EventStore.test.ts` | 5 | append, getAll, liveQuery, wipe, append+getAll round-trip |
-| `events/ProgressEngine.test.ts` | 4 | total time: empty, single, multiple, ignores non-session events |
-
-**Run tests:**
-```bash
-pnpm test:e2e           # Run Playwright smoke + session-log tests
-pnpm --filter app test  # Run Vitest unit tests
-```
+Follow [`.work/README.md`](.work/README.md) for the planner, developer, verifier, and archive workflow.
+When work changes state, update the affected status row and the active plan's `VERIFICATION.md` in the same task.
+Keep durable specifications separate from volatile execution state.
 
 ## Deployment
 
-See [`DEPLOYMENT.md`](DEPLOYMENT.md) for:
-1. Creating two Vercel projects
-2. Configuring path-based routing
-3. Setting up DNS (apex domain → Marketing)
-4. Environment variables for future slices (Supabase)
-
-## Related Documentation
-
-- [`DEPLOYMENT.md`](DEPLOYMENT.md) — Vercel + DNS setup
-- [`prd/PRD-study-tracker-web.md`](prd/PRD-study-tracker-web.md) — Full PRD with 58 user stories
-- [`issues/`](issues/) — 17 implementation issues (vertical slices)
-- [`design/marginalia.html`](design/marginalia.html) — Visual design system documentation
+The marketing site and React app deploy separately under one apex domain.
+The marketing deployment rewrites `/study/*` to the app deployment.
+Use [`DEPLOYMENT.md`](DEPLOYMENT.md) as the deployment contract and verify live configuration before changing routing or environment settings.

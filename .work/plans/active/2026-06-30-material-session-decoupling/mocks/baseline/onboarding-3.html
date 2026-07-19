@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline · Onboarding page 3 (current)</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/onboarding.css" />
+<link rel="stylesheet" href="../css/swap.css" />
+<style>
+  /* Mock-only: force the desktop "fused" breakpoint so the page renders the
+     two-column form+preview even in a narrow embed. Mirrors the @media (min-width:1024px)
+     rules in onboarding.css applied to [data-shape="fused"]. No new visual styling. */
+  body { min-height: 100vh; }
+  .mock-banner {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed);
+    border-bottom: 1px solid var(--border-subtle); padding: 6px 16px; text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="mock-banner">Baseline (current) · onboarding /onboarding/3 · desktop fused layout</div>
+
+<div class="onboarding-shell" data-shape="fused">
+
+  <!-- Step dots -->
+  <div class="onboarding-stepdots-wrap">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:22px;height:8px;border-radius:999px;background:var(--ink);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+    </div>
+    <span class="t-mono onboarding-desktop-caption">Step 3 of 4 · Your materials</span>
+  </div>
+
+  <div class="onboarding-content">
+    <div class="onboarding-step onboarding-materials-grid">
+
+      <!-- LEFT: materials form -->
+      <div class="onboarding-materials-form">
+        <h1 class="onboarding-h1">What are you <em>studying</em>?</h1>
+        <p class="onboarding-lead">Paste links, or add things by hand.</p>
+
+        <div class="field-group">
+          <label class="field-label">Paste a URL</label>
+          <input class="field" type="url" placeholder="youtube.com/… or any article link" />
+          <div class="field-helper">We'll fetch the title and length for you.</div>
+        </div>
+
+        <button class="btn btn-secondary btn-sm onboarding-add-manually-btn">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add manually
+        </button>
+
+        <div class="mono-caps onboarding-materials-count">3 added · ~6h 10m</div>
+
+        <div class="material-list">
+          <!-- Material row: YouTube -->
+          <div class="material-row">
+            <div class="material-icon yt">YT</div>
+            <div class="material-body">
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <input class="field" type="text" value="Linear Algebra — Lecture 4" />
+                <div style="display:flex; gap:8px;">
+                  <div class="field-with-suffix" style="flex:1;">
+                    <input class="field" type="number" value="50" />
+                    <span class="field-with-suffix-text">min</span>
+                  </div>
+                  <select class="field" style="flex:1;">
+                    <option>Main reading</option><option>Foundations</option><option>Practice</option>
+                  </select>
+                </div>
+              </div>
+              <div class="material-meta" style="margin-top:6px;">~50min · Main reading</div>
+            </div>
+            <button class="material-row-action" title="Remove material">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- Material row: Article -->
+          <div class="material-row">
+            <div class="material-icon art">ART</div>
+            <div class="material-body">
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <input class="field" type="text" value="Gilbert Strang — Notes on Eigenvalues" />
+                <div style="display:flex; gap:8px;">
+                  <div class="field-with-suffix" style="flex:1;">
+                    <input class="field" type="number" value="35" />
+                    <span class="field-with-suffix-text">min</span>
+                  </div>
+                  <select class="field" style="flex:1;">
+                    <option selected>Foundations</option><option>Main reading</option><option>Practice</option>
+                  </select>
+                </div>
+              </div>
+              <div class="material-meta" style="margin-top:6px;">~35min · Foundations</div>
+            </div>
+            <button class="material-row-action" title="Remove material">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- Material row: Manual / practice -->
+          <div class="material-row">
+            <div class="material-icon bk">BK</div>
+            <div class="material-body">
+              <div style="display:flex; flex-direction:column; gap:10px;">
+                <input class="field" type="text" value="Problem set 4 — practice" />
+                <div style="display:flex; gap:8px;">
+                  <div class="field-with-suffix" style="flex:1;">
+                    <input class="field" type="number" value="45" />
+                    <span class="field-with-suffix-text">min</span>
+                  </div>
+                  <select class="field" style="flex:1;">
+                    <option selected>Practice</option><option>Main reading</option><option>Foundations</option>
+                  </select>
+                </div>
+              </div>
+              <div class="material-meta" style="margin-top:6px;">~45min · Practice</div>
+            </div>
+            <button class="material-row-action" title="Remove material">
+              <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: live preview (the day-by-day packer — what we're retiring) -->
+      <div class="onboarding-materials-preview-slot">
+        <div class="mono-caps onboarding-materials-preview-label">Live preview · updates as you add</div>
+
+        <div class="onboarding-step onboarding-preview">
+          <div class="onboarding-preview-stats onboarding-preview-desktop-only">
+            <div class="stat"><div class="stat-value md">Jul 21</div><div class="stat-label">target finish</div></div>
+            <div class="stat"><div class="stat-value md">3</div><div class="stat-label">weeks</div></div>
+            <div class="stat"><div class="stat-value md">6h</div><div class="stat-label">per week</div></div>
+          </div>
+
+          <div class="schedule-card">
+            <div class="sched-week">
+              <div class="sched-week-label"><span>Week 1 · 2026-06-30</span><span>3 sessions · 2h 10m</span></div>
+
+              <div class="sched-row">
+                <span class="sched-day">Mon</span>
+                <span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Main reading</span>Linear Algebra — Lecture 4</span>
+                <span class="sched-dur">50m</span>
+              </div>
+
+              <div class="sched-row">
+                <span class="sched-day">Wed</span>
+                <span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Foundations</span>Strang — Eigenvalues</span>
+                <span class="sched-dur">35m</span>
+              </div>
+
+              <!-- A "tie" row: the packer can't decide which material lands here -->
+              <div class="sched-row">
+                <span class="sched-day">Fri</span>
+                <div style="flex:1;">
+                  <div class="mono-caps" style="margin-bottom:4px; color:var(--terracotta);">Pick one</div>
+                  <div class="chip-row">
+                    <button class="chip">Review Problem set 4</button>
+                    <button class="chip">Review Linear Algebra L4</button>
+                    <button class="chip">Rest day</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sched-week">
+              <div class="sched-week-label"><span>Week 2 · 2026-07-07</span><span>2 sessions · 1h 20m</span></div>
+              <div class="sched-row">
+                <span class="sched-day">Mon</span>
+                <span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Practice</span>Problem set 4 — practice</span>
+                <span class="sched-dur">45m</span>
+              </div>
+              <div class="sched-row">
+                <span class="sched-day">Thu</span>
+                <span class="sched-title" style="color:var(--text-tertiary); font-style:italic;">Rest day</span>
+                <span class="sched-dur"></span>
+              </div>
+            </div>
+          </div>
+
+          <div class="onboarding-actions onboarding-preview-actions">
+            <button class="btn btn-primary btn-lg onboarding-continue-btn">
+              Looks good
+              <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

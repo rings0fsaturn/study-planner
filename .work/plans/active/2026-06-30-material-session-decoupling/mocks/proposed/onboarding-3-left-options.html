@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Onboarding page 3 — left panel (materials) organisation options</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/onboarding.css" />
+<style>
+  body { min-height:100vh; }
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .cmp { max-width: 1100px; margin: 0 auto; padding: 28px 24px 80px; display:grid; grid-template-columns: 1fr 1fr; gap: 40px; }
+  .cmp h2 { font-family: var(--font-display); font-weight:500; font-size:18px; margin-bottom:4px; }
+  .cmp .sub { color: var(--text-secondary); font-size:13px; margin-bottom:16px; }
+  @media (max-width: 900px){ .cmp { grid-template-columns: 1fr; } }
+
+  /* shared add bar */
+  .add-bar { display:flex; gap:8px; margin-bottom:14px; }
+  .add-bar .field { flex:1; }
+
+  /* ---- Compact, expand-on-edit row (used by both options) ---- */
+  .mat2-list { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-md); overflow:hidden; }
+  .mat2 { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition: background var(--duration-1) var(--ease-out); }
+  .mat2 + .mat2, .mgroup-body .mat2 + .mat2 { border-top:1px solid var(--border-subtle); }
+  .mat2:hover { background: var(--surface-recessed); }
+  .mat2-body { flex:1; min-width:0; }
+  .mat2-body .material-title { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mat2-body .material-meta { margin-top:2px; }
+  .mat2 .grip { color: var(--text-tertiary); cursor:grab; font-size:14px; line-height:1; }
+  .mat2 .chev { transition: transform var(--duration-2) var(--ease-out); color: var(--text-tertiary); flex-shrink:0; }
+  .mat2.open .chev { transform: rotate(180deg); }
+  .mat2-edit { display:none; padding: 2px 12px 14px 54px; background: var(--surface-recessed); }
+  .mat2.open + .mat2-edit { display:block; }
+  .mat2-edit .row { display:flex; gap:8px; margin-top:8px; }
+
+  /* ---- Grouped sections (option 2) ---- */
+  .mgroup { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-md); overflow:hidden; margin-bottom:10px; }
+  .mgroup-head { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; background: var(--surface-card); }
+  .mgroup-head:hover { background: var(--surface-recessed); }
+  .mgroup-head .ttl { font-weight:500; font-size:14px; flex:1; }
+  .mgroup-head .chev { transition: transform var(--duration-2) var(--ease-out); color: var(--text-tertiary); }
+  .mgroup.collapsed .mgroup-head .chev { transform: rotate(-90deg); }
+  .mgroup.collapsed .mgroup-body { display:none; }
+  .mgroup-body .mat2-list { border:0; border-radius:0; border-top:1px solid var(--border-subtle); }
+  .count-pill { font-family: var(--font-mono); font-size:10px; letter-spacing:.06em; padding:1px 7px; border-radius:999px; background: var(--surface-recessed); color: var(--text-secondary); }
+
+  /* playlist nested videos */
+  .pl-videos { padding: 4px 12px 10px 54px; background: var(--surface-recessed); display:none; }
+  .mat2.open + .pl-videos { display:block; }
+  .pl-video { display:flex; align-items:center; gap:8px; padding:5px 0; font-size:13px; color: var(--text-secondary); }
+  .pl-video input { margin:0; }
+  .scrollcap { max-height: 360px; overflow:auto; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Onboarding /3 LEFT panel — two ways to organise many materials (videos · playlists · links · manual)</div>
+
+<div class="cmp">
+
+  <!-- ============ OPTION 1: Compact accordion list ============ -->
+  <div>
+    <h2>Option 1 — Compact list, expand to edit</h2>
+    <div class="sub">One slim row each (icon · title · length · role). Click a row to expand its fields. Incomplete rows auto-open. Drag the grip to reorder. Long lists stay short; the panel scrolls past ~8.</div>
+
+    <div class="add-bar">
+      <input class="field" type="url" placeholder="Paste a YouTube / playlist / article link" />
+      <button class="btn btn-secondary btn-sm">+ Manual</button>
+    </div>
+    <div class="mono-caps" style="margin:0 0 8px;">8 materials · ~7h 25m</div>
+
+    <div class="mat2-list scrollcap">
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">Linear Algebra — Lecture 4</div><div class="material-meta">~50m · Main reading</div></div><span class="tag tag-sm">Main</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"><input class="field" type="text" value="Linear Algebra — Lecture 4"/><div class="row"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="50"/><span class="field-with-suffix-text">min</span></div><select class="field" style="flex:1;"><option>Main reading</option><option>Foundations</option><option>Practice</option></select></div></div>
+
+      <div class="mat2 open"><span class="grip">⋮⋮</span><div class="material-icon pl">PL</div><div class="mat2-body"><div class="material-title">MIT 18.06 — full playlist</div><div class="material-meta">12 videos · ~3h 10m · Main reading</div></div><span class="tag tag-sm">Main</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="pl-videos">
+        <div class="pl-video"><input type="checkbox" checked> Lec 1 — Geometry of equations · 16m</div>
+        <div class="pl-video"><input type="checkbox" checked> Lec 2 — Elimination with matrices · 18m</div>
+        <div class="pl-video"><input type="checkbox" checked> Lec 3 — Multiplication & inverse · 21m</div>
+        <div class="pl-video" style="color:var(--text-tertiary);">+ 9 more · all selected</div>
+      </div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon art">ART</div><div class="mat2-body"><div class="material-title">Strang — Notes on Eigenvalues</div><div class="material-meta">~35m · Foundations</div></div><span class="tag tag-sm">Found.</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">3Blue1Brown — Change of basis</div><div class="material-meta">~12m · Foundations</div></div><span class="tag tag-sm">Found.</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon art">ART</div><div class="mat2-body"><div class="material-title">Wikipedia — Singular value decomposition</div><div class="material-meta">~20m · Foundations</div></div><span class="tag tag-sm">Found.</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon bk">BK</div><div class="mat2-body"><div class="material-title">Problem set 4 — practice</div><div class="material-meta">~45m · Practice</div></div><span class="tag tag-sm">Practice</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon bk">BK</div><div class="mat2-body"><div class="material-title">Problem set 5 — practice</div><div class="material-meta">~45m · Practice</div></div><span class="tag tag-sm">Practice</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+
+      <div class="mat2"><span class="grip">⋮⋮</span><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">Gilbert Strang — Final review lecture</div><div class="material-meta">~48m · Main reading</div></div><span class="tag tag-sm">Main</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+      <div class="mat2-edit"></div>
+    </div>
+  </div>
+
+  <!-- ============ OPTION 2: Grouped by type ============ -->
+  <div>
+    <h2>Option 2 — Grouped by type</h2>
+    <div class="sub">Materials bucket into collapsible sections — Videos, Playlists, Links &amp; articles, Manual — each with a count. Collapse the ones you're done with. Rows inside are the same compact expand-to-edit rows.</div>
+
+    <div class="add-bar">
+      <input class="field" type="url" placeholder="Paste a YouTube / playlist / article link" />
+      <button class="btn btn-secondary btn-sm">+ Manual</button>
+    </div>
+    <div class="mono-caps" style="margin:0 0 8px;">8 materials · ~7h 25m</div>
+
+    <div class="scrollcap">
+      <!-- Videos -->
+      <div class="mgroup">
+        <div class="mgroup-head"><div class="material-icon yt" style="width:24px;height:24px;">YT</div><span class="ttl">Videos</span><span class="count-pill">3 · 1h 50m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="mgroup-body"><div class="mat2-list">
+          <div class="mat2"><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">Linear Algebra — Lecture 4</div><div class="material-meta">~50m · Main reading</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+          <div class="mat2"><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">3Blue1Brown — Change of basis</div><div class="material-meta">~12m · Foundations</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+          <div class="mat2"><div class="material-icon yt">YT</div><div class="mat2-body"><div class="material-title">Gilbert Strang — Final review lecture</div><div class="material-meta">~48m · Main reading</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+        </div></div>
+      </div>
+
+      <!-- Playlists -->
+      <div class="mgroup">
+        <div class="mgroup-head"><div class="material-icon pl" style="width:24px;height:24px;">PL</div><span class="ttl">Playlists</span><span class="count-pill">1 · 3h 10m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="mgroup-body"><div class="mat2-list">
+          <div class="mat2"><div class="material-icon pl">PL</div><div class="mat2-body"><div class="material-title">MIT 18.06 — full playlist</div><div class="material-meta">12 videos · ~3h 10m</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="pl-videos"></div>
+        </div></div>
+      </div>
+
+      <!-- Links & articles -->
+      <div class="mgroup">
+        <div class="mgroup-head"><div class="material-icon art" style="width:24px;height:24px;">◆</div><span class="ttl">Links &amp; articles</span><span class="count-pill">2 · 55m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="mgroup-body"><div class="mat2-list">
+          <div class="mat2"><div class="material-icon art">ART</div><div class="mat2-body"><div class="material-title">Strang — Notes on Eigenvalues</div><div class="material-meta">~35m · Foundations</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+          <div class="mat2"><div class="material-icon art">ART</div><div class="mat2-body"><div class="material-title">Wikipedia — Singular value decomposition</div><div class="material-meta">~20m · Foundations</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+        </div></div>
+      </div>
+
+      <!-- Manual -->
+      <div class="mgroup collapsed">
+        <div class="mgroup-head"><div class="material-icon bk" style="width:24px;height:24px;">BK</div><span class="ttl">Manual</span><span class="count-pill">2 · 1h 30m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+        <div class="mgroup-body"><div class="mat2-list">
+          <div class="mat2"><div class="material-icon bk">BK</div><div class="mat2-body"><div class="material-title">Problem set 4 — practice</div><div class="material-meta">~45m · Practice</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+          <div class="mat2"><div class="material-icon bk">BK</div><div class="mat2-body"><div class="material-title">Problem set 5 — practice</div><div class="material-meta">~45m · Practice</div></div><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div class="mat2-edit"></div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Accordion: toggle a compact row open (its .mat2-edit / .pl-videos sibling reveals)
+  document.querySelectorAll('.mat2').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('input, select, button, .grip')) return;
+      row.classList.toggle('open');
+    });
+  });
+  // Group collapse
+  document.querySelectorAll('.mgroup-head').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+{
+  "fn": "generateRoadmap",
+  "materials": [
+    {
+      "id": "ddia",
+      "title": "DDIA",
+      "totalMinutes": 3000,
+      "role": "anchor",
+      "additionOrder": 0
+    }
+  ],
+  "weeks": 2,
+  "startDate": "2026-04-29",
+  "selectedStudyDays": [
+    "Mon",
+    "Wed"
+  ],
+  "weekdayHours": 1,
+  "weekendHours": 0
+}

@@ -1,0 +1,129 @@
+{
+  "fn": "analyzeTrend",
+  "sessions": [
+    {
+      "date": "2026-01-01",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-0"
+    },
+    {
+      "date": "2026-01-02",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    },
+    {
+      "date": "2026-01-03",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-2"
+    },
+    {
+      "date": "2026-01-04",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-3"
+    },
+    {
+      "date": "2026-01-05",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-4"
+    },
+    {
+      "date": "2026-01-06",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-5"
+    },
+    {
+      "date": "2026-01-07",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-6"
+    },
+    {
+      "date": "2026-01-08",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-7"
+    },
+    {
+      "date": "2026-01-09",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-8"
+    },
+    {
+      "date": "2026-01-10",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-9"
+    },
+    {
+      "date": "2026-01-11",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-10"
+    },
+    {
+      "date": "2026-01-12",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-11"
+    }
+  ],
+  "exceptionalIds": [],
+  "breakpoints": [
+    10
+  ]
+}

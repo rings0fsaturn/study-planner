@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Roadmap · Option B — directory panel below calendar</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .provisional { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--clay); }
+  .rm-eta { display:flex; gap:20px; align-items:center; background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding:16px 18px; }
+  .rm-eta .eta-finish { font-family: var(--font-display); font-weight:500; font-size:26px; color: var(--moss); line-height:1; }
+  .rm-eta .spark { flex:1; height:44px; }
+  .roadmap-bubble.rm-booked { background: var(--surface-card); border:1.4px solid var(--border-strong); color: var(--text-secondary); }
+  .roadmap-bubble.rm-booked.blank { border-style:dashed; color: var(--text-tertiary); }
+  .rm-add { margin-top:4px; width:100%; border:1px dashed var(--border-default); background:transparent; border-radius: var(--radius-sm); color: var(--text-tertiary); font-size:12px; padding:4px; cursor:pointer; opacity:0; transition:opacity .15s; }
+  .roadmap-day-in-month:hover .rm-add { opacity:1; }
+  /* collapsible directory panel */
+  .dir-panel { margin-top:18px; border:1px solid var(--border-subtle); border-radius: var(--radius-lg); background: var(--surface-card); overflow:hidden; }
+  .dir-head { display:flex; align-items:center; gap:8px; padding:12px 16px; cursor:pointer; }
+  .dir-head:hover { background: var(--surface-recessed); }
+  .dir-head .ttl { font-family: var(--font-display); font-weight:500; font-size:16px; flex:1; }
+  .dir-head .chev { transition: transform .2s; color: var(--text-tertiary); }
+  .dir-panel.collapsed .chev { transform: rotate(-90deg); }
+  .dir-panel.collapsed .dir-body { display:none; }
+  .dir-body { padding:8px 16px 16px; border-top:1px solid var(--border-subtle); }
+  .dir-row { display:flex; gap:12px; align-items:center; padding:12px 0; border-bottom:1px solid var(--border-subtle); }
+  .dir-row:last-child { border-bottom:0; }
+  .dir-prog { flex:1; min-width:0; }
+  .dir-title { font-weight:500; font-size:14px; margin-bottom:6px; }
+  .dir-bar { height:6px; border-radius:999px; background: var(--surface-recessed); overflow:hidden; }
+  .dir-bar > span { display:block; height:100%; background: var(--moss); }
+  .dir-meta { font-family: var(--font-mono); font-size:10px; letter-spacing:.06em; text-transform:uppercase; color: var(--text-tertiary); margin-top:4px; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Roadmap (chosen) — calendar + collapsible Materials panel · bookings vs activity · ETA provisional</div>
+
+<div class="roadmap-page">
+  <a class="roadmap-back-link" href="#">&larr; Roadmaps</a>
+
+  <header class="roadmap-header">
+    <div>
+      <div class="mono-caps">Active roadmap · 3 materials · finishes Jul 13</div>
+      <h1 class="roadmap-title">Active roadmap</h1>
+      <p class="roadmap-subtitle">Jul 1 to Jul 20, 2026 · 7 days buffer</p>
+    </div>
+    <section class="rm-eta" aria-label="Projected finish">
+      <div>
+        <div class="mono-caps" style="margin-bottom:4px;"><span class="provisional">estimate</span> · finish</div>
+        <div class="eta-finish">Jul 13</div>
+        <div class="mono-caps" style="color:var(--moss); margin-top:4px;">7 days early · 42% done</div>
+      </div>
+      <svg class="spark" viewBox="0 0 160 44" preserveAspectRatio="none" aria-hidden="true">
+        <polyline points="0,42 30,42 60,30 90,22 120,12 160,2" fill="none" stroke="var(--border-default)" stroke-width="1.5" stroke-dasharray="3 3"/>
+        <polyline points="0,42 30,40 60,32 90,26" fill="none" stroke="var(--moss)" stroke-width="2.5"/>
+      </svg>
+    </section>
+  </header>
+
+  <div class="roadmap-toolbar">
+    <div class="roadmap-month-nav">
+      <button class="roadmap-nav-icon" aria-label="Previous month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="roadmap-month-label">July 2026</div>
+      <button class="roadmap-nav-icon" aria-label="Next month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="btn btn-secondary roadmap-today-button">Today</button>
+    </div>
+    <div class="roadmap-legend">
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-done"></span>Done</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-pending"></span>Booked</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-skipped"></span>Missed</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-unplanned"></span>Unplanned</span>
+    </div>
+  </div>
+
+  <section class="roadmap-calendar-shell">
+    <div class="roadmap-weekdays"><div class="roadmap-weekday">Mon</div><div class="roadmap-weekday">Tue</div><div class="roadmap-weekday">Wed</div><div class="roadmap-weekday">Thu</div><div class="roadmap-weekday">Fri</div><div class="roadmap-weekday">Sat</div><div class="roadmap-weekday">Sun</div></div>
+    <div class="roadmap-calendar-slide">
+      <div class="roadmap-week-row">
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div><button class="rm-add">+ add session</button></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">3</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">4</span></div><button class="rm-add">+ add session</button></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">5</span></div><button class="rm-add">+ add session</button></div>
+      </div>
+      <div class="roadmap-week-row">
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">6</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-skipped"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></svg><span class="roadmap-bubble-label">Problem set 4</span><span class="roadmap-bubble-minutes">45m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">7</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-unplanned"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span class="roadmap-bubble-label">3Blue1Brown</span><span class="roadmap-bubble-minutes">20m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week roadmap-day-today"><div class="roadmap-day-head"><span class="roadmap-day-number">8</span><span class="roadmap-day-markers"><span class="roadmap-today-pill">Today</span></span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble rm-booked"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">9</span></div><button class="rm-add">+ add session</button></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">10</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble rm-booked"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">11</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">12</span></div></div>
+      </div>
+      <div class="roadmap-week-row">
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">13</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble rm-booked blank"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Session · pick at start</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">14</span></div><button class="rm-add">+ add session</button></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">15</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">16</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">17</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">18</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">19</span></div></div>
+      </div>
+      <div class="roadmap-week-row">
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-deadline"><div class="roadmap-day-head"><span class="roadmap-day-number">20</span><span class="roadmap-day-markers"><span class="roadmap-deadline-pill">Deadline</span></span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">21</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">22</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">23</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">24</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">25</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">26</span></div></div>
+      </div>
+      <!-- Week 5: Jul27–31 (+ Aug 1–2 outside) — was missing, caused the clipped calendar -->
+      <div class="roadmap-week-row">
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">27</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">28</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">31</span></div></div>
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div></div>
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- collapsible material directory -->
+  <div class="dir-panel" id="dirPanel">
+    <div class="dir-head" id="dirHead"><span class="ttl">Materials</span><span class="count-pill" style="font-family:var(--font-mono);font-size:10px;padding:1px 7px;border-radius:999px;background:var(--surface-recessed);color:var(--text-secondary);">3 · 42% done</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+    <div class="dir-body">
+      <div class="dir-row"><div class="material-icon pl">PL</div><div class="dir-prog"><div class="dir-title">Linear Algebra — full playlist</div><div class="dir-bar"><span style="width:33%;"></span></div><div class="dir-meta">4 / 12 videos · ~1h20m of 4h</div></div><button class="btn btn-secondary btn-sm">Mark progress</button></div>
+      <div class="dir-row"><div class="material-icon art">ART</div><div class="dir-prog"><div class="dir-title">Strang — Notes on Eigenvalues</div><div class="dir-bar"><span style="width:100%;"></span></div><div class="dir-meta">done · 35m of 35m</div></div><button class="btn btn-secondary btn-sm">Mark progress</button></div>
+      <div class="dir-row"><div class="material-icon bk">BK</div><div class="dir-prog"><div class="dir-title">Problem set 4 — practice</div><div class="dir-bar"><span style="width:0%;"></span></div><div class="dir-meta">not started · 0 of 45m</div></div><button class="btn btn-secondary btn-sm">Mark progress</button></div>
+    </div>
+  </div>
+
+  <footer class="roadmap-footer">
+    <button class="btn btn-secondary" type="button">Mark roadmap complete</button>
+    <button class="btn btn-secondary" type="button">Abandon roadmap</button>
+    <a class="btn btn-ghost" href="#">Replan</a>
+  </footer>
+</div>
+
+<style>
+  /* booking sheets — balanced settings-row layout */
+  .bk-overlay { position:fixed; inset:0; background:rgba(42,31,24,0.4); display:none; align-items:flex-end; justify-content:center; padding:16px; z-index:100; }
+  .bk-overlay.show { display:flex; }
+  .bk-sheet { background:var(--surface-card); border-radius:var(--radius-xl) var(--radius-xl) 0 0; width:100%; max-width:460px; align-self:flex-end; padding:20px 22px 24px; box-shadow:var(--shadow-modal); }
+  @media(min-width:1024px){ .bk-sheet { align-self:center; border-radius:var(--radius-lg); } }
+  .bk-grip { width:36px; height:4px; border-radius:999px; background:var(--border-default); margin:0 auto 16px; }
+  .bk-head { margin-bottom:6px; }
+  .bk-eyebrow { font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--text-tertiary); margin-bottom:3px; }
+  .bk-title { font-family:var(--font-display); font-weight:500; font-size:20px; letter-spacing:-.01em; }
+  .bk-sheet .ttl { font-weight:500; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bk-sheet .sub { font-size:12px; color:var(--text-secondary); margin-top:1px; }
+  .bk-sheet .body { flex:1; min-width:0; }
+  /* full-width tappable material card */
+  .bk-matcard { display:flex; align-items:center; gap:12px; width:100%; padding:12px 14px; margin:16px 0 4px; border:1px solid var(--border-subtle); border-radius:var(--radius-md); background:var(--surface-page); cursor:pointer; text-align:left; }
+  .bk-matcard:hover { background:var(--surface-recessed); border-color:var(--border-strong); }
+  .bk-matcard .chg { flex-shrink:0; color:var(--text-tertiary); }
+  /* label-left / control-right rows — fills the width, no lopsided gap */
+  .bk-rows { margin:8px 0 2px; }
+  .bk-row { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:14px 0; border-top:1px solid var(--border-subtle); }
+  .bk-row .lbl { font-size:14px; color:var(--text-primary); }
+  .bk-row .lbl .hint { display:block; font-size:12px; color:var(--text-tertiary); margin-top:2px; font-weight:400; }
+  .bk-row .ctrl { display:flex; align-items:center; gap:8px; }
+  .bk-link { background:none; border:0; cursor:pointer; font-size:14px; font-weight:500; color:var(--text-primary); display:inline-flex; align-items:center; gap:4px; }
+  .bk-link:hover { color:var(--terracotta-d); }
+  .stepper { display:inline-flex; align-items:center; border:1px solid var(--border-default); border-radius:var(--radius-md); overflow:hidden; }
+  .stepper button { width:40px; height:36px; border:0; background:var(--surface-page); cursor:pointer; font-size:17px; color:var(--text-secondary); }
+  .stepper button:hover { background:var(--surface-recessed); color:var(--text-primary); }
+  .stepper .val { min-width:64px; text-align:center; font-weight:500; color:var(--text-primary); }
+  .bk-actions { margin-top:18px; display:flex; flex-direction:column; gap:10px; }
+  .bk-remove { align-self:center; background:none; border:0; cursor:pointer; font-size:13px; color:var(--terracotta); padding:4px 8px; }
+  .bk-remove:hover { text-decoration:underline; }
+  .chooser { display:flex; flex-direction:column; gap:6px; margin-top:12px; }
+  .chooser-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border-subtle); border-radius:var(--radius-md); background:var(--surface-page); cursor:pointer; }
+  .chooser-row:hover { background:var(--surface-recessed); }
+  .chooser-row.sel { border-color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink); }
+  .chooser-radio { width:16px; height:16px; border-radius:50%; border:2px solid var(--border-strong); flex-shrink:0; position:relative; }
+  .chooser-row.sel .chooser-radio { border-color:var(--ink); }
+  .chooser-row.sel .chooser-radio::after { content:""; position:absolute; inset:3px; border-radius:50%; background:var(--ink); }
+</style>
+
+<!-- Booking editor (click a future booking) → BookingEdited / BookingCleared -->
+<div class="bk-overlay" id="bkEdit">
+  <div class="bk-sheet">
+    <div class="bk-grip"></div>
+    <div class="bk-head"><div class="bk-eyebrow">Booked session</div><div class="bk-title" id="bkEditDate">Wed, Jul 10</div></div>
+
+    <!-- one tappable material card (opens picker; picker also holds "pick at start") -->
+    <button class="bk-matcard" data-open-pick>
+      <div class="material-icon art">◆</div>
+      <div class="body"><div class="ttl" id="bkEditMat">Strang — Notes on Eigenvalues</div><div class="sub">Suggested · tap to change</div></div>
+      <svg class="icon icon-sm chg" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg>
+    </button>
+
+    <div class="bk-rows">
+      <div class="bk-row">
+        <span class="lbl">Length</span>
+        <span class="ctrl"><div class="stepper"><button class="dec">−</button><span class="val" data-min="60">1h</span><button class="inc">+</button></div></span>
+      </div>
+      <div class="bk-row">
+        <span class="lbl">Day</span>
+        <span class="ctrl"><button class="bk-link">Wed, Jul 10 <svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button></span>
+      </div>
+    </div>
+
+    <div class="bk-actions">
+      <button class="btn btn-accent btn-block" data-close="bkEdit">Done</button>
+      <button class="bk-remove" data-close="bkEdit">Remove booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add session (click "+ add session" on an empty day) → SessionBooked -->
+<div class="bk-overlay" id="bkAdd">
+  <div class="bk-sheet">
+    <div class="bk-grip"></div>
+    <div class="bk-head"><div class="bk-eyebrow">New session</div><div class="bk-title" id="bkAddDate">Thu, Jul 9</div></div>
+
+    <div class="bk-rows">
+      <div class="bk-row">
+        <span class="lbl">Length<span class="hint">within today's 2h cap</span></span>
+        <span class="ctrl"><div class="stepper"><button class="dec">−</button><span class="val" data-min="60">1h</span><button class="inc">+</button></div></span>
+      </div>
+      <div class="bk-row">
+        <span class="lbl">Material<span class="hint">optional — or pick at start</span></span>
+        <span class="ctrl"><button class="bk-link" data-open-pick>Attach <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button></span>
+      </div>
+    </div>
+
+    <div class="bk-actions">
+      <button class="btn btn-accent btn-block" data-close="bkAdd">Add session</button>
+      <button class="btn btn-ghost btn-block" data-close="bkAdd">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Material picker (attach/swap) — includes "pick at start" -->
+<div class="bk-overlay" id="bkPick">
+  <div class="bk-sheet">
+    <div class="bk-grip"></div>
+    <div class="bk-head"><div class="bk-eyebrow">Choose material</div><div class="bk-title">Attach to this session</div></div>
+    <div class="chooser">
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-icon" style="width:30px;height:30px;">—</div><div class="body"><div class="ttl">No material · pick at start</div></div></div>
+      <div class="chooser-row sel"><span class="chooser-radio"></span><div class="material-icon pl" style="width:30px;height:30px;">PL</div><div class="body"><div class="ttl">Linear Algebra — full playlist</div><div class="sub">in progress · 4/12</div></div></div>
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-icon art" style="width:30px;height:30px;">◆</div><div class="body"><div class="ttl">Strang — Notes on Eigenvalues</div><div class="sub">done</div></div></div>
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-icon bk" style="width:30px;height:30px;">BK</div><div class="body"><div class="ttl">Problem set 4 — practice</div><div class="sub">not started</div></div></div>
+    </div>
+    <div class="bk-actions">
+      <button class="btn btn-accent btn-block" data-close="bkPick">Use this material</button>
+      <button class="btn btn-ghost btn-block" data-close="bkPick">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('dirHead').onclick = () => document.getElementById('dirPanel').classList.toggle('collapsed');
+
+  const fmt = m => { const h=Math.floor(m/60), r=m%60; return h>0 ? (r?`${h}h ${r}m`:`${h}h`) : `${r}m`; };
+  const show = id => document.getElementById(id).classList.add('show');
+  const hide = id => document.getElementById(id).classList.remove('show');
+  const dayNum = elm => elm.closest('.roadmap-day')?.querySelector('.roadmap-day-number')?.textContent ?? '';
+
+  // Click a future booking → editor
+  document.querySelectorAll('.roadmap-bubble.rm-booked').forEach(b => {
+    b.addEventListener('click', () => {
+      document.getElementById('bkEditDate').textContent = 'Jul ' + dayNum(b);
+      const label = b.querySelector('.roadmap-bubble-label').textContent;
+      document.getElementById('bkEditMat').textContent = /pick at start/i.test(label) ? 'No material — pick at start' : label;
+      show('bkEdit');
+    });
+  });
+  // Click "+ add session" → add sheet
+  document.querySelectorAll('.rm-add').forEach(a => {
+    a.addEventListener('click', e => { e.stopPropagation(); document.getElementById('bkAddDate').textContent = 'Jul ' + dayNum(a); show('bkAdd'); });
+  });
+  // Steppers
+  document.querySelectorAll('.stepper').forEach(s => {
+    const val = s.querySelector('.val');
+    const get = () => parseInt(val.dataset.min, 10);
+    const set = v => { val.dataset.min = v; val.textContent = fmt(v); };
+    s.querySelector('.dec').onclick = () => set(Math.max(15, get() - 15));
+    s.querySelector('.inc').onclick = () => set(get() + 15);
+  });
+  // Attach/Swap → picker
+  document.querySelectorAll('[data-open-pick]').forEach(btn => btn.addEventListener('click', () => show('bkPick')));
+  // Closers + backdrop
+  document.querySelectorAll('[data-close]').forEach(btn => btn.addEventListener('click', () => hide(btn.dataset.close)));
+  document.querySelectorAll('.bk-overlay').forEach(o => o.addEventListener('click', e => { if (e.target === o) o.classList.remove('show'); }));
+  document.querySelectorAll('.chooser').forEach(g => g.addEventListener('click', e => { const r = e.target.closest('.chooser-row'); if (!r) return; g.querySelectorAll('.chooser-row').forEach(x=>x.classList.remove('sel')); r.classList.add('sel'); }));
+</script>
+</body>
+</html>

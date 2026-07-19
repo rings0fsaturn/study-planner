@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline · Roadmap (current)</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Baseline (current) · Roadmap · slot-based calendar (done / planned / skipped / unplanned) · illustrative mid-plan July</div>
+
+<div class="roadmap-page">
+  <a class="roadmap-back-link" href="#">&larr; Roadmaps</a>
+
+  <header class="roadmap-header">
+    <div>
+      <div class="mono-caps">Active roadmap · 3 materials · 3 weeks</div>
+      <h1 class="roadmap-title">Active roadmap</h1>
+      <p class="roadmap-subtitle">Jul 1 to Jul 20, 2026</p>
+    </div>
+    <section class="roadmap-progress-card" aria-label="Roadmap progress">
+      <div class="roadmap-progress-row">
+        <span class="mono-caps">Progress</span>
+        <span class="roadmap-progress-percent">42%</span>
+      </div>
+      <div class="progress" style="height:6px; margin-bottom:var(--space-2);">
+        <div class="progress-fill" style="width:42%;"></div>
+      </div>
+      <div class="roadmap-progress-meta"><span>2h 15m logged</span><span>3h 5m to go</span></div>
+    </section>
+  </header>
+
+  <div class="roadmap-toolbar">
+    <div class="roadmap-month-nav" aria-label="Roadmap month navigation">
+      <button class="roadmap-nav-icon" aria-label="Previous month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+      <div class="roadmap-month-label">July 2026</div>
+      <button class="roadmap-nav-icon" aria-label="Next month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="btn btn-secondary roadmap-today-button">Today</button>
+    </div>
+    <div class="roadmap-legend" aria-label="Roadmap status legend">
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-done"></span>Done</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-pending"></span>Planned</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-skipped"></span>Skipped</span>
+      <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-unplanned"></span>Unplanned</span>
+    </div>
+  </div>
+
+  <section class="roadmap-calendar-shell" aria-label="July 2026 roadmap calendar">
+    <div class="roadmap-weekdays" role="row">
+      <div class="roadmap-weekday">Mon</div><div class="roadmap-weekday">Tue</div><div class="roadmap-weekday">Wed</div>
+      <div class="roadmap-weekday">Thu</div><div class="roadmap-weekday">Fri</div><div class="roadmap-weekday">Sat</div><div class="roadmap-weekday">Sun</div>
+    </div>
+    <div class="roadmap-calendar-slide" role="grid">
+
+      <!-- Week 1: Jun29–Jul5 -->
+      <div class="roadmap-week-row" role="row">
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+        <div class="roadmap-day roadmap-day-outside"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">3</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">4</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">5</span></div></div>
+      </div>
+
+      <!-- Week 2: Jul6–12 (today = Wed Jul 8) -->
+      <div class="roadmap-week-row roadmap-day-current-week" role="row">
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">6</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-skipped"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></svg><span class="roadmap-bubble-label">Problem set 4</span><span class="roadmap-bubble-minutes">45m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">7</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-unplanned"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span class="roadmap-bubble-label">3Blue1Brown</span><span class="roadmap-bubble-minutes">20m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week roadmap-day-today"><div class="roadmap-day-head"><span class="roadmap-day-number">8</span><span class="roadmap-day-markers"><span class="roadmap-today-pill">Today</span></span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-pending"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">9</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">10</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-pending"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">11</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week"><div class="roadmap-day-head"><span class="roadmap-day-number">12</span></div></div>
+      </div>
+
+      <!-- Week 3: Jul13–19 -->
+      <div class="roadmap-week-row" role="row">
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">13</span></div>
+          <div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-pending"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Problem set 4</span><span class="roadmap-bubble-minutes">45m</span></button></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">14</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">15</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">16</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">17</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">18</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">19</span></div></div>
+      </div>
+
+      <!-- Week 4: Jul20–26 (deadline Jul 20) -->
+      <div class="roadmap-week-row" role="row">
+        <div class="roadmap-day roadmap-day-in-month roadmap-day-deadline"><div class="roadmap-day-head"><span class="roadmap-day-number">20</span><span class="roadmap-day-markers"><span class="roadmap-deadline-pill">Deadline</span></span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">21</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">22</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">23</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">24</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">25</span></div></div>
+        <div class="roadmap-day roadmap-day-in-month"><div class="roadmap-day-head"><span class="roadmap-day-number">26</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="roadmap-footer">
+    <button class="btn btn-secondary" type="button">Mark roadmap complete</button>
+    <button class="btn btn-secondary" type="button">Abandon roadmap</button>
+    <button class="btn btn-ghost" type="button" disabled>Edit roadmap</button>
+    <a class="btn btn-ghost" href="#">Replan</a>
+  </footer>
+</div>
+</body>
+</html>

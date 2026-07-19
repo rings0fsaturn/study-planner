@@ -1,0 +1,5 @@
+{
+  "fn": "initKalman",
+  "level": 1,
+  "variance": 0.1
+}

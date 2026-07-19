@@ -1,0 +1,13 @@
+{
+  "fn": "choleskyDecompose",
+  "matrix": [
+    [
+      4,
+      2
+    ],
+    [
+      2,
+      3
+    ]
+  ]
+}

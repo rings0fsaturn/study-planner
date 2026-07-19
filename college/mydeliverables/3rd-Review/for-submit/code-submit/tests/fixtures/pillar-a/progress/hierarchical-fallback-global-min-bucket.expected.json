@@ -1,0 +1,10 @@
+{
+  "globalPosterior": {
+    "mean": 1.199004975124378,
+    "variance": 0.0004975124378109454,
+    "sessionCount": 2
+  },
+  "globalMultiplier": 1.199004975124378,
+  "roleMultipliers": {},
+  "insights": []
+}

@@ -1,0 +1,9 @@
+{
+  "fn": "runCUSUM",
+  "signal": [
+    1,
+    0.9
+  ],
+  "mean": 1,
+  "std": 0.1
+}

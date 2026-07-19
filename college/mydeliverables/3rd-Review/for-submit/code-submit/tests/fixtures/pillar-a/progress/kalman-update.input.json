@@ -1,0 +1,7 @@
+{
+  "fn": "kalmanUpdate",
+  "level": 1,
+  "variance": 0.1,
+  "observation": 0.8,
+  "observationVariance": 0.05
+}

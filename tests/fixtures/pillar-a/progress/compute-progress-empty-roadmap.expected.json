@@ -1,0 +1,92 @@
+{
+  "streak": {
+    "current": 0,
+    "longest": 0,
+    "grid": [
+      {
+        "date": "2026-01-12",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-13",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-14",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-15",
+        "level": 0,
+        "minutes": 0,
+        "isToday": true
+      },
+      {
+        "date": "2026-01-16",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-17",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-18",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      }
+    ]
+  },
+  "burnUp": {
+    "planned": [],
+    "actual": [],
+    "gpCurve": [],
+    "today": "2026-01-15",
+    "deficit": 0,
+    "dayNumber": 14,
+    "totalDays": 30
+  },
+  "projection": {
+    "finishDate": null,
+    "confidenceInterval": null
+  },
+  "totalMinutes": 0,
+  "totalPlannedMinutes": 0,
+  "completionPercentage": 0,
+  "verdict": "on-track",
+  "driftPastDeadline": false,
+  "upNext": null,
+  "weeklyStats": {
+    "weekIndex": 2,
+    "weekStartDate": "2026-01-12",
+    "sessionsThisWeek": 0,
+    "minutesThisWeek": 0,
+    "plannedMinutesThisWeek": 0,
+    "minutesByDay": {},
+    "materialsTouched": []
+  },
+  "weekSummaryForNarrative": {
+    "weekStartDate": "2026-01-12",
+    "sessionsLogged": 0,
+    "hoursLogged": 0,
+    "verdict": "on-track",
+    "daysWithActivity": 0,
+    "materialsTouched": []
+  },
+  "replanContext": {
+    "isPlanDrifted": false,
+    "daysOverDeadline": null,
+    "pinnedSlotCount": 0,
+    "editableSlotCount": 0
+  }
+}

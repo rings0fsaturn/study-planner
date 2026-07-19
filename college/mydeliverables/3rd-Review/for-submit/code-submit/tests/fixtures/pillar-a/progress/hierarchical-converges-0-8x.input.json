@@ -1,0 +1,106 @@
+{
+  "fn": "computeHierarchicalModel",
+  "sessions": [
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-0"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-2"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-3"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-4"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-5"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-6"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-7"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-8"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-9"
+    }
+  ],
+  "exceptionalIds": []
+}

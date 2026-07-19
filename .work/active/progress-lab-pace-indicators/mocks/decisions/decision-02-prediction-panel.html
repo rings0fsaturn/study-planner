@@ -1,0 +1,300 @@
+<!doctype html>
+<!--
+  Decision 02 — the prediction / finish panel (right rail).
+  Shared context: the whole Progress Lab modal, with the NEW forward-projection
+  green line + GP already in the chart (Decision 01). Only the "Try a pace"
+  prediction display swaps between A / B / C.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Decision 02 — prediction / finish panel</title>
+  <style>
+    :root{
+      --paper:#f5efe4;--paper-deep:#ede3d2;--card:#fbf7ee;--ink:#2a1f18;
+      --ink-soft:#5c4d40;--ink-faint:#8b7b6b;--rule:#d9cdb8;--rule-soft:#e6dcc8;
+      --rust:#a0432a;--moss:#4a6b3a;
+      --font-display:Georgia,"Iowan Old Style",serif;
+      --font-body:"Arial Narrow",Arial,sans-serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace;
+    }
+    *{box-sizing:border-box}html,body{min-height:100%}
+    body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--font-body)}
+    button,input{color:inherit;font:inherit}button{cursor:pointer}
+    .eyebrow{color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    /* variation toolbar */
+    .vt-bar{position:sticky;top:0;z-index:50;display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:9px 14px;background:#1d1b19;color:#eee7df;font:13px var(--font-body)}
+    .vt-bar .vt-title{font-weight:700;margin-right:6px;font-family:var(--font-mono);font-size:12px;letter-spacing:.04em}
+    .vt-bar button{border:1px solid #4a453f;background:#2a2622;color:#d8cfc4;padding:6px 12px;border-radius:999px}
+    .vt-bar button.active{background:var(--moss);border-color:var(--moss);color:#fff}
+    .vt-caption{padding:7px 14px;background:#efe7d8;color:var(--ink-soft);font:12px var(--font-mono)}
+    .stage{display:grid;place-items:center;padding:20px 18px}
+    .lab{display:flex;flex-direction:column;width:min(1280px,97vw);height:min(700px,84vh);overflow:hidden;border:1px solid var(--rule);border-radius:16px;background:var(--card);box-shadow:0 24px 60px rgba(42,31,24,.24)}
+    .lab-head{display:flex;justify-content:space-between;gap:20px;padding:16px 24px 12px;border-bottom:1px solid var(--rule-soft)}
+    .lab-head h2{margin:4px 0 0;font:500 25px/1.1 var(--font-display)}
+    .lab-head p{margin:5px 0 0;color:var(--ink-soft);font-size:13px}
+    .close{flex:none;width:36px;height:36px;border:1px solid var(--rule);border-radius:50%;background:transparent}
+    .range-bar{display:flex;align-items:center;gap:14px;padding:8px 24px;border-bottom:1px solid var(--rule-soft);background:#f8f2e8}
+    .segmented{display:inline-flex;padding:3px;border:1px solid var(--rule);border-radius:999px;background:var(--card)}
+    .segmented button{padding:5px 10px;border:0;border-radius:999px;color:var(--ink-soft);background:transparent;font-size:11px}
+    .segmented button.active{color:var(--paper);background:var(--ink)}
+    .range-readout{margin-left:auto;color:var(--ink-faint);font:10px var(--font-mono)}
+    .lab-body{display:grid;grid-template-columns:minmax(0,1fr) 336px;flex:1;min-height:0;overflow:hidden}
+    .chart-column{display:flex;min-width:0;min-height:0;padding:16px 18px 18px;border-right:1px solid var(--rule-soft)}
+    .burn-card{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:100%;height:100%;min-height:0;overflow:hidden;border:1px solid var(--rule-soft);border-radius:10px;background:var(--card)}
+    .burn-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 4px;color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    .chart-stage{position:relative;min-height:0;overflow:hidden}
+    .chart-svg{display:block;width:100%;height:100%;min-height:0}
+    .chart-svg *{pointer-events:none}
+    .burn-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 16px 12px}
+    .deficit{color:var(--rust);font:500 20px/1 var(--font-display)}
+    .legend{display:flex;align-items:center;gap:12px;color:var(--ink-faint);font:9px var(--font-mono);letter-spacing:.04em;text-transform:uppercase;flex-wrap:wrap}
+    .legend span{display:flex;align-items:center;gap:5px}
+    .legend i{display:block;width:20px;height:2px;background:var(--rust)}
+    .legend i.planned{height:0;border-top:2px dashed var(--ink-faint);background:none}
+    .legend i.gp{height:0;border-top:2px dotted var(--rust);background:none}
+    .legend i.scenario{height:0;border-top:2.5px dashed var(--moss);background:none}
+    .rail{min-height:0;overflow:auto;padding:18px;background:#f8f2e8}
+    .section{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--rule)}
+    .section:last-child{border:0;margin:0;padding:0}
+    .layer-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px}
+    .switch{position:relative;width:34px;height:19px;border:0;border-radius:99px;background:#c8baa7}
+    .switch:after{content:"";position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform 140ms}
+    .switch.on{background:var(--rust)}.switch.on:after{transform:translateX(15px)}
+    .pace-title{margin:4px 0 2px;font:500 19px var(--font-display)}
+    .slider{width:100%;margin-top:12px;accent-color:var(--moss)}
+    .slider-labels{display:flex;justify-content:space-between;color:var(--ink-faint);font:9px var(--font-mono)}
+    .primary{width:100%;margin-top:16px;padding:10px 16px;border:1px solid var(--ink);border-radius:999px;color:var(--paper);background:var(--ink);font-weight:700}
+    /* prediction display shared bits */
+    .variation{display:none;margin-top:14px}
+    .variation.on{display:block}
+    /* Variation A — stacked rows */
+    .finish-row{display:grid;grid-template-columns:14px 1fr auto;align-items:center;gap:9px;padding:9px 0;border-top:1px solid var(--rule-soft)}
+    .finish-row:first-child{border-top:0}
+    .fr-swatch{width:14px;height:0}
+    .fr-swatch.planned{border-top:2px dashed var(--ink-faint)}
+    .fr-swatch.gp{border-top:2px dotted var(--rust)}
+    .fr-swatch.scen{border-top:3px dashed var(--moss)}
+    .fr-label{font-size:12px;color:var(--ink-soft);line-height:1.25}
+    .fr-label b{display:block;color:var(--ink);font-size:13px}
+    .fr-date{text-align:right}
+    .fr-date strong{display:block;font:500 16px var(--font-display)}
+    .fr-date span{font:9px var(--font-mono);letter-spacing:.03em}
+    .late{color:var(--rust)}.early{color:var(--moss)}.neutral{color:var(--ink-faint)}
+    .scen-row{background:#eff3e9;border-radius:8px;padding:9px 10px;margin-top:4px;border-top:0}
+    .scen-row .fr-date strong{color:var(--moss)}
+    /* Variation B — narrative */
+    .narr p{margin:0 0 10px;font-size:13.5px;line-height:1.5;color:var(--ink-soft)}
+    .narr b{color:var(--ink)}.narr b.rust{color:var(--rust)}.narr b.moss{color:var(--moss)}
+    .narr .scen-line{padding:9px 10px;background:#eff3e9;border-radius:8px;margin-top:2px}
+    /* Variation C — timeline strip */
+    .tl-cap{display:flex;justify-content:space-between;font:9px var(--font-mono);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em}
+    .tl{position:relative;height:96px;margin-top:8px}
+    .tl-axis{position:absolute;left:0;right:0;top:64px;height:2px;background:var(--rule)}
+    .tl-tick{position:absolute;top:60px;width:1px;height:10px;background:var(--rule)}
+    .tl-tlabel{position:absolute;top:74px;transform:translateX(-50%);font:9px var(--font-mono);color:var(--ink-faint)}
+    .tl-flag{position:absolute;top:0;transform:translateX(-50%);text-align:center;width:80px}
+    .tl-flag .dot{width:9px;height:9px;border-radius:50%;margin:0 auto}
+    .tl-flag .stem{width:1px;height:22px;margin:2px auto 0;background:currentColor;opacity:.5}
+    .tl-flag .lab{font:9px var(--font-mono);line-height:1.2}
+    .tl-flag .dt{font:500 12px var(--font-display)}
+    .tl-flag.plan{color:var(--ink-faint)}.tl-flag.gp{color:var(--rust)}.tl-flag.scen{color:var(--moss);z-index:2}
+    .tl-flag.plan .dot{background:var(--ink-faint)}.tl-flag.gp .dot{background:var(--rust)}.tl-flag.scen .dot{background:var(--moss)}
+    .tl-note{margin-top:6px;font-size:12px;color:var(--ink-soft);line-height:1.4}
+  </style>
+</head>
+<body>
+  <div class="vt-bar">
+    <span class="vt-title">DECISION 02 — prediction / finish panel</span>
+    <button data-var="A" class="active">A — three-row finish stack</button>
+    <button data-var="B">B — plain-language narrative</button>
+    <button data-var="C">C — finish timeline strip</button>
+  </div>
+  <div class="vt-caption" id="caption">Showing A — three-row finish stack · move the slider to change the "your pace" finish</div>
+
+  <div class="stage">
+    <article class="lab">
+      <header class="lab-head">
+        <div>
+          <div class="eyebrow">Progress Lab · Active roadmap</div>
+          <h2>Study trajectory and pace scenario</h2>
+          <p>Three finish dates: what the plan asks, what you're tracking to, and what a faster pace would buy.</p>
+        </div>
+        <button class="close" aria-label="Close">✕</button>
+      </header>
+
+      <div class="range-bar">
+        <div class="eyebrow">Range</div>
+        <div class="segmented" id="ranges">
+          <button class="active" data-range="full">Full plan</button>
+          <button data-range="month">30 days</button>
+          <button data-range="week">This week</button>
+        </div>
+        <div class="range-readout">Jun 08 to Aug 22 · 75 days</div>
+      </div>
+
+      <div class="lab-body">
+        <section class="chart-column">
+          <div class="burn-card">
+            <div class="burn-head"><span>Hours studied vs plan</span><span>Day 43 of 63</span></div>
+            <div class="chart-stage"><svg class="chart-svg" id="chart" viewBox="0 0 820 460"></svg></div>
+            <div class="burn-foot">
+              <div class="deficit">−19h 33m behind plan</div>
+              <div class="legend">
+                <span><i></i>Actual</span>
+                <span><i class="planned"></i>Planned</span>
+                <span><i class="gp"></i>GP forecast</span>
+                <span><i class="scenario"></i>Your pace</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="rail">
+          <div class="section">
+            <div class="eyebrow">Chart layers</div>
+            <div class="layer-row"><span>Planned staircase</span><button class="switch on" data-layer="planned" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>GP forecast</span><button class="switch on" data-layer="projection" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>Confidence band</span><button class="switch on" data-layer="confidence" aria-pressed="true"></button></div>
+          </div>
+
+          <div class="section">
+            <div class="eyebrow">Try a pace</div>
+            <div class="pace-title" id="pace-title">Current study pace</div>
+            <input class="slider" id="pace" type="range" min="0" max="60" step="15" value="0">
+            <div class="slider-labels"><span>Current</span><span>+60 min</span></div>
+
+            <!-- VARIATION A -->
+            <div class="variation on" data-var="A">
+              <div class="finish-row">
+                <span class="fr-swatch planned"></span>
+                <span class="fr-label"><b>Planned</b>follow your slots</span>
+                <span class="fr-date"><strong>Aug 10</strong><span class="neutral">your deadline</span></span>
+              </div>
+              <div class="finish-row">
+                <span class="fr-swatch gp"></span>
+                <span class="fr-label"><b>Forecast</b>your recent pace</span>
+                <span class="fr-date"><strong>≈ Aug 27</strong><span class="late">17 days late</span></span>
+              </div>
+              <div class="finish-row scen-row">
+                <span class="fr-swatch scen"></span>
+                <span class="fr-label"><b id="a-scen-title">Current pace</b>your pace</span>
+                <span class="fr-date"><strong id="a-scen-date">≈ Aug 27</strong><span id="a-scen-delta" class="late">17 days late</span></span>
+              </div>
+            </div>
+
+            <!-- VARIATION B -->
+            <div class="variation narr" data-var="B">
+              <p>Stick to your planned slots and you finish <b>Aug 10</b> — your deadline.</p>
+              <p>At your recent pace, you're tracking to <b class="rust">≈ Aug 27</b>, about <b class="rust">17 days late</b>.</p>
+              <p class="scen-line" id="b-scen">Right now that's your current pace, so <b class="moss">≈ Aug 27</b> — same as the forecast. Add minutes to beat it.</p>
+            </div>
+
+            <!-- VARIATION C -->
+            <div class="variation" data-var="C">
+              <div class="tl-cap"><span>Aug 1</span><span>Aug 31</span></div>
+              <div class="tl" id="tl">
+                <div class="tl-axis"></div>
+                <div class="tl-tick" style="left:30%"></div><div class="tl-tlabel" style="left:30%">Aug 10</div>
+                <div class="tl-flag plan" style="left:30%"><div class="dot"></div><div class="stem"></div><div class="dt">Aug 10</div><div class="lab">Plan</div></div>
+                <div class="tl-flag gp" style="left:86.7%"><div class="dot"></div><div class="stem"></div><div class="dt">Aug 27</div><div class="lab">Forecast</div></div>
+                <div class="tl-flag scen" id="c-flag" style="left:86.7%"><div class="dot"></div><div class="stem"></div><div class="dt" id="c-date">Aug 27</div><div class="lab">Your pace</div></div>
+              </div>
+              <p class="tl-note" id="c-note">At your current pace you land on the forecast. Each +15 min slides your pace marker left toward the deadline.</p>
+            </div>
+
+            <button class="primary">Replan with this pace</button>
+          </div>
+        </aside>
+      </div>
+    </article>
+  </div>
+
+  <script>
+  (function(){
+    var BASE=new Date(Date.UTC(2026,5,8)),TODAY=43,DEADLINE=63,END=75,YMAX=3600;
+    function dLabel(day){var d=new Date(BASE.getTime()+day*864e5);return d.toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'UTC'});}
+    var planned=[[0,0],[6,330],[13,700],[20,1080],[27,1470],[34,1850],[41,2230],[43,2340],[48,2620],[55,3000],[62,3300],[63,3340],[END,3340]];
+    var actual=[[0,0],[5,150],[10,300],[15,470],[20,610],[25,760],[30,880],[35,980],[39,1040],[43,1080]];
+    var gp=[[0,0],[8,240],[16,470],[24,720],[32,900],[40,1040],[43,1080],[50,1520],[57,1960],[64,2410],[71,2860],[END,3060]];
+    // NEW forward-projection finishes (Decision 01). +0 coincides with the GP forecast.
+    var NEW={0:{fd:80,date:'≈ Aug 27',delta:'17 days late',cls:'late',title:'Current pace'},
+             15:{fd:71,date:'Aug 18',delta:'8 days late',cls:'late',title:'+15 min'},
+             30:{fd:65,date:'Aug 12',delta:'2 days late',cls:'late',title:'+30 min'},
+             45:{fd:61,date:'Aug 8',delta:'2 days early',cls:'early',title:'+45 min'},
+             60:{fd:57,date:'Aug 4',delta:'6 days early',cls:'early',title:'+60 min'}};
+    var state={range:'full',planned:true,projection:true,confidence:true,pace:0};
+    var svg=document.getElementById('chart');
+    function rangeStart(){return state.range==='week'?TODAY-5:state.range==='month'?TODAY-23:0;}
+    function rangeEnd(){return state.range==='week'?TODAY+2:state.range==='month'?TODAY+7:END;}
+    function plannedAt(day){var v=0;planned.forEach(function(p){if(p[0]<=day)v=p[1];});return v;}
+    function smooth(pts){if(!pts.length)return'';var d='M'+pts[0][0]+' '+pts[0][1];for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i],mx=(a[0]+b[0])/2;d+='C'+mx+' '+a[1]+' '+mx+' '+b[1]+' '+b[0]+' '+b[1];}return d;}
+    function forwardY(day){ // straight projection from today's actual to the pace finish total
+      var n=NEW[state.pace],sy=1080,ey=3340;
+      if(day<=TODAY)return sy;
+      var t=Math.min(1,(day-TODAY)/(n.fd-TODAY));
+      return sy+(ey-sy)*t;
+    }
+    function render(){
+      var W=Math.max(360,svg.clientWidth||820),H=Math.max(220,svg.clientHeight||460);
+      svg.setAttribute('viewBox','0 0 '+W+' '+H);
+      var L=62,R=W-18,T=22,B=H-40,s=rangeStart(),e=rangeEnd();
+      var x=function(d){return L+((Math.max(s,Math.min(e,d))-s)/(e-s))*(R-L);},y=function(m){return B-(m/YMAX)*(B-T);};
+      var tx=x(TODAY),out=['<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fbf7ee"/>'];
+      if(e>TODAY)out.push('<rect x="'+tx+'" y="'+T+'" width="'+(R-tx)+'" height="'+(B-T)+'" fill="#ede3d2" opacity=".45"/>');
+      var af=actual.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      var poly=af.map(function(p){return x(p[0])+','+y(p[1]);}).concat(af.slice().reverse().map(function(p){return x(p[0])+','+y(plannedAt(p[0]));})).join(' ');
+      out.push('<polygon points="'+poly+'" fill="#a0432a" opacity=".10"/>');
+      var gpf=gp.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      if(state.confidence){
+        var band=gpf.map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*22;return x(p[0])+','+y(Math.min(YMAX,p[1]+w));})
+          .concat(gpf.slice().reverse().map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*22;return x(p[0])+','+y(Math.max(0,p[1]-w));})).join(' ');
+        out.push('<polygon points="'+band+'" fill="#a0432a" opacity=".12"/>');
+      }
+      if(state.planned){var pf=planned.filter(function(p){return p[0]>=s&&p[0]<=e;});var step='M'+x(pf[0][0])+' '+y(pf[0][1]);pf.slice(1).forEach(function(p){step+='H'+x(p[0])+'V'+y(p[1]);});out.push('<path d="'+step+'" fill="none" stroke="#8b7b6b" stroke-width="1.8" stroke-dasharray="6 4"/>');}
+      if(state.projection)out.push('<path d="'+smooth(gpf.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="1.8" stroke-dasharray="3 3"/>');
+      // NEW green forward projection — straight from today; faint at +0 (coincides with GP), bold when >0
+      var gd='M'+tx+' '+y(1080),lastDay=Math.min(e,NEW[state.pace].fd);
+      for(var day=TODAY+1;day<=lastDay;day++){gd+='L'+x(day)+' '+y(forwardY(day));}
+      out.push('<path d="'+gd+'" fill="none" stroke="#4a6b3a" stroke-width="'+(state.pace>0?2.6:1.4)+'" stroke-dasharray="6 5" opacity="'+(state.pace>0?1:.55)+'"/>');
+      out.push('<path d="'+smooth(af.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="2.4"/>');
+      af.forEach(function(p){out.push('<circle cx="'+x(p[0])+'" cy="'+y(p[1])+'" r="3" fill="#a0432a" stroke="#fbf7ee" stroke-width="1.4"/>');});
+      if(TODAY>=s&&TODAY<=e){out.push('<path d="M'+tx+' '+T+'V'+B+'" stroke="#5c4d40" stroke-width="1" stroke-dasharray="4 3"/><text x="'+tx+'" y="'+(T-8)+'" text-anchor="middle" fill="#5c4d40" font-family="monospace" font-size="9">TODAY</text>');}
+      out.push('<path d="M'+L+' '+T+'V'+B+'H'+R+'" fill="none" stroke="#e6dcc8" stroke-width="1.2"/>');
+      [0,600,1200,1800,2400,3000,3600].forEach(function(m){out.push('<path d="M'+(L-8)+' '+y(m)+'H'+L+'" stroke="#e6dcc8"/><text x="'+(L-13)+'" y="'+(y(m)+4)+'" text-anchor="end" fill="#8b7b6b" font-family="monospace" font-size="10">'+(m/60)+'h</text>');});
+      [s,Math.round((s+e)/2),TODAY,DEADLINE,e].filter(function(v,i,a){return v>=s&&v<=e&&a.indexOf(v)===i;}).forEach(function(d){out.push('<path d="M'+x(d)+' '+B+'V'+(B+7)+'" stroke="#d9cdb8"/><text x="'+x(d)+'" y="'+(B+20)+'" text-anchor="middle" fill="#8b7b6b" font-family="monospace" font-size="10">'+dLabel(d)+'</text>');});
+      svg.innerHTML=out.join('');
+    }
+    function updatePanels(){
+      var n=NEW[state.pace];
+      document.getElementById('pace-title').textContent=state.pace===0?'Current study pace':'+'+state.pace+' min per study day';
+      // A
+      document.getElementById('a-scen-title').textContent=n.title;
+      document.getElementById('a-scen-date').textContent=n.date;
+      var ad=document.getElementById('a-scen-delta');ad.textContent=n.delta;ad.className=n.cls;
+      // B
+      document.getElementById('b-scen').innerHTML=state.pace===0
+        ? 'Right now that\'s your current pace, so <b class="moss">≈ Aug 27</b> — same as the forecast. Add minutes to beat it.'
+        : 'Add <b class="moss">+'+state.pace+' min</b> per study day and you\'d finish <b class="moss">'+n.date+'</b> — '+n.delta+'.';
+      // C
+      var pct=((n.fd-54)/30)*100;pct=Math.max(2,Math.min(98,pct));
+      var flag=document.getElementById('c-flag');flag.style.left=pct+'%';
+      document.getElementById('c-date').textContent=n.date.replace('≈ ','');
+      document.getElementById('c-note').textContent=state.pace===0
+        ? 'At your current pace you land on the forecast. Each +15 min slides your pace marker left toward the deadline.'
+        : '+'+state.pace+' min/day moves your finish to '+n.date+' — '+n.delta+' vs the Aug 10 deadline.';
+    }
+    document.querySelectorAll('#ranges button').forEach(function(b){b.addEventListener('click',function(){state.range=b.dataset.range;document.querySelectorAll('#ranges button').forEach(function(n){n.classList.toggle('active',n===b);});render();});});
+    document.querySelectorAll('.switch').forEach(function(b){b.addEventListener('click',function(){var on=b.classList.toggle('on');b.setAttribute('aria-pressed',String(on));state[b.dataset.layer]=on;render();});});
+    document.getElementById('pace').addEventListener('input',function(){state.pace=Number(this.value);updatePanels();render();});
+    // variation toggle
+    var caps={A:'A — three-row finish stack · move the slider to change the "your pace" finish',B:'B — plain-language narrative',C:'C — finish timeline strip'};
+    document.querySelectorAll('.vt-bar button').forEach(function(btn){btn.addEventListener('click',function(){var v=btn.dataset.var;document.querySelectorAll('.vt-bar button').forEach(function(b){b.classList.toggle('active',b===btn);});document.querySelectorAll('.variation').forEach(function(el){el.classList.toggle('on',el.dataset.var===v);});document.getElementById('caption').textContent='Showing '+caps[v];});});
+    document.addEventListener('keydown',function(e){var m={'1':'A','2':'B','3':'C'}[e.key];if(m)document.querySelector('.vt-bar button[data-var="'+m+'"]').click();});
+    updatePanels();render();
+    if(window.ResizeObserver)new ResizeObserver(render).observe(svg);
+  })();
+  </script>
+</body>
+</html>

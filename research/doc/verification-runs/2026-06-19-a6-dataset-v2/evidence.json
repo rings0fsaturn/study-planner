@@ -1,0 +1,268 @@
+{
+  "calibration": {
+    "runs": {
+      "frozen": {
+        "archetype_split": {
+          "held_out": [
+            "deadline_sprinter",
+            "fading_flame",
+            "night_owl",
+            "weekend_warrior"
+          ],
+          "train": [
+            "crammer",
+            "marathon_runner",
+            "morning_lark",
+            "steady",
+            "steady_improver"
+          ]
+        },
+        "baseline_bar": {
+          "context_pred_mae": {
+            "max": {
+              "covariate_bayes": 0.092376761476088,
+              "eb_partial_pool": 0.09432227805645262,
+              "ewma": 0.12514059698792493,
+              "hierarchical_bayes": 0.10440349677245025,
+              "kalman": 0.14590554890809349,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.10440349677245025,
+              "sma": 0.11552980689827955
+            },
+            "medium": {
+              "covariate_bayes": 0.10345495578386998,
+              "eb_partial_pool": 0.1051043097553581,
+              "ewma": 0.1223114665870263,
+              "hierarchical_bayes": 0.1075614799189899,
+              "kalman": 0.14652529361348698,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.1075614799189899,
+              "sma": 0.11455808537928727
+            },
+            "small": {
+              "covariate_bayes": 0.11735720057408064,
+              "eb_partial_pool": 0.11752503906629506,
+              "ewma": 0.11357359464649078,
+              "hierarchical_bayes": 0.11106906535728693,
+              "kalman": 0.14501282918320274,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.11106906535728693,
+              "sma": 0.11487315484372809
+            }
+          },
+          "recovery_mae": {
+            "max": {
+              "covariate_bayes": 0.08494467786284662,
+              "eb_partial_pool": 0.03133480921618017,
+              "ewma": 0.10701771518801988,
+              "hierarchical_bayes": 0.026354900745805085,
+              "kalman": 0.12138177983233507,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.026354900745805092,
+              "sma": 0.08969078421277732
+            },
+            "medium": {
+              "covariate_bayes": 0.08847475880877416,
+              "eb_partial_pool": 0.05195959948102098,
+              "ewma": 0.12445625447078784,
+              "hierarchical_bayes": 0.04562505437289908,
+              "kalman": 0.1406706322517955,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.045625054372899064,
+              "sma": 0.10034883028415796
+            },
+            "small": {
+              "covariate_bayes": 0.10240532083882255,
+              "eb_partial_pool": 0.08391292746027709,
+              "ewma": 0.11520791437152655,
+              "hierarchical_bayes": 0.07906760923042382,
+              "kalman": 0.139826412501076,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.07906760923042382,
+              "sma": 0.09359640217036656
+            }
+          }
+        },
+        "candidate_kinds": {
+          "covariate_bayes": null,
+          "eb_partial_pool": null,
+          "ewma": null,
+          "hierarchical_bayes": null,
+          "kalman": null,
+          "oracle_calibration": null,
+          "pooled_bayes": null,
+          "sma": null
+        },
+        "dataset_id": "synthetic-21c2cdabfa91-seed0-n5400",
+        "delta_ci_present": true,
+        "label": "frozen",
+        "mc_survivors": {
+          "context_pred_mae": {
+            "holm_sig_but_not_win": {
+              "covariate_bayes": 5,
+              "eb_partial_pool": 5,
+              "ewma": 9,
+              "kalman": 12,
+              "pooled_bayes": 1,
+              "sma": 10
+            },
+            "holm_surviving_wins": {
+              "covariate_bayes": 3,
+              "eb_partial_pool": 3,
+              "ewma": 1,
+              "oracle_calibration": 12
+            }
+          },
+          "recovery_mae": {
+            "holm_sig_but_not_win": {
+              "covariate_bayes": 12,
+              "eb_partial_pool": 5,
+              "ewma": 12,
+              "kalman": 12,
+              "sma": 10
+            },
+            "holm_surviving_wins": {
+              "oracle_calibration": 12
+            }
+          }
+        },
+        "n_learners": 5400,
+        "params_version_hash": "21c2cdabfa91",
+        "scored_split": "held_out",
+        "seed_count": 200,
+        "source_path": "research/doc/verification-runs/2026-06-19-a6-dataset-v2/raw/frozen/calibration_results.json"
+      },
+      "reality": {
+        "archetype_split": {
+          "held_out": [
+            "deadline_sprinter",
+            "fading_flame",
+            "night_owl",
+            "weekend_warrior"
+          ],
+          "train": [
+            "crammer",
+            "marathon_runner",
+            "morning_lark",
+            "steady",
+            "steady_improver"
+          ]
+        },
+        "baseline_bar": {
+          "context_pred_mae": {
+            "max": {
+              "covariate_bayes": 0.16155679515436006,
+              "eb_partial_pool": 0.16464243419334468,
+              "ewma": 0.15136681066507712,
+              "hierarchical_bayes": 0.15952347571159536,
+              "kalman": 0.16916231095963458,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.15952347571159536,
+              "sma": 0.14759425038393556
+            },
+            "medium": {
+              "covariate_bayes": 0.15774367986783203,
+              "eb_partial_pool": 0.16314235089705467,
+              "ewma": 0.14900482474737192,
+              "hierarchical_bayes": 0.15199492171195933,
+              "kalman": 0.16969488418779968,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.15199492171195936,
+              "sma": 0.1503649937245412
+            },
+            "small": {
+              "covariate_bayes": 0.15704705454435694,
+              "eb_partial_pool": 0.16005072304473275,
+              "ewma": 0.1504727231165803,
+              "hierarchical_bayes": 0.15144472444418214,
+              "kalman": 0.17706641149086694,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.15144472444418214,
+              "sma": 0.1575361089469975
+            }
+          },
+          "recovery_mae": {
+            "max": {
+              "covariate_bayes": 0.16646866466541443,
+              "eb_partial_pool": 0.1537920661700096,
+              "ewma": 0.2666018646030275,
+              "hierarchical_bayes": 0.14009724382539346,
+              "kalman": 0.27499020232179505,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.14009724382539346,
+              "sma": 0.25038354262412477
+            },
+            "medium": {
+              "covariate_bayes": 0.13833432529402642,
+              "eb_partial_pool": 0.11921042972872538,
+              "ewma": 0.21174761046067225,
+              "hierarchical_bayes": 0.10482368102877253,
+              "kalman": 0.2261749107800465,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.10482368102877253,
+              "sma": 0.18860425011755638
+            },
+            "small": {
+              "covariate_bayes": 0.137627203321888,
+              "eb_partial_pool": 0.12403076797105515,
+              "ewma": 0.13999327267031492,
+              "hierarchical_bayes": 0.10739078071342852,
+              "kalman": 0.16646120771039694,
+              "oracle_calibration": 0.0,
+              "pooled_bayes": 0.10739078071342852,
+              "sma": 0.12690481943829743
+            }
+          }
+        },
+        "candidate_kinds": {
+          "covariate_bayes": null,
+          "eb_partial_pool": null,
+          "ewma": null,
+          "hierarchical_bayes": null,
+          "kalman": null,
+          "oracle_calibration": null,
+          "pooled_bayes": null,
+          "sma": null
+        },
+        "dataset_id": "synthetic-reality-c545404bcacf-seed0-n5400",
+        "delta_ci_present": true,
+        "label": "reality",
+        "mc_survivors": {
+          "context_pred_mae": {
+            "holm_sig_but_not_win": {
+              "covariate_bayes": 7,
+              "eb_partial_pool": 8,
+              "kalman": 8,
+              "sma": 4
+            },
+            "holm_surviving_wins": {
+              "covariate_bayes": 3,
+              "eb_partial_pool": 3,
+              "ewma": 1,
+              "oracle_calibration": 12,
+              "sma": 4
+            }
+          },
+          "recovery_mae": {
+            "holm_sig_but_not_win": {
+              "covariate_bayes": 9,
+              "eb_partial_pool": 12,
+              "ewma": 12,
+              "kalman": 12,
+              "sma": 12
+            },
+            "holm_surviving_wins": {
+              "oracle_calibration": 12
+            }
+          }
+        },
+        "n_learners": 5400,
+        "params_version_hash": "c545404bcacf",
+        "scored_split": "held_out",
+        "seed_count": 200,
+        "source_path": "research/doc/verification-runs/2026-06-19-a6-dataset-v2/raw/reality/calibration_results.json"
+      }
+    }
+  },
+  "generated_at": "2026-06-19T04:53:39Z"
+}

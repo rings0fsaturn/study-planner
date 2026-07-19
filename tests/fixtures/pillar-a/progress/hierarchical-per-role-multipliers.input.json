@@ -1,0 +1,106 @@
+{
+  "fn": "computeHierarchicalModel",
+  "sessions": [
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 72,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "a-0"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 72,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "a-1"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 72,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "a-2"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 72,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "a-3"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 72,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "a-4"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "practice",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "p-0"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "practice",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "p-1"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "practice",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "p-2"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "practice",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "p-3"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 48,
+      "duration": 60,
+      "materialRole": "practice",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "p-4"
+    }
+  ],
+  "exceptionalIds": []
+}

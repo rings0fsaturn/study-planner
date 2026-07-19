@@ -1,0 +1,182 @@
+{
+  "base_params_version_hash": "21c2cdabfa91",
+  "bounds_version": "oulad-engagement-v1",
+  "by_archetype": {
+    "crammer": {
+      "ar1_phi": 0.22739654666666667,
+      "dropout_probability": 0.22666666666666666,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.23903306945541708,
+      "shift_frequency_per_100_days": 10.105420976284616
+    },
+    "deadline_sprinter": {
+      "ar1_phi": 0.21678026333333333,
+      "dropout_probability": 0.21166666666666667,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 2.0,
+        "p90": 4.0,
+        "p95": 5.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.19863456075591585,
+      "shift_frequency_per_100_days": 7.128467362387765
+    },
+    "fading_flame": {
+      "ar1_phi": 0.20843535166666666,
+      "dropout_probability": 0.23,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 2.0,
+        "p90": 3.0,
+        "p95": 4.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.20213151701638746,
+      "shift_frequency_per_100_days": 9.074360673596406
+    },
+    "marathon_runner": {
+      "ar1_phi": 0.22183390166666667,
+      "dropout_probability": 0.20166666666666666,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.20640628387623955,
+      "shift_frequency_per_100_days": 10.215567544813405
+    },
+    "morning_lark": {
+      "ar1_phi": 0.22075821,
+      "dropout_probability": 0.195,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.14683321354964557,
+      "shift_frequency_per_100_days": 10.306425388865899
+    },
+    "night_owl": {
+      "ar1_phi": 0.22114452333333334,
+      "dropout_probability": 0.24666666666666667,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.1600355383444725,
+      "shift_frequency_per_100_days": 9.945312293839667
+    },
+    "steady": {
+      "ar1_phi": 0.22083781333333333,
+      "dropout_probability": 0.22,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.242286203908212,
+      "shift_frequency_per_100_days": 10.138198740615376
+    },
+    "steady_improver": {
+      "ar1_phi": 0.22007158166666665,
+      "dropout_probability": 0.2,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 1.0,
+        "p90": 2.0,
+        "p95": 3.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.21141307986243252,
+      "shift_frequency_per_100_days": 10.159632922943826
+    },
+    "weekend_warrior": {
+      "ar1_phi": 0.21753014833333334,
+      "dropout_probability": 0.22166666666666668,
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 2.0,
+        "p90": 3.0,
+        "p95": 5.0
+      },
+      "n_learners": 600,
+      "observed_lag1_phi": 0.21953264133774525,
+      "shift_frequency_per_100_days": 8.63875443496648
+    }
+  },
+  "checks": {
+    "ar1_phi": {
+      "high": 0.422619,
+      "low": 0.019299,
+      "value": 0.21942092666666665,
+      "within_bounds": true
+    },
+    "dropout_probability": {
+      "high": 0.290278,
+      "low": 0.140278,
+      "value": 0.21703703703703703,
+      "within_bounds": true
+    },
+    "gap_days": {
+      "p50": {
+        "high": 1.0,
+        "value": 1.0,
+        "within_bounds": true
+      },
+      "p75": {
+        "high": 3.0,
+        "value": 1.0,
+        "within_bounds": true
+      },
+      "p90": {
+        "high": 6.0,
+        "value": 2.0,
+        "within_bounds": true
+      },
+      "p95": {
+        "high": 11.0,
+        "value": 3.0,
+        "within_bounds": true
+      }
+    },
+    "shift_frequency_per_100_days": {
+      "high": 20.0,
+      "low": 0.25,
+      "value": 9.523571148701492,
+      "within_bounds": true
+    }
+  },
+  "dataset_id": "synthetic-reality-c545404bcacf-seed0-n5400",
+  "moment_bounds_hash": "3513c739b9ed",
+  "params_version_hash": "c545404bcacf",
+  "status": "pass",
+  "summary": {
+    "ar1_phi": 0.21942092666666665,
+    "dropout_probability": 0.21703703703703703,
+    "gap_days": {
+      "p50": 1.0,
+      "p75": 1.0,
+      "p90": 2.0,
+      "p95": 3.0
+    },
+    "n_learners": 5400,
+    "observed_lag1_phi": 0.20292290090071866,
+    "shift_frequency_per_100_days": 9.523571148701492
+  }
+}

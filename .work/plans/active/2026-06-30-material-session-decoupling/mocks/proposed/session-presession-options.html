@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pre-session setup — 3 variations</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/session.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; position:sticky; top:0; z-index:5; }
+  .var-label { max-width:720px; margin: 28px auto 0; padding: 0 20px; }
+  .var-label h2 { font-family: var(--font-display); font-weight:500; font-size:18px; }
+  .var-label p { color: var(--text-secondary); font-size:13px; margin-top:2px; }
+  .presession { max-width: 720px; margin: 0 auto; padding: 16px 20px 40px; }
+  .ps-divider { border:0; border-top:1px dashed var(--border-default); margin: 8px 0 0; }
+
+  /* dial */
+  .dial-wrap { display:flex; flex-direction:column; align-items:center; margin: var(--space-4) 0; }
+  .dial-svg { touch-action:none; width: 280px; height: 280px; max-width: 100%; }
+  .dial-cap-note { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color: var(--text-tertiary); margin-top: 6px; text-align:center; }
+  .dial-legend { display:flex; gap:14px; flex-wrap:wrap; justify-content:center; margin-top:8px; font-size:11px; color: var(--text-secondary); }
+  .dial-legend .sw { width:10px; height:10px; border-radius:3px; display:inline-block; vertical-align:-1px; margin-right:5px; }
+
+  /* change-material affordance on the strip */
+  .strip-change { margin-left:auto; flex-shrink:0; }
+
+  /* variation 2 split */
+  .ps-split { display:grid; grid-template-columns: 1fr; gap: var(--space-5); }
+  @media (min-width: 1024px){ .ps-split { grid-template-columns: 1.05fr 0.95fr; align-items:start; } }
+  .chooser { display:flex; flex-direction:column; gap:6px; }
+  .chooser-row { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--border-subtle); border-radius: var(--radius-md); background: var(--surface-card); cursor:pointer; }
+  .chooser-row:hover { background: var(--surface-recessed); }
+  .chooser-row.sel { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+  .chooser-radio { width:16px; height:16px; border-radius:50%; border:2px solid var(--border-strong); flex-shrink:0; position:relative; }
+  .chooser-row.sel .chooser-radio { border-color: var(--ink); }
+  .chooser-row.sel .chooser-radio::after { content:""; position:absolute; inset:3px; border-radius:50%; background: var(--ink); }
+  .chooser-grouplbl { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--text-tertiary); margin:10px 0 2px; }
+
+  /* recommended caption row */
+  .rec-line { display:flex; align-items:center; justify-content:center; gap:8px; font-size:13px; color: var(--text-secondary); margin-bottom: var(--space-3); }
+  .rec-line .dot { width:8px; height:8px; border-radius:50%; background: var(--moss); display:inline-block; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · NEW pre-session page (material confirm + dial) — 3 variations · faithful to /session frame</div>
+
+<!-- ============ VARIATION 1 — Confirm card (stacked, faithful) ============ -->
+<div class="var-label"><h2>Variation 1 — Confirm card (stacked)</h2>
+  <p>Closest to the live session layout: the suggested material sits where the session title goes, the dial sits where the timer goes. One centered column. "Change" swaps the material.</p></div>
+<div class="presession">
+  <div class="session-frame">
+    <div class="session-eyebrow-row eyebrow-clay">
+      <span class="session-pulse-dot paused"></span> Ready to start
+    </div>
+    <div class="session-title">Linear Algebra — Lecture 4</div>
+    <div class="session-subtitle">Suggested for today · YouTube · est ~50 min</div>
+
+    <div class="material-strip" style="margin-bottom: var(--space-5);">
+      <div class="material-strip-icon" style="color:var(--terracotta-d);">YT</div>
+      <div class="material-strip-body">
+        <div class="material-strip-title">Linear Algebra — Lecture 4</div>
+        <div class="material-strip-meta">YouTube · Main reading · in progress</div>
+      </div>
+      <button class="btn btn-secondary btn-sm strip-change" onclick="document.getElementById('picker1').classList.add('show')">Change</button>
+    </div>
+
+    <div class="rec-line"><span class="dot"></span> Recommended <strong>1h</strong> · within today's 2h cap</div>
+    <div class="dial-wrap">
+      <svg class="dial-svg" id="dial1" viewBox="0 0 300 300" role="img" aria-label="Set planned session length"></svg>
+      <div class="dial-cap-note">drag the knob to set how long you'll study</div>
+      <div class="dial-legend">
+        <span><span class="sw" style="background:var(--ink);"></span>planned</span>
+        <span><span class="sw" style="background:var(--moss);"></span>recommended</span>
+        <span><span class="sw" style="background:var(--terracotta);"></span>daily cap</span>
+      </div>
+    </div>
+
+    <div class="session-actions">
+      <button class="btn btn-accent">Start session</button>
+      <button class="btn btn-secondary" onclick="document.getElementById('picker1').classList.add('show')">Pick a different material</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIATION 2 — Split: choose material + dial ============ -->
+<div class="var-label"><h2>Variation 2 — Split: choose, then set length</h2>
+  <p>Material choice gets first-class space: a directory on the left (suggested one pre-selected), the dial + Start on the right. Best when swapping material is common. Stacks on mobile.</p></div>
+<div class="presession">
+  <div class="session-frame">
+    <div class="session-eyebrow-row eyebrow-clay"><span class="session-pulse-dot paused"></span> Set up your session</div>
+    <div class="ps-split">
+      <!-- left: material chooser -->
+      <div>
+        <div class="chooser-grouplbl">Suggested</div>
+        <div class="chooser">
+          <div class="chooser-row sel"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:var(--terracotta-d);">YT</div><div class="material-strip-body"><div class="material-strip-title">Linear Algebra — Lecture 4</div><div class="material-strip-meta">in progress · ~50m left</div></div></div>
+        </div>
+        <div class="chooser-grouplbl">Or pick another</div>
+        <div class="chooser">
+          <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:#5f5a9b;">PL</div><div class="material-strip-body"><div class="material-strip-title">MIT 18.06 — full playlist</div><div class="material-strip-meta">12 videos · ~3h 10m</div></div></div>
+          <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:var(--moss);">◆</div><div class="material-strip-body"><div class="material-strip-title">Strang — Notes on Eigenvalues</div><div class="material-strip-meta">article · ~35m</div></div></div>
+          <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:#7a5630;">BK</div><div class="material-strip-body"><div class="material-strip-title">Problem set 4 — practice</div><div class="material-strip-meta">manual · ~45m</div></div></div>
+        </div>
+      </div>
+      <!-- right: dial + start -->
+      <div>
+        <div class="rec-line"><span class="dot"></span> Recommended <strong>1h</strong> · cap 2h</div>
+        <div class="dial-wrap" style="margin-top:0;">
+          <svg class="dial-svg" id="dial2" viewBox="0 0 300 300" role="img" aria-label="Set planned session length"></svg>
+          <div class="dial-cap-note">planned length</div>
+        </div>
+        <div class="session-actions">
+          <button class="btn btn-accent">Start session</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ VARIATION 3 — Dial-forward minimal ============ -->
+<div class="var-label"><h2>Variation 3 — Dial-forward (minimal)</h2>
+  <p>Fastest confirm-and-go: the dial is the hero (like the timer it becomes). Material is a slim strip with a quiet "change" link. Least chrome.</p></div>
+<div class="presession">
+  <div class="session-frame">
+    <div class="session-eyebrow-row eyebrow-clay"><span class="session-pulse-dot paused"></span> Ready · how long today?</div>
+
+    <div class="dial-wrap" style="margin-top: var(--space-2);">
+      <svg class="dial-svg" id="dial3" viewBox="0 0 300 300" style="width:300px;height:300px;" role="img" aria-label="Set planned session length"></svg>
+      <div class="dial-legend">
+        <span><span class="sw" style="background:var(--ink);"></span>planned</span>
+        <span><span class="sw" style="background:var(--moss);"></span>recommended 1h</span>
+        <span><span class="sw" style="background:var(--terracotta);"></span>cap 2h</span>
+      </div>
+    </div>
+
+    <div class="material-strip">
+      <div class="material-strip-icon" style="color:var(--terracotta-d);">YT</div>
+      <div class="material-strip-body">
+        <div class="material-strip-title">Linear Algebra — Lecture 4</div>
+        <div class="material-strip-meta">Suggested · YouTube · Main reading</div>
+      </div>
+      <button class="btn btn-ghost btn-sm strip-change" onclick="document.getElementById('picker1').classList.add('show')">Change</button>
+    </div>
+
+    <div class="session-actions">
+      <button class="btn btn-accent">Start session</button>
+    </div>
+  </div>
+</div>
+
+<!-- shared material picker (reuses the onboarding grouped directory idea) -->
+<div class="modal-overlay" id="picker1" style="position:fixed; display:none;">
+  <div class="modal-card" style="max-width:440px; width:100%; background:var(--surface-card); border-radius:var(--radius-lg); padding:18px; align-self:center;">
+    <div class="modal-eyebrow">Choose material</div>
+    <div class="modal-title" style="margin-bottom:12px;">What do you want to study?</div>
+    <div class="chooser">
+      <div class="chooser-row sel"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:var(--terracotta-d);">YT</div><div class="material-strip-body"><div class="material-strip-title">Linear Algebra — Lecture 4</div><div class="material-strip-meta">in progress</div></div></div>
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:#5f5a9b;">PL</div><div class="material-strip-body"><div class="material-strip-title">MIT 18.06 — full playlist</div><div class="material-strip-meta">12 videos</div></div></div>
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:var(--moss);">◆</div><div class="material-strip-body"><div class="material-strip-title">Strang — Notes on Eigenvalues</div><div class="material-strip-meta">article</div></div></div>
+      <div class="chooser-row"><span class="chooser-radio"></span><div class="material-strip-icon" style="width:30px;height:30px;color:#7a5630;">BK</div><div class="material-strip-body"><div class="material-strip-title">Problem set 4 — practice</div><div class="material-strip-meta">manual</div></div></div>
+    </div>
+    <div style="display:flex; gap:8px; justify-content:flex-end; margin-top:14px;">
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('picker1').classList.remove('show')">Cancel</button>
+      <button class="btn btn-primary btn-sm" onclick="document.getElementById('picker1').classList.remove('show')">Use this material</button>
+    </div>
+  </div>
+</div>
+
+<style> #picker1.show { display:flex !important; } </style>
+
+<script>
+  // ---- Marginalia-skinned "set planned length" dial (no running ring) ----
+  const CEN=150, R_BAND=116, R_TICK_OUT=128, R_TICK_MIN=121, R_TICK_MAJ=114, R_LABEL=140, R_KNOB=116, SWEEP=270, START=225;
+  const polar=(r,deg)=>{const rad=((deg-90)*Math.PI)/180;return [CEN+r*Math.cos(rad),CEN+r*Math.sin(rad)];};
+  const ang=(v,max)=>START+(Math.min(Math.max(v,0),max)/(max||1))*SWEEP;
+  function arcPath(r,v0,v1,max){if(v1<=v0)return"";const a0=ang(v0,max),a1=ang(v1,max);const[x0,y0]=polar(r,a0),[x1,y1]=polar(r,a1);const large=a1-a0>180?1:0;return `M ${x0} ${y0} A ${r} ${r} 0 ${large} 1 ${x1} ${y1}`;}
+  function angleToValue(deg,max){let f;if(deg>=START)f=(deg-START)/SWEEP;else if(deg<=START-360+SWEEP)f=(deg+360-START)/SWEEP;else f=deg<180?1:0;return Math.min(Math.max(f,0),1)*max;}
+  const fmt=m=>{m=Math.max(0,Math.round(m));const h=Math.floor(m/60),r=m%60;return h>0?`${h}h ${r}m`:`${r}m`;};
+  const NS="http://www.w3.org/2000/svg";
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+
+  function makeDial(id,{budget=120,done=0,recommended=60,planned=50}={}){
+    const svg=document.getElementById(id); if(!svg) return;
+    const max=Math.ceil((budget*1.5)/30)*30; const cap=Math.max(0,budget-done);
+    let val=planned;
+    function render(){
+      svg.innerHTML="";
+      // zone bands
+      svg.appendChild(el("path",{d:arcPath(R_BAND,0,cap,max),fill:"none",stroke:"rgba(74,107,58,0.12)","stroke-width":20}));
+      svg.appendChild(el("path",{d:arcPath(R_BAND,cap,max,max),fill:"none",stroke:"rgba(194,142,90,0.18)","stroke-width":20}));
+      // ticks
+      for(let t=0;t<=max;t+=15){const major=t%60===0;const a=ang(t,max);const[xi,yi]=polar(major?R_TICK_MAJ:R_TICK_MIN,a);const[xo,yo]=polar(R_TICK_OUT,a);
+        svg.appendChild(el("line",{x1:xi,y1:yi,x2:xo,y2:yo,stroke:major?"#8B7B6B":"#C9BCA6","stroke-width":major?2:1}));
+        if(major){const[lx,ly]=polar(R_LABEL,a);const tx=el("text",{x:lx,y:ly+3,"text-anchor":"middle","font-size":10,fill:"#8B7B6B","font-family":"var(--font-mono)"});tx.textContent=t;svg.appendChild(tx);}}
+      // cap notch
+      const capA=ang(cap,max);const[ci,ciy]=polar(R_TICK_MAJ-4,capA);const[co,coy]=polar(R_TICK_OUT,capA);
+      svg.appendChild(el("line",{x1:ci,y1:ciy,x2:co,y2:coy,stroke:"#B85C38","stroke-width":3,"stroke-dasharray":"3 2"}));
+      const[clx,cly]=polar(R_LABEL+8,capA);const ct=el("text",{x:clx,y:cly,"text-anchor":"middle","font-size":9,fill:"#B85C38","font-family":"var(--font-mono)"});ct.textContent="cap";svg.appendChild(ct);
+      // recommended triangle
+      const rA=ang(recommended,max);const[rx,ry]=polar(R_BAND,rA);
+      svg.appendChild(el("polygon",{points:`${rx},${ry} ${rx-5},${ry-9} ${rx+5},${ry-9}`,fill:"#4A6B3A"}));
+      const[rlx,rly]=polar(R_LABEL+8,rA);const rt=el("text",{x:rlx,y:rly,"text-anchor":"middle","font-size":9,fill:"#4A6B3A","font-family":"var(--font-mono)"});rt.textContent="rec";svg.appendChild(rt);
+      // planned knob + spoke
+      const kA=ang(val,max);const[kx,ky]=polar(R_KNOB,kA);const[sx,sy]=polar(70,kA);
+      svg.appendChild(el("line",{x1:sx,y1:sy,x2:kx,y2:ky,stroke:"#2A1F18","stroke-width":3}));
+      const knob=el("circle",{cx:kx,cy:ky,r:13,fill:"#FBF7EE",stroke:"#2A1F18","stroke-width":4,style:"cursor:grab"});
+      svg.appendChild(knob); svg.appendChild(el("circle",{cx:kx,cy:ky,r:4,fill:"#2A1F18"}));
+      // center text
+      const big=el("text",{x:CEN,y:CEN-2,"text-anchor":"middle","font-size":40,"font-weight":500,fill:"#2A1F18","font-family":"var(--font-display)"});big.textContent=fmt(val);svg.appendChild(big);
+      const sub=el("text",{x:CEN,y:CEN+22,"text-anchor":"middle","font-size":12,fill:"#8B7B6B","font-family":"var(--font-body)"});sub.textContent="planned length";svg.appendChild(sub);
+      knob.addEventListener("pointerdown",e=>{e.preventDefault();drag=true;});
+    }
+    let drag=false;
+    function move(e){
+      if(!drag)return;const rect=svg.getBoundingClientRect();
+      const x=((e.clientX-rect.left)/rect.width)*300, y=((e.clientY-rect.top)/rect.height)*300;
+      let deg=(Math.atan2(y-CEN,x-CEN)*180)/Math.PI+90; deg=(deg+360)%360;
+      const v=angleToValue(deg,max); val=Math.min(Math.max(Math.round(v/5)*5,5),max); render();
+    }
+    window.addEventListener("pointermove",move);
+    window.addEventListener("pointerup",()=>drag=false);
+    render();
+  }
+
+  makeDial("dial1",{planned:50});
+  makeDial("dial2",{planned:50});
+  makeDial("dial3",{planned:60});
+
+  // chooser radios (visual)
+  document.querySelectorAll('.chooser').forEach(group=>{
+    group.addEventListener('click',e=>{const row=e.target.closest('.chooser-row'); if(!row||!group.contains(row))return;
+      group.querySelectorAll('.chooser-row').forEach(r=>r.classList.remove('sel')); row.classList.add('sel');});
+  });
+</script>
+</body>
+</html>

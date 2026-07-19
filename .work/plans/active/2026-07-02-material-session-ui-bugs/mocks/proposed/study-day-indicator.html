@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Study-day indicator — real baseline + proposed (BUG-4)</title>
+<!-- REAL app stylesheets (verbatim copies), so this matches the running pages -->
+<link rel="stylesheet" href="../real-css/tokens.css" />
+<link rel="stylesheet" href="../real-css/global.css" />
+<link rel="stylesheet" href="../real-css/components.css" />
+<link rel="stylesheet" href="../real-css/roadmap.css" />
+<link rel="stylesheet" href="../real-css/onboarding.css" />
+<style>
+  /* ---- mock chrome only (not shipped) ---- */
+  .mock-bar { position:sticky; top:0; z-index:2000; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background: var(--surface-inverted); color: var(--text-on-inverted); padding:10px 16px; font-family:var(--font-mono); font-size:12px; }
+  .mock-bar strong { color: var(--text-on-inverted); }
+  .mock-toggle { display:inline-flex; align-items:center; gap:8px; cursor:pointer; border:1px solid rgba(245,239,228,.35);
+    border-radius: var(--radius-pill); padding:6px 12px; color: var(--text-on-inverted); background:transparent; font-family:var(--font-mono); font-size:12px; }
+  .mock-toggle[data-on="true"] { background: var(--moss); border-color: var(--moss); }
+  .mock-wrap { max-width: var(--container-wide); margin: 0 auto; padding: 20px; }
+  .mock-section-label { font-family: var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; color: var(--text-tertiary); margin: 28px 0 12px; border-top:1px solid var(--border-subtle); padding-top:18px; }
+
+  /* =========================================================
+     PROPOSED (BUG-4) — study-day indicator. Gated on body.studyday-on
+     so you can flip baseline <-> proposed with the toggle.
+     Ship path: drop the `body.studyday-on` gate + `.js-` hooks;
+     apply .roadmap-day-studyday to cells whose weekday is selected.
+     ========================================================= */
+  body.studyday-on .js-studyday { background: color-mix(in srgb, var(--moss) 8%, var(--surface-card)); }
+  body.studyday-on .roadmap-day-today.js-studyday { background: var(--cal-today-fill); }        /* today wins */
+  body.studyday-on .roadmap-day-current-week.js-studyday { background: color-mix(in srgb, var(--moss) 8%, var(--cal-week-band)); }
+  body.studyday-on .js-weekday-studyday { color: var(--moss); font-weight: 600; }
+  .js-legend-studyday { display: none; }
+  body.studyday-on .js-legend-studyday { display: inline-flex; }
+  .roadmap-legend-swatch.studyday-swatch,
+  .cal-swatch.studyday { background: color-mix(in srgb, var(--moss) 8%, var(--surface-card)); border:1px solid color-mix(in srgb, var(--moss) 32%, var(--surface-card)); }
+
+  /* proposed onboarding fixes, also gated on the toggle */
+  body.studyday-on .onboarding-mini-calendar .roadmap-day-in-month:hover { transform:none; box-shadow:none; z-index:auto; } /* read-only: no false lift */
+  body.studyday-on .onboarding-mini-calendar .roadmap-day { cursor: default; }
+  body.studyday-on .js-onb-session {                                                             /* recolor done->booked */
+    color: var(--text-tertiary); background: var(--surface-card); border:1.4px solid var(--border-default);
+  }
+</style>
+</head>
+<body class="studyday-on">
+
+<div class="mock-bar">
+  <strong>BUG-4 mock</strong> · real app CSS + real DOM ·
+  <button class="mock-toggle" id="toggle" data-on="true">study-day indicator: ON</button>
+  <span>toggle to compare baseline ↔ proposed · hover a session for its tooltip</span>
+</div>
+
+<div class="mock-wrap">
+
+  <!-- ============================================================ -->
+  <!-- A. ROADMAP PAGE (/roadmap) — real DOM. Study days Mon/Wed/Fri -->
+  <!-- ============================================================ -->
+  <div class="mock-section-label">A · Roadmap page — study days Mon · Wed · Fri</div>
+
+  <div class="roadmap-page">
+    <a class="roadmap-back-link" href="#">&larr; Roadmaps</a>
+
+    <header class="roadmap-header">
+      <div>
+        <div class="mono-caps">Active roadmap · 3 materials · 3 weeks</div>
+        <h1 class="roadmap-title">Active roadmap</h1>
+        <p class="roadmap-subtitle">Jul 1 – Jul 20, 2026</p>
+      </div>
+      <section class="roadmap-eta-card" aria-label="Projected finish">
+        <div class="roadmap-eta-copy">
+          <div class="mono-caps"><span class="roadmap-provisional">provisional estimate</span> · finish</div>
+          <div class="roadmap-eta-finish">Jul 13</div>
+          <div class="mono-caps roadmap-eta-meta">7 days early · gp</div>
+        </div>
+        <svg class="roadmap-eta-spark" viewBox="0 0 160 44" preserveAspectRatio="none" aria-hidden="true">
+          <polyline points="0,42 40,34 80,24 120,14 160,4" fill="none" stroke="var(--border-default)" stroke-width="1.5" stroke-dasharray="3 3"/>
+          <polyline points="0,42 40,26 80,16" fill="none" stroke="var(--moss)" stroke-width="2.5"/>
+        </svg>
+      </section>
+    </header>
+
+    <div class="roadmap-toolbar">
+      <div class="roadmap-month-nav" aria-label="Roadmap month navigation">
+        <button type="button" class="roadmap-nav-icon" aria-label="Previous month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div class="roadmap-month-label">July 2026</div>
+        <button type="button" class="roadmap-nav-icon" aria-label="Next month"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+        <button type="button" class="btn btn-secondary roadmap-today-button" disabled>Today</button>
+      </div>
+      <div class="roadmap-legend" aria-label="Roadmap status legend">
+        <span class="roadmap-legend-item js-legend-studyday"><span class="roadmap-legend-swatch studyday-swatch" aria-hidden="true"></span>Study day</span>
+        <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-done" aria-hidden="true"></span>Done</span>
+        <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-booked" aria-hidden="true"></span>Booked</span>
+        <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-missed" aria-hidden="true"></span>Missed</span>
+        <span class="roadmap-legend-item"><span class="roadmap-legend-swatch roadmap-chip-unplanned" aria-hidden="true"></span>Unplanned</span>
+      </div>
+    </div>
+
+    <section class="roadmap-calendar-shell" aria-label="July 2026 roadmap calendar">
+      <div class="roadmap-weekdays" role="row">
+        <div class="roadmap-weekday js-weekday-studyday" role="columnheader">Mon</div>
+        <div class="roadmap-weekday" role="columnheader">Tue</div>
+        <div class="roadmap-weekday js-weekday-studyday" role="columnheader">Wed</div>
+        <div class="roadmap-weekday" role="columnheader">Thu</div>
+        <div class="roadmap-weekday js-weekday-studyday" role="columnheader">Fri</div>
+        <div class="roadmap-weekday" role="columnheader">Sat</div>
+        <div class="roadmap-weekday" role="columnheader">Sun</div>
+      </div>
+      <div class="roadmap-calendar-slide" role="grid">
+        <div class="roadmap-week-row" role="row">
+          <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+          <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done" data-status="done" title="Done · Linear Algebra · 1h · Wed, Jul 1"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">3</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-done" data-status="done" title="Done · Strang notes · 35m · Fri, Jul 3"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M5 12l4 4L19 6"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">4</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">5</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+        </div>
+        <div class="roadmap-week-row" role="row">
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">6</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-missed" data-status="missed" title="Missed · Problem set 4 · 45m · Mon, Jul 6"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M7 7l10 10"/><path d="M17 7L7 17"/></svg><span class="roadmap-bubble-label">Problem set 4</span><span class="roadmap-bubble-minutes">45m</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">7</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-unplanned" data-status="unplanned" title="Unplanned · 3Blue1Brown · 20m · Tue, Jul 7 (not a study day)"><svg class="icon icon-sm" viewBox="0 0 24 24"><path d="M12 5v14"/><path d="M5 12h14"/></svg><span class="roadmap-bubble-label">3Blue1Brown</span><span class="roadmap-bubble-minutes">20m</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week roadmap-day-today js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">8</span><span class="roadmap-day-markers"><span class="roadmap-today-pill">Today</span></span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-booked" data-status="booked" title="Booked · Linear Algebra · 1h · Wed, Jul 8"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Linear Algebra</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">9</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">10</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-booked" data-status="booked" title="Booked · Strang notes · 35m · Fri, Jul 10"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Strang notes</span><span class="roadmap-bubble-minutes">35m</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">11</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-current-week" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">12</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+        </div>
+        <div class="roadmap-week-row" role="row">
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">13</span></div><div class="roadmap-bubble-stack"><button class="roadmap-bubble roadmap-chip-booked roadmap-booking-blank" data-status="booked" title="Booked · pick material at start · 1h · Mon, Jul 13"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Session · pick at start</span><span class="roadmap-bubble-minutes">1h</span></button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">14</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">15</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">16</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">17</span></div><div class="roadmap-bubble-stack"><button class="roadmap-add-session" type="button">+ add session</button></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">18</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">19</span></div></div>
+        </div>
+        <div class="roadmap-week-row" role="row">
+          <div class="roadmap-day roadmap-day-in-month roadmap-day-deadline js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">20</span><span class="roadmap-day-markers"><span class="roadmap-deadline-pill">Deadline</span></span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">21</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">22</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">23</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">24</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">25</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">26</span></div></div>
+        </div>
+        <div class="roadmap-week-row" role="row">
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">27</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">28</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+          <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">31</span></div></div>
+          <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div></div>
+          <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="dir-panel" aria-label="Materials directory">
+      <button type="button" class="dir-head" aria-expanded="true">
+        <span class="ttl">Materials</span>
+        <span class="count-pill">3 · 42% done</span>
+        <svg class="icon icon-sm chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="dir-body">
+        <div class="dir-row"><div class="material-icon art" aria-hidden="true">LI</div><div class="dir-prog"><div class="dir-title">Linear Algebra — full playlist</div><div class="dir-bar" aria-hidden="true"><span style="width:33%;"></span></div><div class="dir-meta">in progress · 1h 20m of 4h</div></div><button class="btn btn-secondary btn-sm" type="button">Mark progress</button></div>
+        <div class="dir-row"><div class="material-icon art" aria-hidden="true">ST</div><div class="dir-prog"><div class="dir-title">Strang — Notes on Eigenvalues</div><div class="dir-bar" aria-hidden="true"><span style="width:100%;"></span></div><div class="dir-meta">done · 35m of 35m</div></div><button class="btn btn-secondary btn-sm" type="button">Mark progress</button></div>
+        <div class="dir-row"><div class="material-icon art" aria-hidden="true">PR</div><div class="dir-prog"><div class="dir-title">Problem set 4 — practice</div><div class="dir-bar" aria-hidden="true"><span style="width:0%;"></span></div><div class="dir-meta">not started · 0m of 45m</div></div><button class="btn btn-secondary btn-sm" type="button">Mark progress</button></div>
+      </div>
+    </section>
+
+    <footer class="roadmap-footer">
+      <button class="btn btn-secondary" type="button">Mark roadmap complete</button>
+      <button class="btn btn-secondary" type="button">Abandon roadmap</button>
+      <button class="btn btn-ghost" type="button" disabled>Edit roadmap</button>
+      <a class="btn btn-ghost" href="#">Replan</a>
+    </footer>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- B. ONBOARDING PREVIEW (/onboarding/3?new=1) — real DOM        -->
+  <!-- today Jul 2 · study days Tue/Sat · deadline Jul 11            -->
+  <!-- ============================================================ -->
+  <div class="mock-section-label">B · Onboarding preview pane — study days Tue · Sat · today Jul 2 · deadline Jul 11</div>
+
+  <div class="onboarding-step onboarding-preview onboarding-booking-preview" style="max-width:560px;">
+    <section class="onboarding-verdict-card finish-toggle" role="button" tabindex="0" aria-expanded="true" aria-controls="obcal" id="finishToggle">
+      <div class="onboarding-verdict-row">
+        <div>
+          <div class="stat-label">Projected finish</div>
+          <div class="stat-value md moss">Jul 7</div>
+        </div>
+        <span class="cal-affordance">Calendar<svg class="icon icon-sm cal-chev" viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg></span>
+      </div>
+      <div class="mono-caps onboarding-estimate-line"><span class="provisional">estimate</span> · 4 days before your Jul 11 deadline</div>
+      <div class="finish-hint">Tap to see your booked study days and deadline.</div>
+    </section>
+
+    <section id="obcal" class="onboarding-calendar-panel open" aria-hidden="false">
+      <div class="cal-monthnav">
+        <button type="button" class="cal-navbtn" aria-label="Previous month"><svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg></button>
+        <span class="cal-monthlabel">July 2026</span>
+        <button type="button" class="cal-navbtn" aria-label="Next month"><svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>
+      </div>
+
+      <div class="roadmap-calendar-shell onboarding-mini-calendar" aria-label="July 2026 booked sessions">
+        <div class="roadmap-weekdays" role="row">
+          <div class="roadmap-weekday" role="columnheader">Mon</div>
+          <div class="roadmap-weekday js-weekday-studyday" role="columnheader">Tue</div>
+          <div class="roadmap-weekday" role="columnheader">Wed</div>
+          <div class="roadmap-weekday" role="columnheader">Thu</div>
+          <div class="roadmap-weekday" role="columnheader">Fri</div>
+          <div class="roadmap-weekday js-weekday-studyday" role="columnheader">Sat</div>
+          <div class="roadmap-weekday" role="columnheader">Sun</div>
+        </div>
+        <div role="grid">
+          <div class="roadmap-week-row" role="row">
+            <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">29</span></div></div>
+            <div class="roadmap-day roadmap-day-outside" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">30</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">1</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month roadmap-day-today" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">2</span><span class="roadmap-day-markers"><span class="roadmap-today-pill">Today</span></span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">3</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">4</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">5</span></div></div>
+          </div>
+          <div class="roadmap-week-row" role="row">
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">6</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">7</span></div><div class="roadmap-bubble-stack"><div class="roadmap-bubble roadmap-chip-done js-onb-session" data-status="booked" title="Booked study session · 2h · Tue, Jul 7"><svg class="icon icon-sm" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v5l3 2"/></svg><span class="roadmap-bubble-label">Session</span><span class="roadmap-bubble-minutes">2h</span></div></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">8</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">9</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">10</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month js-studyday roadmap-day-deadline" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">11</span><span class="roadmap-day-markers"><span class="roadmap-deadline-pill">Deadline</span></span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">12</span></div></div>
+          </div>
+          <div class="roadmap-week-row" role="row">
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">13</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">14</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">15</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">16</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">17</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month js-studyday" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">18</span></div></div>
+            <div class="roadmap-day roadmap-day-in-month" role="gridcell"><div class="roadmap-day-head"><span class="roadmap-day-number">19</span></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cal-legend">
+        <span class="js-legend-studyday"><span class="cal-swatch studyday"></span>study day</span>
+        <span><span class="cal-swatch booked"></span>booked session</span>
+        <span><span class="cal-swatch today"></span>today</span>
+        <span><span class="cal-swatch deadline"></span>deadline</span>
+      </div>
+    </section>
+
+    <section class="onboarding-verdict-card">
+      <div class="onboarding-verdict-row">
+        <span class="stat-label">Your backlog fits your time</span>
+        <span class="t-body-sm">1h 24m of 4h capacity</span>
+      </div>
+      <div class="cap-bar" aria-hidden="true"><span style="width:35%;"></span></div>
+      <div class="t-body-sm onboarding-muted">We book study sessions on your study days until your materials are done, then leave the rest as buffer.</div>
+    </section>
+
+    <div class="onboarding-preview-stats">
+      <div class="stat"><div class="stat-value sm">1</div><div class="stat-label">sessions</div></div>
+      <div class="stat"><div class="stat-value sm">1h 24m</div><div class="stat-label">total</div></div>
+      <div class="stat"><div class="stat-value sm">4 d</div><div class="stat-label">buffer</div></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // toggle study-day indicator (baseline <-> proposed)
+  var t = document.getElementById('toggle');
+  t.addEventListener('click', function () {
+    var on = document.body.classList.toggle('studyday-on');
+    t.dataset.on = String(on);
+    t.textContent = 'study-day indicator: ' + (on ? 'ON' : 'OFF');
+  });
+  // onboarding: expandable calendar (finish card toggles the panel)
+  var ft = document.getElementById('finishToggle');
+  var panel = document.getElementById('obcal');
+  function toggleCal() {
+    var open = panel.classList.toggle('open');
+    ft.setAttribute('aria-expanded', String(open));
+    panel.setAttribute('aria-hidden', String(!open));
+  }
+  ft.addEventListener('click', toggleCal);
+  ft.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCal(); } });
+</script>
+</body>
+</html>

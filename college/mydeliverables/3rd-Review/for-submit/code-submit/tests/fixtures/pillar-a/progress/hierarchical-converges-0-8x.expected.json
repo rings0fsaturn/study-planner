@@ -1,0 +1,24 @@
+{
+  "globalPosterior": {
+    "mean": 0.8001998001998004,
+    "variance": 0.0000999000999000999,
+    "sessionCount": 10
+  },
+  "globalMultiplier": 0.8001998001998004,
+  "roleMultipliers": {
+    "anchor": {
+      "multiplier": 0.8000999500249875,
+      "confidence": 141.45670715805596,
+      "sessionCount": 10
+    }
+  },
+  "insights": [
+    {
+      "role": "anchor",
+      "timeOfDay": "evening",
+      "multiplier": 0.8000666444518495,
+      "sessionCount": 10,
+      "label": "anchor in the evening"
+    }
+  ]
+}

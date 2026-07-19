@@ -1,0 +1,111 @@
+---
+import '@study-tracker/design-tokens/global.css';
+import '@study-tracker/design-tokens/tokens.css';
+import '@study-tracker/design-tokens/components.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'A quiet study companion that mirrors your discipline.' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content={description}>
+  <title>{title} | Study Tracker</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container">
+      <a href="/" class="logo">Study Tracker</a>
+      <nav class="site-nav">
+        <a href="/about">About</a>
+        <a href="/how-it-works">How it works</a>
+        <a href="/privacy">Privacy</a>
+        <a href="/terms">Terms</a>
+        <a href="/study/sign-in" class="btn btn-accent btn-sm">Get started</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <p>&copy; {new Date().getFullYear()} Study Tracker. Built for self-directed learners.</p>
+    </div>
+  </footer>
+</body>
+</html>
+
+<style>
+  .site-header {
+    padding: var(--space-4) 0;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .site-header .container {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+  }
+
+  .site-nav {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    flex-wrap: wrap;
+  }
+
+  .site-nav a:not(.btn) {
+    color: var(--text-secondary);
+    font-size: 14px;
+    transition: color var(--duration-2) var(--ease-out);
+  }
+
+  .site-nav a:not(.btn):hover {
+    color: var(--text-primary);
+  }
+
+  main {
+    min-height: calc(100vh - 140px);
+  }
+
+  .site-footer {
+    padding: var(--space-5) 0;
+    border-top: 1px solid var(--border-subtle);
+    text-align: center;
+  }
+
+  .site-footer .container {
+    max-width: var(--container-wide);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .site-footer p {
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+</style>

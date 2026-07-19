@@ -1,0 +1,345 @@
+{
+  "weeks": [
+    {
+      "weekIndex": 0,
+      "startDate": "2026-04-29",
+      "slots": [
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Mon",
+          "date": "2026-04-29",
+          "capacityMinutes": 60,
+          "role": "foundation",
+          "candidateMaterialIds": [
+            "cap"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "CAP theorem · session 1 of 4"
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-01",
+          "capacityMinutes": 60,
+          "role": "foundation",
+          "candidateMaterialIds": [
+            "cap"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "CAP theorem · session 2 of 4"
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-04",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "Designing Data-Intensive Applications · session 1 of 4"
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "startDate": "2026-05-06",
+      "slots": [
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-06",
+          "capacityMinutes": 60,
+          "role": "foundation",
+          "candidateMaterialIds": [
+            "cap"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "CAP theorem · session 3 of 4"
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-08",
+          "capacityMinutes": 60,
+          "role": "foundation",
+          "candidateMaterialIds": [
+            "cap"
+          ],
+          "plannedMinutes": 20,
+          "sessionTitle": "CAP theorem · session 4 of 4"
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-11",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "Designing Data-Intensive Applications · session 2 of 4"
+        }
+      ]
+    },
+    {
+      "weekIndex": 2,
+      "startDate": "2026-05-13",
+      "slots": [
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-13",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Mock interviews · session 1 of 5"
+        },
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-15",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Mock interviews · session 2 of 5"
+        },
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-18",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "Designing Data-Intensive Applications · session 3 of 4"
+        }
+      ]
+    },
+    {
+      "weekIndex": 3,
+      "startDate": "2026-05-20",
+      "slots": [
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-20",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Mock interviews · session 3 of 5"
+        },
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-22",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Mock interviews · session 4 of 5"
+        },
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-25",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Designing Data-Intensive Applications · session 4 of 4"
+        }
+      ]
+    },
+    {
+      "weekIndex": 4,
+      "startDate": "2026-05-27",
+      "slots": [
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-27",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "Mock interviews · session 5 of 5"
+        },
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-29",
+          "capacityMinutes": 60,
+          "role": "practice",
+          "candidateMaterialIds": [
+            "mocks",
+            "__rest__"
+          ],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-01",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia",
+            "__rest__"
+          ],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 5,
+      "startDate": "2026-06-03",
+      "slots": [
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Mon",
+          "date": "2026-06-03",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Wed",
+          "date": "2026-06-05",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-08",
+          "capacityMinutes": 180,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 6,
+      "startDate": "2026-06-10",
+      "slots": [
+        {
+          "weekIndex": 6,
+          "dayOfWeek": "Mon",
+          "date": "2026-06-10",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 6,
+          "dayOfWeek": "Wed",
+          "date": "2026-06-12",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 6,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-15",
+          "capacityMinutes": 180,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 7,
+      "startDate": "2026-06-17",
+      "slots": [
+        {
+          "weekIndex": 7,
+          "dayOfWeek": "Mon",
+          "date": "2026-06-17",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 7,
+          "dayOfWeek": "Wed",
+          "date": "2026-06-19",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 7,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-22",
+          "capacityMinutes": 180,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "under-capacity-buffer",
+      "detail": {
+        "bufferMinutes": 1300,
+        "suggestedWeeks": 4
+      }
+    },
+    {
+      "kind": "unresolved-tie-count",
+      "detail": {
+        "count": 2
+      }
+    }
+  ],
+  "capacityCheck": {
+    "totalCapacityMinutes": 2400,
+    "totalMaterialMinutes": 1100,
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 4
+  }
+}

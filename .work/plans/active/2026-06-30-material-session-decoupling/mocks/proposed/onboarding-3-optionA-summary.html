@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Option A · Onboarding page 3 — capacity summary</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/onboarding.css" />
+<style>
+  body { min-height: 100vh; }
+  .mock-banner { font-family: var(--font-mono); font-size: 11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  /* Mock-only helpers built from tokens (no new design language) */
+  .verdict-card { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 18px 18px 16px; margin-bottom:16px; }
+  .verdict-row { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .cap-bar { height:12px; border-radius: var(--radius-pill); background: var(--surface-recessed); overflow:hidden; display:flex; margin:10px 0 6px; }
+  .cap-bar > span { display:block; height:100%; }
+  .peek-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border-subtle); }
+  .peek-row:first-child { border-top:0; }
+  .dir-chip { display:inline-flex; align-items:center; gap:6px; }
+  .provisional { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--clay); }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Option A — capacity summary (book-to-exhaustion + buffer) · /onboarding/3</div>
+
+<div class="onboarding-shell" data-shape="fused">
+  <div class="onboarding-stepdots-wrap">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:22px;height:8px;border-radius:999px;background:var(--ink);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+    </div>
+    <span class="t-mono onboarding-desktop-caption">Step 3 of 4 · Your materials</span>
+  </div>
+
+  <div class="onboarding-content">
+    <div class="onboarding-step onboarding-materials-grid">
+
+      <!-- LEFT: materials form (unchanged) -->
+      <div class="onboarding-materials-form">
+        <h1 class="onboarding-h1">What are you <em>studying</em>?</h1>
+        <p class="onboarding-lead">Paste links, or add things by hand.</p>
+        <div class="field-group">
+          <label class="field-label">Paste a URL</label>
+          <input class="field" type="url" placeholder="youtube.com/… or any article link" />
+          <div class="field-helper">We'll fetch the title and length for you.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm onboarding-add-manually-btn">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add manually
+        </button>
+        <div class="mono-caps onboarding-materials-count">3 added · ~2h 10m</div>
+        <div class="material-list">
+          <div class="material-row"><div class="material-icon yt">YT</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Linear Algebra — Lecture 4" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="50"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option>Main reading</option><option>Foundations</option><option>Practice</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~50min · Main reading</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+          <div class="material-row"><div class="material-icon art">ART</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Strang — Notes on Eigenvalues" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="35"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option selected>Foundations</option><option>Main reading</option><option>Practice</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~35min · Foundations</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+          <div class="material-row"><div class="material-icon bk">BK</div>
+            <div class="material-body"><div style="display:flex;flex-direction:column;gap:10px;">
+              <input class="field" type="text" value="Problem set 4 — practice" />
+              <div style="display:flex;gap:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="45"/><span class="field-with-suffix-text">min</span></div>
+              <select class="field" style="flex:1;"><option selected>Practice</option><option>Main reading</option><option>Foundations</option></select></div></div>
+              <div class="material-meta" style="margin-top:6px;">~45min · Practice</div></div>
+            <button class="material-row-action"><svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+        </div>
+      </div>
+
+      <!-- RIGHT: capacity summary preview -->
+      <div class="onboarding-materials-preview-slot">
+        <div class="mono-caps onboarding-materials-preview-label">Your plan · updates as you add</div>
+
+        <!-- Finish-date verdict -->
+        <div class="verdict-card">
+          <div class="verdict-row">
+            <div>
+              <div class="stat-label" style="margin-bottom:4px;">Projected finish</div>
+              <div class="stat-value md" style="color:var(--moss);">Jul 14</div>
+            </div>
+            <span class="tag tag-sm tag-moss">7 days before deadline</span>
+          </div>
+          <div class="mono-caps" style="margin-top:8px; color:var(--text-tertiary);">
+            <span class="provisional">estimate</span> · deadline Aug 1 · at your stated pace
+          </div>
+        </div>
+
+        <!-- Capacity vs backlog bar -->
+        <div class="verdict-card">
+          <div class="verdict-row"><span class="stat-label">Your backlog fits your time</span><span class="t-body-sm">2h 10m of 18h capacity</span></div>
+          <div class="cap-bar">
+            <span style="width:12%; background:var(--moss);"></span>
+            <span style="flex:1; background:var(--surface-recessed);"></span>
+          </div>
+          <div class="t-body-sm" style="color:var(--text-tertiary);">Plenty of room. We'll book sessions until your materials are done, then leave the rest as buffer.</div>
+        </div>
+
+        <!-- Stat row -->
+        <div class="onboarding-preview-stats onboarding-preview-desktop-only">
+          <div class="stat"><div class="stat-value sm">5</div><div class="stat-label">sessions</div></div>
+          <div class="stat"><div class="stat-value sm">2h 10m</div><div class="stat-label">total</div></div>
+          <div class="stat"><div class="stat-value sm">7 d</div><div class="stat-label">buffer</div></div>
+        </div>
+
+        <!-- Material directory (unordered — no day assignment) -->
+        <div class="mono-caps" style="margin:6px 0 8px;">What you'll study</div>
+        <div class="chip-row" style="margin-bottom:16px;">
+          <span class="chip dir-chip">▶ Linear Algebra — L4</span>
+          <span class="chip dir-chip">◆ Strang — Eigenvalues</span>
+          <span class="chip dir-chip">✎ Problem set 4</span>
+        </div>
+
+        <!-- First few sessions peek (dates + capacity, NO material packed) -->
+        <div class="mono-caps" style="margin:6px 0 4px;">Your first sessions</div>
+        <div class="verdict-card" style="padding:6px 16px;">
+          <div class="peek-row"><span class="t-body">Mon · Jun 30</span><span class="t-mono">~60 min</span></div>
+          <div class="peek-row"><span class="t-body">Wed · Jul 2</span><span class="t-mono">~60 min</span></div>
+          <div class="peek-row"><span class="t-body">Fri · Jul 4</span><span class="t-mono">~60 min</span></div>
+          <div class="peek-row"><span class="t-body" style="color:var(--text-tertiary);">…you pick what to study when you start each one</span><span></span></div>
+        </div>
+
+        <div class="onboarding-actions onboarding-preview-actions">
+          <button class="btn btn-primary btn-lg onboarding-continue-btn">
+            Looks good
+            <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+</body>
+</html>

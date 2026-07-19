@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<!--
+  BASELINE — current Home screen, reproduced faithfully at desktop width.
+  This is the "problem" state: a hardcoded maxWidth:640px single column
+  (apps/app/src/pages/Home.tsx:186) sitting in a 1440px viewport, leaving
+  ~450px of dead margin on each side. Every later decision re-frames THIS
+  content; keep this file as the before-picture.
+
+  Fonts loaded from Google Fonts for fidelity (the app uses Fraunces /
+  Inter Tight / JetBrains Mono); robust serif/sans/mono fallbacks keep it
+  readable offline.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Baseline — Home (current)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --paper:#F5EFE4; --paper-deep:#EDE3D2; --card:#FBF7EE;
+      --ink:#2A1F18; --ink-soft:#5C4D40; --ink-faint:#8B7B6B;
+      --rule:#D9CDB8; --rule-soft:#E6DCC8;
+      --terracotta:#B85C38; --terracotta-d:#8E4429; --moss:#4A6B3A; --clay:#C28E5A; --rust:#A0432A;
+      --streak-0:#EDE3D2;
+      --font-display:'Fraunces','Iowan Old Style',Charter,Georgia,serif;
+      --font-body:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+      --radius-md:10px; --radius-lg:16px; --radius-xl:24px; --radius-pill:999px;
+      --shadow-sm:0 1px 0 rgba(42,31,24,.04),0 2px 4px rgba(42,31,24,.04);
+      --shadow-md:0 1px 0 rgba(42,31,24,.05),0 6px 16px rgba(42,31,24,.06);
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); line-height:1.5; }
+
+    /* ---- top nav (matches current app) ---- */
+    .nav { display:flex; align-items:center; gap:36px; padding:0 40px; height:64px;
+      background:var(--card); border-bottom:1px solid var(--rule-soft); }
+    .brand { font-family:var(--font-display); font-style:italic; font-weight:600; font-size:22px; letter-spacing:.2px; }
+    .nav-links { display:flex; gap:8px; }
+    .nav-links a { text-decoration:none; color:var(--ink-soft); font-size:15px; padding:7px 14px; border-radius:var(--radius-pill); }
+    .nav-links a.active { background:var(--ink); color:var(--paper); }
+    .sync { margin-left:auto; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft);
+      background:var(--paper-deep); border-radius:var(--radius-pill); padding:6px 14px; display:flex; align-items:center; gap:8px; }
+    .sync::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--moss); }
+
+    /* ---- CURRENT: 640px single column ---- */
+    .page { max-width:640px; margin:0 auto; padding:32px 16px 64px; }
+
+    .eyebrow { font-family:var(--font-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); }
+    h1.display { font-family:var(--font-display); font-weight:600; font-size:38px; line-height:1.05; margin:4px 0 8px; }
+    .subtitle { color:var(--ink-soft); margin:0 0 28px; font-size:16px; }
+
+    .card { background:var(--card); border:1px solid var(--rule-soft); border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); }
+    .card.pad { padding:24px; }
+
+    /* up-next dark card */
+    .upnext { background:var(--ink); color:var(--paper); border:none; border-radius:var(--radius-lg); padding:26px; margin-bottom:20px; }
+    .upnext .k { font-family:var(--font-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--clay); }
+    .upnext .t { font-family:var(--font-display); font-size:26px; font-weight:500; margin:10px 0 8px; }
+    .upnext .m { color:rgba(245,239,228,.7); font-size:14px; display:flex; align-items:center; gap:8px; }
+    .tag { background:var(--paper-deep); color:var(--ink); border-radius:var(--radius-pill); padding:3px 10px; font-size:13px; }
+    .btn-accent { display:block; width:100%; margin-top:20px; background:var(--terracotta); color:#fff; border:none;
+      border-radius:var(--radius-md); padding:14px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; }
+
+    /* streak */
+    .streak-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:16px; }
+    .streak-head .h { font-family:var(--font-display); font-size:20px; }
+    .streak-head .r { font-family:var(--font-mono); font-size:12px; letter-spacing:.1em; color:var(--ink-faint); }
+    .streak-row { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+    .streak-cell { text-align:center; }
+    .streak-box { height:54px; border-radius:var(--radius-md); background:var(--streak-0); border:1px solid var(--rule-soft); }
+    .streak-box.today { border:2px solid var(--ink); }
+    .streak-cell .d { font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); margin-top:6px; }
+
+    /* stat cards row */
+    .stats-2 { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:20px 0; }
+    .stat .label { font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
+    .stat .val { font-family:var(--font-display); font-size:26px; margin-top:8px; }
+    .stat .val.moss { color:var(--moss); }
+    .stat .sub { font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; color:var(--moss); margin-top:6px; }
+    .stat .sub.dim { color:var(--ink-faint); }
+
+    /* recent activity */
+    .ra-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; }
+    .ra-head .h { font-family:var(--font-display); font-size:24px; }
+    .btn-ghost { background:var(--card); border:1px solid var(--rule); border-radius:var(--radius-md); padding:9px 16px; font:inherit; font-size:14px; cursor:pointer; }
+    .ra-row { display:flex; align-items:flex-start; justify-content:space-between; padding:16px 0; border-bottom:1px solid var(--rule-soft); }
+    .ra-row:last-child { border-bottom:none; }
+    .ra-row .date { font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); }
+    .ra-row .ttl { font-family:var(--font-display); font-size:18px; margin:4px 0 2px; }
+    .ra-row .day { color:var(--ink-faint); font-size:13px; }
+    .ra-row .min { font-family:var(--font-mono); font-size:13px; color:var(--ink-soft); white-space:nowrap; padding-left:24px; }
+
+    .note { max-width:640px; margin:0 auto; padding:0 16px 40px; color:var(--ink-faint); font-size:13px; font-family:var(--font-mono); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <span class="brand">Study Tracker</span>
+    <span class="nav-links">
+      <a href="#" class="active">Home</a>
+      <a href="#">Session</a>
+      <a href="#">Week</a>
+      <a href="#">Roadmaps</a>
+      <a href="#">Settings</a>
+    </span>
+    <span class="sync">Synced just now</span>
+  </nav>
+
+  <div class="page">
+    <div class="eyebrow">Sat · Jul 18</div>
+    <h1 class="display">Good morning, iamrohitsaji.</h1>
+    <p class="subtitle">Here's how your study time adds up</p>
+
+    <div class="upnext">
+      <div class="k">Study session · Today</div>
+      <div class="t">Study session · ~120 min</div>
+      <div class="m">Suggested material: <span class="tag">Practice Problems Set</span></div>
+      <button class="btn-accent">Start session</button>
+    </div>
+
+    <div class="card pad">
+      <div class="streak-head"><span class="h">No streak</span><span class="r">0M THIS WEEK</span></div>
+      <div class="streak-row">
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">M</div></div>
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">T</div></div>
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">W</div></div>
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">T</div></div>
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">F</div></div>
+        <div class="streak-cell"><div class="streak-box today"></div><div class="d">S</div></div>
+        <div class="streak-cell"><div class="streak-box"></div><div class="d">S</div></div>
+      </div>
+    </div>
+
+    <div class="stats-2">
+      <div class="card pad stat">
+        <div class="label">Projected finish · provisional</div>
+        <div class="val moss">Aug 5–Aug 8</div>
+        <div class="sub">2 days early</div>
+      </div>
+      <div class="card pad stat">
+        <div class="label">This week</div>
+        <div class="val">0 min</div>
+        <div class="sub dim">of 6.5h goal</div>
+      </div>
+    </div>
+
+    <div class="card pad">
+      <div class="ra-head"><span class="h">Recent activity</span><button class="btn-ghost">Log session</button></div>
+      <div class="ra-row"><div><div class="date">Sat, Jul 4</div><div class="ttl">TypeScript Patterns</div><div class="day">Sat, Jul 4</div></div><div class="min">1 MIN</div></div>
+      <div class="ra-row"><div><div class="date">Fri, Jul 3</div><div class="ttl">TypeScript Patterns</div><div class="day">Fri, Jul 3</div></div><div class="min">64 MIN</div></div>
+      <div class="ra-row"><div><div class="date">Wed, Jul 1</div><div class="ttl">TypeScript Patterns</div><div class="day">Wed, Jul 1</div></div><div class="min">63 MIN</div></div>
+      <div class="ra-row"><div><div class="date">Mon, Jun 29</div><div class="ttl">TypeScript Patterns</div><div class="day">Mon, Jun 29</div></div><div class="min">58 MIN</div></div>
+      <div class="ra-row"><div><div class="date">Sat, Jun 27</div><div class="ttl">TypeScript Patterns</div><div class="day">Sat, Jun 27</div></div><div class="min">84 MIN</div></div>
+    </div>
+  </div>
+
+  <div class="note">// Baseline reproduces the current 640px column. The empty space left and right is the problem we're solving.</div>
+</body>
+</html>

@@ -1,0 +1,339 @@
+{
+  "calibration": {
+    "provenance": {
+      "n_learners": 3600,
+      "hash": "e716cd12dddc",
+      "scored_split": "held_out",
+      "split_train": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ],
+      "split_held_out": [
+        "deadline_sprinter",
+        "fading_flame",
+        "weekend_warrior"
+      ],
+      "split_disjoint": true
+    },
+    "delta_ci_present": true,
+    "candidate_kinds": {
+      "oracle_calibration": null,
+      "hierarchical_bayes": null,
+      "kalman": null,
+      "covariate_bayes": null,
+      "eb_partial_pool": null,
+      "sma": null,
+      "ewma": null,
+      "pooled_bayes": null
+    },
+    "mc_survivors": {
+      "context_pred_mae": {
+        "holm_surviving_wins": {
+          "oracle_calibration": 9,
+          "ewma": 1
+        },
+        "holm_sig_but_not_win": {
+          "covariate_bayes": 5,
+          "eb_partial_pool": 6,
+          "ewma": 5,
+          "kalman": 9,
+          "sma": 7
+        }
+      },
+      "recovery_mae": {
+        "holm_surviving_wins": {
+          "oracle_calibration": 9
+        },
+        "holm_sig_but_not_win": {
+          "covariate_bayes": 9,
+          "eb_partial_pool": 5,
+          "ewma": 9,
+          "kalman": 9,
+          "sma": 8
+        }
+      }
+    }
+  },
+  "detection": {
+    "provenance": {
+      "n_learners": 3600,
+      "hash": "e716cd12dddc",
+      "scored_split": "held_out",
+      "split_train": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ],
+      "split_held_out": [
+        "deadline_sprinter",
+        "fading_flame",
+        "weekend_warrior"
+      ],
+      "split_disjoint": true
+    },
+    "delta_ci_present": true,
+    "candidate_kinds": {
+      "cusum": "deployable",
+      "ewma_control_chart": "deployable",
+      "csd": "deployable",
+      "bocpd": "deployable",
+      "page_hinkley": "deployable",
+      "adwin": "deployable",
+      "ruptures_pelt_binseg": "upper_bound",
+      "oracle_detection": "upper_bound"
+    },
+    "mc_survivors": {
+      "(single)": {
+        "holm_surviving_wins": {
+          "csd": 3,
+          "page_hinkley": 3
+        },
+        "holm_sig_but_not_win": {
+          "adwin": 4,
+          "bocpd": 4,
+          "ewma_control_chart": 4,
+          "csd": 1,
+          "page_hinkley": 1
+        }
+      }
+    },
+    "cusum_tuning": {
+      "grid_scores": {
+        "drift": [
+          {
+            "drift_h": 3.5,
+            "drift_k": 0.08,
+            "score": Infinity
+          },
+          {
+            "drift_h": 4.5,
+            "drift_k": 0.15,
+            "score": Infinity
+          },
+          {
+            "drift_h": 5.5,
+            "drift_k": 0.22,
+            "score": Infinity
+          }
+        ],
+        "step": [
+          {
+            "score": 10.864422723514778,
+            "step_h": 2.5,
+            "step_k": 0.25
+          },
+          {
+            "score": 11.701910040821456,
+            "step_h": 3.0,
+            "step_k": 0.35
+          },
+          {
+            "score": 12.804367557379589,
+            "step_h": 3.5,
+            "step_k": 0.45
+          }
+        ]
+      },
+      "method": "grid_search_train_archetypes_only",
+      "selected": {
+        "drift_h": 4.5,
+        "drift_k": 0.15,
+        "step_h": 2.5,
+        "step_k": 0.25
+      },
+      "train_archetypes": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ]
+    },
+    "pareto_monotone": {
+      "drift": {
+        "n": 10,
+        "latency_monotone_nonincreasing": true
+      },
+      "step": {
+        "n": 9,
+        "latency_monotone_nonincreasing": true
+      }
+    },
+    "winner_by_shift_type": {
+      "drift": "cusum",
+      "step": "page_hinkley"
+    }
+  },
+  "projection": {
+    "provenance": {
+      "n_learners": 3600,
+      "hash": "e716cd12dddc",
+      "scored_split": "held_out",
+      "split_train": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ],
+      "split_held_out": [
+        "deadline_sprinter",
+        "fading_flame",
+        "weekend_warrior"
+      ],
+      "split_disjoint": true
+    },
+    "delta_ci_present": true,
+    "candidate_kinds": {
+      "gp_ard": null,
+      "linear": null,
+      "conformal": null,
+      "gp_hetero_t": null,
+      "kalman": null,
+      "oracle_projection": null
+    },
+    "mc_survivors": {
+      "(single)": {
+        "holm_surviving_wins": {
+          "conformal": 9,
+          "gp_hetero_t": 9,
+          "oracle_projection": 9,
+          "kalman": 1,
+          "linear": 3
+        },
+        "holm_sig_but_not_win": {
+          "kalman": 5,
+          "linear": 5
+        }
+      }
+    },
+    "conformal_calibration": {
+      "alpha": 0.05,
+      "method": "across_learner_finish_date_residual",
+      "residual_unit": "one max finish-date residual per train learner",
+      "train_archetypes": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ],
+      "width_days_by_band": {
+        "max": 44.0,
+        "medium": 44.0,
+        "small": 8.0
+      }
+    },
+    "coverage_by_band": {
+      "max": {
+        "conformal": 0.9064583333333334,
+        "conformal_sharpness": 87.999375,
+        "gp_ard": 0.16479166666666667
+      },
+      "medium": {
+        "conformal": 0.991388888888889,
+        "conformal_sharpness": 86.63103174603174,
+        "gp_ard": 0.26392857142857146
+      },
+      "small": {
+        "conformal": 0.9559722222222223,
+        "conformal_sharpness": 15.849166666666667,
+        "gp_ard": 0.4
+      }
+    }
+  },
+  "scheduling": {
+    "provenance": {
+      "n_learners": 3600,
+      "hash": "e716cd12dddc",
+      "scored_split": "held_out",
+      "split_train": [
+        "marathon_runner",
+        "morning_lark",
+        "steady"
+      ],
+      "split_held_out": [
+        "deadline_sprinter",
+        "fading_flame",
+        "weekend_warrior"
+      ],
+      "split_disjoint": true
+    },
+    "delta_ci_present": true,
+    "candidate_kinds": {
+      "greedy_incumbent": "deployable",
+      "dp_capacity": "deployable",
+      "rule_based": "deployable",
+      "topological_prereq": "deployable",
+      "local_search_repair": "deployable"
+    },
+    "mc_survivors": {
+      "(single)": {
+        "holm_surviving_wins": {
+          "dp_capacity": 13,
+          "local_search_repair": 13,
+          "rule_based": 11,
+          "topological_prereq": 13
+        },
+        "holm_sig_but_not_win": {
+          "dp_capacity": 1,
+          "local_search_repair": 1,
+          "rule_based": 1,
+          "topological_prereq": 1
+        }
+      }
+    },
+    "prereq_order_by_mix": {
+      "anchor": {
+        "dp_capacity": 1.0,
+        "greedy_incumbent": 1.0,
+        "local_search_repair": 1.0,
+        "rule_based": 1.0,
+        "topological_prereq": 1.0
+      },
+      "anchor+foundation": {
+        "dp_capacity": 1.0,
+        "greedy_incumbent": 1.0,
+        "local_search_repair": 1.0,
+        "rule_based": 1.0,
+        "topological_prereq": 1.0
+      },
+      "anchor+foundation+practice": {
+        "dp_capacity": 1.0,
+        "greedy_incumbent": 1.0,
+        "local_search_repair": 1.0,
+        "rule_based": 1.0,
+        "topological_prereq": 1.0
+      },
+      "anchor+practice": {
+        "dp_capacity": 1.0,
+        "greedy_incumbent": 1.0,
+        "local_search_repair": 1.0,
+        "rule_based": 1.0,
+        "topological_prereq": 1.0
+      }
+    },
+    "skipped_candidates": [
+      {
+        "candidate": "cpsat_optimum",
+        "candidate_kind": "upper_bound",
+        "reason": "ortools optional extra is not installed"
+      }
+    ]
+  },
+  "sweep": {
+    "points_per_axis": {
+      "ar1_phi": 5,
+      "drift_total": 5,
+      "manual_fraction": 5,
+      "sigma_log": 5,
+      "step_mag": 5
+    },
+    "adversarial_cases": [
+      "bursty_missingness",
+      "multi_shift",
+      "step_drift_combined"
+    ],
+    "n_flip_cells": 2454,
+    "per_archetype_worst_case_keys": [
+      "detection",
+      "projection",
+      "scheduling"
+    ]
+  }
+}

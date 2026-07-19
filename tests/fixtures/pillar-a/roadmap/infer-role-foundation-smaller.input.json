@@ -1,0 +1,14 @@
+{
+  "fn": "inferRole",
+  "title": "CAP",
+  "totalMinutes": 200,
+  "existing": [
+    {
+      "id": "x",
+      "title": "X",
+      "totalMinutes": 600,
+      "role": "anchor",
+      "additionOrder": 0
+    }
+  ]
+}

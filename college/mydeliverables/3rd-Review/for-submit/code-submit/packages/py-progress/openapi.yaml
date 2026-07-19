@@ -1,0 +1,1535 @@
+openapi: 3.1.0
+
+info:
+  title: Study Tracker Intelligence Service
+  description: |
+    Pillar A adaptation engines — Bayesian calibration, CUSUM change-point detection,
+    Gaussian Process burn-up projection, Kalman trend tracking, and roadmap generation.
+
+    This service wraps the `py-progress` Python library and exposes its pure-function
+    engines over HTTP.  All computation is **deterministic and stateless** — no data
+    is persisted inside this service.
+
+    ## Key conventions
+    - **Dates** use `YYYY-MM-DD` (ISO 8601 date-only, no time component).
+    - **Timestamps** use ISO 8601 with a time-zone offset or trailing `Z`.
+    - **Minutes** are always floating-point (`90.0` = 1.5 hours).
+    - All POST bodies use `application/json`.
+    - Unknown extra fields are silently ignored (Pydantic `extra="ignore"`).
+
+    ## Architecture
+    The service is a thin HTTP adapter around `py_progress` and `py_roadmap_engine`
+    pure-function packages.  The recommended client flow is:
+
+    1. Call `POST /v1/calibration` → store `CalibrationState`.
+    2. Call `POST /v1/progress` with sessions + roadmap + calibration → render dashboard.
+    3. When `calibration.promptNeeded` is `true`, call `POST /v1/calibration/prompt-detail`
+       → show regime-shift UI and POST a `RecalibrationResolution` back via step 1.
+    4. Call `POST /v1/roadmap/generate` once during onboarding.
+    5. Call `POST /v1/roadmap/regenerate` whenever the learner edits the plan.
+  version: 0.1.0
+  contact:
+    name: Study Tracker
+
+servers:
+  - url: http://localhost:8000
+    description: Local (Docker Compose / Colima)
+  - url: https://intelligence.studytracker.app
+    description: Production
+
+tags:
+  - name: Health
+    description: Liveness probe
+  - name: Calibration
+    description: Bayesian pace estimation and CUSUM regime-shift detection
+  - name: Progress
+    description: GP burn-up projection, streak grid, and weekly snapshot
+  - name: Roadmap
+    description: Roadmap generation and regeneration from study materials
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Health check
+      description: Returns `{"status":"ok"}` when the service is ready to serve requests.
+      tags:
+        - Health
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+              example:
+                status: ok
+
+  /v1/calibration:
+    post:
+      operationId: computeCalibration
+      summary: Compute Bayesian calibration state
+      description: |
+        Runs a hierarchical Bayesian model over `active` sessions to estimate:
+
+        - A **global pace multiplier** (`globalMultiplier`) — how fast this learner
+          actually studies relative to planned minutes (1.0 = on-plan, 0.8 = takes 25% longer).
+        - **Per-role multipliers** for `anchor`, `foundation`, and `practice` material.
+          Only roles with ≥ 3 active sessions produce an entry; others fall back to
+          `globalMultiplier`.
+        - **CUSUM-detected regime shifts** — `promptNeeded` is `true` when pace has
+          changed significantly and the learner has not yet acknowledged it.
+        - A **Kalman-filtered trend line** (`trend`) segmented at each regime shift.
+        - **Role × time-of-day insights** (`insightsByContext`) — context-specific
+          multipliers (e.g. "anchor in the morning: 0.85×") once a bucket reaches ≥ 3 sessions.
+
+        Sessions with `source != "active"` or missing/zero `plannedMinutes` / `activeMinutes`
+        are ignored during modelling (but may still appear in the session array).
+
+        Sessions listed in `exceptionalTags` with `exceptional: true` are excluded from
+        the Bayesian update (e.g. exam-week outliers).
+
+        The most recent `acknowledged` resolution in `resolutions` resets the CUSUM
+        reference mean so that `promptNeeded` only fires for **new** regime shifts.
+      tags:
+        - Calibration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalibrationRequest"
+            examples:
+              empty:
+                summary: No sessions yet — returns the Bayesian prior (mean=1.0)
+                value:
+                  sessions: []
+                  exceptionalTags: []
+                  resolutions: []
+              typical:
+                summary: Learner with active sessions
+                value:
+                  sessions:
+                    - date: "2026-05-01"
+                      source: active
+                      plannedMinutes: 60
+                      activeMinutes: 55
+                      materialRole: anchor
+                      startedAt: "2026-05-01T09:00:00+05:30"
+                      sessionId: "sess-001"
+                    - date: "2026-05-02"
+                      source: active
+                      plannedMinutes: 60
+                      activeMinutes: 48
+                      materialRole: foundation
+                      startedAt: "2026-05-02T14:30:00+05:30"
+                      sessionId: "sess-002"
+                  exceptionalTags: []
+                  resolutions: []
+      responses:
+        "200":
+          description: Calibration state — persist this client-side for use in `/v1/progress`.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalibrationState"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /v1/calibration/prompt-detail:
+    post:
+      operationId: getPromptDetail
+      summary: Get regime-shift prompt detail
+      description: |
+        Returns sessions around the most recent CUSUM breakpoint plus before/after
+        pace ratios, so the UI can show a meaningful prompt to the learner
+        ("Your pace has changed — was this week exceptional?").
+
+        Call this endpoint whenever `CalibrationState.promptNeeded` is `true`.
+        The `breakpoints` list should be sourced from the phase boundary indices
+        returned indirectly via `CalibrationState.trend.phases`.
+
+        `currentPace` and `previousPace` are mean pace ratios
+        (activeMinutes / plannedMinutes) in a sliding window before and after
+        the most recent breakpoint.  A `currentPace` of 0.75 means the learner
+        now takes ~33% longer than planned on average.
+      tags:
+        - Calibration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PromptDetailRequest"
+            example:
+              sessions:
+                - date: "2026-05-20"
+                  source: active
+                  plannedMinutes: 60
+                  activeMinutes: 45
+                  sessionId: "sess-010"
+              breakpoints: [7]
+      responses:
+        "200":
+          description: Prompt detail for the regime-shift notification UI.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PromptDetail"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /v1/progress:
+    post:
+      operationId: computeProgress
+      summary: Compute full progress snapshot
+      description: |
+        Computes the learner's current progress against their roadmap:
+
+        - **Streak** — current and longest consecutive study-day streak, plus a
+          7-cell Mon–Sun heat-map grid with per-day intensity levels (0–3).
+        - **Burn-up chart** — planned cumulative minutes, actual cumulative minutes,
+          and a GP-extrapolated curve with 95% CI from day 0 to deadline + 14 days.
+        - **Projection** — predicted finish date and 95% CI dates from the GP.
+        - **Verdict** — `"ahead"`, `"on-track"`, or `"slipping"` based on whether
+          the GP lower-bound, mean, or neither meets the planned line today.
+        - **Weekly stats** — sessions, minutes, and materials touched in the
+          current ISO week (Mon–Sun).
+        - **Up-next slot** — the next unlogged roadmap slot on or after `today`.
+        - **Replan context** — whether the GP-projected finish drifts past the
+          deadline and how many editable slots remain.
+
+        The `calibration` field must come from a prior `/v1/calibration` response
+        for the same learner.  It is currently used for context only; future versions
+        may use it to adjust the GP prior.
+      tags:
+        - Progress
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProgressRequest"
+      responses:
+        "200":
+          description: Complete progress snapshot for the learner dashboard.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProgressSnapshot"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /v1/roadmap/generate:
+    post:
+      operationId: generateRoadmap
+      summary: Generate a study roadmap
+      description: |
+        Allocates study materials into a week-by-week slot schedule given the
+        learner's capacity and timeline.
+
+        Materials are assigned roles (`anchor`, `foundation`, `practice`) which
+        influence allocation priority:
+        - `anchor` materials are allocated first and most heavily.
+        - `foundation` materials fill capacity after anchors.
+        - `practice` materials occupy remaining slots.
+
+        `selectedStudyDays` controls which days of the week receive slots.
+        `weekdayHours` and `weekendHours` set per-day capacity (converted to minutes
+        internally).  Slots are created for each selected day within the `weeks` window.
+      tags:
+        - Roadmap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapGenerateRequest"
+            examples:
+              weekdays_only:
+                summary: Two materials, 8 weeks, weekdays only
+                value:
+                  materials:
+                    - id: "mat-001"
+                      title: "Linear Algebra"
+                      totalMinutes: 1200
+                      role: anchor
+                      additionOrder: 0
+                    - id: "mat-002"
+                      title: "Probability"
+                      totalMinutes: 900
+                      role: foundation
+                      additionOrder: 1
+                  weeks: 8
+                  startDate: "2026-06-16"
+                  selectedStudyDays: ["Mon", "Tue", "Wed", "Thu", "Fri"]
+                  weekdayHours: 1.5
+                  weekendHours: 0.0
+              full_week:
+                summary: Single anchor, 12 weeks, all days
+                value:
+                  materials:
+                    - id: "mat-001"
+                      title: "Deep Learning Specialisation"
+                      totalMinutes: 3600
+                      role: anchor
+                      additionOrder: 0
+                  weeks: 12
+                  startDate: "2026-06-16"
+                  selectedStudyDays: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+                  weekdayHours: 1.0
+                  weekendHours: 2.5
+      responses:
+        "200":
+          description: Generated roadmap.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapOutput"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+  /v1/roadmap/regenerate:
+    post:
+      operationId: regenerateRoadmap
+      summary: Regenerate a roadmap preserving pinned slots
+      description: |
+        Re-runs roadmap generation from a (possibly modified) set of inputs while
+        preserving user-pinned, completed, or today's slots.
+
+        Use this endpoint when the learner:
+        - Edits a session title or planned duration (`reason: "user-edited"`).
+        - Completes a session that must remain locked (`reason: "completed"`).
+        - Has a slot locked mid-session today (`reason: "today"`).
+        - Changes their weekly capacity or adds/removes materials.
+
+        Pinned slots are never rescheduled.  Unpinned slots are redistributed
+        around the pins using the same algorithm as `/v1/roadmap/generate`.
+      tags:
+        - Roadmap
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoadmapRegenerateRequest"
+      responses:
+        "200":
+          description: Regenerated roadmap.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RoadmapOutput"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+
+components:
+  schemas:
+
+    # ── Shared enumerations ───────────────────────────────────────────────────
+
+    MaterialRole:
+      type: string
+      enum: [anchor, foundation, practice]
+      description: |
+        Allocation priority role for a study material.
+        - `anchor`: primary load-bearing material — allocated first and most heavily.
+        - `foundation`: prerequisite or supporting material — allocated after anchors.
+        - `practice`: exercises and problem sets — fills remaining daily capacity.
+
+    TimeOfDay:
+      type: string
+      enum: [morning, afternoon, evening]
+      description: |
+        Time-of-day bucket inferred from a session's `startedAt` timestamp.
+        - `morning`: before 12:00 local time.
+        - `afternoon`: 12:00–16:59 local time.
+        - `evening`: 17:00 and later.
+        Defaults to `afternoon` when `startedAt` is absent.
+
+    Verdict:
+      type: string
+      enum: [ahead, on-track, slipping]
+      description: |
+        Overall pace verdict relative to the planned burn-up line at `today`.
+        - `ahead`: GP lower-bound ≥ planned minutes → learner is ahead even
+          conservatively.
+        - `on-track`: GP mean ≥ planned minutes → expected pace meets the plan.
+        - `slipping`: GP mean < planned minutes → learner is falling behind.
+
+    DayOfWeek:
+      type: string
+      enum: [Mon, Tue, Wed, Thu, Fri, Sat, Sun]
+      description: Three-letter abbreviated day of week.
+
+    # ── Input sub-types ───────────────────────────────────────────────────────
+
+    SessionEvent:
+      type: object
+      description: |
+        A single study session.
+
+        Only sessions with `source: "active"` **and** both `plannedMinutes` and
+        `activeMinutes` > 0 are used in Bayesian/CUSUM modelling.
+
+        All sessions (including `source: "manual"`) contribute to streak
+        calculation and the actual burn-up line via `duration`.
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar date of the session (`YYYY-MM-DD`).
+          example: "2026-05-15"
+        source:
+          type: string
+          enum: [active, manual]
+          description: |
+            - `active`: timer-tracked session with `plannedMinutes` and `activeMinutes`.
+            - `manual`: user-entered past session (no pace data available).
+        plannedMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Minutes planned for this slot (from the roadmap).
+          example: 60.0
+        activeMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Minutes the learner actively studied (from the session timer).
+          example: 52.0
+        duration:
+          type: number
+          format: float
+          minimum: 0
+          description: |
+            Total session duration in minutes, used for burn-up accumulation.
+            For `active` sessions, typically equal to `activeMinutes`.
+          example: 52.0
+        materialRole:
+          $ref: "#/components/schemas/MaterialRole"
+        startedAt:
+          type: string
+          format: date-time
+          description: |
+            Session start timestamp (ISO 8601, with time-zone offset or `Z`).
+            Used to infer `TimeOfDay` for context-based calibration insights.
+          example: "2026-05-15T09:15:00+05:30"
+        sessionId:
+          type: string
+          description: |
+            Unique session identifier.
+            Used for exceptional-tag matching and materials-touched tracking.
+          example: "sess-001"
+
+    ExceptionalTag:
+      type: object
+      required:
+        - sessionId
+        - exceptional
+      description: |
+        Marks a session as exceptional so it is excluded from Bayesian pace estimation.
+
+        Typical use-cases: exam weeks, travel, illness.  Set `exceptional: false`
+        to explicitly un-mark a previously-tagged session.
+      properties:
+        sessionId:
+          type: string
+          description: ID of the session to tag.
+        exceptional:
+          type: boolean
+          description: "`true` to exclude from modelling; `false` to re-include."
+
+    RecalibrationResolution:
+      type: object
+      required:
+        - resolution
+        - resolvedAt
+      description: |
+        Records how the learner responded to a regime-shift prompt.
+        Passed in `resolutions` on subsequent calibration calls.
+      properties:
+        resolution:
+          type: string
+          enum: [replan, acknowledged, temporary]
+          description: |
+            - `replan`: learner intends to adjust their roadmap.
+            - `acknowledged`: shift is intentional; resets CUSUM reference baseline
+              so future regime shifts are detected relative to the new pace.
+            - `temporary`: shift was a one-off event; keeps original reference mean.
+        resolvedAt:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when the learner resolved the prompt.
+          example: "2026-05-20T18:00:00Z"
+
+    BayesianPosterior:
+      type: object
+      required:
+        - mean
+        - variance
+        - sessionCount
+      description: |
+        Posterior distribution of a pace multiplier after Normal-Normal Bayesian updating.
+        Prior: mean = 1.0, variance = 0.1.
+        A mean of 0.85 indicates the learner takes ~18% longer than planned on average.
+      properties:
+        mean:
+          type: number
+          format: float
+          description: Posterior mean pace multiplier (1.0 = exactly on-plan).
+          example: 0.92
+        variance:
+          type: number
+          format: float
+          minimum: 0
+          description: Posterior variance — shrinks toward 0 as session count grows.
+          example: 0.04
+        sessionCount:
+          type: integer
+          minimum: 0
+          description: Number of active sessions incorporated into this posterior.
+          example: 12
+
+    RoleMultiplier:
+      type: object
+      required:
+        - multiplier
+        - confidence
+        - sessionCount
+      description: Per-material-role Bayesian posterior summary.
+      properties:
+        multiplier:
+          type: number
+          format: float
+          description: Role-specific pace multiplier.
+          example: 0.88
+        confidence:
+          type: number
+          format: float
+          description: Reciprocal of posterior standard deviation (higher = more certain).
+          example: 3.5
+        sessionCount:
+          type: integer
+          minimum: 0
+          description: Number of sessions in this role bucket.
+          example: 7
+
+    Phase:
+      type: object
+      required:
+        - startSessionIndex
+        - endSessionIndex
+        - startDate
+        - endDate
+        - level
+        - slope
+        - slopeUncertainty
+        - sessionCount
+      description: |
+        A contiguous segment of the pace time-series fitted by a Kalman filter.
+        Phase boundaries coincide with CUSUM-detected regime shifts.
+      properties:
+        startSessionIndex:
+          type: integer
+          minimum: 0
+          description: Inclusive index into the chronological active-sessions array.
+        endSessionIndex:
+          type: integer
+          minimum: 0
+          description: Inclusive index into the chronological active-sessions array.
+        startDate:
+          type: string
+          format: date
+          description: Date of the first session in this phase.
+        endDate:
+          type: string
+          format: date
+          description: Date of the last session in this phase.
+        level:
+          type: number
+          format: float
+          description: Kalman-estimated pace level at the end of the phase.
+          example: 0.93
+        slope:
+          type: number
+          format: float
+          description: Kalman-estimated pace slope (change per session).
+          example: -0.005
+        slopeUncertainty:
+          type: number
+          format: float
+          minimum: 0
+          description: 1-sigma uncertainty of the slope estimate.
+          example: 0.02
+        sessionCount:
+          type: integer
+          minimum: 0
+          description: Number of sessions in this phase.
+
+    TrendAnalysis:
+      type: object
+      required:
+        - phases
+        - projectionSlope
+        - projectionUncertainty
+      description: Kalman-filtered pace trend segmented at CUSUM breakpoints.
+      properties:
+        phases:
+          type: array
+          items:
+            $ref: "#/components/schemas/Phase"
+          description: All identified phases in chronological order.
+        currentPhase:
+          oneOf:
+            - $ref: "#/components/schemas/Phase"
+            - type: "null"
+          description: The most recent phase (last in `phases`), or `null` if no sessions.
+        projectionSlope:
+          type: number
+          format: float
+          description: Current phase slope used for short-term pace projection.
+        projectionUncertainty:
+          type: number
+          format: float
+          minimum: 0
+          description: 1-sigma uncertainty of the projected slope.
+
+    ContextInsight:
+      type: object
+      required:
+        - role
+        - timeOfDay
+        - multiplier
+        - sessionCount
+        - label
+      description: |
+        A role × time-of-day Bayesian insight produced once a context bucket reaches
+        ≥ 3 active sessions.  Example: "anchor in the morning: 0.85×".
+      properties:
+        role:
+          $ref: "#/components/schemas/MaterialRole"
+        timeOfDay:
+          $ref: "#/components/schemas/TimeOfDay"
+        multiplier:
+          type: number
+          format: float
+          description: Context-specific pace multiplier.
+          example: 0.85
+        sessionCount:
+          type: integer
+          minimum: 0
+          description: Sessions in this role × time-of-day bucket.
+        label:
+          type: string
+          description: Human-readable label for UI display.
+          example: "anchor in the morning"
+
+    # ── Request body schemas ──────────────────────────────────────────────────
+
+    CalibrationRequest:
+      type: object
+      description: Input for Bayesian calibration and CUSUM regime-shift detection.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionEvent"
+          default: []
+          description: |
+            All study sessions for this learner, in any order.
+            The service sorts by date internally.
+        exceptionalTags:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExceptionalTag"
+          default: []
+          description: Sessions to exclude from the Bayesian and CUSUM models.
+        resolutions:
+          type: array
+          items:
+            $ref: "#/components/schemas/RecalibrationResolution"
+          default: []
+          description: |
+            Prior regime-shift resolutions in ascending `resolvedAt` order.
+            The most recent `acknowledged` entry resets the CUSUM baseline.
+
+    PromptDetailRequest:
+      type: object
+      description: Input for fetching regime-shift prompt detail.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionEvent"
+          default: []
+          description: Same session array used for the preceding calibration call.
+        breakpoints:
+          type: array
+          items:
+            type: integer
+            minimum: 0
+          default: []
+          description: |
+            CUSUM breakpoint indices into the chronological active-sessions array.
+            Derived from `CalibrationState.trend.phases` boundary session indices.
+
+    RoadmapSlot:
+      type: object
+      required:
+        - date
+        - plannedMinutes
+      description: A single day-slot in the roadmap.
+      properties:
+        date:
+          type: string
+          format: date
+          description: Calendar date of this slot (`YYYY-MM-DD`).
+        dayOfWeek:
+          type: string
+          description: Human-readable day label (e.g. `"Monday"`).
+        weekIndex:
+          type: integer
+          minimum: 0
+          description: Zero-based week number within the roadmap.
+        plannedMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Minutes planned for this slot.
+          example: 90.0
+        candidateMaterialIds:
+          type: array
+          items:
+            type: string
+          default: []
+          description: Material IDs that could fill this slot (engine-assigned).
+        role:
+          oneOf:
+            - $ref: "#/components/schemas/MaterialRole"
+            - type: "null"
+          description: Material role for this slot, if fixed.
+        sessionTitle:
+          type: string
+          nullable: true
+          description: Override session title shown in the UI.
+
+    ProgressRoadmapInput:
+      type: object
+      required:
+        - startDate
+        - deadline
+        - weeks
+        - weeklyHours
+        - slots
+      description: The learner's current roadmap, used as the planned burn-up baseline.
+      properties:
+        startDate:
+          type: string
+          format: date
+          description: First day of the roadmap (`YYYY-MM-DD`).
+          example: "2026-04-01"
+        deadline:
+          type: string
+          format: date
+          description: Target completion date (`YYYY-MM-DD`).
+          example: "2026-07-31"
+        weeks:
+          type: integer
+          minimum: 1
+          description: Total number of weeks in the roadmap.
+          example: 17
+        weeklyHours:
+          type: number
+          format: float
+          minimum: 0
+          description: Nominal weekly study hours at roadmap-generation time.
+          example: 10.0
+        slots:
+          type: array
+          items:
+            $ref: "#/components/schemas/RoadmapSlot"
+          description: All scheduled day-slots — used to derive planned cumulative minutes.
+
+    CalibrationStatePayload:
+      type: object
+      required:
+        - globalMultiplier
+        - globalPosterior
+        - trend
+        - promptNeeded
+      description: |
+        A previously-computed `CalibrationState` (from `POST /v1/calibration`),
+        echoed back into `POST /v1/progress` for context.
+      properties:
+        globalMultiplier:
+          type: number
+          format: float
+          description: Global Bayesian pace multiplier.
+          example: 0.92
+        globalPosterior:
+          $ref: "#/components/schemas/BayesianPosterior"
+        roleMultipliers:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/RoleMultiplier"
+          default: {}
+          description: Per-role multipliers keyed by `MaterialRole` string.
+        trend:
+          $ref: "#/components/schemas/TrendAnalysis"
+        promptNeeded:
+          type: boolean
+          description: Whether an unresolved regime shift requires a learner prompt.
+        insightsByContext:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextInsight"
+          default: []
+
+    ProgressRequest:
+      type: object
+      required:
+        - roadmap
+        - calibration
+        - today
+      description: Input for the full progress snapshot computation.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/SessionEvent"
+          default: []
+          description: All study sessions for this learner.
+        roadmap:
+          $ref: "#/components/schemas/ProgressRoadmapInput"
+        calibration:
+          $ref: "#/components/schemas/CalibrationStatePayload"
+        today:
+          type: string
+          format: date
+          description: Reference date for streak and verdict calculations (`YYYY-MM-DD`).
+          example: "2026-06-13"
+
+    Material:
+      type: object
+      required:
+        - id
+        - title
+        - totalMinutes
+        - role
+        - additionOrder
+      description: A study material to be scheduled in the roadmap.
+      properties:
+        id:
+          type: string
+          description: Unique material identifier.
+          example: "mat-001"
+        title:
+          type: string
+          description: Display name shown in the UI.
+          example: "Linear Algebra — Gilbert Strang"
+        totalMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Estimated total study time in minutes.
+          example: 1200.0
+        role:
+          $ref: "#/components/schemas/MaterialRole"
+        additionOrder:
+          type: integer
+          minimum: 0
+          description: Insertion order (0-based) — used for tie-breaking in allocation.
+          example: 0
+
+    RoadmapGenerateRequest:
+      type: object
+      required:
+        - materials
+        - weeks
+        - startDate
+        - selectedStudyDays
+        - weekdayHours
+        - weekendHours
+      description: Input for initial roadmap generation.
+      properties:
+        materials:
+          type: array
+          items:
+            $ref: "#/components/schemas/Material"
+          minItems: 1
+          description: Materials to schedule.
+        weeks:
+          type: integer
+          minimum: 1
+          description: Number of weeks to plan.
+          example: 12
+        startDate:
+          type: string
+          format: date
+          description: First day of the roadmap.
+          example: "2026-06-16"
+        selectedStudyDays:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayOfWeek"
+          minItems: 1
+          uniqueItems: true
+          description: Days of the week on which the learner studies.
+          example: ["Mon", "Tue", "Wed", "Thu", "Fri"]
+        weekdayHours:
+          type: number
+          format: float
+          minimum: 0
+          description: Study hours per weekday.
+          example: 1.5
+        weekendHours:
+          type: number
+          format: float
+          minimum: 0
+          description: Study hours per weekend day (Sat/Sun).
+          example: 2.0
+
+    Pin:
+      type: object
+      required:
+        - weekIndex
+        - dayOfWeek
+        - plannedMinutes
+        - reason
+      description: |
+        A slot locked in place during roadmap regeneration.
+        Pinned slots are never rescheduled.
+      properties:
+        weekIndex:
+          type: integer
+          minimum: 0
+          description: Zero-based week index within the roadmap.
+        dayOfWeek:
+          $ref: "#/components/schemas/DayOfWeek"
+        materialId:
+          type: string
+          nullable: true
+          description: Material ID for this slot (`null` = rest day or empty).
+        sessionTitle:
+          type: string
+          nullable: true
+          description: User-overridden session title (persisted across regen).
+        plannedMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Minutes allocated to this pinned slot.
+        reason:
+          type: string
+          enum: [completed, today, user-edited]
+          description: |
+            - `completed`: session already logged — immovable.
+            - `today`: current-day slot — locked to avoid disruption mid-session.
+            - `user-edited`: learner manually changed title or planned duration.
+
+    RoadmapRegenerateRequest:
+      type: object
+      required:
+        - input
+      description: Input for roadmap regeneration with pinned slots.
+      properties:
+        input:
+          $ref: "#/components/schemas/RoadmapGenerateRequest"
+        pins:
+          type: array
+          items:
+            $ref: "#/components/schemas/Pin"
+          default: []
+          description: Slots that must be preserved during regeneration.
+
+    # ── Response schemas ──────────────────────────────────────────────────────
+
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum: [ok]
+
+    CalibrationState:
+      type: object
+      required:
+        - globalMultiplier
+        - globalPosterior
+        - roleMultipliers
+        - trend
+        - promptNeeded
+        - insightsByContext
+      description: |
+        The result of Bayesian calibration.  Persist this client-side (e.g. in
+        Supabase or IndexedDB) and pass it with every `POST /v1/progress` call.
+        When `promptNeeded` is `true`, show the recalibration prompt UI and
+        call `POST /v1/calibration/prompt-detail` for the detail payload.
+      properties:
+        globalMultiplier:
+          type: number
+          format: float
+          description: Best estimate of the learner's global pace multiplier.
+          example: 0.92
+        globalPosterior:
+          $ref: "#/components/schemas/BayesianPosterior"
+        roleMultipliers:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/RoleMultiplier"
+          description: |
+            Per-role posterior multipliers keyed by `MaterialRole` string.
+            Only roles with ≥ 3 active sessions are included; others fall back
+            to `globalMultiplier`.
+        trend:
+          $ref: "#/components/schemas/TrendAnalysis"
+        promptNeeded:
+          type: boolean
+          description: |
+            `true` when an unresolved CUSUM regime shift has been detected.
+            Show the recalibration prompt UI and resolve it via a new
+            `POST /v1/calibration` call with a `RecalibrationResolution`.
+        insightsByContext:
+          type: array
+          items:
+            $ref: "#/components/schemas/ContextInsight"
+          description: |
+            Role × time-of-day insights.  Empty array until each bucket
+            accumulates ≥ 3 active sessions.
+
+    PromptSession:
+      type: object
+      required:
+        - sessionId
+        - date
+        - timeOfDay
+        - sessionTitle
+        - plannedMinutes
+        - activeMinutes
+      description: Summary of one session shown in the regime-shift prompt.
+      properties:
+        sessionId:
+          type: string
+        date:
+          type: string
+          format: date
+        timeOfDay:
+          $ref: "#/components/schemas/TimeOfDay"
+        sessionTitle:
+          type: string
+          description: Display title (empty string when unavailable from the session array).
+        plannedMinutes:
+          type: number
+          format: float
+        activeMinutes:
+          type: number
+          format: float
+
+    PromptDetail:
+      type: object
+      required:
+        - sessions
+        - currentPace
+        - previousPace
+      description: |
+        Detail shown in the regime-shift recalibration prompt UI.
+        `sessions` is a ±5–10 session window around the most recent breakpoint.
+      properties:
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/PromptSession"
+          description: Sessions around the most recent CUSUM breakpoint.
+        currentPace:
+          type: number
+          format: float
+          description: |
+            Mean pace ratio (activeMinutes / plannedMinutes) **after** the breakpoint.
+            Values < 1.0 mean the learner takes longer than planned.
+          example: 0.75
+        previousPace:
+          type: number
+          format: float
+          description: Mean pace ratio **before** the breakpoint.
+          example: 0.95
+
+    DayCell:
+      type: object
+      required:
+        - date
+        - level
+        - minutes
+        - isToday
+      description: One cell in the 7-day streak heat-map grid (Mon–Sun of the current ISO week).
+      properties:
+        date:
+          type: string
+          format: date
+        level:
+          type: integer
+          enum: [0, 1, 2, 3]
+          description: |
+            Heat-map intensity level:
+            - `0`: no activity, or future day.
+            - `1`: activity logged but minutes < 50% of planned (or manual session with no duration).
+            - `2`: 50–99% of planned minutes.
+            - `3`: ≥ 100% of planned minutes.
+        minutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Total minutes studied on this calendar day.
+        isToday:
+          type: boolean
+          description: "`true` when this cell's date equals the request `today`."
+
+    CumulativePoint:
+      type: object
+      required:
+        - date
+        - minutes
+      description: A single data point on the planned or actual cumulative burn-up line.
+      properties:
+        date:
+          type: string
+          format: date
+        minutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Running cumulative total minutes up to and including this date.
+
+    GPPoint:
+      type: object
+      required:
+        - date
+        - mean
+        - lower
+        - upper
+      description: |
+        A Gaussian Process posterior prediction point.
+        `lower` and `upper` are the 95% CI bounds (1.96σ).
+        For dates after `today`, the CI is inflated by 1.5× to reflect
+        extrapolation uncertainty.
+      properties:
+        date:
+          type: string
+          format: date
+        mean:
+          type: number
+          format: float
+          minimum: 0
+          description: GP posterior mean (clamped ≥ 0).
+        lower:
+          type: number
+          format: float
+          minimum: 0
+          description: 95% CI lower bound (clamped ≥ 0).
+        upper:
+          type: number
+          format: float
+          description: 95% CI upper bound.
+
+    BurnUpData:
+      type: object
+      required:
+        - planned
+        - actual
+        - gpCurve
+        - today
+        - deficit
+        - dayNumber
+        - totalDays
+      description: |
+        Data for rendering a burn-up chart.
+        The chart should plot `planned` and `actual` as step lines, and `gpCurve`
+        as a mean line with a CI ribbon.
+      properties:
+        planned:
+          type: array
+          items:
+            $ref: "#/components/schemas/CumulativePoint"
+          description: Planned cumulative minutes — one point per day that has a roadmap slot.
+        actual:
+          type: array
+          items:
+            $ref: "#/components/schemas/CumulativePoint"
+          description: Actual cumulative minutes logged — one point per day with sessions.
+        gpCurve:
+          type: array
+          items:
+            $ref: "#/components/schemas/GPPoint"
+          description: |
+            GP posterior curve from day 0 to `deadline + 14 days`.
+            Covers both fitted (past) and extrapolated (future) regions.
+        today:
+          type: string
+          format: date
+          description: The reference date used for this computation.
+        deficit:
+          type: number
+          format: float
+          description: |
+            `actual_cumulative_today − planned_cumulative_today`.
+            Negative = behind plan; positive = ahead of plan.
+        dayNumber:
+          type: integer
+          minimum: 0
+          description: Calendar days elapsed since `roadmap.startDate` (0-based).
+        totalDays:
+          type: integer
+          minimum: 1
+          description: Total calendar days from `roadmap.startDate` to `roadmap.deadline`.
+
+    WeeklyStats:
+      type: object
+      required:
+        - weekIndex
+        - weekStartDate
+        - sessionsThisWeek
+        - minutesThisWeek
+        - plannedMinutesThisWeek
+        - minutesByDay
+        - materialsTouched
+      description: Detailed statistics for the current ISO week (Mon–Sun).
+      properties:
+        weekIndex:
+          type: integer
+          minimum: 0
+          description: Week number relative to roadmap start (0-based).
+        weekStartDate:
+          type: string
+          format: date
+          description: Monday of the current ISO week.
+        sessionsThisWeek:
+          type: integer
+          minimum: 0
+          description: Number of sessions logged in this week.
+        minutesThisWeek:
+          type: number
+          format: float
+          minimum: 0
+          description: Total minutes studied in this week.
+        plannedMinutesThisWeek:
+          type: number
+          format: float
+          minimum: 0
+          description: Sum of `plannedMinutes` for all roadmap slots in this week.
+        minutesByDay:
+          type: object
+          additionalProperties:
+            type: number
+            format: float
+          description: Minutes studied per calendar day, keyed by `YYYY-MM-DD`.
+          example:
+            "2026-06-09": 55.0
+            "2026-06-11": 90.0
+        materialsTouched:
+          type: array
+          items:
+            type: string
+          description: Session IDs of materials studied in this week.
+
+    WeekSummaryForNarrative:
+      type: object
+      required:
+        - weekStartDate
+        - sessionsLogged
+        - hoursLogged
+        - verdict
+        - daysWithActivity
+        - materialsTouched
+      description: |
+        Condensed weekly summary for natural-language narrative generation
+        (e.g. "You studied 4.5 hours over 3 days this week — on track!").
+      properties:
+        weekStartDate:
+          type: string
+          format: date
+        sessionsLogged:
+          type: integer
+          minimum: 0
+        hoursLogged:
+          type: number
+          format: float
+          minimum: 0
+          description: Hours studied this week, rounded to 1 decimal place.
+          example: 4.5
+        verdict:
+          $ref: "#/components/schemas/Verdict"
+        daysWithActivity:
+          type: integer
+          minimum: 0
+          maximum: 7
+          description: Number of distinct calendar days with at least one session.
+        materialsTouched:
+          type: array
+          items:
+            type: string
+          description: Session IDs of materials studied (same as `WeeklyStats.materialsTouched`).
+
+    ReplanContext:
+      type: object
+      required:
+        - isPlanDrifted
+        - pinnedSlotCount
+        - editableSlotCount
+      description: Context for the roadmap-replan decision UI.
+      properties:
+        isPlanDrifted:
+          type: boolean
+          description: |
+            `true` when `projection.finishDate > roadmap.deadline` (GP projects
+            the learner will finish after their deadline).
+        daysOverDeadline:
+          oneOf:
+            - type: integer
+              minimum: 0
+            - type: "null"
+          description: |
+            How many calendar days the projected finish exceeds the deadline.
+            `null` when `projection.finishDate` is unavailable (e.g. no sessions yet,
+            or the GP never reaches `totalPlannedMinutes` within the curve window).
+        pinnedSlotCount:
+          type: integer
+          minimum: 0
+          description: Number of locked/completed slots (currently always 0).
+        editableSlotCount:
+          type: integer
+          minimum: 0
+          description: Number of unfulfilled roadmap slots with `date >= today`.
+
+    StreakData:
+      type: object
+      required:
+        - current
+        - longest
+        - grid
+      description: Streak counters and the current-week heat-map grid.
+      properties:
+        current:
+          type: integer
+          minimum: 0
+          description: |
+            Current consecutive study-day streak ending on `today` or yesterday.
+            Resets to 0 if no session was logged in the last two calendar days.
+          example: 5
+        longest:
+          type: integer
+          minimum: 0
+          description: Longest streak ever achieved across all sessions.
+          example: 14
+        grid:
+          type: array
+          items:
+            $ref: "#/components/schemas/DayCell"
+          minItems: 7
+          maxItems: 7
+          description: |
+            Seven cells covering Mon–Sun of the ISO week containing `today`.
+            Cells for future days have `level: 0` and `minutes: 0`.
+
+    Projection:
+      type: object
+      required:
+        - finishDate
+        - confidenceInterval
+      description: |
+        GP-extrapolated completion projection.
+
+        `finishDate` is the date the GP mean curve first reaches `totalPlannedMinutes`.
+        `confidenceInterval` is `[optimisticDate, pessimisticDate]` where:
+        - **optimisticDate**: the date the GP **upper** CI crosses the total (CI upper
+          reaches the target sooner).
+        - **pessimisticDate**: the date the GP **lower** CI crosses the total (CI lower
+          reaches the target latest).
+      properties:
+        finishDate:
+          oneOf:
+            - type: string
+              format: date
+            - type: "null"
+          description: |
+            Projected completion date, or `null` when the GP mean hasn't crossed
+            `totalPlannedMinutes` within the curve window (deadline + 14 days).
+        confidenceInterval:
+          oneOf:
+            - type: array
+              items:
+                type: string
+                format: date
+              minItems: 2
+              maxItems: 2
+            - type: "null"
+          description: |
+            `[optimisticDate, pessimisticDate]`, or `null` when either bound
+            cannot be determined.
+
+    ProgressSnapshot:
+      type: object
+      required:
+        - streak
+        - burnUp
+        - projection
+        - totalMinutes
+        - totalPlannedMinutes
+        - completionPercentage
+        - verdict
+        - driftPastDeadline
+        - weeklyStats
+        - weekSummaryForNarrative
+        - replanContext
+      description: |
+        Complete progress snapshot — the primary payload for rendering the
+        learner dashboard (streak, burn-up chart, verdict, weekly stats, etc.).
+      properties:
+        streak:
+          $ref: "#/components/schemas/StreakData"
+        burnUp:
+          $ref: "#/components/schemas/BurnUpData"
+        projection:
+          $ref: "#/components/schemas/Projection"
+        totalMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Cumulative minutes logged across all sessions.
+          example: 840.0
+        totalPlannedMinutes:
+          type: number
+          format: float
+          minimum: 0
+          description: Cumulative planned minutes across all roadmap slots.
+          example: 1800.0
+        completionPercentage:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 100
+          description: |
+            `min(totalMinutes / totalPlannedMinutes × 100, 100)`.
+            Capped at 100 to avoid over-reporting.
+          example: 46.7
+        verdict:
+          $ref: "#/components/schemas/Verdict"
+        driftPastDeadline:
+          type: boolean
+          description: "`true` when `projection.finishDate > roadmap.deadline`."
+        upNext:
+          oneOf:
+            - $ref: "#/components/schemas/RoadmapSlot"
+            - type: "null"
+          description: |
+            The next unlogged roadmap slot with `date >= today`, or `null`
+            when all upcoming slots have corresponding sessions.
+        weeklyStats:
+          $ref: "#/components/schemas/WeeklyStats"
+        weekSummaryForNarrative:
+          $ref: "#/components/schemas/WeekSummaryForNarrative"
+        replanContext:
+          $ref: "#/components/schemas/ReplanContext"
+
+    RoadmapOutput:
+      type: object
+      description: |
+        Output of the roadmap generation / regeneration engine (`py_roadmap_engine`).
+        The engine is the Python port of `@study-tracker/roadmap-engine`.
+
+        Pass the `slots` from this response as `roadmap.slots` in subsequent
+        `POST /v1/progress` calls.  Persist `weeks` and `warnings` in the
+        client store.
+      properties:
+        weeks:
+          type: array
+          description: Week-level groups of slots, one entry per week in the roadmap.
+          items:
+            type: object
+            properties:
+              weekIndex:
+                type: integer
+                minimum: 0
+                description: Zero-based week number.
+              weekStartDate:
+                type: string
+                format: date
+                description: Monday of this week.
+              slots:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RoadmapSlot"
+                description: Day-slots allocated within this week.
+        warnings:
+          type: array
+          description: |
+            Capacity or deadline warnings produced by the allocation algorithm.
+            Render these in the UI so the learner can adjust their plan.
+          items:
+            type: object
+            required:
+              - kind
+              - message
+            properties:
+              kind:
+                type: string
+                description: Warning category (e.g. `"capacity"`, `"deadline"`).
+              message:
+                type: string
+                description: Human-readable warning message.
+        pins:
+          type: object
+          description: |
+            Echo of the `pins` map from a regenerate request — confirms which slots
+            were preserved.
+          additionalProperties:
+            $ref: "#/components/schemas/Pin"
+
+    # ── Error schemas ─────────────────────────────────────────────────────────
+
+    ValidationError:
+      type: object
+      description: FastAPI / Pydantic request validation error (HTTP 422).
+      properties:
+        detail:
+          type: array
+          items:
+            type: object
+            required:
+              - loc
+              - msg
+              - type
+            properties:
+              loc:
+                type: array
+                description: JSON path to the invalid field.
+                items:
+                  oneOf:
+                    - type: string
+                    - type: integer
+                example: ["body", "sessions", 0, "plannedMinutes"]
+              msg:
+                type: string
+                description: Human-readable description of the validation failure.
+                example: "Input should be a valid number"
+              type:
+                type: string
+                description: Pydantic error type identifier.
+                example: "float_type"
+
+  responses:
+    ValidationError:
+      description: Request validation failed — one or more fields have invalid values or types.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationError"
+          example:
+            detail:
+              - loc: ["body", "today"]
+                msg: "Field required"
+                type: "missing"
+              - loc: ["body", "roadmap", "slots", 0, "plannedMinutes"]
+                msg: "Input should be a valid number"
+                type: "float_type"

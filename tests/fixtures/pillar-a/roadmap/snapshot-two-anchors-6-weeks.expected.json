@@ -1,0 +1,247 @@
+{
+  "weeks": [
+    {
+      "weekIndex": 0,
+      "startDate": "2026-04-29",
+      "slots": [
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Mon",
+          "date": "2026-04-29",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-01",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-04",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "DDIA · session 1 of 3"
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "startDate": "2026-05-06",
+      "slots": [
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-06",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-08",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-11",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "alex"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "Alex Xu System Design · session 1 of 3"
+        }
+      ]
+    },
+    {
+      "weekIndex": 2,
+      "startDate": "2026-05-13",
+      "slots": [
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-13",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-15",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-18",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "DDIA · session 2 of 3"
+        }
+      ]
+    },
+    {
+      "weekIndex": 3,
+      "startDate": "2026-05-20",
+      "slots": [
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-20",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-22",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-25",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "alex"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "Alex Xu System Design · session 2 of 3"
+        }
+      ]
+    },
+    {
+      "weekIndex": 4,
+      "startDate": "2026-05-27",
+      "slots": [
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-27",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-29",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 4,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-01",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 180,
+          "sessionTitle": "DDIA · session 3 of 3"
+        }
+      ]
+    },
+    {
+      "weekIndex": 5,
+      "startDate": "2026-06-03",
+      "slots": [
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Mon",
+          "date": "2026-06-03",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Wed",
+          "date": "2026-06-05",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        },
+        {
+          "weekIndex": 5,
+          "dayOfWeek": "Sat",
+          "date": "2026-06-08",
+          "capacityMinutes": 180,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "alex"
+          ],
+          "plannedMinutes": 40,
+          "sessionTitle": "Alex Xu System Design · session 3 of 3"
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "under-capacity-buffer",
+      "detail": {
+        "bufferMinutes": 800,
+        "suggestedWeeks": 4
+      }
+    }
+  ],
+  "capacityCheck": {
+    "totalCapacityMinutes": 1800,
+    "totalMaterialMinutes": 1000,
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 4
+  }
+}

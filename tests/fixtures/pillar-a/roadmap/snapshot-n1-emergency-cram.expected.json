@@ -1,0 +1,67 @@
+{
+  "weeks": [
+    {
+      "weekIndex": 0,
+      "startDate": "2026-04-29",
+      "slots": [
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Mon",
+          "date": "2026-04-29",
+          "capacityMinutes": 120,
+          "role": "foundation",
+          "candidateMaterialIds": [
+            "cap"
+          ],
+          "plannedMinutes": 100,
+          "sessionTitle": "CAP · session 1 of 1"
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-01",
+          "capacityMinutes": 120,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 120,
+          "sessionTitle": "DDIA · session 1 of 1"
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Sat",
+          "date": "2026-05-04",
+          "capacityMinutes": 360,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "under-capacity-buffer",
+      "detail": {
+        "bufferMinutes": 300,
+        "suggestedWeeks": 1
+      }
+    },
+    {
+      "kind": "material-underfilled",
+      "detail": {
+        "materialId": "ddia",
+        "allocated": 120,
+        "total": 200
+      }
+    }
+  ],
+  "capacityCheck": {
+    "totalCapacityMinutes": 600,
+    "totalMaterialMinutes": 300,
+    "status": "under-capacity-buffer",
+    "suggestedWeeks": 1
+  }
+}

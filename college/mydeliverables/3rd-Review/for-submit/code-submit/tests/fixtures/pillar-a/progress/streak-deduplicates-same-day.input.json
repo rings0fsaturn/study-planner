@@ -1,0 +1,36 @@
+{
+  "fn": "calculateStreak",
+  "sessions": [
+    {
+      "date": "2026-01-14",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    },
+    {
+      "date": "2026-01-14",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-2"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-3"
+    }
+  ],
+  "today": "2026-01-15"
+}

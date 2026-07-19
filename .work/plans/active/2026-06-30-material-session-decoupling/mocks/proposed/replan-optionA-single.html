@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Replan · Option A — single column, live finish</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .app { display:flex; flex-direction:column; min-height:100vh; } .navbar-desktop { display:flex !important; }
+  .sync-indicator { font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--moss); }
+  .rp { max-width:640px; margin:0 auto; padding:2rem 1rem 4rem; }
+  .provisional { font-family:var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--clay); }
+  /* context banner */
+  .rp-ctx { background: color-mix(in srgb, var(--terracotta) 8%, var(--surface-card)); border:1px solid color-mix(in srgb, var(--terracotta) 30%, var(--border-subtle)); border-radius:var(--radius-md); padding:12px 14px; font-size:14px; color:var(--text-primary); margin-bottom:16px; }
+  /* live finish card (sticky) */
+  .rp-finish { position:sticky; top:8px; z-index:2; display:flex; align-items:center; justify-content:space-between; gap:16px; background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:var(--radius-lg); padding:16px 18px; margin-bottom:18px; box-shadow:var(--shadow-sm); }
+  .rp-finish .big { font-family:var(--font-display); font-weight:500; font-size:26px; line-height:1; }
+  .rp-finish .delta { font-family:var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; margin-top:4px; }
+  .late { color:var(--rust); } .early { color:var(--moss); }
+  /* lever cards */
+  .lever { border:1px solid var(--border-subtle); border-radius:var(--radius-md); background:var(--surface-card); padding:14px 16px; margin-bottom:12px; }
+  .lever-h { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:2px; }
+  .lever-t { font-weight:500; font-size:15px; }
+  .lever-sub { font-size:12px; color:var(--text-secondary); }
+  .lever-body { margin-top:12px; }
+  .stepper { display:inline-flex; align-items:center; border:1px solid var(--border-default); border-radius:var(--radius-md); overflow:hidden; }
+  .stepper button { width:38px; height:34px; border:0; background:var(--surface-page); cursor:pointer; font-size:16px; color:var(--text-secondary); }
+  .stepper button:hover { background:var(--surface-recessed); }
+  .stepper .val { min-width:70px; text-align:center; font-weight:500; }
+  .row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .daychips { display:flex; gap:6px; flex-wrap:wrap; }
+  .daychip { width:36px; height:34px; border:1px solid var(--border-default); border-radius:var(--radius-sm); background:var(--surface-page); cursor:pointer; font-size:12px; color:var(--text-secondary); }
+  .daychip.on { background:var(--ink); color:var(--paper); border-color:var(--ink); }
+  .presets { display:flex; gap:8px; }
+  .preset { padding:7px 12px; border:1px solid var(--border-default); border-radius:var(--radius-pill); background:var(--surface-page); cursor:pointer; font-size:13px; color:var(--text-secondary); }
+  .preset.on { border-color:var(--ink); color:var(--text-primary); box-shadow:inset 0 0 0 1px var(--ink); }
+  .matline { display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--border-subtle); }
+  .matline:first-child { border-top:0; }
+  .matline .body { flex:1; min-width:0; }
+  .matline.dropped .body { opacity:.5; text-decoration:line-through; }
+  .rp-actions { display:flex; gap:10px; margin-top:20px; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Replan Option A — single column · pull levers, projected finish updates live (provisional)</div>
+
+<div class="app">
+  <nav class="navbar-desktop"><div class="navbar-desktop-brand">Study Tracker</div><a class="navbar-desktop-item">Home</a><a class="navbar-desktop-item">Session</a><a class="navbar-desktop-item">Week</a><a class="navbar-desktop-item active">Roadmaps</a><a class="navbar-desktop-item">Settings</a><div class="navbar-desktop-spacer"></div><span class="sync-indicator">● Synced</span></nav>
+  <main class="app-shell-content">
+    <div class="rp">
+      <div class="mono-caps">Replan</div>
+      <h1 class="t-display-2" style="margin:2px 0 12px;">Adjust your plan</h1>
+
+      <div class="rp-ctx">At your current pace you'll finish <strong>Jul 28</strong> — <strong>8 days past</strong> your Jul 20 deadline. Pull a lever below to see what fixes it.</div>
+
+      <div class="rp-finish">
+        <div>
+          <div class="mono-caps" style="margin-bottom:3px;"><span class="provisional">estimate</span> · new finish</div>
+          <div class="big" id="finishDate">Jul 28</div>
+          <div class="delta late" id="finishDelta">8 days late</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="mono-caps" style="color:var(--text-tertiary);">deadline</div>
+          <div class="t-body" id="deadlineLbl">Jul 20</div>
+        </div>
+      </div>
+
+      <!-- Lever 1: extend deadline -->
+      <div class="lever">
+        <div class="lever-h"><div><div class="lever-t">Extend the deadline</div><div class="lever-sub">Give yourself more time.</div></div></div>
+        <div class="lever-body presets" id="extendPresets">
+          <button class="preset on" data-wk="0">Keep Jul 20</button>
+          <button class="preset" data-wk="1">+1 week</button>
+          <button class="preset" data-wk="2">+2 weeks</button>
+        </div>
+      </div>
+
+      <!-- Lever 2: capacity -->
+      <div class="lever">
+        <div class="lever-h"><div><div class="lever-t">Study more each week</div><div class="lever-sub">Hours per day and which days.</div></div></div>
+        <div class="lever-body">
+          <div class="row" style="margin-bottom:12px;"><span class="t-body">Hours per day</span><div class="stepper"><button class="dec" data-t="hpd">−</button><span class="val" id="hpdVal">1.5h</span><button class="inc" data-t="hpd">+</button></div></div>
+          <div class="daychips" id="daychips">
+            <button class="daychip on" data-d="M">M</button><button class="daychip on" data-d="T">T</button><button class="daychip on" data-d="W">W</button><button class="daychip" data-d="T2">T</button><button class="daychip" data-d="F">F</button><button class="daychip" data-d="S">S</button><button class="daychip" data-d="U">S</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lever 3: materials -->
+      <div class="lever">
+        <div class="lever-h"><div><div class="lever-t">Drop or shorten materials</div><div class="lever-sub">Trim the backlog.</div></div></div>
+        <div class="lever-body" id="mats">
+          <div class="matline" data-min="120"><div class="material-icon pl" style="width:28px;height:28px;">PL</div><div class="body"><div style="font-weight:500;font-size:14px;">Linear Algebra playlist</div><div class="lever-sub">~2h left</div></div><button class="btn btn-ghost btn-sm drop">Drop</button></div>
+          <div class="matline" data-min="35"><div class="material-icon art" style="width:28px;height:28px;">◆</div><div class="body"><div style="font-weight:500;font-size:14px;">Strang — Eigenvalues</div><div class="lever-sub">~35m left</div></div><button class="btn btn-ghost btn-sm drop">Drop</button></div>
+          <div class="matline" data-min="45"><div class="material-icon bk" style="width:28px;height:28px;">BK</div><div class="body"><div style="font-weight:500;font-size:14px;">Problem set 4</div><div class="lever-sub">~45m left</div></div><button class="btn btn-ghost btn-sm drop">Drop</button></div>
+        </div>
+      </div>
+
+      <div class="rp-actions">
+        <button class="btn btn-accent" style="flex:1;">Apply changes</button>
+        <button class="btn btn-secondary" style="flex:1;">Keep current</button>
+      </div>
+      <p class="t-body-sm" style="color:var(--text-tertiary); margin-top:10px;">Or just <strong>accept the later finish</strong> — Keep current leaves the plan as is.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+  // Illustrative live-finish model (provisional — real projection is R4-gated).
+  const state = { extendWk:0, hpd:1.5, days:3, droppedMin:0 };
+  const MONTH=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const addDays=(iso,n)=>{const d=new Date(iso);d.setDate(d.getDate()+n);return d;};
+  const fmtD=d=>`${MONTH[d.getMonth()]} ${d.getDate()}`;
+  const DEADLINE='2026-07-20';
+  function recompute(){
+    // baseline 8 days late; each lever reduces lateness
+    let late = 8;
+    late -= (state.hpd-1.5)/0.5*3;          // +3 days earlier per +0.5h/day
+    late -= (state.days-3)*2;                // +2 days earlier per extra study day
+    late -= state.droppedMin/45*3;           // ~3 days earlier per ~45m dropped
+    late -= state.extendWk*7;                // extending moves the deadline out
+    late = Math.round(late);
+    const deadline = addDays(DEADLINE, state.extendWk*7);
+    document.getElementById('deadlineLbl').textContent = fmtD(deadline);
+    const finish = addDays(deadline, late);   // finish relative to (possibly extended) deadline
+    document.getElementById('finishDate').textContent = fmtD(finish);
+    const el = document.getElementById('finishDelta');
+    if (late > 0){ el.textContent = late+' day'+(late!==1?'s':'')+' late'; el.className='delta late'; }
+    else { const e=Math.abs(late); el.textContent = (e===0?'On target':e+' day'+(e!==1?'s':'')+' early'); el.className='delta early'; }
+  }
+  document.querySelectorAll('#extendPresets .preset').forEach(b=>b.onclick=()=>{document.querySelectorAll('#extendPresets .preset').forEach(x=>x.classList.remove('on'));b.classList.add('on');state.extendWk=+b.dataset.wk;recompute();});
+  document.querySelectorAll('.stepper button').forEach(b=>b.onclick=()=>{ if(b.dataset.t==='hpd'){ state.hpd=Math.max(0.5, state.hpd + (b.classList.contains('inc')?0.5:-0.5)); document.getElementById('hpdVal').textContent=state.hpd+'h'; recompute(); }});
+  document.querySelectorAll('#daychips .daychip').forEach(c=>c.onclick=()=>{ c.classList.toggle('on'); state.days=document.querySelectorAll('#daychips .daychip.on').length; recompute(); });
+  document.querySelectorAll('#mats .drop').forEach(btn=>btn.onclick=()=>{ const line=btn.closest('.matline'); const on=line.classList.toggle('dropped'); const m=+line.dataset.min; state.droppedMin += on? m : -m; btn.textContent = on?'Undo':'Drop'; recompute(); });
+  recompute();
+</script>
+</body>
+</html>

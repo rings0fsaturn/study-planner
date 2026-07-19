@@ -1,0 +1,145 @@
+{
+  "weeks": [
+    {
+      "weekIndex": 0,
+      "startDate": "2026-04-29",
+      "slots": [
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Mon",
+          "date": "2026-04-29",
+          "capacityMinutes": 60,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "DDIA · session 1 of 4"
+        },
+        {
+          "weekIndex": 0,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-01",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 1,
+      "startDate": "2026-05-06",
+      "slots": [
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-06",
+          "capacityMinutes": 60,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "DDIA · session 2 of 4"
+        },
+        {
+          "weekIndex": 1,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-08",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 2,
+      "startDate": "2026-05-13",
+      "slots": [
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-13",
+          "capacityMinutes": 60,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "DDIA · session 3 of 4"
+        },
+        {
+          "weekIndex": 2,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-15",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    },
+    {
+      "weekIndex": 3,
+      "startDate": "2026-05-20",
+      "slots": [
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Mon",
+          "date": "2026-05-20",
+          "capacityMinutes": 60,
+          "role": "anchor",
+          "candidateMaterialIds": [
+            "ddia"
+          ],
+          "plannedMinutes": 60,
+          "sessionTitle": "DDIA · session 4 of 4"
+        },
+        {
+          "weekIndex": 3,
+          "dayOfWeek": "Wed",
+          "date": "2026-05-22",
+          "capacityMinutes": 60,
+          "role": null,
+          "candidateMaterialIds": [],
+          "plannedMinutes": 0,
+          "sessionTitle": null
+        }
+      ]
+    }
+  ],
+  "warnings": [
+    {
+      "kind": "over-capacity",
+      "detail": {
+        "overflowMinutes": 320
+      }
+    },
+    {
+      "kind": "material-underfilled",
+      "detail": {
+        "materialId": "ddia",
+        "allocated": 240,
+        "total": 600
+      }
+    },
+    {
+      "kind": "material-underfilled",
+      "detail": {
+        "materialId": "cap",
+        "allocated": 120,
+        "total": 200
+      }
+    }
+  ],
+  "capacityCheck": {
+    "totalCapacityMinutes": 480,
+    "totalMaterialMinutes": 240,
+    "status": "under-capacity-buffer"
+  }
+}

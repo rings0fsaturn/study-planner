@@ -1,0 +1,28 @@
+{
+  "fn": "generateRoadmap",
+  "materials": [
+    {
+      "id": "ddia",
+      "title": "DDIA",
+      "totalMinutes": 200,
+      "role": "anchor",
+      "additionOrder": 0
+    },
+    {
+      "id": "cap",
+      "title": "CAP",
+      "totalMinutes": 100,
+      "role": "foundation",
+      "additionOrder": 1
+    }
+  ],
+  "weeks": 1,
+  "startDate": "2026-04-29",
+  "selectedStudyDays": [
+    "Mon",
+    "Wed",
+    "Sat"
+  ],
+  "weekdayHours": 4,
+  "weekendHours": 6
+}

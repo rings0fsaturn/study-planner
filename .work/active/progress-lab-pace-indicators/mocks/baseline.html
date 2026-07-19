@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress Lab — BEFORE baseline (pace indicators redesign)</title>
+  <style>
+    :root{
+      --paper:#f5efe4;--paper-deep:#ede3d2;--card:#fbf7ee;--ink:#2a1f18;
+      --ink-soft:#5c4d40;--ink-faint:#8b7b6b;--rule:#d9cdb8;--rule-soft:#e6dcc8;
+      --rust:#a0432a;--moss:#4a6b3a;--sky:#3a5b6b;
+      --font-display:Georgia,"Iowan Old Style",serif;
+      --font-body:"Arial Narrow",Arial,sans-serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace;
+    }
+    *{box-sizing:border-box}html,body{min-height:100%}
+    body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--font-body)}
+    button,input{color:inherit;font:inherit}button{cursor:pointer}
+    .eyebrow{color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    .prototype-note{position:fixed;inset:0 0 auto;z-index:3000;display:flex;justify-content:space-between;gap:16px;padding:9px 16px;color:#f4d9cf;background:#3a1c14;font:11px var(--font-mono)}
+    .prototype-note b{color:#fff}
+    .stage{display:grid;place-items:center;padding:52px 18px 26px}
+    .lab{display:flex;flex-direction:column;width:min(1280px,97vw);height:min(720px,86vh);overflow:hidden;border:1px solid var(--rule);border-radius:16px;background:var(--card);box-shadow:0 34px 80px rgba(42,31,24,.28)}
+    .lab-head{display:flex;justify-content:space-between;gap:20px;padding:18px 24px 13px;border-bottom:1px solid var(--rule-soft)}
+    .lab-head h2{margin:4px 0 0;font:500 27px/1.1 var(--font-display)}
+    .lab-head p{margin:6px 0 0;color:var(--ink-soft);font-size:13px}
+    .close{flex:none;width:38px;height:38px;border:1px solid var(--rule);border-radius:50%;background:transparent}
+    .range-bar{display:flex;align-items:center;gap:14px;padding:9px 24px;border-bottom:1px solid var(--rule-soft);background:#f8f2e8}
+    .segmented{display:inline-flex;padding:3px;border:1px solid var(--rule);border-radius:999px;background:var(--card)}
+    .segmented button{padding:6px 10px;border:0;border-radius:999px;color:var(--ink-soft);background:transparent;font-size:11px}
+    .segmented button.active{color:var(--paper);background:var(--ink)}
+    .range-readout{margin-left:auto;color:var(--ink-faint);font:10px var(--font-mono)}
+    .lab-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;flex:1;min-height:0;overflow:hidden}
+    .chart-column{display:flex;min-width:0;min-height:0;padding:18px 20px 20px;border-right:1px solid var(--rule-soft)}
+    .burn-card{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:100%;height:100%;min-height:0;overflow:hidden;border:1px solid var(--rule-soft);border-radius:10px;background:var(--card)}
+    .burn-head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 6px;color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    .chart-stage{position:relative;min-height:0;overflow:hidden}
+    .chart-svg{display:block;width:100%;height:100%;min-height:0;background:var(--card)}
+    .chart-svg path,.chart-svg polygon,.chart-svg text,.chart-svg rect{pointer-events:none}
+    .point-hit{cursor:pointer;pointer-events:all}
+    .burn-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;padding:11px 18px 14px}
+    .deficit{color:var(--rust);font:500 26px/1 var(--font-display);letter-spacing:-.02em}
+    .legend{display:flex;align-items:center;gap:16px;color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.05em;text-transform:uppercase}
+    .legend span{display:flex;align-items:center;gap:6px}
+    .legend i{display:block;width:22px;height:2px;background:var(--rust)}
+    .legend i.planned{height:0;border-top:2px dashed var(--ink-faint);background:none}
+    .legend i.behind{width:14px;height:10px;border-radius:2px;background:rgba(160,67,42,.18)}
+    .rail{min-height:0;overflow:auto;padding:20px;background:#f8f2e8}
+    .section{padding-bottom:18px;margin-bottom:18px;border-bottom:1px solid var(--rule)}
+    .section:last-child{border:0;margin:0;padding:0}
+    .section h3{margin:6px 0 8px;font:500 21px var(--font-display)}
+    .section p{margin:0;color:var(--ink-soft);font-size:13px;line-height:1.45}
+    .layer-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:7px 0;font-size:13px}
+    .switch{position:relative;width:35px;height:20px;border:0;border-radius:99px;background:#c8baa7}
+    .switch:after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform 140ms}
+    .switch.on{background:var(--rust)}.switch.on:after{transform:translateX(15px)}
+    .slider{width:100%;margin-top:16px;accent-color:var(--rust)}
+    .slider-labels{display:flex;justify-content:space-between;color:var(--ink-faint);font:9px var(--font-mono)}
+    .scenario-result{padding:14px;margin-top:14px;border:1px solid #c9d6bd;border-radius:10px;background:#eff3e9}
+    .scenario-result strong{display:block;margin-top:4px;color:var(--moss);font:500 24px var(--font-display)}
+    .scenario-result .sub{display:block;margin-top:2px;color:var(--ink-soft);font-size:12px}
+    .primary{width:100%;margin-top:14px;padding:11px 16px;border:1px solid var(--ink);border-radius:999px;color:var(--paper);background:var(--ink);font-weight:700}
+    .flag{position:absolute;z-index:4;padding:2px 6px;border-radius:5px;font:9px var(--font-mono);letter-spacing:.04em;color:#fff;white-space:nowrap;transform:translate(-50%,-140%);pointer-events:none}
+    .flag.rust{background:var(--rust)}.flag.moss{background:var(--moss)}
+  </style>
+</head>
+<body>
+  <div class="prototype-note">
+    <span><b>BASELINE — the current screen (the "before").</b> This is what ships today. Problems flagged below.</span>
+    <span>Move the pace slider to see the awkward green line ↘</span>
+  </div>
+
+  <div class="stage">
+    <article class="lab">
+      <header class="lab-head">
+        <div>
+          <div class="eyebrow">Progress Lab · Active roadmap</div>
+          <h2>Study trajectory and pace scenario</h2>
+          <p>Inspect your cumulative progress and compare it with the original plan.</p>
+        </div>
+        <button class="close" aria-label="Close">✕</button>
+      </header>
+
+      <div class="range-bar">
+        <div class="eyebrow">Range</div>
+        <div class="segmented" id="ranges">
+          <button class="active" data-range="full">Full plan</button>
+          <button data-range="month">30 days</button>
+          <button data-range="week">This week</button>
+        </div>
+        <div class="range-readout" id="range-readout">Jun 08 to Aug 22 · 75 days</div>
+      </div>
+
+      <div class="lab-body">
+        <section class="chart-column">
+          <div class="burn-card">
+            <div class="burn-head"><span>Hours studied vs plan</span><span>Day 43 of 63</span></div>
+            <div class="chart-stage">
+              <svg class="chart-svg" id="chart" viewBox="0 0 820 470" aria-label="Hours studied versus plan"></svg>
+            </div>
+            <div class="burn-foot">
+              <div class="deficit">−19h 33m behind plan today</div>
+              <div class="legend">
+                <span><i></i>Actual</span>
+                <span><i class="planned"></i>Planned</span>
+                <span><i class="behind"></i>Behind</span>
+                <!-- PROBLEM 1: the green scenario line has NO legend entry -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="rail">
+          <div class="section">
+            <div class="eyebrow">Chart layers</div>
+            <div class="layer-row"><span>Planned staircase</span><button class="switch on" data-layer="planned" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>GP pace projection</span><button class="switch on" data-layer="projection" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>Confidence band</span><button class="switch on" data-layer="confidence" aria-pressed="true"></button></div>
+          </div>
+
+          <div class="section">
+            <div class="eyebrow">Try a pace</div>
+            <h3 id="pace-title">Current study pace</h3>
+            <p>Preview a capacity finish without changing your roadmap.</p>
+            <input class="slider" id="pace" type="range" min="0" max="60" step="15" value="0">
+            <div class="slider-labels"><span>Current</span><span>+60 min</span></div>
+            <div class="scenario-result">
+              <div class="eyebrow">Scenario finish</div>
+              <strong id="scenario-finish">Aug 5, 2026</strong>
+              <span class="sub" id="scenario-sub">Current capacity-model finish</span>
+              <!-- PROBLEM 2: at "Current" this shows the CAPACITY-model finish, NOT the GP forecast.
+                   PROBLEM 3: it's the only "finish" shown — no Planned deadline, no GP forecast. -->
+            </div>
+            <button class="primary">Replan with this pace</button>
+          </div>
+        </aside>
+      </div>
+    </article>
+  </div>
+
+  <script>
+  (function(){
+    // ---- domain model (grounded in the screenshot) ----
+    // day 0 = Jun 8 2026 (start) · day 43 = today · day 63 = deadline (Aug 10) · day 75 = chart end (Aug 22)
+    var BASE=new Date(Date.UTC(2026,5,8)), TODAY=43, DEADLINE=63, END=75, YMAX=3600; // minutes (60h)
+    function dLabel(day){var d=new Date(BASE.getTime()+day*864e5);return d.toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'UTC'});}
+
+    // cumulative minutes
+    var planned=[[0,0],[6,330],[13,700],[20,1080],[27,1470],[34,1850],[41,2230],[43,2340],[48,2620],[55,3000],[62,3300],[63,3340],[END,3340]];
+    var actual=[[0,0],[5,150],[10,300],[15,470],[20,610],[25,760],[30,880],[35,980],[39,1040],[43,1080]]; // 18h @ today, behind
+    var gp=[[0,0],[8,240],[16,470],[24,720],[32,900],[40,1040],[43,1080],[50,1520],[57,1960],[64,2410],[71,2860],[END,3060]]; // forecast
+    // OLD capacity-model scenario finishes (optimistic — the CURRENT behavior)
+    var OLD={0:{day:58,label:'Aug 5, 2026',sub:'Current capacity-model finish'},
+             15:{day:54,label:'Aug 1, 2026',sub:'4 days sooner'},
+             30:{day:51,label:'Jul 29, 2026',sub:'7 days sooner'},
+             45:{day:49,label:'Jul 27, 2026',sub:'9 days sooner'},
+             60:{day:47,label:'Jul 25, 2026',sub:'11 days sooner'}};
+
+    var state={range:'full',planned:true,projection:true,confidence:true,pace:0};
+    var svg=document.getElementById('chart'), stage=svg.parentElement;
+
+    function rangeEnd(){return state.range==='week'?TODAY+2:state.range==='month'?TODAY+7:END;}
+    function rangeStart(){return state.range==='week'?TODAY-5:state.range==='month'?TODAY-23:0;}
+
+    function plannedAt(day){var v=0;planned.forEach(function(p){if(p[0]<=day)v=p[1];});return v;}
+
+    function smooth(pts){if(!pts.length)return'';var d='M'+pts[0][0]+' '+pts[0][1];for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i],mx=(a[0]+b[0])/2;d+='C'+mx+' '+a[1]+' '+mx+' '+b[1]+' '+b[0]+' '+b[1];}return d;}
+
+    function render(){
+      var W=Math.max(360,svg.clientWidth||820), H=Math.max(220,svg.clientHeight||470);
+      svg.setAttribute('viewBox','0 0 '+W+' '+H);
+      var L=62,R=W-18,T=22,B=H-40;
+      var s=rangeStart(), e=rangeEnd();
+      var x=function(day){return L+((Math.max(s,Math.min(e,day))-s)/(e-s))*(R-L);};
+      var y=function(min){return B-(min/YMAX)*(B-T);};
+      var todayX=x(TODAY);
+      var out=['<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fbf7ee"/>'];
+      // future shade
+      if(e>TODAY) out.push('<rect x="'+todayX+'" y="'+T+'" width="'+(R-todayX)+'" height="'+(B-T)+'" fill="#ede3d2" opacity=".45"/>');
+      // behind fill (actual↔planned)
+      var af=actual.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      var poly=af.map(function(p){return x(p[0])+','+y(p[1]);}).concat(af.slice().reverse().map(function(p){return x(p[0])+','+y(plannedAt(p[0]));})).join(' ');
+      out.push('<polygon points="'+poly+'" fill="#a0432a" opacity=".10"/>');
+      // confidence band
+      var gpf=gp.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      if(state.confidence){
+        var band=gpf.map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*22;return x(p[0])+','+y(Math.min(YMAX,p[1]+w));})
+          .concat(gpf.slice().reverse().map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*22;return x(p[0])+','+y(Math.max(0,p[1]-w));})).join(' ');
+        out.push('<polygon points="'+band+'" fill="#a0432a" opacity=".12"/>');
+      }
+      // planned staircase
+      if(state.planned){
+        var pf=planned.filter(function(p){return p[0]>=s&&p[0]<=e;});
+        var step='M'+x(pf[0][0])+' '+y(pf[0][1]);
+        pf.slice(1).forEach(function(p){step+='H'+x(p[0])+'V'+y(p[1]);});
+        out.push('<path d="'+step+'" fill="none" stroke="#8b7b6b" stroke-width="1.8" stroke-dasharray="6 4"/>');
+      }
+      // GP projection
+      if(state.projection) out.push('<path d="'+smooth(gpf.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="1.8" stroke-dasharray="3 3"/>');
+      // OLD awkward scenario line (only when pace>0): steep spike from today's actual to FULL planned total on capacity finish
+      if(state.pace>0){
+        var fd=OLD[state.pace].day, sy=y(1080), ey=y(3340), sx=todayX, ex=x(fd);
+        var d='M'+sx+' '+sy+'C'+(sx+(ex-sx)*.45)+' '+(sy+8)+' '+(ex-(ex-sx)*.15)+' '+(ey+70)+' '+ex+' '+ey;
+        out.push('<path d="'+d+'" fill="none" stroke="#4a6b3a" stroke-width="2.5" stroke-dasharray="6 5"/>');
+      }
+      // actual line + checkpoints
+      out.push('<path d="'+smooth(af.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="2.4"/>');
+      af.forEach(function(p){out.push('<circle cx="'+x(p[0])+'" cy="'+y(p[1])+'" r="3" fill="#a0432a" stroke="#fbf7ee" stroke-width="1.4"/>');});
+      // today marker
+      if(TODAY>=s&&TODAY<=e){
+        out.push('<path d="M'+todayX+' '+T+'V'+B+'" stroke="#5c4d40" stroke-width="1" stroke-dasharray="4 3"/>');
+        out.push('<text x="'+todayX+'" y="'+(T-8)+'" text-anchor="middle" fill="#5c4d40" font-family="monospace" font-size="9" letter-spacing="1">TODAY</text>');
+      }
+      // axes
+      out.push('<path d="M'+L+' '+T+'V'+B+'H'+R+'" fill="none" stroke="#e6dcc8" stroke-width="1.2"/>');
+      [0,600,1200,1800,2400,3000,3600].forEach(function(m){out.push('<path d="M'+(L-8)+' '+y(m)+'H'+L+'" stroke="#e6dcc8"/><text x="'+(L-13)+'" y="'+(y(m)+4)+'" text-anchor="end" fill="#8b7b6b" font-family="monospace" font-size="10">'+(m/60)+'h</text>');});
+      var ticks=[s,Math.round((s+e)/2),TODAY,DEADLINE,e].filter(function(v,i,a){return v>=s&&v<=e&&a.indexOf(v)===i;});
+      ticks.forEach(function(day){out.push('<path d="M'+x(day)+' '+B+'V'+(B+7)+'" stroke="#d9cdb8"/><text x="'+x(day)+'" y="'+(B+20)+'" text-anchor="middle" fill="#8b7b6b" font-family="monospace" font-size="10">'+dLabel(day)+'</text>');});
+      svg.innerHTML=out.join('');
+    }
+
+    document.querySelectorAll('#ranges button').forEach(function(b){b.addEventListener('click',function(){state.range=b.dataset.range;document.querySelectorAll('#ranges button').forEach(function(n){n.classList.toggle('active',n===b);});render();});});
+    document.querySelectorAll('.switch').forEach(function(b){b.addEventListener('click',function(){var on=b.classList.toggle('on');b.setAttribute('aria-pressed',String(on));state[b.dataset.layer]=on;render();});});
+    document.getElementById('pace').addEventListener('input',function(){
+      state.pace=Number(this.value);
+      document.getElementById('pace-title').textContent=state.pace===0?'Current study pace':'+'+state.pace+' min per study day';
+      document.getElementById('scenario-finish').textContent=OLD[state.pace].label;
+      document.getElementById('scenario-sub').textContent=OLD[state.pace].sub;
+      render();
+    });
+    render();
+    if(window.ResizeObserver) new ResizeObserver(render).observe(svg);
+  })();
+  </script>
+</body>
+</html>

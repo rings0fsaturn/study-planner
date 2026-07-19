@@ -1,0 +1,307 @@
+{
+  "fn": "computeCalibration",
+  "sessions": [
+    {
+      "date": "2026-01-01",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 55,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-0"
+    },
+    {
+      "date": "2026-01-02",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 59,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    },
+    {
+      "date": "2026-01-03",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-2"
+    },
+    {
+      "date": "2026-01-04",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 56,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-3"
+    },
+    {
+      "date": "2026-01-05",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 51,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-4"
+    },
+    {
+      "date": "2026-01-06",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 50,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-5"
+    },
+    {
+      "date": "2026-01-07",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 54,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-6"
+    },
+    {
+      "date": "2026-01-08",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 58,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-7"
+    },
+    {
+      "date": "2026-01-09",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-8"
+    },
+    {
+      "date": "2026-01-10",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 57,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-9"
+    },
+    {
+      "date": "2026-01-11",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 52,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-10"
+    },
+    {
+      "date": "2026-01-12",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 50,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-11"
+    },
+    {
+      "date": "2026-01-13",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 52,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-12"
+    },
+    {
+      "date": "2026-01-14",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 57,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-13"
+    },
+    {
+      "date": "2026-01-15",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-14"
+    },
+    {
+      "date": "2026-01-16",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 58,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-15"
+    },
+    {
+      "date": "2026-01-17",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 54,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-16"
+    },
+    {
+      "date": "2026-01-18",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 50,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-17"
+    },
+    {
+      "date": "2026-01-19",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 51,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-18"
+    },
+    {
+      "date": "2026-01-20",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 56,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-19"
+    },
+    {
+      "date": "2026-01-21",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-20"
+    },
+    {
+      "date": "2026-01-22",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 59,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-21"
+    },
+    {
+      "date": "2026-01-23",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 55,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-22"
+    },
+    {
+      "date": "2026-01-24",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 51,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-23"
+    },
+    {
+      "date": "2026-01-25",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 50,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-24"
+    },
+    {
+      "date": "2026-01-26",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 54,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-25"
+    },
+    {
+      "date": "2026-01-27",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 59,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-26"
+    },
+    {
+      "date": "2026-01-28",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-27"
+    },
+    {
+      "date": "2026-01-29",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 56,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-28"
+    },
+    {
+      "date": "2026-01-30",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 52,
+      "duration": 60,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-29"
+    }
+  ],
+  "exceptionalTags": [],
+  "resolutions": []
+}

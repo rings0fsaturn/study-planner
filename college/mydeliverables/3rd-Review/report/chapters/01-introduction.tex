@@ -1,0 +1,30 @@
+\chapter{Introduction}
+This chapter sets out the problem the project addresses and the shape of the work that follows. Section~1.1 states the problem faced by self-directed learners and the motivation for an adaptive study planner. Section~1.2 lists the objectives of Phase~I. Section~1.3 defines the scope of the work across the two project phases. Section~1.4 describes the organization of the remainder of the report.
+
+\section{Problem Statement}
+A self-directed learner is a person who works through online courses, examination preparation, or self-study material without an instructor setting the pace. Such a learner typically begins with a fixed plan, of the form ``two hours a day, finish by this date.'' The plan is a one-time estimate. It assumes that the learner will study at the rate they intended and that the material will take as long as they guessed.
+
+Within a few days the plan no longer matches reality. The learner falls behind on some days and moves ahead on others, the estimate of how long each item takes proves wrong, and the fixed plan does not adjust. The learner is left without a trustworthy signal of how far off-track they are or when they will actually finish. The estimate that mattered at the start, the finish date, silently becomes inaccurate while the plan continues to display it as though it were still valid.
+
+Existing tools address only one side of this problem. Time-tracking applications record how long a learner studied but do not plan; static plan generators produce a schedule once and never revise it against the rate the learner actually achieves. Neither learns the learner's realised pace, and neither revises the finish-date estimate as evidence accumulates. The gap this project addresses is the absence of a planner that treats the learner's own logged behaviour as evidence, updates its estimate of their pace as that evidence arrives, and regenerates the plan accordingly.
+
+The difficulty is that the evidence is sparse. A single learner produces only a handful of study sessions before the plan first needs to adapt, so a method that requires large amounts of per-learner data is not usable here. The pace is also not stationary: it shifts when the learner's circumstances change, and a useful system must distinguish a genuine shift from ordinary day-to-day variation before it acts. These two constraints, sparse data and non-stationary behaviour, shape the choice of methods in the chapters that follow.
+
+\section{Objectives}
+Phase~I of the project pursues the following objectives.
+\begin{enumerate}[noitemsep]
+    \item Estimate a learner's true study pace from their own session history using hierarchical Bayesian calibration with a context-aware shrinkage model, so that a usable estimate is available from few sessions.
+    \item Detect behavioural shifts in the learner's pace using statistical change-point detection, so that the plan adapts to a genuine change rather than to noise.
+    \item Project the learner's completion date with a calibrated uncertainty band, rather than a single point, using Gaussian-process regression over the accumulated progress.
+    \item Regenerate the study schedule from the learner's realised capacity when the projected finish date diverges from the deadline.
+    \item Evaluate each component against established baselines on a synthetic dataset with known ground truth, using held-out evaluation with bootstrap confidence intervals and multiple-comparison correction.
+    \item Realise the selected models in a working, local-first web application for a single self-directed learner.
+\end{enumerate}
+
+\section{Scope of the Project}
+The work is delivered across two phases. \textbf{Phase~I}, reported here, builds and evaluates the open-loop system. Its components are pace calibration, change detection, completion projection, and capacity-based schedule regeneration. Each is compared offline against baselines on synthetic data with known ground truth, and the selected models are realised in the application. The target user is the individual self-directed learner.
+
+\textbf{Phase~II} will close the loop and add assessment-based verification of genuine learning, so that the pace signal driving the plan is checked against evidence that studying produced learning rather than against self-reported time alone. Phase~II will also validate the system longitudinally on a single learner's real logged sessions. Multi-user, institutional, and instructor-mediated settings are out of scope for both phases.
+
+\section{Organization of the Report}
+The remainder of the report is organized as follows. Chapter~2 surveys the research the project draws on, grouped by technique, and states the gaps it addresses. Chapter~3 specifies the hardware, software, and functional requirements of the system. Chapter~4 describes the proposed methodology: the candidate models for each component, the offline comparison methodology, the system design and how it evolved during development, and the resulting architecture. Chapter~5 gives the implementation details, including the datasets and their sources and the realised application. Chapter~6 presents and discusses the comparison results. Chapter~7 concludes Phase~I and sets out the work planned for Phase~II.

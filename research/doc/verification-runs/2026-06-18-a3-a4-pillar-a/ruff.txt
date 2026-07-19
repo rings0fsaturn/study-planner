@@ -1,0 +1,462 @@
+E501 Line too long (109 > 100)
+  --> research/comparison/src/research_comparison/generator/regimes.py:62:101
+   |
+60 |         pre_mean = float(multipliers[max(0, onset - 1)])
+61 |         if shift_type == "step":
+62 |             magnitude = float(step_magnitude if step_magnitude is not None else rng.uniform(*STEP_MAG_RANGE))
+   |                                                                                                     ^^^^^^^^^
+63 |             if archetype in {"fading_flame", "marathon_runner"}:
+64 |                 sign = -1 if len(shifts) % 2 == 0 else 1
+   |
+
+UP035 [*] Import from `collections.abc` instead: `Iterable`
+  --> research/comparison/src/research_comparison/kt/join.py:8:1
+   |
+ 6 | from collections import defaultdict
+ 7 | from pathlib import Path
+ 8 | from typing import Any, Iterable
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |
+10 | from research_comparison.kt.progress_log import ProgressLogger
+   |
+help: Import from `collections.abc`
+
+E501 Line too long (101 > 100)
+  --> research/comparison/src/research_comparison/kt/join.py:32:101
+   |
+30 |     registry = json.loads(path.read_text(encoding="utf-8"))
+31 |     return [
+32 |         {"dataset": str(item["dataset"]), "model": str(item["model"]), "status": str(item["status"])}
+   |                                                                                                     ^
+33 |         for item in registry.get("reportable_allowlist", [])
+34 |         if item.get("status") == "credible"
+   |
+
+E501 Line too long (106 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:259:101
+    |
+257 |     reportable_allowlist = load_reportable_allowlist(registry_path)
+258 |     if reportable_only:
+259 |         logger.log(10, "join.allowlist", f"mode=reportable_allowlist entries={len(reportable_allowlist)}")
+    |                                                                                                     ^^^^^^
+260 |         if not reportable_allowlist:
+261 |             raise ValueError("model_registry.json has no credible reportable_allowlist entries")
+    |
+
+E501 Line too long (123 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:278:101
+    |
+276 |         35,
+277 |         "join.summary_ready",
+278 |         f"mode={summary['_provenance']['mode']} rows={summary['_provenance']['result_count']} gaps={len(summary['gaps'])}",
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^
+279 |     )
+    |
+
+E501 Line too long (101 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:291:101
+    |
+289 |     target_summary = summary_path or root / "research/results/kt_summary.json"
+290 |     target_summary.parent.mkdir(parents=True, exist_ok=True)
+291 |     target_summary.write_text(json.dumps(summary, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    |                                                                                                     ^
+292 |     outputs.append(target_summary)
+293 |     logger.log(85, "join.summary_written", str(target_summary))
+    |
+
+E501 Line too long (106 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:301:101
+    |
+299 |     ]
+300 |     provenance.write_text(
+301 |         f"KT artifacts generated from {source} with {summary['_provenance']['result_count']} JSON rows.\n"
+    |                                                                                                     ^^^^^^
+302 |         f"Mode: {summary['_provenance']['mode']}.\n"
+303 |         + (
+    |
+
+E501 Line too long (104 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:308:101
+    |
+306 |             else "Reportable allow-list: not applied.\n"
+307 |         )
+308 |         + f"Fold raw sources: {', '.join(summary['_provenance']['folds_raw_sources']) or 'unknown'}.\n",
+    |                                                                                                     ^^^^
+309 |         encoding="utf-8",
+310 |     )
+    |
+
+E501 Line too long (127 > 100)
+   --> research/comparison/src/research_comparison/kt/join.py:320:101
+    |
+318 |     parser.add_argument("--results-dir", type=Path, default=None)
+319 |     parser.add_argument("--generated-dir", type=Path, default=None)
+320 |     parser.add_argument("--full-grid", action="store_true", help="write all expected cells instead of the credible allow-list")
+    |                                                                                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+321 |     parser.add_argument("--quiet", action="store_true", help="suppress progress output on stderr")
+322 |     args = parser.parse_args()
+    |
+
+UP035 [*] Import from `collections.abc` instead: `Iterable`
+  --> research/comparison/src/research_comparison/kt/pybkt_runner.py:11:1
+   |
+ 9 | from importlib.metadata import version
+10 | from pathlib import Path
+11 | from typing import Any, Iterable
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+12 |
+13 | import pandas as pd
+   |
+help: Import from `collections.abc`
+
+E501 Line too long (108 > 100)
+  --> research/comparison/src/research_comparison/kt/pybkt_runner.py:93:101
+   |
+92 |         if "guesses" in fixed:
+93 |             guesses = fixed["guesses"] * (fixed["guesses"] < 0) + fixed["guesses"] * (fixed["guesses"] >= 0)
+   |                                                                                                     ^^^^^^^^
+94 |         if "slips" in fixed:
+95 |             slips = fixed["slips"] * (fixed["slips"] < 0) + fixed["slips"] * (fixed["slips"] >= 0)
+   |
+
+E501 Line too long (107 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:131:101
+    |
+129 |         return {
+130 |             "total_loglike": total_loglike,
+131 |             "all_trans_softcounts": np.reshape(trans.flatten(order="F"), (num_resources, 2, 2), order="C"),
+    |                                                                                                     ^^^^^^^
+132 |             "all_emission_softcounts": np.reshape(emission.flatten(order="F"), (num_subparts, 2, 2), order="C"),
+133 |             "all_initial_softcounts": init,
+    |
+
+E501 Line too long (112 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:132:101
+    |
+130 |             "total_loglike": total_loglike,
+131 |             "all_trans_softcounts": np.reshape(trans.flatten(order="F"), (num_resources, 2, 2), order="C"),
+132 |             "all_emission_softcounts": np.reshape(emission.flatten(order="F"), (num_subparts, 2, 2), order="C"),
+    |                                                                                                     ^^^^^^^^^^^^
+133 |             "all_initial_softcounts": init,
+134 |             "alpha_out": alpha_out.flatten(order="F").reshape(alpha_out.shape, order="C"),
+    |
+
+E501 Line too long (101 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:210:101
+    |
+208 |     if k == "full":
+209 |         return frame
+210 |     return frame.groupby("user_id", sort=False, group_keys=False).head(int(k)).reset_index(drop=True)
+    |                                                                                                     ^
+    |
+
+E501 Line too long (107 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:275:101
+    |
+273 |         percent_start,
+274 |         "pybkt.fold.fit_start",
+275 |         f"dataset={dataset} fold={fold_id} rows={row_count} learners={learner_count} skills={skill_count}",
+    |                                                                                                     ^^^^^^^
+276 |     )
+277 |     started = time.monotonic()
+    |
+
+E501 Line too long (148 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:289:101
+    |
+287 | …
+288 | …
+289 | …ndex={index}/{skill_count} skill={skill_name} rows={len(skill_train)} elapsed={elapsed}s",
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+290 | …
+291 | …
+    |
+
+E501 Line too long (117 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:302:101
+    |
+300 |         )
+301 |     elapsed = int(time.monotonic() - started)
+302 |     _progress(logger, percent_end, "pybkt.fold.fit_complete", f"dataset={dataset} fold={fold_id} elapsed={elapsed}s")
+    |                                                                                                     ^^^^^^^^^^^^^^^^^
+303 |     return models
+    |
+
+E501 Line too long (136 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:340:101
+    |
+338 | …
+339 | …
+340 | …arners={sequences['user_id'].nunique()} skills={sequences['skill_name'].nunique()}",
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+341 | …
+342 | …
+    |
+
+E501 Line too long (101 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:380:101
+    |
+378 |         prediction_keys = ["full", *k_values]
+379 |         for key_index, k in enumerate(prediction_keys):
+380 |             percent = fit_end + (key_index / max(1, len(prediction_keys) + 1)) * (fold_end - fit_end)
+    |                                                                                                     ^
+381 |             logger.log(percent, "pybkt.fold.predict", f"dataset={dataset} fold={fold_id} k={k}")
+382 |             y_true, y_score = _predict(model, _truncate_first_k(test, k))
+    |
+
+E501 Line too long (108 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:400:101
+    |
+398 |             out_path = _write_result(_result_path(results_dir, dataset, fold_id, k), payload)
+399 |             outputs.append(out_path)
+400 |             logger.log(percent, "pybkt.fold.wrote", f"{out_path} auc={auc:.6f} n_predictions={len(y_true)}")
+    |                                                                                                     ^^^^^^^^
+401 |
+402 |         logger.log(fold_end - 1, "pybkt.fold.ece", f"dataset={dataset} fold={fold_id}")
+    |
+
+E501 Line too long (112 > 100)
+   --> research/comparison/src/research_comparison/kt/pybkt_runner.py:436:101
+    |
+434 |     folds = args.folds or root / "research/kt-bench/folds" / f"{args.dataset}_folds.json"
+435 |     results = args.results_dir or root / "research/results/kt"
+436 |     for path in run_pybkt(dataset=args.dataset, folds_path=folds, results_dir=results, progress=not args.quiet):
+    |                                                                                                     ^^^^^^^^^^^^
+437 |         print(path)
+    |
+
+E501 Line too long (103 > 100)
+  --> research/comparison/src/research_comparison/metrics/projection.py:38:101
+   |
+36 |         1
+37 |         for forecast in usable
+38 |         if _parse(str(forecast["interval_low"])) <= true_date <= _parse(str(forecast["interval_high"]))
+   |                                                                                                     ^^^
+39 |     )
+40 |     sharpness = [
+   |
+
+UP040 Type alias `DeltaCI` uses `TypeAlias` annotation instead of the `type` keyword
+  --> research/comparison/src/research_comparison/metrics/rigour.py:36:1
+   |
+34 | import numpy as np
+35 |
+36 | DeltaCI: TypeAlias = tuple[float, float, float]
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+37 | DEFAULT_HELDOUT_TRAIN_ARCHETYPES = frozenset(
+38 |     {"steady", "marathon_runner", "morning_lark"}
+   |
+help: Use the `type` keyword
+
+E501 Line too long (103 > 100)
+  --> research/comparison/src/research_comparison/plots/kt_coldstart.py:40:101
+   |
+38 | def write_reliability_plot(summary: dict[str, Any], out_path: Path) -> Path:
+39 |     out_path.parent.mkdir(parents=True, exist_ok=True)
+40 |     grouped: dict[str, dict[float, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
+   |                                                                                                     ^^^
+41 |     for row in summary["reliability"]:
+42 |         for bin_row in row["bins"]:
+   |
+
+UP035 [*] Import from `collections.abc` instead: `Callable`
+  --> research/comparison/src/research_comparison/progress_log.py:8:1
+   |
+ 6 | from dataclasses import dataclass, field
+ 7 | from datetime import datetime, timezone
+ 8 | from typing import Callable, TypeVar
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ 9 |
+10 | T = TypeVar("T")
+   |
+help: Import from `collections.abc`
+
+UP017 [*] Use `datetime.UTC` alias
+  --> research/comparison/src/research_comparison/progress_log.py:23:34
+   |
+21 |             return
+22 |         pct = max(0, min(100, int(round(percent))))
+23 |         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+   |                                  ^^^^^^^^^^^^
+24 |         elapsed = int(time.monotonic() - self.started_at)
+25 |         suffix = f" detail={detail}" if detail else ""
+   |
+help: Convert to `datetime.UTC` alias
+
+E501 Line too long (103 > 100)
+  --> research/comparison/src/research_comparison/progress_log.py:27:101
+   |
+25 |         suffix = f" detail={detail}" if detail else ""
+26 |         print(
+27 |             f"[{self.label}-progress] {timestamp} {pct:03d}% state={state} elapsed={elapsed}s{suffix}",
+   |                                                                                                     ^^^
+28 |             file=sys.stderr,
+29 |             flush=True,
+   |
+
+UP047 Generic function `run_with_heartbeat` should use type parameters
+  --> research/comparison/src/research_comparison/progress_log.py:33:5
+   |
+33 |   def run_with_heartbeat(
+   |  _____^
+34 | |     work: Callable[[], T],
+35 | |     *,
+36 | |     logger: ProgressLogger,
+37 | |     percent: float,
+38 | |     state: str,
+39 | |     detail: str,
+40 | |     heartbeat_seconds: float,
+41 | | ) -> T:
+   | |_^
+42 |       with ThreadPoolExecutor(max_workers=1) as executor:
+43 |           future = executor.submit(work)
+   |
+help: Use type parameters
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> research/comparison/src/research_comparison/runners/closed_loop.py:1:1
+   |
+ 1 | / from __future__ import annotations
+ 2 | |
+ 3 | | import argparse
+ 4 | | import json
+ 5 | | import statistics
+ 6 | | from dataclasses import replace
+ 7 | | from pathlib import Path
+ 8 | | from typing import Any
+ 9 | |
+10 | | from py_progress import compute_calibration
+11 | | from py_roadmap_engine import Material, Pin, RoadmapInput, RoadmapOutput, regenerate_roadmap
+12 | |
+13 | | from research_comparison.metrics.closed_loop import (
+14 | |     adherence_score,
+15 | |     compare_closed_vs_open,
+16 | |     finish_date_drift_days,
+17 | | )
+18 | | from research_comparison.metrics.scheduling import planned_slots
+19 | | from research_comparison.progress_log import ProgressLogger
+20 | | from research_comparison.runners.calibration import latest_dataset_dir
+21 | | from research_comparison.runners.detection import detect_cusum
+22 | | from research_comparison.runners.scheduling import scenario_from_learner, schedule_greedy
+23 | | from research_comparison.writers.results import manifest_from_dataset, write_stamped_json
+   | |_________________________________________________________________________________________^
+   |
+help: Organize imports
+
+E501 Line too long (103 > 100)
+   --> research/comparison/src/research_comparison/runners/closed_loop.py:227:101
+    |
+225 |     args = parser.parse_args()
+226 |     logger = ProgressLogger(label="research-closed-loop", enabled=not args.quiet)
+227 |     print(run_closed_loop_archive(dataset_dir=args.dataset_dir, out_dir=args.out_dir, progress=logger))
+    |                                                                                                     ^^^
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> research/comparison/tests/test_closed_loop.py:1:1
+  |
+1 | / from __future__ import annotations
+2 | |
+3 | | from pathlib import Path
+4 | |
+5 | | from py_roadmap_engine import Material, RoadmapInput
+6 | |
+7 | | from research_comparison.metrics.closed_loop import compare_closed_vs_open
+8 | | from research_comparison.runners.closed_loop import run_closed_loop_for_scenario
+  | |________________________________________________________________________________^
+  |
+help: Organize imports
+
+I001 [*] Import block is un-sorted or un-formatted
+  --> research/comparison/tests/test_kt_join.py:1:1
+   |
+ 1 | / from __future__ import annotations
+ 2 | |
+ 3 | | import csv
+ 4 | | import hashlib
+ 5 | | import json
+ 6 | | import importlib
+ 7 | | import importlib.util
+ 8 | | import statistics
+ 9 | | import sys
+10 | | from datetime import datetime
+11 | | from pathlib import Path
+12 | |
+13 | | import pytest
+   | |_____________^
+   |
+help: Organize imports
+
+E501 Line too long (105 > 100)
+  --> research/comparison/tests/test_kt_join.py:80:101
+   |
+78 | def _pykt_fold_sequence_counts(dataset: str) -> dict[int, int]:
+79 |     folds_meta = json.loads((FOLDS_DIR / f"{dataset}_folds.json").read_text(encoding="utf-8"))
+80 |     sequence_path = KT_BENCH_DIR / "data" / str(folds_meta["pykt_dataset"]) / "train_valid_sequences.csv"
+   |                                                                                                     ^^^^^
+81 |     assert sequence_path.exists(), f"missing pyKT sequence file: {sequence_path}"
+   |
+
+E501 Line too long (101 > 100)
+   --> research/comparison/tests/test_kt_join.py:190:101
+    |
+188 |     adapter = _load_accoding_adapter()
+189 |     sql = [
+190 |         "INSERT INTO `submissions` VALUES (1, 'c++', 'CE', 0, 0, 0, 3, 'comma, ok', 7, 11, NULL);\n",
+    |                                                                                                     ^
+191 |         "INSERT INTO `submissions` VALUES (2, 'c++', 'AC', 1, 0, 0, 3, '', 7, 12, NULL);\n",
+192 |         "INSERT INTO `submissions` VALUES (3, 'c++', 'JG', 0, 0, 0, 3, '', 7, 13, NULL);\n",
+    |
+
+E501 Line too long (101 > 100)
+   --> research/comparison/tests/test_kt_join.py:313:101
+    |
+311 |                 for k in DEFAULT_K_VALUES:
+312 |                     _write_result(results_dir, dataset=dataset, model=model, fold=fold, k=k)
+313 |                 _write_result(results_dir, dataset=dataset, model=model, fold=fold, k="ece", ece=0.2)
+    |                                                                                                     ^
+314 |     _write_result(results_dir, dataset="poj", model="dkt", fold=0, k="full", raw_source="smoke_fixture")
+    |
+
+E501 Line too long (104 > 100)
+   --> research/comparison/tests/test_kt_join.py:314:101
+    |
+312 |                     _write_result(results_dir, dataset=dataset, model=model, fold=fold, k=k)
+313 |                 _write_result(results_dir, dataset=dataset, model=model, fold=fold, k="ece", ece=0.2)
+314 |     _write_result(results_dir, dataset="poj", model="dkt", fold=0, k="full", raw_source="smoke_fixture")
+    |                                                                                                     ^^^^
+315 |
+316 |     summary = join_kt_results(results_dir)
+    |
+
+E501 Line too long (107 > 100)
+   --> research/comparison/tests/test_kt_join.py:385:101
+    |
+383 |     assert "accoding" not in summary["full_seq_auc"]
+384 |     assert "accoding" not in (generated_dir / "kt_auc.tex").read_text(encoding="utf-8")
+385 |     assert "dkt x nips2020 (credible)" in (generated_dir / "kt_provenance.txt").read_text(encoding="utf-8")
+    |                                                                                                     ^^^^^^^
+386 |     assert summary_path in outputs
+    |
+
+I001 [*] Import block is un-sorted or un-formatted
+ --> research/comparison/tests/test_progress_logging.py:1:1
+  |
+1 | / from __future__ import annotations
+2 | |
+3 | | from pathlib import Path
+  | |________________________^
+  |
+help: Organize imports
+
+E501 Line too long (107 > 100)
+  --> research/comparison/tests/test_progress_logging.py:34:101
+   |
+32 |             missing_progress.append(str(rel))
+33 |
+34 |     assert not missing_progress, "Python entrypoints missing progress logs: " + ", ".join(missing_progress)
+   |                                                                                                     ^^^^^^^
+   |
+
+Found 39 errors.
+[*] 8 fixable with the `--fix` option (2 hidden fixes can be enabled with the `--unsafe-fixes` option).

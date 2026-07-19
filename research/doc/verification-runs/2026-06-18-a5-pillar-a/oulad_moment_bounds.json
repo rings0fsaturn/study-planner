@@ -1,0 +1,44 @@
+{
+  "bounds": {
+    "ar1_phi": {
+      "high": 0.422619,
+      "low": 0.019299
+    },
+    "dropout_probability": {
+      "high": 0.290278,
+      "low": 0.140278
+    },
+    "gap_days": {
+      "p50": 1.0,
+      "p75": 3.0,
+      "p90": 6.0,
+      "p95": 11.0
+    },
+    "shift_frequency_per_100_days": {
+      "high": 20.0,
+      "low": 0.25
+    }
+  },
+  "bounds_version": "oulad-engagement-v1",
+  "moment_bounds_hash": "3513c739b9ed",
+  "proxy_mapping": "Aggregate OULAD studentVle.sum_click by learner/course/day; treat daily clicks as engagement intensity, a bounded proxy for minutes toward a roadmap.",
+  "source": {
+    "dataset": "OULAD",
+    "license": "CC-BY 4.0",
+    "max_series": 5000,
+    "prestart_days": "excluded",
+    "rows_kept": 571356,
+    "rows_seen": 10655280,
+    "sample_mod": 17,
+    "sampled_series": 1701,
+    "student_registration": "/Users/rsaji/projects/1/college-mtech/study-planner-web/research/datasets/oulad/studentRegistration.csv",
+    "student_vle": "/Users/rsaji/projects/1/college-mtech/study-planner-web/research/datasets/oulad/studentVle.csv",
+    "usable_series": 1440
+  },
+  "summary": {
+    "active_days_median": 54.0,
+    "ar1_phi_median": 0.20865,
+    "dropout_rate_sample": 0.190278,
+    "shift_frequency_median": 17.715661
+  }
+}

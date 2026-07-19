@@ -1,0 +1,43 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.*.local
+*.log
+.DS_Store
+.vite/
+.svelte-kit/
+.vercel/
+.output/
+.dev/
+test-results/
+.claude/settings.local.json
+# code-memory: agent-only index, do not commit
+.claude/memory/
+
+# transient agent worktrees
+.claude/worktrees/
+/handovers/
+
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# code-memory: agent-only index, do not commit
+.codex/memory/
+
+# Research tier generated artifacts
+research/datasets/**
+!research/datasets/**/
+!research/datasets/**/manifest.json
+!research/datasets/NeurIPS 2020.zip
+!research/datasets/ACcoding.zip
+!research/datasets/acoding/ACcoding.zip
+research/results/
+research/kt-bench/.venv/
+research/kt-bench/.work/
+research/kt-bench/data/
+research/kt-bench/folds/*_sequences.csv

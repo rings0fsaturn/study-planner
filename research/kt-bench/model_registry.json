@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "models": {
+    "pybkt": {
+      "runner": "pyBKT",
+      "underlying_model": "pyBKT.Model",
+      "distinct_method": true,
+      "status": "active",
+      "report_label": "pyBKT"
+    },
+    "dkt": {
+      "runner": "pyKT",
+      "underlying_model": "dkt",
+      "distinct_method": true,
+      "status": "active",
+      "report_label": "DKT"
+    },
+    "akt": {
+      "runner": "pyKT",
+      "underlying_model": "akt",
+      "distinct_method": true,
+      "status": "active",
+      "report_label": "AKT"
+    },
+    "deep_irt": {
+      "runner": "pyKT",
+      "underlying_model": "deep_irt",
+      "distinct_method": true,
+      "status": "active",
+      "report_label": "Deep-IRT"
+    },
+    "sakt": {
+      "runner": "pyKT",
+      "underlying_model": "sakt",
+      "distinct_method": true,
+      "status": "active",
+      "report_label": "SAKT"
+    },
+    "dkt_clst_config": {
+      "runner": "pyKT",
+      "underlying_model": "dkt",
+      "distinct_method": false,
+      "status": "active_relabeled",
+      "report_label": "DKT-compatible CLST config",
+      "alias_of": "dkt",
+      "alias_policy": "explicit_relabel",
+      "notes": "pyKT 0.0.38 has no distinct CLST implementation in this bench; this label preserves the DKT-backed recurrent config without claiming a CLST method."
+    }
+  },
+  "retired_labels": {
+    "clst": {
+      "replaced_by": "dkt_clst_config",
+      "reason": "Historical clst rows were a silent alias to pyKT dkt and are not reportable as CLST."
+    }
+  },
+  "pybkt_skill_space": {
+    "nips2020": {
+      "keying": "pyKT numeric concept ids exported from Eedi level-3 subjects",
+      "max_unique_skills": 1000,
+      "allow_compound_underscore_keys": false,
+      "allow_singleton_skills": false
+    },
+    "accoding": {
+      "keying": "problem id as concept",
+      "max_unique_skills": 10000,
+      "allow_compound_underscore_keys": false,
+      "allow_singleton_skills": true
+    }
+  },
+  "dataset_sampling": {
+    "accoding": {
+      "adapter": "adapters/accoding_to_poj.py",
+      "active_provenance": "data/poj/poj_log.provenance.json",
+      "active_max_learners": 3000,
+      "active_seed": 20260614,
+      "requires_subsample_stability": true,
+      "required_max_learners": [1000, 3000, 10000],
+      "completed_max_learners": [1000, 3000, 10000],
+      "status": "stable",
+      "stability": {
+        "metric": "pybkt_full_sequence_auc_mean",
+        "threshold_spread": 0.02,
+        "observed_spread": 0.009065,
+        "runs": [
+          {
+            "max_learners": 1000,
+            "rows_kept": 151457,
+            "learners_kept": 856,
+            "fold_auc": [0.605939, 0.599864, 0.6095, 0.60026, 0.59575],
+            "mean_auc": 0.602263,
+            "ece_mean": 0.268447,
+            "results_dir": ".work/sub_1000/results"
+          },
+          {
+            "max_learners": 3000,
+            "rows_kept": 445837,
+            "learners_kept": 2523,
+            "fold_auc": [0.608155, 0.60079, 0.607649, 0.610874, 0.603661],
+            "mean_auc": 0.606226,
+            "ece_mean": 0.2716,
+            "results_dir": "../../research/results/kt"
+          },
+          {
+            "max_learners": 10000,
+            "rows_kept": 1445579,
+            "learners_kept": 8320,
+            "fold_auc": [0.611964, 0.609186, 0.616192, 0.608606, 0.610689],
+            "mean_auc": 0.611327,
+            "ece_mean": 0.271463,
+            "results_dir": ".work/sub_10000/results"
+          }
+        ],
+        "decision": "Stable across the required learner subsamples; ACcoding cells may be credited by their own gates."
+      },
+      "notes": "Required learner subsamples are stable for pyBKT full-sequence mean AUC (spread 0.009065 <= 0.02)."
+    }
+  },
+  "calibration_policy": {
+    "accoding__pybkt": {
+      "status": "not_reportable_high_ece",
+      "ece_mean": 0.2716,
+      "ece_threshold": 0.25,
+      "decision": "No post-hoc calibration applied in this runbook pass; mark the cell not reportable because G5 remains red after T2/T3.",
+      "reason": "Full-sequence AUC is reproducible, above chance, and stable across learner subsamples, but ECE exceeds the investigation threshold. A calibration fix would need an explicit train-fold-only held-out design to avoid test leakage."
+    }
+  },
+  "reportable_allowlist": [
+    {
+      "dataset": "nips2020",
+      "model": "dkt",
+      "status": "credible"
+    },
+    {
+      "dataset": "nips2020",
+      "model": "akt",
+      "status": "credible"
+    },
+    {
+      "dataset": "nips2020",
+      "model": "deep_irt",
+      "status": "credible"
+    },
+    {
+      "dataset": "nips2020",
+      "model": "sakt",
+      "status": "credible"
+    },
+    {
+      "dataset": "nips2020",
+      "model": "dkt_clst_config",
+      "status": "credible"
+    },
+    {
+      "dataset": "accoding",
+      "model": "dkt",
+      "status": "credible"
+    },
+    {
+      "dataset": "accoding",
+      "model": "akt",
+      "status": "credible"
+    },
+    {
+      "dataset": "accoding",
+      "model": "deep_irt",
+      "status": "credible"
+    },
+    {
+      "dataset": "accoding",
+      "model": "dkt_clst_config",
+      "status": "credible"
+    }
+  ]
+}

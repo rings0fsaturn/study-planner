@@ -1,0 +1,13 @@
+{
+  "fn": "gpRegression",
+  "trainX": [
+    0
+  ],
+  "trainY": [
+    100
+  ],
+  "testX": [
+    0,
+    5
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "fn": "inferRole",
+  "title": "DDIA",
+  "totalMinutes": 600,
+  "existing": [
+    {
+      "id": "x",
+      "title": "X",
+      "totalMinutes": 100,
+      "role": "anchor",
+      "additionOrder": 0
+    }
+  ]
+}

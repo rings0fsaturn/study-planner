@@ -1,0 +1,178 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0 -- /Users/rsaji/projects/1/college-mtech/study-planner-web/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/rsaji/projects/1/college-mtech/study-planner-web/research/comparison
+configfile: pyproject.toml
+plugins: anyio-4.13.0
+collecting ... collected 78 items
+
+research/comparison/tests/test_calibration_track.py::test_prequential_runner_returns_finite_estimates_for_all_candidates PASSED [  1%]
+research/comparison/tests/test_calibration_track.py::test_baselines_return_float_and_pooled_converges_on_flat_pace PASSED [  2%]
+research/comparison/tests/test_calibration_track.py::test_a4_kalman_calibration_candidate_runs_on_fixture PASSED [  3%]
+research/comparison/tests/test_calibration_track.py::test_infer_day_of_week_is_deterministic_for_known_timestamps PASSED [  5%]
+research/comparison/tests/test_calibration_track.py::test_covariate_bayes_recovers_planted_bucket_multipliers PASSED [  6%]
+research/comparison/tests/test_calibration_track.py::test_covariate_bayes_uses_neutral_prior_for_unsupported_context_effects PASSED [  7%]
+research/comparison/tests/test_calibration_track.py::test_covariate_predict_next_applies_upcoming_context_multipliers PASSED [  8%]
+research/comparison/tests/test_calibration_track.py::test_context_prediction_rewards_planted_context_structure PASSED [ 10%]
+research/comparison/tests/test_calibration_track.py::test_eb_partial_pool_beats_pooled_on_structured_small_band_fixture PASSED [ 11%]
+research/comparison/tests/test_calibration_track.py::test_paired_difference_recovers_delta_p_value_and_effect_sign PASSED [ 12%]
+research/comparison/tests/test_calibration_track.py::test_winner_per_band_chooses_lower_error_candidate PASSED [ 14%]
+research/comparison/tests/test_calibration_track.py::test_tracer_bullet_dataset_compare_figs_produces_artifacts_in_temp_workspace PASSED [ 15%]
+research/comparison/tests/test_calibration_track.py::test_a3_calibration_result_carries_ci_correction_and_heldout_split PASSED [ 16%]
+research/comparison/tests/test_closed_loop.py::test_closed_loop_run_regenerates_when_shift_is_detected PASSED [ 17%]
+research/comparison/tests/test_closed_loop.py::test_open_loop_run_leaves_plan_unchanged PASSED [ 19%]
+research/comparison/tests/test_closed_loop.py::test_closed_vs_open_metrics_include_adherence_and_finish_drift PASSED [ 20%]
+research/comparison/tests/test_closed_loop.py::test_closed_loop_artifacts_do_not_leak_to_phase_i_report_outputs PASSED [ 21%]
+research/comparison/tests/test_detection_track.py::test_cusum_detects_planted_step_with_finite_latency PASSED [ 23%]
+research/comparison/tests/test_detection_track.py::test_drift_detection_is_recorded_under_drift_type PASSED [ 24%]
+research/comparison/tests/test_detection_track.py::test_runner_reports_latency_separately_for_step_and_drift PASSED [ 25%]
+research/comparison/tests/test_detection_track.py::test_a4_detection_candidates_and_upper_bound_shape_on_fixture PASSED [ 26%]
+research/comparison/tests/test_detection_track.py::test_a4_pareto_frontier_is_monotone_and_upper_bounds_do_not_win PASSED [ 28%]
+research/comparison/tests/test_detection_track.py::test_a4_cusum_tuning_uses_train_archetype_only PASSED [ 29%]
+research/comparison/tests/test_detection_track.py::test_roc_points_are_bounded_and_monotone_by_threshold_order PASSED [ 30%]
+research/comparison/tests/test_detection_track.py::test_a3_detection_result_carries_ci_correction_and_heldout_split PASSED [ 32%]
+research/comparison/tests/test_generator.py::test_generate_learner_emits_session_event_shape PASSED [ 33%]
+research/comparison/tests/test_generator.py::test_generate_learner_is_deterministic_by_seed PASSED [ 34%]
+research/comparison/tests/test_generator.py::test_oracle_recovers_planted_pace_for_steady_learner PASSED [ 35%]
+research/comparison/tests/test_generator.py::test_shift_labels_match_band_schedule PASSED [ 37%]
+research/comparison/tests/test_generator.py::test_clip_rate_under_two_percent_for_each_archetype PASSED [ 38%]
+research/comparison/tests/test_generator.py::test_generate_dataset_writes_manifest_sidecar_and_face_validity PASSED [ 39%]
+research/comparison/tests/test_kt_join.py::test_folds_schema PASSED      [ 41%]
+research/comparison/tests/test_kt_join.py::test_sequences_sidecar_schema PASSED [ 42%]
+research/comparison/tests/test_kt_join.py::test_pybkt_skill_space_matches_registry_policy PASSED [ 43%]
+research/comparison/tests/test_kt_join.py::test_accoding_subsample_provenance_matches_sampling_policy PASSED [ 44%]
+research/comparison/tests/test_kt_join.py::test_accoding_log_schema_fixture PASSED [ 46%]
+research/comparison/tests/test_kt_join.py::test_accoding_log_schema_if_landed PASSED [ 47%]
+research/comparison/tests/test_kt_join.py::test_join_reports_missing_cells_as_gaps PASSED [ 48%]
+research/comparison/tests/test_kt_join.py::test_join_default_grid_has_accoding_and_can_be_gap_free PASSED [ 50%]
+research/comparison/tests/test_kt_join.py::test_join_expected_pairs_avoids_allowlist_cross_product PASSED [ 51%]
+research/comparison/tests/test_kt_join.py::test_write_joined_artifacts_defaults_to_credible_allowlist PASSED [ 52%]
+research/comparison/tests/test_kt_join.py::test_model_registry_has_no_silent_aliases_and_allowlist_is_registered PASSED [ 53%]
+research/comparison/tests/test_kt_join.py::test_allowlist_candidates_have_public_raw_matching_provenance PASSED [ 55%]
+research/comparison/tests/test_kt_join.py::test_no_smoke_in_reportable PASSED [ 56%]
+research/comparison/tests/test_kt_join.py::test_allowlist_candidates_record_reproducibility_config PASSED [ 57%]
+research/comparison/tests/test_kt_join.py::test_allowlist_candidates_auc_above_chance_floor PASSED [ 58%]
+research/comparison/tests/test_kt_join.py::test_allowlist_candidates_coldstart_curve_is_sane PASSED [ 60%]
+research/comparison/tests/test_kt_join.py::test_join_boundary_does_not_import_torch_or_pykt PASSED [ 61%]
+research/comparison/tests/test_kt_join.py::test_expected_calibration_error_matches_hand_computed_value PASSED [ 62%]
+research/comparison/tests/test_oracles_and_sweep.py::test_oracles_separate_from_candidate_field_on_fixture_tracks PASSED [ 64%]
+research/comparison/tests/test_oracles_and_sweep.py::test_sweep_runner_visits_every_grid_point_and_records_ranking PASSED [ 65%]
+research/comparison/tests/test_oracles_and_sweep.py::test_a4_default_sweep_has_five_points_per_axis_and_adversarial_cases PASSED [ 66%]
+research/comparison/tests/test_oracles_and_sweep.py::test_stable_ranking_is_reported_as_held PASSED [ 67%]
+research/comparison/tests/test_oracles_and_sweep.py::test_a4_flip_cells_and_per_archetype_worst_case_are_reported PASSED [ 69%]
+research/comparison/tests/test_progress_logging.py::test_visible_python_entrypoints_emit_progress_logs PASSED [ 70%]
+research/comparison/tests/test_projection_track.py::test_gp_forecast_contains_true_finish_date_on_low_noise_learner PASSED [ 71%]
+research/comparison/tests/test_projection_track.py::test_linear_baseline_interval_is_discriminating_not_fixed_to_nominal PASSED [ 73%]
+research/comparison/tests/test_projection_track.py::test_kalman_forecast_handles_negative_early_trend_without_date_overflow PASSED [ 74%]
+research/comparison/tests/test_projection_track.py::test_projection_runner_reports_coverage_sharpness_and_error PASSED [ 75%]
+research/comparison/tests/test_projection_track.py::test_a1_projection_candidates_are_registered_without_removing_gp_incumbent PASSED [ 76%]
+research/comparison/tests/test_projection_track.py::test_conformal_quantile_math_matches_finite_sample_rank PASSED [ 78%]
+research/comparison/tests/test_projection_track.py::test_default_gp_path_matches_explicit_gaussian_no_ar1 PASSED [ 79%]
+research/comparison/tests/test_projection_track.py::test_a3_projection_result_carries_ci_correction_and_heldout_split PASSED [ 80%]
+research/comparison/tests/test_projection_track.py::test_across_learner_conformal_noisy_fixture_covers_medium_and_max PASSED [ 82%]
+research/comparison/tests/test_rigour.py::test_bootstrap_delta_ci_brackets_known_mean PASSED [ 83%]
+research/comparison/tests/test_rigour.py::test_multiple_comparison_masks_match_hand_computed_vector PASSED [ 84%]
+research/comparison/tests/test_rigour.py::test_heldout_archetype_split_is_deterministic_and_disjoint PASSED [ 85%]
+research/comparison/tests/test_scaffold.py::test_engines_importable PASSED [ 87%]
+research/comparison/tests/test_scaffold.py::test_params_hash_stable_and_prereg_found PASSED [ 88%]
+research/comparison/tests/test_scaffold.py::test_stamp_attaches_provenance PASSED [ 89%]
+research/comparison/tests/test_scheduling_track.py::test_generate_roadmap_runs_on_two_material_scenario PASSED [ 91%]
+research/comparison/tests/test_scheduling_track.py::test_a4_greedy_prereq_tweak_restores_role_order_on_reversed_mix PASSED [ 92%]
+research/comparison/tests/test_scheduling_track.py::test_a4_scheduling_candidates_include_new_deployables_and_optional_cpsat PASSED [ 93%]
+research/comparison/tests/test_scheduling_track.py::test_capacity_violation_metric_detects_over_capacity_plan PASSED [ 94%]
+research/comparison/tests/test_scheduling_track.py::test_prereq_order_metric_flags_practice_before_anchor PASSED [ 96%]
+research/comparison/tests/test_scheduling_track.py::test_runner_records_gen_time_and_material_mix PASSED [ 97%]
+research/comparison/tests/test_scheduling_track.py::test_a4_scheduling_rows_shape_and_upper_bounds_excluded_from_winner PASSED [ 98%]
+research/comparison/tests/test_scheduling_track.py::test_a3_scheduling_result_carries_ci_correction_and_heldout_split PASSED [100%]
+
+==================================== PASSES ====================================
+__________ test_write_joined_artifacts_defaults_to_credible_allowlist __________
+----------------------------- Captured stderr call -----------------------------
+[kt-join-progress] 2026-06-18T05:40:52Z 000% state=join.start elapsed=0s detail=source=/private/var/folders/kj/hspjh5dx25vcn04zc25bwlbw0000gp/T/pytest-of-rsaji/pytest-90/test_write_joined_artifacts_de0/kt generated=/private/var/folders/kj/hspjh5dx25vcn04zc25bwlbw0000gp/T/pytest-of-rsaji/pytest-90/test_write_joined_artifacts_de0/generated
+[kt-join-progress] 2026-06-18T05:40:52Z 010% state=join.allowlist elapsed=0s detail=mode=reportable_allowlist entries=1
+[kt-join-progress] 2026-06-18T05:40:52Z 035% state=join.summary_ready elapsed=0s detail=mode=reportable_allowlist rows=30 gaps=0
+[kt-join-progress] 2026-06-18T05:40:52Z 045% state=join.write_tables elapsed=0s detail=generated=/private/var/folders/kj/hspjh5dx25vcn04zc25bwlbw0000gp/T/pytest-of-rsaji/pytest-90/test_write_joined_artifacts_de0/generated
+[kt-join-progress] 2026-06-18T05:40:52Z 070% state=join.tables_plots_written elapsed=0s detail=count=4
+[kt-join-progress] 2026-06-18T05:40:52Z 085% state=join.summary_written elapsed=0s detail=/private/var/folders/kj/hspjh5dx25vcn04zc25bwlbw0000gp/T/pytest-of-rsaji/pytest-90/test_write_joined_artifacts_de0/kt_summary.json
+[kt-join-progress] 2026-06-18T05:40:52Z 100% state=join.complete elapsed=0s detail=wrote=6
+- generated xml file: /Users/rsaji/projects/1/college-mtech/study-planner-web/research/doc/verification-runs/2026-06-18-a3-a4-pillar-a/junit-research-comparison.xml -
+=========================== short test summary info ============================
+PASSED research/comparison/tests/test_calibration_track.py::test_prequential_runner_returns_finite_estimates_for_all_candidates
+PASSED research/comparison/tests/test_calibration_track.py::test_baselines_return_float_and_pooled_converges_on_flat_pace
+PASSED research/comparison/tests/test_calibration_track.py::test_a4_kalman_calibration_candidate_runs_on_fixture
+PASSED research/comparison/tests/test_calibration_track.py::test_infer_day_of_week_is_deterministic_for_known_timestamps
+PASSED research/comparison/tests/test_calibration_track.py::test_covariate_bayes_recovers_planted_bucket_multipliers
+PASSED research/comparison/tests/test_calibration_track.py::test_covariate_bayes_uses_neutral_prior_for_unsupported_context_effects
+PASSED research/comparison/tests/test_calibration_track.py::test_covariate_predict_next_applies_upcoming_context_multipliers
+PASSED research/comparison/tests/test_calibration_track.py::test_context_prediction_rewards_planted_context_structure
+PASSED research/comparison/tests/test_calibration_track.py::test_eb_partial_pool_beats_pooled_on_structured_small_band_fixture
+PASSED research/comparison/tests/test_calibration_track.py::test_paired_difference_recovers_delta_p_value_and_effect_sign
+PASSED research/comparison/tests/test_calibration_track.py::test_winner_per_band_chooses_lower_error_candidate
+PASSED research/comparison/tests/test_calibration_track.py::test_tracer_bullet_dataset_compare_figs_produces_artifacts_in_temp_workspace
+PASSED research/comparison/tests/test_calibration_track.py::test_a3_calibration_result_carries_ci_correction_and_heldout_split
+PASSED research/comparison/tests/test_closed_loop.py::test_closed_loop_run_regenerates_when_shift_is_detected
+PASSED research/comparison/tests/test_closed_loop.py::test_open_loop_run_leaves_plan_unchanged
+PASSED research/comparison/tests/test_closed_loop.py::test_closed_vs_open_metrics_include_adherence_and_finish_drift
+PASSED research/comparison/tests/test_closed_loop.py::test_closed_loop_artifacts_do_not_leak_to_phase_i_report_outputs
+PASSED research/comparison/tests/test_detection_track.py::test_cusum_detects_planted_step_with_finite_latency
+PASSED research/comparison/tests/test_detection_track.py::test_drift_detection_is_recorded_under_drift_type
+PASSED research/comparison/tests/test_detection_track.py::test_runner_reports_latency_separately_for_step_and_drift
+PASSED research/comparison/tests/test_detection_track.py::test_a4_detection_candidates_and_upper_bound_shape_on_fixture
+PASSED research/comparison/tests/test_detection_track.py::test_a4_pareto_frontier_is_monotone_and_upper_bounds_do_not_win
+PASSED research/comparison/tests/test_detection_track.py::test_a4_cusum_tuning_uses_train_archetype_only
+PASSED research/comparison/tests/test_detection_track.py::test_roc_points_are_bounded_and_monotone_by_threshold_order
+PASSED research/comparison/tests/test_detection_track.py::test_a3_detection_result_carries_ci_correction_and_heldout_split
+PASSED research/comparison/tests/test_generator.py::test_generate_learner_emits_session_event_shape
+PASSED research/comparison/tests/test_generator.py::test_generate_learner_is_deterministic_by_seed
+PASSED research/comparison/tests/test_generator.py::test_oracle_recovers_planted_pace_for_steady_learner
+PASSED research/comparison/tests/test_generator.py::test_shift_labels_match_band_schedule
+PASSED research/comparison/tests/test_generator.py::test_clip_rate_under_two_percent_for_each_archetype
+PASSED research/comparison/tests/test_generator.py::test_generate_dataset_writes_manifest_sidecar_and_face_validity
+PASSED research/comparison/tests/test_kt_join.py::test_folds_schema
+PASSED research/comparison/tests/test_kt_join.py::test_sequences_sidecar_schema
+PASSED research/comparison/tests/test_kt_join.py::test_pybkt_skill_space_matches_registry_policy
+PASSED research/comparison/tests/test_kt_join.py::test_accoding_subsample_provenance_matches_sampling_policy
+PASSED research/comparison/tests/test_kt_join.py::test_accoding_log_schema_fixture
+PASSED research/comparison/tests/test_kt_join.py::test_accoding_log_schema_if_landed
+PASSED research/comparison/tests/test_kt_join.py::test_join_reports_missing_cells_as_gaps
+PASSED research/comparison/tests/test_kt_join.py::test_join_default_grid_has_accoding_and_can_be_gap_free
+PASSED research/comparison/tests/test_kt_join.py::test_join_expected_pairs_avoids_allowlist_cross_product
+PASSED research/comparison/tests/test_kt_join.py::test_write_joined_artifacts_defaults_to_credible_allowlist
+PASSED research/comparison/tests/test_kt_join.py::test_model_registry_has_no_silent_aliases_and_allowlist_is_registered
+PASSED research/comparison/tests/test_kt_join.py::test_allowlist_candidates_have_public_raw_matching_provenance
+PASSED research/comparison/tests/test_kt_join.py::test_no_smoke_in_reportable
+PASSED research/comparison/tests/test_kt_join.py::test_allowlist_candidates_record_reproducibility_config
+PASSED research/comparison/tests/test_kt_join.py::test_allowlist_candidates_auc_above_chance_floor
+PASSED research/comparison/tests/test_kt_join.py::test_allowlist_candidates_coldstart_curve_is_sane
+PASSED research/comparison/tests/test_kt_join.py::test_join_boundary_does_not_import_torch_or_pykt
+PASSED research/comparison/tests/test_kt_join.py::test_expected_calibration_error_matches_hand_computed_value
+PASSED research/comparison/tests/test_oracles_and_sweep.py::test_oracles_separate_from_candidate_field_on_fixture_tracks
+PASSED research/comparison/tests/test_oracles_and_sweep.py::test_sweep_runner_visits_every_grid_point_and_records_ranking
+PASSED research/comparison/tests/test_oracles_and_sweep.py::test_a4_default_sweep_has_five_points_per_axis_and_adversarial_cases
+PASSED research/comparison/tests/test_oracles_and_sweep.py::test_stable_ranking_is_reported_as_held
+PASSED research/comparison/tests/test_oracles_and_sweep.py::test_a4_flip_cells_and_per_archetype_worst_case_are_reported
+PASSED research/comparison/tests/test_progress_logging.py::test_visible_python_entrypoints_emit_progress_logs
+PASSED research/comparison/tests/test_projection_track.py::test_gp_forecast_contains_true_finish_date_on_low_noise_learner
+PASSED research/comparison/tests/test_projection_track.py::test_linear_baseline_interval_is_discriminating_not_fixed_to_nominal
+PASSED research/comparison/tests/test_projection_track.py::test_kalman_forecast_handles_negative_early_trend_without_date_overflow
+PASSED research/comparison/tests/test_projection_track.py::test_projection_runner_reports_coverage_sharpness_and_error
+PASSED research/comparison/tests/test_projection_track.py::test_a1_projection_candidates_are_registered_without_removing_gp_incumbent
+PASSED research/comparison/tests/test_projection_track.py::test_conformal_quantile_math_matches_finite_sample_rank
+PASSED research/comparison/tests/test_projection_track.py::test_default_gp_path_matches_explicit_gaussian_no_ar1
+PASSED research/comparison/tests/test_projection_track.py::test_a3_projection_result_carries_ci_correction_and_heldout_split
+PASSED research/comparison/tests/test_projection_track.py::test_across_learner_conformal_noisy_fixture_covers_medium_and_max
+PASSED research/comparison/tests/test_rigour.py::test_bootstrap_delta_ci_brackets_known_mean
+PASSED research/comparison/tests/test_rigour.py::test_multiple_comparison_masks_match_hand_computed_vector
+PASSED research/comparison/tests/test_rigour.py::test_heldout_archetype_split_is_deterministic_and_disjoint
+PASSED research/comparison/tests/test_scaffold.py::test_engines_importable
+PASSED research/comparison/tests/test_scaffold.py::test_params_hash_stable_and_prereg_found
+PASSED research/comparison/tests/test_scaffold.py::test_stamp_attaches_provenance
+PASSED research/comparison/tests/test_scheduling_track.py::test_generate_roadmap_runs_on_two_material_scenario
+PASSED research/comparison/tests/test_scheduling_track.py::test_a4_greedy_prereq_tweak_restores_role_order_on_reversed_mix
+PASSED research/comparison/tests/test_scheduling_track.py::test_a4_scheduling_candidates_include_new_deployables_and_optional_cpsat
+PASSED research/comparison/tests/test_scheduling_track.py::test_capacity_violation_metric_detects_over_capacity_plan
+PASSED research/comparison/tests/test_scheduling_track.py::test_prereq_order_metric_flags_practice_before_anchor
+PASSED research/comparison/tests/test_scheduling_track.py::test_runner_records_gen_time_and_material_mix
+PASSED research/comparison/tests/test_scheduling_track.py::test_a4_scheduling_rows_shape_and_upper_bounds_excluded_from_winner
+PASSED research/comparison/tests/test_scheduling_track.py::test_a3_scheduling_result_carries_ci_correction_and_heldout_split
+======================== 78 passed in 61.86s (0:01:01) =========================

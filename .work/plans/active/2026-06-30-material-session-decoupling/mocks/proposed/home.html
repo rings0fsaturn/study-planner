@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline · Home (current)</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .divider-rule-soft { border-top:1px solid var(--border-subtle); margin:12px 0; }
+  .app { display:flex; flex-direction:column; min-height:100vh; }
+  /* force desktop nav visible in the mock embed */
+  .navbar-desktop { display:flex !important; }
+  .sync-indicator { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color: var(--moss); display:inline-flex; align-items:center; gap:6px; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Home — unchanged, except the booking's material is labelled "Suggested material" (confirm/swap moves to the Session page)</div>
+
+<div class="app">
+  <nav class="navbar-desktop" aria-label="Main navigation">
+    <div class="navbar-desktop-brand">Study Tracker</div>
+    <a class="navbar-desktop-item active">Home</a>
+    <a class="navbar-desktop-item">Session</a>
+    <a class="navbar-desktop-item">Week</a>
+    <a class="navbar-desktop-item">Roadmaps</a>
+    <a class="navbar-desktop-item">Settings</a>
+    <div class="navbar-desktop-spacer"></div>
+    <span class="sync-indicator">● Synced</span>
+  </nav>
+
+  <main class="app-shell-content">
+    <div style="padding:2rem 1rem; max-width:640px; margin:0 auto;">
+
+      <div class="mono-caps" style="margin-bottom:4px;">Tue · Jun 30</div>
+      <h1 class="t-display-2" style="margin-bottom:0.5rem;">Good morning, rsaji.</h1>
+      <p class="t-body" style="color:var(--text-secondary); margin-bottom:2rem;">Here's how your study time adds up</p>
+
+      <!-- Up next — booking with a SUGGESTED material (confirm/swap on Session page) -->
+      <div class="card card-inverted" style="margin-bottom:1.5rem;">
+        <div class="card-eyebrow">Up next · Today</div>
+        <div class="card-title">Study session · ~50 min</div>
+        <div class="card-meta">
+          Suggested material: <span class="tag tag-sm">Linear Algebra — Lecture 4</span>
+        </div>
+        <div class="upnext-actions">
+          <button class="btn btn-accent">Start session</button>
+        </div>
+      </div>
+
+      <!-- Streak card -->
+      <div style="background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md); padding:14px 16px; margin-bottom:1rem;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+          <span class="t-body" style="font-weight:500;">3-day streak</span>
+          <span class="t-mono" style="font-size:12px; color:var(--text-secondary);">2h 10m this week</span>
+        </div>
+        <div style="display:flex; gap:4px;">
+          <!-- 7 day cells -->
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-2);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">M</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-3);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">T</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-1);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">W</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-4);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">T</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-0); box-shadow:inset 0 0 0 1.5px var(--ink);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">F</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-0);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">S</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:3px;"><div style="width:100%; aspect-ratio:1; border-radius:var(--radius-sm); background:var(--streak-0);"></div><span class="t-mono" style="font-size:9px; color:var(--text-tertiary);">S</span></div>
+        </div>
+      </div>
+
+      <!-- Stat cards grid -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:1.5rem;">
+        <div style="padding:14px 16px; background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+          <div class="stat-label" style="margin-bottom:6px;">Projected finish</div>
+          <div class="stat-value sm moss">Jul 13</div>
+          <div class="mono-caps" style="margin-top:4px; color:var(--moss);">7 days early</div>
+        </div>
+        <div style="padding:14px 16px; background:var(--surface-card); border:1px solid var(--border-subtle); border-radius:var(--radius-md);">
+          <div class="stat-label" style="margin-bottom:6px;">This week</div>
+          <div class="stat-value sm">2h 10m</div>
+          <div class="mono-caps" style="margin-top:4px;">of 6h goal</div>
+        </div>
+      </div>
+
+      <!-- Recent activity -->
+      <div class="card card-elevated" style="padding:1.5rem; margin-bottom:1.5rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+          <h2 class="t-display-3" style="margin:0;">Recent activity</h2>
+          <a class="btn btn-secondary btn-sm">Log session</a>
+        </div>
+        <div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+            <div style="flex:1;">
+              <span class="card-eyebrow">Mon, Jun 29</span>
+              <p class="card-title" style="margin-bottom:0.25rem;">Linear Algebra — Lecture 3</p>
+              <p class="card-meta">Mon, Jun 29</p>
+            </div>
+            <span class="t-mono" style="flex-shrink:0;">48 min</span>
+          </div>
+          <div class="divider-rule-soft"></div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+            <div style="flex:1;">
+              <span class="card-eyebrow">Sun, Jun 28</span>
+              <p class="card-title" style="margin-bottom:0.25rem;">Strang — Notes on Eigenvalues</p>
+              <p class="card-meta">Sun, Jun 28</p>
+            </div>
+            <span class="t-mono" style="flex-shrink:0;">35 min</span>
+          </div>
+          <div class="divider-rule-soft"></div>
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:1rem;">
+            <div style="flex:1;">
+              <span class="card-eyebrow">Fri, Jun 26</span>
+              <p class="card-title" style="margin-bottom:0.25rem;">Problem set 3 — practice</p>
+              <p class="card-meta">Fri, Jun 26</p>
+            </div>
+            <span class="t-mono" style="flex-shrink:0;">45 min</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost">Sign out</button>
+    </div>
+  </main>
+</div>
+</body>
+</html>

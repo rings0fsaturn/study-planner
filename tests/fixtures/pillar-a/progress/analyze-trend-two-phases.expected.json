@@ -1,0 +1,36 @@
+{
+  "phases": [
+    {
+      "startSessionIndex": 0,
+      "endSessionIndex": 9,
+      "startDate": "2026-01-01",
+      "endDate": "2026-01-10",
+      "level": 1,
+      "slope": 0,
+      "slopeUncertainty": 0.04079352426868862,
+      "sessionCount": 10
+    },
+    {
+      "startSessionIndex": 10,
+      "endSessionIndex": 19,
+      "startDate": "2026-01-11",
+      "endDate": "2026-01-20",
+      "level": 0.7459617369110887,
+      "slope": -0.004597119891470414,
+      "slopeUncertainty": 0.04079352426868862,
+      "sessionCount": 10
+    }
+  ],
+  "currentPhase": {
+    "startSessionIndex": 10,
+    "endSessionIndex": 19,
+    "startDate": "2026-01-11",
+    "endDate": "2026-01-20",
+    "level": 0.7459617369110887,
+    "slope": -0.004597119891470414,
+    "slopeUncertainty": 0.04079352426868862,
+    "sessionCount": 10
+  },
+  "projectionSlope": -0.004597119891470414,
+  "projectionUncertainty": 0.04079352426868862
+}

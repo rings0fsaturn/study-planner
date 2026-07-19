@@ -1,0 +1,18 @@
+{
+  "globalMultiplier": 1.0,
+  "globalPosterior": {
+    "mean": 1.0,
+    "variance": 0.1,
+    "sessionCount": 0
+  },
+  "roleMultipliers": {},
+  "trend": {
+    "phases": [],
+    "currentPhase": null,
+    "projectionSlope": 0.0,
+    "projectionUncertainty": 1.0
+  },
+  "promptNeeded": false,
+  "insightsByContext": [],
+  "nextSessionForecast": null
+}

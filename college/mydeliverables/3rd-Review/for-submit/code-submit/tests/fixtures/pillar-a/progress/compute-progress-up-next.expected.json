@@ -1,0 +1,270 @@
+{
+  "streak": {
+    "current": 0,
+    "longest": 1,
+    "grid": [
+      {
+        "date": "2026-01-12",
+        "level": 0,
+        "minutes": 0,
+        "isToday": true
+      },
+      {
+        "date": "2026-01-13",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-14",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-15",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-16",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-17",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-18",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      }
+    ]
+  },
+  "burnUp": {
+    "planned": [
+      {
+        "date": "2026-01-10",
+        "minutes": 60
+      },
+      {
+        "date": "2026-01-15",
+        "minutes": 120
+      },
+      {
+        "date": "2026-01-20",
+        "minutes": 180
+      }
+    ],
+    "actual": [
+      {
+        "date": "2026-01-10",
+        "minutes": 60
+      }
+    ],
+    "gpCurve": [
+      {
+        "date": "2026-01-10",
+        "mean": 60,
+        "lower": 0,
+        "upper": 256
+      },
+      {
+        "date": "2026-01-11",
+        "mean": 60,
+        "lower": 0,
+        "upper": 256
+      },
+      {
+        "date": "2026-01-12",
+        "mean": 60,
+        "lower": 0,
+        "upper": 256
+      },
+      {
+        "date": "2026-01-13",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-14",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-15",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-16",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-17",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-18",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-19",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-20",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-21",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-22",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-23",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-24",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-25",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-26",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-27",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-28",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-29",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-30",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-01-31",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-02-01",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-02-02",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      },
+      {
+        "date": "2026-02-03",
+        "mean": 60,
+        "lower": 0,
+        "upper": 354
+      }
+    ],
+    "today": "2026-01-12",
+    "deficit": 0,
+    "dayNumber": 2,
+    "totalDays": 10
+  },
+  "projection": {
+    "finishDate": null,
+    "confidenceInterval": null
+  },
+  "totalMinutes": 60,
+  "totalPlannedMinutes": 180,
+  "completionPercentage": 33.33333333333333,
+  "verdict": "on-track",
+  "driftPastDeadline": false,
+  "upNext": {
+    "date": "2026-01-15",
+    "dayOfWeek": "Thursday",
+    "weekIndex": 0,
+    "plannedMinutes": 60,
+    "candidateMaterialIds": [
+      "mat-1"
+    ],
+    "role": "anchor"
+  },
+  "weeklyStats": {
+    "weekIndex": 1,
+    "weekStartDate": "2026-01-12",
+    "sessionsThisWeek": 0,
+    "minutesThisWeek": 0,
+    "plannedMinutesThisWeek": 60,
+    "minutesByDay": {},
+    "materialsTouched": []
+  },
+  "weekSummaryForNarrative": {
+    "weekStartDate": "2026-01-12",
+    "sessionsLogged": 0,
+    "hoursLogged": 0,
+    "verdict": "on-track",
+    "daysWithActivity": 0,
+    "materialsTouched": []
+  },
+  "replanContext": {
+    "isPlanDrifted": false,
+    "daysOverDeadline": null,
+    "pinnedSlotCount": 0,
+    "editableSlotCount": 2
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "globalMultiplier": 0.8993624130162519,
+  "globalPosterior": {
+    "mean": 0.8993624130162519,
+    "variance": 0.000117282528685635,
+    "sessionCount": 30
+  },
+  "roleMultipliers": {
+    "anchor": {
+      "multiplier": 0.9200483487954604,
+      "confidence": 128.63293059793557,
+      "sessionCount": 30
+    }
+  },
+  "trend": {
+    "phases": [
+      {
+        "startSessionIndex": 0,
+        "endSessionIndex": 29,
+        "startDate": "2026-01-01",
+        "endDate": "2026-01-30",
+        "level": 0.8831649806449621,
+        "slope": -0.0038091952674386403,
+        "slopeUncertainty": 0.03290620979331031,
+        "sessionCount": 30
+      }
+    ],
+    "currentPhase": {
+      "startSessionIndex": 0,
+      "endSessionIndex": 29,
+      "startDate": "2026-01-01",
+      "endDate": "2026-01-30",
+      "level": 0.8831649806449621,
+      "slope": -0.0038091952674386403,
+      "slopeUncertainty": 0.03290620979331031,
+      "sessionCount": 30
+    },
+    "projectionSlope": -0.0038091952674386403,
+    "projectionUncertainty": 0.03290620979331031
+  },
+  "promptNeeded": false,
+  "insightsByContext": [
+    {
+      "role": "anchor",
+      "timeOfDay": "evening",
+      "multiplier": 0.9200322390249654,
+      "sessionCount": 30,
+      "label": "anchor in the evening"
+    }
+  ],
+  "nextSessionForecast": null
+}

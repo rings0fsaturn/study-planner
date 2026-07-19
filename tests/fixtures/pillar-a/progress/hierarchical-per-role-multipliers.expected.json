@@ -1,0 +1,36 @@
+{
+  "globalPosterior": {
+    "mean": 1.0000000000000004,
+    "variance": 0.00425531914893617,
+    "sessionCount": 10
+  },
+  "globalMultiplier": 1.0000000000000004,
+  "roleMultipliers": {
+    "anchor": {
+      "multiplier": 1.1910219675262652,
+      "confidence": 72.35329985563892,
+      "sessionCount": 5
+    },
+    "practice": {
+      "multiplier": 0.8089780324737345,
+      "confidence": 72.35329985563892,
+      "sessionCount": 5
+    }
+  },
+  "insights": [
+    {
+      "role": "anchor",
+      "timeOfDay": "evening",
+      "multiplier": 1.1954079140205176,
+      "sessionCount": 5,
+      "label": "anchor in the evening"
+    },
+    {
+      "role": "practice",
+      "timeOfDay": "evening",
+      "multiplier": 0.8045920859794823,
+      "sessionCount": 5,
+      "label": "practice in the evening"
+    }
+  ]
+}

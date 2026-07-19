@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Baseline · Replan (current)</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  .mock-banner { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .app { display:flex; flex-direction:column; min-height:100vh; }
+  .navbar-desktop { display:flex !important; }
+  .sync-indicator { font-family: var(--font-mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color: var(--moss); }
+</style>
+</head>
+<body>
+<div class="mock-banner">Baseline (current) · Replan · reuses the day-by-day SchedulePreview slot grid (retired by the redesign)</div>
+
+<div class="app">
+  <nav class="navbar-desktop">
+    <div class="navbar-desktop-brand">Study Tracker</div>
+    <a class="navbar-desktop-item">Home</a><a class="navbar-desktop-item">Session</a><a class="navbar-desktop-item">Week</a>
+    <a class="navbar-desktop-item active">Roadmaps</a><a class="navbar-desktop-item">Settings</a>
+    <div class="navbar-desktop-spacer"></div><span class="sync-indicator">● Synced</span>
+  </nav>
+  <main class="app-shell-content">
+    <main class="replan-page" style="max-width:720px; margin:0 auto; padding:2rem 1rem;">
+      <header class="replan-header">
+        <div>
+          <div class="mono-caps">Replan</div>
+          <h1 class="t-display-2">Preview the replan</h1>
+          <p class="t-body" style="color:var(--text-secondary);">2 locked, 4 will be re-planned</p>
+        </div>
+      </header>
+
+      <div class="replan-summary" aria-label="Replan summary" style="display:flex; gap:16px; margin:16px 0;">
+        <span><strong>3</strong> weeks</span><span><strong>5h 20m</strong> planned</span><span><strong>1</strong> warning</span>
+      </div>
+
+      <div class="schedule-card">
+        <div class="sched-week">
+          <div class="sched-week-label"><span>Week 1 · Jul 6</span><span>2 sessions · 1h 35m</span></div>
+          <div class="sched-row"><span class="sched-day">Mon</span><span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Practice</span>Problem set 4</span><span class="sched-dur">45m</span></div>
+          <div class="sched-row"><span class="sched-day">Wed</span><span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Main reading</span>Linear Algebra L5</span><span class="sched-dur">50m</span></div>
+        </div>
+        <div class="sched-week">
+          <div class="sched-week-label"><span>Week 2 · Jul 13</span><span>2 sessions · 1h 20m</span></div>
+          <div class="sched-row"><span class="sched-day">Mon</span><span class="sched-title"><span class="tag tag-sm" style="margin-right:6px;">Foundations</span>Strang notes</span><span class="sched-dur">35m</span></div>
+          <div class="sched-row"><span class="sched-day">Fri</span><span class="sched-title" style="color:var(--text-tertiary); font-style:italic;">Rest day</span><span class="sched-dur"></span></div>
+        </div>
+      </div>
+
+      <div class="replan-actions" style="display:flex; gap:8px; margin-top:20px;">
+        <button class="btn btn-primary">Apply</button>
+        <button class="btn btn-secondary">Keep current</button>
+      </div>
+    </main>
+  </main>
+</div>
+</body>
+</html>

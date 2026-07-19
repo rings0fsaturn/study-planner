@@ -1,0 +1,831 @@
+"""
+A6 change-detection design probe (standalone — NOT the repo harness).
+
+GOAL: discover whether ONE unified detector can fuse the strengths of the existing
+field (CUSUM = low false alarm, CSD = fast/early-warning, Page-Hinkley = drift) on
+AR(1)-whitened residuals and DOMINATE the CUSUM<->CSD latency/false-alarm Pareto
+frontier on held-out shifts, on both the frozen and reality-style regimes.
+
+This is a *design probe* to pressure-test the math before it is specified for the
+real harness (research/comparison). It is intentionally comprehensive: the full
+detector field, both regimes, per-shift-type frontiers, a train/test split with
+thresholds tuned ONLY on train, and replications with bootstrap confidence
+intervals on the dominance margin.
+
+No-leakage by construction: every detector receives ONLY the pace-ratio series.
+The shift onset/type are used solely for scoring, never passed to a detector.
+
+Run (Codex):
+    python3 unified_detector_sim.py                 # comprehensive (default)
+    python3 unified_detector_sim.py --quick         # fast smoke check
+    python3 unified_detector_sim.py --out results.json --summary summary.md
+
+Faithful to the generator (research_comparison/params.py + generator/*):
+    pace = latent * lognormal-AR(1) noise,  AR1_PHI default 0.30
+    sigma_log in {0.15, 0.20, 0.25};  CLIP [0.55, 1.60]
+    STEP magnitude in [0.10, 0.22];  DRIFT total +-0.20 over a [0.30,0.45]*N window
+    reality regime: relapse/recovery + multi-shift + exam-crunch + heavy tails
+"""
+from __future__ import annotations
+
+import argparse
+import itertools
+import json
+import math
+import sys
+import time
+from dataclasses import dataclass, field
+from typing import Any, Callable
+
+import numpy as np
+
+# ----------------------------------------------------------------------------
+# Generator constants (mirror research_comparison/params.py)
+# ----------------------------------------------------------------------------
+AR1_PHI_DEFAULT = 0.30
+CLIP_LO, CLIP_HI = 0.55, 1.60
+SIGMA_CHOICES = (0.15, 0.20, 0.25)
+STEP_MAG_RANGE = (0.10, 0.22)
+DRIFT_TOTAL = 0.20
+DRIFT_WINDOW_FRAC = (0.30, 0.45)
+BAND_SESSIONS = {"small": (15, 30), "medium": (40, 70), "max": (90, 140)}
+SHIFT_TYPES = ("step", "drift")
+
+# Bump this whenever the detector set / candidate math changes, so a run is
+# self-identifying and we never review a stale copy again.
+VERSION = "a6-detsim-v2 (adds unified_glr; unified_full FAR-floor scale-fix)"
+
+
+# ----------------------------------------------------------------------------
+# Heartbeat progress logger (D-08 parity with research_comparison.progress_log)
+# ----------------------------------------------------------------------------
+@dataclass
+class Progress:
+    label: str = "detsim"
+    enabled: bool = True
+    started: float = field(default_factory=time.monotonic)
+
+    def log(self, percent: float, state: str, detail: str = "") -> None:
+        if not self.enabled:
+            return
+        pct = max(0, min(100, int(round(percent))))
+        elapsed = int(time.monotonic() - self.started)
+        ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        suffix = f" detail={detail}" if detail else ""
+        print(f"[{self.label}-progress] {ts} {pct:03d}% state={state} "
+              f"elapsed={elapsed}s{suffix}", file=sys.stderr, flush=True)
+
+
+# ----------------------------------------------------------------------------
+# Generators
+# ----------------------------------------------------------------------------
+def _emit_noise(latent: np.ndarray, sigma: float, phi: float,
+                rng: np.random.Generator, heavy_tail: bool) -> np.ndarray:
+    n = len(latent)
+    eta = 0.0
+    innov = math.sqrt(max(0.0, 1.0 - phi ** 2)) * sigma
+    out = np.empty(n)
+    for i in range(n):
+        if heavy_tail:
+            shock = float(rng.standard_t(df=3) / math.sqrt(3.0)) * innov
+        else:
+            shock = float(rng.normal(0.0, innov))
+        eta = phi * eta + shock
+        val = latent[i] * math.exp(eta - 0.5 * sigma ** 2)
+        out[i] = min(CLIP_HI, max(CLIP_LO, val))
+    return out
+
+
+def make_learner_frozen(rng: np.random.Generator) -> dict[str, Any]:
+    """Single planted shift (step / drift / none) — the clean regime."""
+    band = str(rng.choice(list(BAND_SESSIONS)))
+    lo, hi = BAND_SESSIONS[band]
+    n = int(rng.integers(lo, hi + 1))
+    sigma = float(rng.choice(SIGMA_CHOICES))
+    phi = AR1_PHI_DEFAULT
+    kind = str(rng.choice(["step", "drift", "none"], p=[0.40, 0.40, 0.20]))
+    latent = np.ones(n)
+    onsets: list[dict[str, Any]] = []
+    if kind != "none":
+        onset = int(rng.integers(int(0.30 * n), max(int(0.30 * n) + 1, int(0.70 * n))))
+        if kind == "step":
+            mag = float(rng.uniform(*STEP_MAG_RANGE)) * float(rng.choice([-1, 1]))
+            latent[onset:] *= (1.0 + mag)
+        else:
+            total = DRIFT_TOTAL * float(rng.choice([-1, 1]))
+            win = max(2, int(n * float(rng.uniform(*DRIFT_WINDOW_FRAC))))
+            end = min(n, onset + win)
+            latent[onset:end] *= 1.0 + np.linspace(0.0, total, end - onset)
+            latent[end:] *= 1.0 + total
+        onsets.append({"onset": onset, "type": kind})
+    x = _emit_noise(latent, sigma, phi, rng, heavy_tail=False)
+    return {"x": x, "n": n, "band": band, "sigma": sigma, "shifts": onsets}
+
+
+def make_learner_reality(rng: np.random.Generator) -> dict[str, Any]:
+    """Multi-shift reality regime: relapse/recovery + extra shifts + exam crunch,
+    heavy-tailed noise, occasional hiatus gap. Mirrors generator/reality.py shapes."""
+    band = str(rng.choice(list(BAND_SESSIONS)))
+    lo, hi = BAND_SESSIONS[band]
+    n = int(rng.integers(lo, hi + 1))
+    sigma = float(rng.choice(SIGMA_CHOICES))
+    phi = float(rng.uniform(0.20, 0.50))
+    latent = np.ones(n)
+    shifts: list[dict[str, Any]] = []
+    count = max(1, min(n // 8, int(rng.integers(1, 4))))
+    lo_o = max(3, int(0.15 * n)); hi_o = max(lo_o + 1, int(0.82 * n))
+    onsets = sorted(int(v) for v in rng.choice(range(lo_o, hi_o), size=count,
+                    replace=(hi_o - lo_o) < count))
+    for idx, onset in enumerate(onsets):
+        if idx == 0:           # relapse (down step)
+            mag = -float(rng.uniform(0.14, 0.28)); latent[onset:] *= (1.0 + mag); kind = "step"
+        elif idx == 1:         # recovery (up step)
+            mag = float(rng.uniform(0.10, 0.24)); latent[onset:] *= (1.0 + mag); kind = "step"
+        elif idx % 2 == 0:     # extra step
+            mag = float(rng.choice([-1, 1])) * float(rng.uniform(0.08, 0.20))
+            latent[onset:] *= (1.0 + mag); kind = "step"
+        else:                  # drift
+            total = float(rng.choice([-1, 1])) * float(rng.uniform(0.08, 0.18))
+            end = min(n, onset + max(2, int(n * float(rng.uniform(0.10, 0.22)))))
+            latent[onset:end] *= 1.0 + np.linspace(0.0, total, end - onset)
+            latent[end:] *= 1.0 + total; kind = "drift"
+        shifts.append({"onset": onset, "type": kind})
+    # exam-crunch seasonality (gradual upward ramp at the end) — NOT a labelled shift
+    exam_start = max(0, int(n * float(rng.uniform(0.76, 0.88))))
+    latent[exam_start:] *= np.linspace(1.0, float(rng.uniform(1.08, 1.24)), n - exam_start)
+    x = _emit_noise(latent, sigma, phi, rng, heavy_tail=True)
+    return {"x": x, "n": n, "band": band, "sigma": sigma, "shifts": shifts}
+
+
+def build_population(n_learners: int, seed: int, regime: str) -> list[dict[str, Any]]:
+    rng = np.random.default_rng(seed)
+    make = make_learner_frozen if regime == "frozen" else make_learner_reality
+    return [make(rng) for _ in range(n_learners)]
+
+
+# ----------------------------------------------------------------------------
+# Robust helpers
+# ----------------------------------------------------------------------------
+def _mad(a: np.ndarray, center: float) -> float:
+    if a.size == 0:
+        return 0.05
+    return max(float(np.median(np.abs(a - center))) * 1.4826, 0.05)
+
+
+def robust_z(x: np.ndarray, window: int = 10) -> np.ndarray:
+    z = np.zeros(len(x))
+    base = x[: max(3, min(window, len(x)))]
+    bc = float(np.median(base)); bs = _mad(base, bc)
+    for i in range(len(x)):
+        hist = x[max(0, i - window): i]
+        if len(hist) >= 3:
+            c = float(np.median(hist)); s = _mad(hist, c)
+        else:
+            c, s = bc, bs
+        z[i] = (x[i] - c) / s
+    return z
+
+
+def ar1_phi_hat(z: np.ndarray, window: int = 24) -> float:
+    """Lag-1 autocorrelation of residual z on a trailing window, clipped [0, 0.6]."""
+    if len(z) < 4:
+        return 0.0
+    w = z[-window:].astype(float)
+    w = w - np.mean(w)
+    denom = float(np.sum(w * w))
+    if denom <= 1e-9:
+        return 0.0
+    num = float(np.sum(w[1:] * w[:-1]))
+    return float(np.clip(num / denom, 0.0, 0.6))
+
+
+def whitened_cusum_series(x: np.ndarray, k: float, whiten: bool, window: int = 10) -> np.ndarray:
+    z = robust_z(x, window)
+    up = lo = 0.0
+    out = np.zeros(len(x))
+    for i in range(len(x)):
+        phi = ar1_phi_hat(z[: i + 1]) if whiten else 0.0
+        w = z[i] - phi * z[i - 1] if (whiten and i > 0) else z[i]
+        up = max(0.0, up + w - k)
+        lo = min(0.0, lo + w + k)
+        out[i] = max(up, -lo)
+    return out
+
+
+# ----------------------------------------------------------------------------
+# Detectors — each returns sorted list of fire indices. Inputs: x + params only.
+# ----------------------------------------------------------------------------
+def det_cusum(x, h, k=0.25, window=10, min_gap=4):
+    z = robust_z(x, window); up = lo = 0.0; out = []; last = -min_gap
+    for i, v in enumerate(z):
+        up = max(0.0, up + v - k); lo = min(0.0, lo + v + k)
+        if i - last < min_gap:
+            continue
+        if up > h or lo < -h:
+            out.append(i); last = i; up = lo = 0.0
+    return out
+
+
+def det_csd(x, thr, window=8, min_gap=8):
+    out = []; last = -min_gap
+    if len(x) < 2 * window:
+        return out
+    for end in range(2 * window, len(x) + 1):
+        i = end - 1
+        if i - last < min_gap:
+            continue
+        prev = x[end - 2 * window: end - window]; cur = x[end - window: end]
+        md = abs(float(np.mean(cur)) - float(np.mean(prev)))
+        vr = float(np.var(cur)) / max(float(np.var(prev)), 1e-6)
+        if md >= thr or vr >= 1.75:
+            out.append(i); last = i
+    return out
+
+
+def det_page_hinkley(x, thr, delta=0.005, alpha=0.995, min_gap=6):
+    if len(x) < 4:
+        return []
+    mean = float(x[0]); cum = mn = mx = 0.0; out = []; last = -min_gap
+    for i in range(1, len(x)):
+        mean = alpha * mean + (1 - alpha) * float(x[i])
+        cum += float(x[i]) - mean - delta
+        mn = min(mn, cum); mx = max(mx, cum)
+        if i - last < min_gap:
+            continue
+        if cum - mn > thr or mx - cum > thr:
+            out.append(i); last = i; cum = mn = mx = 0.0
+            mean = float(np.mean(x[max(0, i - 5): i + 1]))
+    return out
+
+
+def det_ewma(x, thr, alpha=0.30, window=8, min_gap=4):
+    if len(x) < 3:
+        return []
+    base = x[: min(window, len(x))]
+    ref = float(np.mean(base)); sd = max(float(np.std(base)), 0.05)
+    sigma_ewma = sd * math.sqrt(alpha / (2.0 - alpha))
+    stat = ref; out = []; last = -min_gap
+    for i, v in enumerate(x):
+        stat = alpha * float(v) + (1 - alpha) * stat
+        if i - last < min_gap:
+            continue
+        if abs(stat - ref) > thr * sigma_ewma:
+            out.append(i); last = i
+            ref = float(np.mean(x[max(0, i - 5): i + 1])); stat = ref
+    return out
+
+
+def det_adwin(x, thr, min_window=8, min_gap=5):
+    if len(x) < 2 * min_window:
+        return []
+    win = []; out = []; last = -min_gap
+    for i, v in enumerate(x):
+        win.append(float(v))
+        if len(win) < 2 * min_window or i - last < min_gap:
+            continue
+        best_cut, best_margin = None, 0.0
+        for cut in range(min_window, len(win) - min_window + 1):
+            l, r = win[:cut], win[cut:]
+            diff = abs(float(np.mean(l)) - float(np.mean(r)))
+            eps = math.sqrt(0.5 * math.log(4.0 / max(thr, 1e-9)) * (1.0 / len(l) + 1.0 / len(r)))
+            if diff - eps > best_margin:
+                best_margin = diff - eps; best_cut = cut
+        if best_cut is not None and best_margin > 0.0:
+            out.append(i - len(win) + best_cut); last = i; win = win[best_cut:]
+    return sorted(set(p for p in out if p >= 0))
+
+
+def _bocpd_core(x, hazard, thr, min_gap):
+    if len(x) < 5:
+        return []
+    run = []; out = []; last = -min_gap
+    for i, v in enumerate(x):
+        if len(run) >= 4:
+            mean = float(np.mean(run)); sd = max(float(np.std(run)), 0.05)
+            surprise = abs(float(v) - mean) / sd
+            posterior = min(1.0, hazard * math.exp(min(6.0, surprise)))
+            if i - last >= min_gap and surprise >= thr and posterior > 0.5:
+                out.append(i); last = i; run = [float(v)]; continue
+        run.append(float(v))
+        if len(run) > 24:
+            run = run[-24:]
+    return out
+
+
+def det_bocpd(x, thr, hazard=0.04, min_gap=5):
+    return _bocpd_core(np.asarray(x, float), hazard, thr, min_gap)
+
+
+def det_bocpd_ar1(x, thr, hazard=0.04, min_gap=5, window=10):
+    """BOCPD on AR(1)-whitened robust residuals (the 'fixed observation model')."""
+    z = robust_z(np.asarray(x, float), window)
+    w = np.zeros(len(z))
+    for i in range(len(z)):
+        phi = ar1_phi_hat(z[: i + 1])
+        w[i] = z[i] - phi * z[i - 1] if i > 0 else z[i]
+    return _bocpd_core(w, hazard, thr, min_gap)
+
+
+# ---- unified candidates ----
+def det_unified_gate(x, h0, k=0.25, alpha_drift=0.5, beta_gate=0.5, whiten=True,
+                     window=10, min_gap=4):
+    """WGFD-gate: whiten -> max(CUSUM-step, PH-drift) -> CSD early-warning lowers
+    the firing threshold (one statistic, adaptive threshold)."""
+    z = robust_z(x, window)
+    up = lo = ph = ph_mn = ph_mx = 0.0
+    out = []; last = -min_gap
+    for i in range(len(x)):
+        phi = ar1_phi_hat(z[: i + 1]) if whiten else 0.0
+        w = z[i] - phi * z[i - 1] if (whiten and i > 0) else z[i]
+        up = max(0.0, up + w - k); lo = min(0.0, lo + w + k)
+        L = max(up, -lo)
+        ph += w; ph_mn = min(ph_mn, ph); ph_mx = max(ph_mx, ph)
+        D = max(ph - ph_mn, ph_mx - ph)
+        S = max(L, alpha_drift * D)
+        gate = 0.0
+        if i >= 2 * window:
+            prev = x[i - 2 * window: i - window]; cur = x[i - window: i]
+            vr = float(np.var(cur)) / max(float(np.var(prev)), 1e-6)
+            md = abs(float(np.mean(cur)) - float(np.mean(prev)))
+            raw = max(0.0, vr - 1.0) + 6.0 * md
+            gate = 1.0 / (1.0 + math.exp(-(raw - 1.0)))
+        h = h0 * (1.0 - beta_gate * gate)
+        if i - last < min_gap:
+            continue
+        if S > h:
+            out.append(i); last = i; up = lo = ph = ph_mn = ph_mx = 0.0
+    return out
+
+
+def det_two_stage(x, csd_thr, confirm_h=2.0, confirm_k=0.25, confirm_win=4,
+                  whiten=True, window=8, min_gap=8):
+    """CSD proposes a candidate fast; whitened-CUSUM must confirm within a short
+    window. Fire at the confirmation time (honest latency). Keeps CSD speed, drops
+    its uncorroborated false alarms."""
+    cands = det_csd(x, csd_thr, window=window, min_gap=min_gap)
+    L = whitened_cusum_series(np.asarray(x, float), confirm_k, whiten, window=10)
+    out = []; last = -min_gap
+    for c in cands:
+        if c - last < min_gap:
+            continue
+        fire = None
+        for t in range(c, min(len(x), c + confirm_win + 1)):
+            if L[t] > confirm_h:
+                fire = t; break
+        if fire is not None:
+            out.append(fire); last = fire
+    return out
+
+
+def det_unified_full(x, csd_thr, confirm_h=2.0, confirm_k=0.25, confirm_win=4,
+                     ph_base=2.0, whiten=True, window=8, min_gap=6):
+    """Full unified model: union of two evidence paths on AR(1)-whitened residuals,
+    de-duplicated within min_gap:
+      (1) fast path  = CSD-propose + whitened-CUSUM-confirm  (steps, low latency)
+      (2) drift path = Page-Hinkley on whitened innovations   (slow drifts)
+    FIX: the drift arm runs on UNIT-VARIANCE whitened residuals, so its threshold is
+    sized on that ~O(1-3) scale (not the raw-pace 0.05 scale that pinned the FAR
+    floor) AND scaled with the primary csd_thr sweep so BOTH arms tighten together
+    and the union traces a real latency/false-alarm frontier."""
+    fast = det_two_stage(x, csd_thr, confirm_h=confirm_h, confirm_k=confirm_k,
+                         confirm_win=confirm_win, whiten=whiten, window=window, min_gap=min_gap)
+    z = robust_z(np.asarray(x, float), 10)
+    w = np.zeros(len(z))
+    for i in range(len(z)):
+        phi = ar1_phi_hat(z[: i + 1]) if whiten else 0.0
+        w[i] = z[i] - phi * z[i - 1] if (whiten and i > 0) else z[i]
+    ph_thr_eff = max(0.3, ph_base * (csd_thr / 0.06))   # unit-variance scale, scaled with the sweep
+    drift = det_page_hinkley(w, ph_thr_eff, min_gap=max(min_gap, 6))
+    merged = sorted(set(fast) | set(drift))
+    out = []; last = -min_gap
+    for p in merged:
+        if p - last >= min_gap:
+            out.append(p); last = p
+    return out
+
+
+def det_glr(x, h, window=14, min_seg=3, whiten=True, min_gap=4):
+    """Windowed Generalized Likelihood Ratio detector on AR(1)-whitened robust
+    residuals. At each step it takes the MAX of two matched statistics over a
+    trailing window — a step-change GLR (best two-mean split) and a linear-drift GLR
+    (regression slope) — so one statistic natively covers both shift shapes. This is
+    the principled 'unified' detector: Neyman-Pearson-optimal for the known forms,
+    on residuals whitened to restore the iid assumption."""
+    z = robust_z(np.asarray(x, float), 10)
+    w = np.empty(len(z))
+    for i in range(len(z)):
+        phi = ar1_phi_hat(z[: i + 1]) if whiten else 0.0
+        w[i] = z[i] - phi * z[i - 1] if (whiten and i > 0) else z[i]
+    out = []; last = -min_gap
+    for i in range(len(w)):
+        if (i + 1) < 2 * min_seg or i - last < min_gap:
+            continue
+        seg = w[max(0, i - window + 1): i + 1]
+        W = len(seg)
+        if W < 2 * min_seg:
+            continue
+        csum = np.cumsum(seg); total = float(csum[-1])
+        best_step = 0.0
+        for k in range(min_seg, W - min_seg + 1):
+            left = float(csum[k - 1]); right = total - left
+            diff = (left / k) - (right / (W - k))
+            g = (k * (W - k) / W) * diff * diff       # unit-variance step LR
+            if g > best_step:
+                best_step = g
+        ix = np.arange(W); xm = ix.mean(); sxx = float(((ix - xm) ** 2).sum())
+        best_drift = 0.0
+        if sxx > 0:
+            slope = float(((ix - xm) * (seg - seg.mean())).sum() / sxx)
+            best_drift = slope * slope * sxx           # linear-trend LR
+        if max(best_step, best_drift) > h:
+            out.append(i); last = i
+    return out
+
+
+def det_oracle(x, onsets_for_scoring=None):  # upper bound — set by scorer, not used as candidate
+    return list(onsets_for_scoring or [])
+
+
+# ----------------------------------------------------------------------------
+# Detector registry: name -> (fn, threshold_param, grid, fixed_kwargs)
+# ----------------------------------------------------------------------------
+def detector_registry(quick: bool) -> dict[str, dict[str, Any]]:
+    g = (lambda full, q: q if quick else full)
+    return {
+        "cusum":            dict(fn=det_cusum, tparam="h",
+                                 grid=g([2.0,2.5,3.0,3.5,4.0,4.5,5.0,5.5], [3.0,4.5]), fixed={}),
+        "csd":              dict(fn=det_csd, tparam="thr",
+                                 grid=g([0.03,0.04,0.05,0.06,0.08,0.10,0.13,0.16], [0.06,0.10]), fixed={}),
+        "page_hinkley":     dict(fn=det_page_hinkley, tparam="thr",
+                                 grid=g([0.03,0.05,0.07,0.10,0.14,0.18], [0.05,0.10]), fixed={}),
+        "ewma":             dict(fn=det_ewma, tparam="thr",
+                                 grid=g([1.5,2.0,2.4,3.0,3.6], [2.0,3.0]), fixed={}),
+        "adwin":            dict(fn=det_adwin, tparam="thr",
+                                 grid=g([0.002,0.005,0.01,0.02,0.05], [0.01,0.05]), fixed={}),
+        "bocpd":            dict(fn=det_bocpd, tparam="thr",
+                                 grid=g([2.0,2.5,2.75,3.0,3.5], [2.5,3.0]), fixed={}),
+        "bocpd_ar1":        dict(fn=det_bocpd_ar1, tparam="thr",
+                                 grid=g([2.0,2.5,2.75,3.0,3.5], [2.5,3.0]), fixed={}),
+        "unified_gate":     dict(fn=det_unified_gate, tparam="h0",
+                                 grid=g([2.0,2.5,3.0,3.5,4.0,4.5,5.0], [3.0,4.5]), fixed=dict(whiten=True),
+                                 tune=dict(beta_gate=g([0.3,0.5,0.7], [0.5]), alpha_drift=g([0.4,0.6], [0.6]))),
+        "unified_gate_nowhiten": dict(fn=det_unified_gate, tparam="h0",
+                                 grid=g([2.0,2.5,3.0,3.5,4.0,4.5,5.0], [3.0,4.5]), fixed=dict(whiten=False),
+                                 tune=dict(beta_gate=g([0.3,0.5,0.7], [0.5]), alpha_drift=g([0.4,0.6], [0.6]))),
+        "unified_two_stage": dict(fn=det_two_stage, tparam="csd_thr",
+                                 grid=g([0.03,0.04,0.05,0.06,0.08,0.10,0.13], [0.05,0.10]),
+                                 fixed=dict(whiten=True),
+                                 tune=dict(confirm_h=g([1.5,2.0,2.5,3.0], [2.0]))),
+        "unified_full":     dict(fn=det_unified_full, tparam="csd_thr",
+                                 grid=g([0.03,0.04,0.05,0.06,0.08,0.10,0.13], [0.05,0.10]),
+                                 fixed=dict(whiten=True),
+                                 tune=dict(confirm_h=g([1.5,2.0,2.5], [2.0]), ph_base=g([1.0,2.0,3.0], [2.0]))),
+        "unified_glr":      dict(fn=det_glr, tparam="h",
+                                 grid=g([4,6,8,10,13,17,22], [8,14]),
+                                 fixed=dict(whiten=True),
+                                 tune=dict(window=g([10,14,20], [14]), min_seg=g([3,4], [3]))),
+    }
+
+
+# ----------------------------------------------------------------------------
+# Scoring
+# ----------------------------------------------------------------------------
+def score_learner(fires: list[int], learner: dict[str, Any]) -> dict[str, Any]:
+    """Greedy-match detections to planted shifts (each shift matched to the first
+    detection at/after its onset). Everything else is a false alarm."""
+    fires = sorted(set(int(f) for f in fires if f >= 0))
+    shifts = sorted(learner["shifts"], key=lambda s: s["onset"])
+    remaining = fires[:]
+    matched = []
+    for s in shifts:
+        m = next((f for f in remaining if f >= s["onset"]), None)
+        if m is not None:
+            remaining.remove(m)
+            matched.append({"type": s["type"], "latency": m - s["onset"]})
+    by_type = {t: {"n_shifts": 0, "n_detected": 0, "lat": []} for t in SHIFT_TYPES}
+    for s in shifts:
+        by_type[s["type"]]["n_shifts"] += 1
+    for m in matched:
+        by_type[m["type"]]["n_detected"] += 1
+        by_type[m["type"]]["lat"].append(m["latency"])
+    return {"by_type": by_type, "false_alarms": len(remaining), "n_obs": learner["n"]}
+
+
+def aggregate(detector: Callable, learners: list[dict[str, Any]], tparam: str,
+              thr: float, fixed: dict[str, Any]) -> dict[str, Any]:
+    fa_total = 0; obs_total = 0
+    lat = {t: [] for t in SHIFT_TYPES}
+    miss = {t: 0 for t in SHIFT_TYPES}; nshift = {t: 0 for t in SHIFT_TYPES}
+    for L in learners:
+        fires = detector(L["x"], **{tparam: thr}, **fixed)
+        s = score_learner(fires, L)
+        fa_total += s["false_alarms"]; obs_total += s["n_obs"]
+        for t in SHIFT_TYPES:
+            bt = s["by_type"][t]
+            nshift[t] += bt["n_shifts"]
+            miss[t] += bt["n_shifts"] - bt["n_detected"]
+            lat[t].extend(bt["lat"])
+    far = fa_total / max(1, obs_total)
+    res = {"far": far}
+    comps = []
+    for t in SHIFT_TYPES:
+        ml = float(np.mean(lat[t])) if lat[t] else math.inf
+        mr = miss[t] / max(1, nshift[t])
+        res[t] = {"mean_latency": ml, "miss_rate": mr, "n_shifts": nshift[t]}
+        comp = (ml if math.isfinite(ml) else 100.0) + mr * 100.0 + far * 25.0
+        res[t]["comp"] = comp
+        comps.append(comp)
+    res["comp_overall"] = float(np.mean(comps))
+    return res
+
+
+def best_on_train(name: str, spec: dict[str, Any], train: list[dict[str, Any]]):
+    best = None
+    for thr in spec["grid"]:
+        a = aggregate(spec["fn"], train, spec["tparam"], thr, spec["fixed"])
+        if best is None or a["comp_overall"] < best[1]["comp_overall"]:
+            best = (thr, a)
+    return best
+
+
+def frontier(spec: dict[str, Any], learners: list[dict[str, Any]], shift_type: str):
+    """Per shift-type Pareto frontier: (false_alarm_rate, mean_latency)."""
+    pts = []
+    for thr in spec["grid"]:
+        a = aggregate(spec["fn"], learners, spec["tparam"], thr, spec["fixed"])
+        pts.append((a["far"], a[shift_type]["mean_latency"], thr))
+    pts.sort()
+    mono = []; best = math.inf
+    for far, latv, thr in pts:
+        if latv <= best:
+            mono.append((far, latv, thr)); best = latv
+    return mono
+
+
+def latency_at_far(front, far_target):
+    cand = [latv for far, latv, _ in front if far <= far_target + 1e-9 and math.isfinite(latv)]
+    return min(cand) if cand else math.inf
+
+
+def bootstrap_ci(deltas, n_boot=5000, seed=0):
+    a = np.asarray([d for d in deltas if math.isfinite(d)], float)
+    if a.size == 0:
+        return (math.nan, math.nan, math.nan)
+    rng = np.random.default_rng(seed)
+    boots = rng.choice(a, size=(n_boot, a.size), replace=True).mean(axis=1)
+    lo, hi = np.quantile(boots, [0.025, 0.975])
+    return (float(lo), float(hi), float(a.mean()))
+
+
+# ----------------------------------------------------------------------------
+# Experiment
+# ----------------------------------------------------------------------------
+# ---- per-learner caching so the dominance CI can bootstrap over learners ----
+def _learner_row(detector, learner, tparam, thr, fixed):
+    s = score_learner(detector(learner["x"], **{tparam: thr}, **fixed), learner)
+    row = {"fa": float(s["false_alarms"]), "nobs": float(s["n_obs"])}
+    for t in SHIFT_TYPES:
+        bt = s["by_type"][t]
+        row[t] = (float(sum(bt["lat"])), float(bt["n_detected"]), float(bt["n_shifts"]))
+    return row
+
+
+def build_cache(spec, learners):
+    """For each threshold, cache per-learner [fa, nobs] and per-type [lat_sum, ndet,
+    nshift] so aggregates over any learner subset are cheap re-sums (enables bootstrap)."""
+    n = len(learners)
+    cache = {}
+    for thr in spec["grid"]:
+        fa = np.zeros(n); nobs = np.zeros(n)
+        per = {t: np.zeros((n, 3)) for t in SHIFT_TYPES}
+        for i, L in enumerate(learners):
+            r = _learner_row(spec["fn"], L, spec["tparam"], thr, spec["fixed"])
+            fa[i] = r["fa"]; nobs[i] = r["nobs"]
+            for t in SHIFT_TYPES:
+                per[t][i] = r[t]
+        cache[thr] = {"fa": fa, "nobs": nobs, "per": per}
+    return cache
+
+
+def _agg(entry, idx, t):
+    fa = float(entry["fa"][idx].sum()); nobs = float(entry["nobs"][idx].sum())
+    far = fa / max(1.0, nobs)
+    p = entry["per"][t][idx]
+    lat_sum = float(p[:, 0].sum()); ndet = float(p[:, 1].sum()); nshift = float(p[:, 2].sum())
+    mean_lat = (lat_sum / ndet) if ndet > 0 else math.inf
+    miss = ((nshift - ndet) / nshift) if nshift > 0 else 0.0
+    return far, mean_lat, miss
+
+
+def _comp_overall(cache, thr, idx):
+    comps = []
+    for t in SHIFT_TYPES:
+        far, lat, miss = _agg(cache[thr], idx, t)
+        comps.append((lat if math.isfinite(lat) else 100.0) + miss * 100.0 + far * 25.0)
+    return float(np.mean(comps))
+
+
+def _frontier(cache, grid, idx, t):
+    pts = sorted((_agg(cache[thr], idx, t)[0], _agg(cache[thr], idx, t)[1]) for thr in grid)
+    mono = []; best = math.inf
+    for far, lat in pts:
+        if lat <= best:
+            mono.append((far, lat)); best = lat
+    return mono
+
+
+def _lat_at(front, far_t):
+    cand = [lat for far, lat in front if far <= far_t + 1e-9 and math.isfinite(lat)]
+    return min(cand) if cand else math.inf
+
+
+def _train_comp(spec, train, kwargs):
+    """comp_overall on the full TRAIN set for one detector parameterisation."""
+    fa = 0.0; nobs = 0.0
+    lat = {t: [] for t in SHIFT_TYPES}; miss = {t: 0} if False else {t: 0 for t in SHIFT_TYPES}
+    nsh = {t: 0 for t in SHIFT_TYPES}
+    for L in train:
+        s = score_learner(spec["fn"](L["x"], **kwargs), L)
+        fa += s["false_alarms"]; nobs += s["n_obs"]
+        for t in SHIFT_TYPES:
+            bt = s["by_type"][t]
+            nsh[t] += bt["n_shifts"]; miss[t] += bt["n_shifts"] - bt["n_detected"]; lat[t].extend(bt["lat"])
+    far = fa / max(1.0, nobs); comps = []
+    for t in SHIFT_TYPES:
+        ml = float(np.mean(lat[t])) if lat[t] else math.inf
+        mr = miss[t] / max(1, nsh[t])
+        comps.append((ml if math.isfinite(ml) else 100.0) + mr * 100.0 + far * 25.0)
+    return float(np.mean(comps))
+
+
+def tune_secondary(spec, train):
+    """Pick the best secondary knobs (confirm_h, ph_thr, gate betas...) on TRAIN
+    ONLY, at a representative mid-grid primary threshold. Bounded: |secondary combos|
+    train passes. Returns {} for detectors with no `tune` block (the baselines)."""
+    tune = spec.get("tune", {})
+    if not tune:
+        return {}
+    keys = list(tune)
+    grid = spec["grid"]; thr_rep = grid[len(grid) // 2]
+    best = None
+    for vals in itertools.product(*[tune[k] for k in keys]):
+        sec = dict(zip(keys, vals))
+        kwargs = {**spec.get("fixed", {}), spec["tparam"]: thr_rep, **sec}
+        c = _train_comp(spec, train, kwargs)
+        if best is None or c < best[1]:
+            best = (sec, c)
+    return best[0]
+
+
+def run_regime(regime: str, args, prog: Progress) -> dict[str, Any]:
+    reg = detector_registry(args.quick)
+    unified_names = [n for n in reg if n.startswith("unified")]
+    B = 200 if args.quick else 600
+    point_scores = {name: [] for name in reg}
+    # dom_frac = fraction of the cusum+csd frontier operating points the unified
+    # detector matches-or-beats (one value per bootstrap resample of learners).
+    domfrac = {t: {u: [] for u in unified_names} for t in SHIFT_TYPES}
+    dommargin = {t: {u: [] for u in unified_names} for t in SHIFT_TYPES}
+    thr_star_last = {}; point_frontiers_last = None
+
+    for rep in range(args.reps):
+        seed = 1000 * (1 if regime == "frozen" else 2) + rep
+        train = build_population(args.train, seed * 2 + 1, regime)
+        test = build_population(args.test, seed * 2 + 2, regime)
+        prog.log(100 * rep / max(1, args.reps), f"{regime}.build", f"rep={rep+1}/{args.reps}")
+
+        test_cache = {}
+        for j, (name, spec) in enumerate(reg.items()):
+            sec = tune_secondary(spec, train)                       # TRAIN-only secondary tuning
+            eff = {**spec, "fixed": {**spec.get("fixed", {}), **sec}}
+            tr = build_cache(eff, train)
+            allid_tr = np.arange(len(train))
+            thr_best = min(spec["grid"], key=lambda th: _comp_overall(tr, th, allid_tr))
+            thr_star_last[name] = {"thr": thr_best, "secondary": sec}
+            test_cache[name] = build_cache(eff, test)
+            point_scores[name].append(_comp_overall(test_cache[name], thr_best, np.arange(len(test))))
+            prog.log(100 * rep / max(1, args.reps), f"{regime}.cache",
+                     f"rep={rep+1} {name} sec={sec} ({j+1}/{len(reg)})")
+
+        allid = np.arange(len(test))
+        point_frontiers_last = {t: {n: _frontier(test_cache[n], reg[n]["grid"], allid, t)
+                                    for n in reg} for t in SHIFT_TYPES}
+
+        rng = np.random.default_rng(7 + rep); m = len(test)
+        for b in range(B):
+            idx = rng.integers(0, m, m)
+            for t in SHIFT_TYPES:
+                base = [(far, lat) for (far, lat) in
+                        (_frontier(test_cache["cusum"], reg["cusum"]["grid"], idx, t)
+                         + _frontier(test_cache["csd"], reg["csd"]["grid"], idx, t))
+                        if math.isfinite(lat)]
+                if not base:
+                    continue
+                for u in unified_names:
+                    uf = _frontier(test_cache[u], reg[u]["grid"], idx, t)
+                    w = []; mg = []
+                    for far_b, lat_b in base:
+                        ul = _lat_at(uf, far_b)       # unified's best latency at <= this false-alarm level
+                        if math.isfinite(ul):
+                            w.append(1.0 if ul <= lat_b + 1e-6 else 0.0); mg.append(ul - lat_b)
+                        else:
+                            w.append(0.0)             # unified can't even operate this clean -> loses point
+                    domfrac[t][u].append(float(np.mean(w)))
+                    if mg:
+                        dommargin[t][u].append(float(np.mean(mg)))
+            if b % max(1, B // 4) == 0:
+                prog.log(100 * rep / max(1, args.reps), f"{regime}.bootstrap", f"rep={rep+1} b={b}/{B}")
+
+    def _ci(arr):
+        a = np.asarray([x for x in arr if x == x], float)
+        if a.size == 0:
+            return (math.nan, math.nan, math.nan)
+        return (float(np.quantile(a, 0.025)), float(np.quantile(a, 0.975)), float(a.mean()))
+
+    dom = {}
+    for t in SHIFT_TYPES:
+        dom[t] = {}
+        for u in unified_names:
+            flo, fhi, fmean = _ci(domfrac[t][u])
+            mlo, mhi, mmean = _ci(dommargin[t][u])
+            dom[t][u] = {
+                "dom_frac_mean": fmean, "dom_frac_lo": flo, "dom_frac_hi": fhi,
+                "latency_margin_mean": mmean, "latency_margin_lo": mlo, "latency_margin_hi": mhi,
+                "n_bootstrap": len(domfrac[t][u]),
+            }
+    return {
+        "regime": regime, "reps": args.reps, "n_train": args.train, "n_test": args.test,
+        "B_bootstrap": B,
+        "point_comp_overall_mean": {n: float(np.mean(v)) for n, v in point_scores.items()},
+        "thr_star_last_rep": thr_star_last,
+        "dominance_over_frontier": dom,
+        "point_frontiers_last_rep": point_frontiers_last,
+    }
+
+
+def verdict_lines(summary: dict[str, Any]) -> list[str]:
+    lines = []
+    reg = summary["regime"]
+    cm = summary["point_comp_overall_mean"]
+    lines.append(f"### {reg}: detectors by mean comp_overall (lower=better)")
+    for name, val in sorted(cm.items(), key=lambda kv: kv[1]):
+        lines.append(f"  {name:>22} {val:8.2f}")
+    lines.append(f"### {reg}: Pareto dominance over the cusum+csd frontier — "
+                 f"dom_frac = fraction of baseline operating points the unified matches/beats "
+                 f"(>=0.90 CI-low => DOMINATES; lat_margin neg = faster)")
+    for t in SHIFT_TYPES:
+        for u, d in summary["dominance_over_frontier"][t].items():
+            fm = d["dom_frac_mean"]; flo = d["dom_frac_lo"]; fhi = d["dom_frac_hi"]; mm = d["latency_margin_mean"]
+            if fm != fm:
+                mark = "n/a"
+            elif flo >= 0.90:
+                mark = "DOMINATES"
+            elif fm >= 0.50:
+                mark = "competitive"
+            else:
+                mark = "worse"
+            lines.append(f"  [{t:>5}] {u:>22}: dom_frac={fm:.2f} CI=[{flo:.2f},{fhi:.2f}] "
+                         f"lat_margin={mm:+.2f} -> {mark}")
+    return lines
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--train", type=int, default=1500)
+    ap.add_argument("--test", type=int, default=1500)
+    ap.add_argument("--reps", type=int, default=5)
+    ap.add_argument("--regime", choices=["frozen", "reality", "both"], default="both")
+    ap.add_argument("--quick", action="store_true", help="fast smoke config")
+    ap.add_argument("--out", default="unified_detector_results.json")
+    ap.add_argument("--summary", default="unified_detector_summary.md")
+    ap.add_argument("--quiet", action="store_true")
+    args = ap.parse_args()
+    if args.quick:
+        args.train = min(args.train, 80); args.test = min(args.test, 80); args.reps = min(args.reps, 1)
+
+    prog = Progress(enabled=not args.quiet)
+    prog.log(0, "start", f"{VERSION} | train={args.train} test={args.test} reps={args.reps} regime={args.regime}")
+    regimes = ["frozen", "reality"] if args.regime == "both" else [args.regime]
+    detector_names = list(detector_registry(args.quick))
+    results = {}
+    summary_lines = [
+        f"# A6 unified change-detector design probe — {VERSION}",
+        f"detectors ({len(detector_names)}): {', '.join(detector_names)}",
+        "",
+    ]
+    for r in regimes:
+        prog.log(0, f"{r}.begin")
+        results[r] = run_regime(r, args, prog)
+        summary_lines += verdict_lines(results[r]) + [""]
+        prog.log(100, f"{r}.done")
+
+    with open(args.out, "w") as f:
+        json.dump(results, f, indent=2, default=float)
+    with open(args.summary, "w") as f:
+        f.write("\n".join(summary_lines) + "\n")
+    prog.log(100, "complete", f"out={args.out} summary={args.summary}")
+    print("\n".join(summary_lines))
+
+
+if __name__ == "__main__":
+    main()

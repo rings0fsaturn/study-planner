@@ -1,0 +1,26 @@
+[project]
+name = "intelligence"
+version = "0.1.0"
+description = "FastAPI Intelligence Service — Pillar A HTTP API"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "pyjwt[crypto]>=2.9",
+    "py-progress",
+    "py-roadmap-engine",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.uv.sources]
+py-progress = { workspace = true }
+py-roadmap-engine = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

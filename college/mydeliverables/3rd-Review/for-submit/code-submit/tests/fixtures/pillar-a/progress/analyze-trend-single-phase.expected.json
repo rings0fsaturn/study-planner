@@ -1,0 +1,26 @@
+{
+  "phases": [
+    {
+      "startSessionIndex": 0,
+      "endSessionIndex": 9,
+      "startDate": "2026-01-01",
+      "endDate": "2026-01-10",
+      "level": 1,
+      "slope": 0,
+      "slopeUncertainty": 0.038009013862520306,
+      "sessionCount": 10
+    }
+  ],
+  "currentPhase": {
+    "startSessionIndex": 0,
+    "endSessionIndex": 9,
+    "startDate": "2026-01-01",
+    "endDate": "2026-01-10",
+    "level": 1,
+    "slope": 0,
+    "slopeUncertainty": 0.038009013862520306,
+    "sessionCount": 10
+  },
+  "projectionSlope": 0,
+  "projectionUncertainty": 0.038009013862520306
+}

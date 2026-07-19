@@ -1,0 +1,13 @@
+{
+  "fn": "updatePosteriorChain",
+  "prior": {
+    "mean": 1,
+    "variance": 0.1,
+    "sessionCount": 0
+  },
+  "observations": [
+    1,
+    1
+  ],
+  "observationVariance": 0.1
+}

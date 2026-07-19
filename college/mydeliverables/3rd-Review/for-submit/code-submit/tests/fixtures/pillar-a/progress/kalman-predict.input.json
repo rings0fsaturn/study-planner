@@ -1,0 +1,6 @@
+{
+  "fn": "kalmanPredict",
+  "level": 1,
+  "variance": 0.1,
+  "slope": 0.05
+}

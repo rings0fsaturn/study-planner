@@ -1,0 +1,20 @@
+services:
+  intelligence:
+    build:
+      context: .
+      dockerfile: services/intelligence/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-docker.io/library/python:3.12-slim}
+        UV_IMAGE: ${UV_IMAGE:-docker.io/astral/uv:0.11.19}
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+      SUPABASE_URL: ${SUPABASE_URL:-}
+      SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
+    ports:
+      - "${INTELLIGENCE_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=3).status==200 else sys.exit(1)"]
+      interval: 10s
+      timeout: 4s
+      retries: 5
+

@@ -1,0 +1,99 @@
+{
+  "dataset": "poj",
+  "folds": [
+    {
+      "fold": 0,
+      "test_indices": [
+        0,
+        1
+      ],
+      "train_indices": [
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "fold": 1,
+      "test_indices": [
+        2,
+        3
+      ],
+      "train_indices": [
+        0,
+        1,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "fold": 2,
+      "test_indices": [
+        4,
+        5
+      ],
+      "train_indices": [
+        0,
+        1,
+        2,
+        3,
+        6,
+        7,
+        8,
+        9
+      ]
+    },
+    {
+      "fold": 3,
+      "test_indices": [
+        6,
+        7
+      ],
+      "train_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        8,
+        9
+      ]
+    },
+    {
+      "fold": 4,
+      "test_indices": [
+        8,
+        9
+      ],
+      "train_indices": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ]
+    }
+  ],
+  "kfold": 5,
+  "pykt_dataset": "poj",
+  "pykt_version": "0.0.38",
+  "python_version": "3.9.6",
+  "raw_source": "smoke_fixture",
+  "source": "pykt.preprocess.split_datasets.KFold_split",
+  "source_sequences_sha256": "9345f629bf7c8971327f669d409acdd4105b64df83006b2cd8e5991e7fa19c07",
+  "train_valid_rows": 10,
+  "train_valid_sha256": "832268347942e25e5c2fbd7139a70ebf1e9c9080f4136a403d554b38af38019a"
+}

@@ -1,0 +1,172 @@
+---
+description: Docker Compose, Buildx, Colima, and corporate CA setup for this machine
+globs: docker-compose.yml,services/**/Dockerfile,services/**/README.md,pyproject.toml,uv.lock
+alwaysApply: false
+---
+
+# Docker Colima Setup
+
+## When to Apply
+
+- Any task that builds or runs Docker images in this repo.
+- Any task involving `docker compose`, `docker buildx`, or Colima.
+- Any Docker failure that mentions missing Compose/Buildx plugins, public
+  registry certificate errors, or localhost port forwarding not working.
+
+## Baseline Checks
+
+Start with Docker, not Colima, because Colima status can be less useful than the
+Docker daemon state on this machine:
+
+```bash
+docker info
+docker ps --format '{{.Names}} {{.Ports}}'
+colima status
+```
+
+Expected Docker context:
+
+```text
+Context: colima
+```
+
+Do not stop or restart Colima just because a command is confusing. There may be
+unrelated containers running, such as `wiremock-simulator` on port `9999`.
+
+## Install Docker Compose and Buildx Plugins
+
+If these fail:
+
+```bash
+docker compose version
+docker buildx version
+```
+
+install the Homebrew plugin packages:
+
+```bash
+brew install docker-compose docker-buildx
+```
+
+Then ensure Docker can discover Homebrew's plugin directory. Update
+`~/.docker/config.json` to include:
+
+```json
+{
+  "cliPluginsExtraDirs": [
+    "/opt/homebrew/lib/docker/cli-plugins"
+  ]
+}
+```
+
+Verify:
+
+```bash
+docker info
+```
+
+Expected plugin lines include:
+
+```text
+Plugins:
+  buildx: Docker Buildx
+  compose: Docker Compose
+```
+
+## Corporate Registry and CA Pattern
+
+Public Docker Hub and GHCR pulls can fail from Colima with:
+
+```text
+tls: failed to verify certificate: x509: certificate signed by unknown authority
+```
+
+Use the internal image mirror by default:
+
+```text
+docker.io/library/python:3.12-slim
+docker.io/astral/uv:0.11.19
+```
+
+For Python dependency downloads inside Docker builds, pass the local corporate
+CA bundle as a BuildKit secret instead of committing a certificate:
+
+```bash
+docker buildx build \
+  # corporate CA bundle secret removed; use public registry \
+  --load \
+  -f services/intelligence/Dockerfile \
+  -t study-tracker-intelligence:phase6 .
+```
+
+Dockerfile pattern:
+
+```dockerfile
+RUN uv sync --frozen --package intelligence --no-dev
+```
+
+Compose pattern:
+
+```yaml
+services:
+  intelligence:
+    build:
+      context: .
+      dockerfile: services/intelligence/Dockerfile
+      args:
+        PYTHON_IMAGE: ${PYTHON_IMAGE:-docker.io/library/python:3.12-slim}
+        UV_IMAGE: ${UV_IMAGE:-docker.io/astral/uv:0.11.19}
+
+```
+
+Avoid `UV_INSECURE_HOST` or disabling TLS verification as the default fix.
+
+## Colima Port Forwarding Gotcha
+
+Docker can show a published port even when macOS localhost is not listening:
+
+```bash
+docker port study-planner-web-intelligence-1
+lsof -nP -iTCP:8000 -sTCP:LISTEN
+```
+
+If `docker port` shows `0.0.0.0:8000->8000/tcp` but host curl fails, verify the
+service from inside the container and VM before changing app code:
+
+```bash
+docker compose exec -T intelligence python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read().decode())"
+
+env LIMA_HOME=/Users/rsaji/.colima/_lima limactl shell colima ss -ltnp
+env LIMA_HOME=/Users/rsaji/.colima/_lima limactl shell colima curl -sS http://127.0.0.1:8000/health
+```
+
+If the service works in the container and VM but not from macOS, create a
+temporary SSH forward for verification:
+
+```bash
+ssh -F /Users/rsaji/.colima/ssh_config -N -L 127.0.0.1:8000:127.0.0.1:8000 colima
+```
+
+After verification, remove only that temporary forward:
+
+```bash
+ssh -F /Users/rsaji/.colima/ssh_config -O cancel -L 127.0.0.1:8000:127.0.0.1:8000 colima
+```
+
+Do not kill the existing `9999` SSH forward; it belongs to the WireMock
+simulator.
+
+## Standard Verification Flow
+
+For this repo's Intelligence Service:
+
+```bash
+docker compose config
+docker compose up --build -d
+docker compose ps
+curl -sS http://127.0.0.1:8000/health
+docker compose down
+```
+
+If host curl cannot connect, use the Colima port-forwarding checks above before
+touching service code.

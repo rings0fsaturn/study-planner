@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Decoupling redesign — mock index</title>
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/global.css" />
+<link rel="stylesheet" href="css/components.css" />
+<style>
+  .wrap { max-width: 820px; margin: 0 auto; padding: 40px 20px 80px; }
+  .grp { margin-bottom: 40px; }
+  .opt { display:block; background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg);
+    padding: 16px 18px; margin-bottom: 12px; text-decoration:none; color: var(--text-primary); transition: box-shadow .16s, transform .16s; }
+  .opt:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); color: var(--text-primary); }
+  .opt h3 { font-family: var(--font-display); font-weight:500; font-size:18px; margin-bottom:4px; }
+  .opt p { color: var(--text-secondary); font-size:14px; }
+  .pill { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:2px 8px; border-radius:999px; background: var(--surface-recessed); color: var(--text-tertiary); margin-left:8px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="mono-caps" style="margin-bottom:6px;">Material / Session decoupling</div>
+  <h1 class="t-display-2" style="margin-bottom:24px;">Redesign mocks</h1>
+
+  <div class="grp">
+    <div class="t-mono" style="margin-bottom:10px;">Onboarding · page 3</div>
+
+    <a class="opt" href="baseline/onboarding-3.html" target="_blank">
+      <h3>Baseline <span class="pill">current · frozen</span></h3>
+      <p>Today's day-by-day material packer — the "Pick one" tie row is the bug surface we're retiring.</p>
+    </a>
+
+    <a class="opt" href="proposed/onboarding-3.html" target="_blank" style="border-color: var(--moss);">
+      <h3>★ Chosen — Summary + expandable calendar <span class="pill" style="background:var(--moss); color:var(--paper);">locked · D13</span></h3>
+      <p>Option A's capacity summary, with the <strong>Projected finish</strong> card as a toggle: click it and a multi-month calendar (‹ › arrows) slides down showing booked sessions + deadline. Hover/affordance signals it's clickable.</p>
+    </a>
+
+    <a class="opt" href="proposed/onboarding-3-optionA-summary.html" target="_blank">
+      <h3>Option A — Capacity summary <span class="pill">explored</span></h3>
+      <p>No day grid. Finish-date verdict, a backlog-fits-capacity bar, an unordered material directory, and a short "your first sessions" peek. Most honest about what the engine now knows.</p>
+    </a>
+
+    <a class="opt" href="proposed/onboarding-3-optionB-bookinglist.html" target="_blank">
+      <h3>Option B — Booking list <span class="pill">book every study-day to deadline</span></h3>
+      <p>A week-grouped list of blank capacity bookings (date + length). A material is softly <em>suggested</em> per booking but never locked. Closest structurally to today's preview.</p>
+    </a>
+
+    <a class="opt" href="proposed/onboarding-3-optionC-calendar.html" target="_blank">
+      <h3>Option C — Mini calendar <span class="pill">explored → folded into chosen</span></h3>
+      <p>A compact month grid (real roadmap calendar) with booked study-days dotted, finish day, and buffer days. Visual; pairs with a material directory below.</p>
+    </a>
+  </div>
+
+  <div class="grp">
+    <div class="t-mono" style="margin-bottom:10px;">Home &amp; Session</div>
+    <a class="opt" href="proposed/home.html" target="_blank"><h3>Home <span class="pill">locked · D15</span></h3><p>Unchanged, but the booking's material reads "Suggested material". Start → Session.</p></a>
+    <a class="opt" href="proposed/session-presession.html" target="_blank"><h3>Pre-session setup (V1) <span class="pill">locked · D15a</span></h3><p>Confirm/swap material + set planned length on the dial, before the timer runs.</p></a>
+    <a class="opt" href="proposed/session-running.html" target="_blank"><h3>Running session <span class="pill">locked · D18</span></h3><p>Same numeric timer; one End → end-of-session sheet (complete/keep-open + position capture). Baseline: <code>baseline/session-running.html</code>.</p></a>
+  </div>
+
+  <div class="grp">
+    <div class="t-mono" style="margin-bottom:10px;">Roadmap (D20)</div>
+    <a class="opt" href="proposed/roadmap.html" target="_blank" style="border-color:var(--moss);"><h3>★ Chosen — Calendar + Materials panel <span class="pill" style="background:var(--moss);color:var(--paper);">locked · D20 · Option B</span></h3><p>Calendar always visible, collapsible Materials directory below. New booking statuses + add-session + provisional ETA.</p></a>
+    <a class="opt" href="baseline/roadmap.html" target="_blank"><h3>Baseline <span class="pill">current · frozen</span></h3><p>Slot-based calendar (done/planned/skipped/unplanned).</p></a>
+    <a class="opt" href="proposed/roadmap-optionA-tabs.html" target="_blank"><h3>Option A — Calendar / Materials tabs</h3><p>One view at a time; directory behind a tab; ETA card in the header.</p></a>
+    <a class="opt" href="proposed/roadmap-optionB-panel.html" target="_blank"><h3>Option B — Directory panel below calendar</h3><p>Calendar always visible; collapsible Materials panel underneath.</p></a>
+    <a class="opt" href="proposed/roadmap-optionC-split.html" target="_blank"><h3>Option C — Split (calendar + directory)</h3><p>Calendar left, material directory right (side-by-side on desktop).</p></a>
+  </div>
+</div>
+</body>
+</html>

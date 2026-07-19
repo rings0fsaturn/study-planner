@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<!--
+  Variation-toggle mock template for grill-me-with-mocks.
+
+  ONE self-contained file. No external CSS/JS/fonts/network — it must open
+  straight from disk on any machine. Copy this file per decision to
+  decisions/decision-NN-<slug>.html and fill in the parts marked TODO.
+
+  The rules that matter:
+  - Render the CURRENT baseline screen. Only the element/section under
+    decision changes between variations; everything else stays identical so
+    the user compares one thing.
+  - 2–4 variations, each a genuinely different answer (not a colour tweak).
+  - Real copy, plausible data, controls that look/behave like the real ones.
+  - Approximate the target platform's look (spacing, buttons, chrome) enough
+    that the winning variation obviously maps to something buildable.
+  - The toolbar label for each variation should describe it in a few words.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Decision NN — TODO decision title</title>
+  <style>
+    :root {
+      /* TODO: swap these for the target design tokens.
+         Defaults below approximate a neutral palette. */
+      --page-bg: #f5f7fa;
+      --surface: #ffffff;
+      --ink: #2c2e2f;
+      --muted: #6c7378;
+      --line: #cfd4d9;
+      --brand: #0070ba;
+      --cta-top: #fcbb49;
+      --cta-bottom: #e89c0e;
+      --radius: 8px;
+      --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: var(--font); color: var(--ink);
+      background: var(--page-bg); line-height: 1.45;
+    }
+
+    /* --- variation toolbar (chrome, not part of the mocked screen) --- */
+    .vt-bar {
+      position: sticky; top: 0; z-index: 50;
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      padding: 10px 14px; background: #1b1f23; color: #fff;
+      font-size: 13px;
+    }
+    .vt-bar .vt-title { font-weight: 600; margin-right: 8px; }
+    .vt-bar button {
+      border: 1px solid #3a4046; background: #2a2f34; color: #cfd4d9;
+      padding: 6px 12px; border-radius: 999px; cursor: pointer; font: inherit;
+    }
+    .vt-bar button.active { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .vt-caption { padding: 8px 14px; background: #eef1f4; color: var(--muted); font-size: 13px; }
+
+    /* --- the mocked screen --- */
+    .screen { max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    .card {
+      background: var(--surface); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 28px;
+    }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    p.lead { color: var(--muted); margin: 0 0 20px; }
+    label { display: block; font-size: 14px; font-weight: 600; margin: 16px 0 6px; }
+    input[type="text"], input[type="password"] {
+      width: 100%; padding: 11px 12px; border: 1px solid var(--line);
+      border-radius: 6px; font: inherit;
+    }
+    .cta {
+      display: inline-block; margin-top: 22px; padding: 12px 28px; border: 0;
+      border-radius: 999px; font: inherit; font-weight: 700; cursor: pointer;
+      color: #2c2e2f;
+      background: linear-gradient(var(--cta-top), var(--cta-bottom));
+    }
+
+    /* variation visibility: only .is-active shows */
+    .variation { display: none; }
+    .variation.is-active { display: block; }
+  </style>
+</head>
+<body>
+  <!-- Toolbar: one button per variation. data-var must match the variation id. -->
+  <div class="vt-bar">
+    <span class="vt-title">Decision NN — TODO decision title</span>
+    <button data-var="A" class="active">A — TODO short label</button>
+    <button data-var="B">B — TODO short label</button>
+    <button data-var="C">C — TODO short label</button>
+  </div>
+  <div class="vt-caption" id="vt-caption">Showing variation A — TODO short label</div>
+
+  <div class="screen">
+    <div class="card">
+      <!-- ============================================================
+           SHARED context — identical across all variations. Put the
+           rest of the baseline screen here so each option is judged in
+           context. Keep it byte-for-byte identical between variations.
+           ============================================================ -->
+      <h1>TODO screen heading (shared)</h1>
+      <p class="lead">TODO shared subtext that stays put across variations.</p>
+
+      <!-- ============================================================
+           The element/section UNDER DECISION. One .variation per option.
+           Only this region differs between A / B / C.
+           ============================================================ -->
+
+      <div class="variation is-active" data-var="A">
+        <!-- TODO: variation A. e.g. single wide auth-code field -->
+        <label for="a-code">Authorization code</label>
+        <input id="a-code" type="text" placeholder="Enter the 6-digit code" />
+      </div>
+
+      <div class="variation" data-var="B">
+        <!-- TODO: variation B — a genuinely different answer -->
+        <label>Authorization code</label>
+        <div style="display:flex; gap:8px;">
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+          <input type="text" maxlength="1" style="width:44px; text-align:center;" />
+        </div>
+      </div>
+
+      <div class="variation" data-var="C">
+        <!-- TODO: variation C (delete if only two options) -->
+        <label for="c-code">Authorization code</label>
+        <input id="c-code" type="text" placeholder="Paste from your email" />
+        <p style="font-size:13px; color:var(--muted); margin-top:6px;">
+          We emailed this to you — paste it here.
+        </p>
+      </div>
+
+      <!-- shared footer / CTA, identical across variations -->
+      <button class="cta">Continue</button>
+    </div>
+  </div>
+
+  <script>
+    // Minimal toggle: clicking a toolbar button shows the matching variation.
+    (function () {
+      var buttons = document.querySelectorAll('.vt-bar button');
+      var caption = document.getElementById('vt-caption');
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var v = btn.getAttribute('data-var');
+          buttons.forEach(function (b) { b.classList.toggle('active', b === btn); });
+          document.querySelectorAll('.variation').forEach(function (el) {
+            el.classList.toggle('is-active', el.getAttribute('data-var') === v);
+          });
+          caption.textContent = 'Showing variation ' + btn.textContent.trim();
+        });
+      });
+      // Optional: number keys 1/2/3 switch variations.
+      document.addEventListener('keydown', function (e) {
+        var idx = ({ '1': 0, '2': 1, '3': 2, '4': 3 })[e.key];
+        if (idx !== undefined && buttons[idx]) buttons[idx].click();
+      });
+    })();
+  </script>
+</body>
+</html>

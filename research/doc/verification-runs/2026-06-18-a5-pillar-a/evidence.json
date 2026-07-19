@@ -1,0 +1,381 @@
+{
+  "a3_protocol": {
+    "calibration": {
+      "archetype_split": {
+        "held_out": [
+          "deadline_sprinter",
+          "fading_flame",
+          "weekend_warrior"
+        ],
+        "train": [
+          "marathon_runner",
+          "morning_lark",
+          "steady"
+        ]
+      },
+      "params_version_hash": "3b404c903563",
+      "scored_split": "held_out"
+    },
+    "detection": {
+      "archetype_split": {
+        "held_out": [
+          "deadline_sprinter",
+          "fading_flame",
+          "weekend_warrior"
+        ],
+        "train": [
+          "marathon_runner",
+          "morning_lark",
+          "steady"
+        ]
+      },
+      "params_version_hash": "3b404c903563",
+      "scored_split": "held_out"
+    },
+    "projection": {
+      "archetype_split": {
+        "held_out": [
+          "deadline_sprinter",
+          "fading_flame",
+          "weekend_warrior"
+        ],
+        "train": [
+          "marathon_runner",
+          "morning_lark",
+          "steady"
+        ]
+      },
+      "params_version_hash": "3b404c903563",
+      "scored_split": "held_out"
+    },
+    "scheduling": {
+      "archetype_split": {
+        "held_out": [
+          "deadline_sprinter",
+          "fading_flame",
+          "weekend_warrior"
+        ],
+        "train": [
+          "marathon_runner",
+          "morning_lark",
+          "steady"
+        ]
+      },
+      "params_version_hash": "3b404c903563",
+      "scored_split": "held_out"
+    }
+  },
+  "commands_run": [
+    "uv run --package research-comparison pytest research/comparison/tests/test_generator.py -q",
+    "uv run --package research-comparison python -m research_comparison.generator.oulad_moments --out research/doc/verification-runs/2026-06-18-a5-pillar-a/oulad_moment_bounds.json --max-series 5000 --sample-mod 17",
+    "uv run --package research-comparison python -m research_comparison.generator.generate --regime reality_matched --moment-bounds-file research/doc/verification-runs/2026-06-18-a5-pillar-a/oulad_moment_bounds.json --seeds 200 --quiet",
+    "uv run --package research-comparison python -m research_comparison.runners.calibration --dataset-dir research/datasets/synthetic-reality-3b404c903563-seed0-n3600 --quiet",
+    "uv run --package research-comparison python -m research_comparison.runners.detection --dataset-dir research/datasets/synthetic-reality-3b404c903563-seed0-n3600 --quiet",
+    "uv run --package research-comparison python -m research_comparison.runners.projection --dataset-dir research/datasets/synthetic-reality-3b404c903563-seed0-n3600 --quiet",
+    "uv run --package research-comparison python -m research_comparison.runners.scheduling --dataset-dir research/datasets/synthetic-reality-3b404c903563-seed0-n3600 --quiet",
+    "uv run --package research-comparison python -m research_comparison.runners.sweep --quiet"
+  ],
+  "dataset": {
+    "base_params_version_hash": "e716cd12dddc",
+    "dataset_id": "synthetic-reality-3b404c903563-seed0-n3600",
+    "generator_regime": "reality_matched",
+    "moment_bounds_hash": "3513c739b9ed",
+    "n_learners": 3600,
+    "params_version_hash": "3b404c903563",
+    "proxy_mapping": "Aggregate OULAD studentVle.sum_click by learner/course/day; treat daily clicks as engagement intensity, a bounded proxy for minutes toward a roadmap.",
+    "reality_params_hash": "3b404c903563",
+    "seed_count": 200
+  },
+  "oulad_moment_bounds": {
+    "bounds": {
+      "ar1_phi": {
+        "high": 0.422619,
+        "low": 0.019299
+      },
+      "dropout_probability": {
+        "high": 0.290278,
+        "low": 0.140278
+      },
+      "gap_days": {
+        "p50": 1.0,
+        "p75": 3.0,
+        "p90": 6.0,
+        "p95": 11.0
+      },
+      "shift_frequency_per_100_days": {
+        "high": 20.0,
+        "low": 0.25
+      }
+    },
+    "moment_bounds_hash": "3513c739b9ed",
+    "source": {
+      "dataset": "OULAD",
+      "license": "CC-BY 4.0",
+      "max_series": 5000,
+      "prestart_days": "excluded",
+      "rows_kept": 571356,
+      "rows_seen": 10655280,
+      "sample_mod": 17,
+      "sampled_series": 1701,
+      "student_registration": "/Users/rsaji/projects/1/college-mtech/study-planner-web/research/datasets/oulad/studentRegistration.csv",
+      "student_vle": "/Users/rsaji/projects/1/college-mtech/study-planner-web/research/datasets/oulad/studentVle.csv",
+      "usable_series": 1440
+    },
+    "summary": {
+      "active_days_median": 54.0,
+      "ar1_phi_median": 0.20865,
+      "dropout_rate_sample": 0.190278,
+      "shift_frequency_median": 17.715661
+    }
+  },
+  "ranking_hold": {
+    "calibration": {
+      "a5_best_deployable_context_pred_by_band": {
+        "max": "sma",
+        "medium": "ewma",
+        "small": "ewma"
+      },
+      "a5_mc_survivors": {
+        "context_pred_mae": {
+          "holm_sig_but_not_win": {
+            "covariate_bayes": 7,
+            "eb_partial_pool": 8,
+            "kalman": 6,
+            "sma": 3
+          },
+          "holm_surviving_wins": {
+            "ewma": 2,
+            "oracle_calibration": 9,
+            "sma": 3
+          }
+        },
+        "recovery_mae": {
+          "holm_sig_but_not_win": {
+            "covariate_bayes": 9,
+            "eb_partial_pool": 9,
+            "ewma": 9,
+            "kalman": 9,
+            "sma": 9
+          },
+          "holm_surviving_wins": {
+            "oracle_calibration": 9
+          }
+        }
+      },
+      "baseline_a3_a4_mc_survivors": {
+        "context_pred_mae": {
+          "holm_sig_but_not_win": {
+            "covariate_bayes": 5,
+            "eb_partial_pool": 6,
+            "ewma": 5,
+            "kalman": 9,
+            "sma": 7
+          },
+          "holm_surviving_wins": {
+            "ewma": 1,
+            "oracle_calibration": 9
+          }
+        },
+        "recovery_mae": {
+          "holm_sig_but_not_win": {
+            "covariate_bayes": 9,
+            "eb_partial_pool": 5,
+            "ewma": 9,
+            "kalman": 9,
+            "sma": 8
+          },
+          "holm_surviving_wins": {
+            "oracle_calibration": 9
+          }
+        }
+      },
+      "verdict": "does_not_hold_for_structured_context_candidates"
+    },
+    "detection": {
+      "a5_mc_survivors": {
+        "holm_sig_but_not_win": {
+          "adwin": 15,
+          "bocpd": 15,
+          "csd": 15,
+          "ewma_control_chart": 15,
+          "page_hinkley": 15
+        },
+        "holm_surviving_wins": {}
+      },
+      "a5_pareto_frontier_counts": {
+        "drift": 10,
+        "step": 10
+      },
+      "a5_winner_by_shift_type": {
+        "drift": "cusum",
+        "step": "cusum"
+      },
+      "baseline_winner_by_shift_type": {
+        "drift": "cusum",
+        "step": "page_hinkley"
+      },
+      "verdict": "partial_hold_drift_only_step_switches_to_cusum"
+    },
+    "projection": {
+      "a5_best_non_oracle_by_band": {
+        "max": "conformal",
+        "medium": "conformal",
+        "small": "conformal"
+      },
+      "a5_conformal_calibration": {
+        "alpha": 0.05,
+        "method": "across_learner_finish_date_residual",
+        "residual_unit": "one max finish-date residual per train learner",
+        "train_archetypes": [
+          "marathon_runner",
+          "morning_lark",
+          "steady"
+        ],
+        "width_days_by_band": {
+          "max": 67.0,
+          "medium": 44.0,
+          "small": 28.0
+        }
+      },
+      "a5_mc_survivors": {
+        "holm_sig_but_not_win": {
+          "kalman": 5,
+          "linear": 4
+        },
+        "holm_surviving_wins": {
+          "conformal": 9,
+          "gp_hetero_t": 9,
+          "kalman": 3,
+          "linear": 3,
+          "oracle_projection": 9
+        }
+      },
+      "baseline_mc_survivors": {
+        "(single)": {
+          "holm_sig_but_not_win": {
+            "kalman": 5,
+            "linear": 5
+          },
+          "holm_surviving_wins": {
+            "conformal": 9,
+            "gp_hetero_t": 9,
+            "kalman": 1,
+            "linear": 3,
+            "oracle_projection": 9
+          }
+        }
+      },
+      "verdict": "holds_for_conformal_and_gp_hetero_t"
+    },
+    "scheduling": {
+      "a5_mc_survivors": {
+        "holm_sig_but_not_win": {
+          "dp_capacity": 1,
+          "local_search_repair": 1,
+          "rule_based": 1,
+          "topological_prereq": 1
+        },
+        "holm_surviving_wins": {
+          "dp_capacity": 13,
+          "local_search_repair": 13,
+          "rule_based": 12,
+          "topological_prereq": 13
+        }
+      },
+      "a5_prereq_order_by_mix": {
+        "anchor": {
+          "dp_capacity": 1.0,
+          "greedy_incumbent": 1.0,
+          "local_search_repair": 1.0,
+          "rule_based": 1.0,
+          "topological_prereq": 1.0
+        },
+        "anchor+foundation": {
+          "dp_capacity": 1.0,
+          "greedy_incumbent": 1.0,
+          "local_search_repair": 1.0,
+          "rule_based": 1.0,
+          "topological_prereq": 1.0
+        },
+        "anchor+foundation+practice": {
+          "dp_capacity": 1.0,
+          "greedy_incumbent": 1.0,
+          "local_search_repair": 1.0,
+          "rule_based": 1.0,
+          "topological_prereq": 1.0
+        },
+        "anchor+practice": {
+          "dp_capacity": 1.0,
+          "greedy_incumbent": 1.0,
+          "local_search_repair": 1.0,
+          "rule_based": 1.0,
+          "topological_prereq": 1.0
+        }
+      },
+      "a5_winner_by_material_mix": {
+        "anchor": "dp_capacity",
+        "anchor+foundation": "dp_capacity",
+        "anchor+foundation+practice": "dp_capacity",
+        "anchor+practice": "dp_capacity"
+      },
+      "baseline_mc_survivors": {
+        "(single)": {
+          "holm_sig_but_not_win": {
+            "dp_capacity": 1,
+            "local_search_repair": 1,
+            "rule_based": 1,
+            "topological_prereq": 1
+          },
+          "holm_surviving_wins": {
+            "dp_capacity": 13,
+            "local_search_repair": 13,
+            "rule_based": 11,
+            "topological_prereq": 13
+          }
+        }
+      },
+      "skipped_candidates": [
+        {
+          "candidate": "cpsat_optimum",
+          "candidate_kind": "upper_bound",
+          "reason": "ortools optional extra is not installed"
+        }
+      ],
+      "verdict": "holds_non_greedy_schedulers_still_beat_greedy"
+    },
+    "sweep": {
+      "adversarial_regimes": [
+        {
+          "adversarial_case": "multi_shift",
+          "ar1_phi": 0.5,
+          "drift_total": 0.2,
+          "manual_fraction": 0.15,
+          "sigma_log": 0.18,
+          "step_mag": 0.24
+        },
+        {
+          "adversarial_case": "step_drift_combined",
+          "ar1_phi": 0.35,
+          "drift_total": 0.32,
+          "manual_fraction": 0.15,
+          "sigma_log": 0.2,
+          "step_mag": 0.2
+        },
+        {
+          "adversarial_case": "bursty_missingness",
+          "ar1_phi": 0.35,
+          "drift_total": 0.2,
+          "manual_fraction": 0.32,
+          "sigma_log": 0.23,
+          "step_mag": 0.16
+        }
+      ],
+      "n_flip_cells": 2454,
+      "stability_keys": [
+        "detection",
+        "projection",
+        "scheduling"
+      ]
+    }
+  }
+}

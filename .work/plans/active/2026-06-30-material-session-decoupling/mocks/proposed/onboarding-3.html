@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Proposed · Onboarding page 3 — summary + expandable calendar</title>
+<link rel="stylesheet" href="../css/tokens.css" />
+<link rel="stylesheet" href="../css/global.css" />
+<link rel="stylesheet" href="../css/components.css" />
+<link rel="stylesheet" href="../css/onboarding.css" />
+<link rel="stylesheet" href="../css/roadmap.css" />
+<style>
+  body { min-height: 100vh; }
+  .mock-banner { font-family: var(--font-mono); font-size: 11px; letter-spacing:.06em; text-transform:uppercase;
+    color: var(--text-tertiary); background: var(--surface-recessed); border-bottom:1px solid var(--border-subtle); padding:6px 16px; text-align:center; }
+  .verdict-card { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-lg); padding: 16px 18px; margin-bottom:16px; }
+  .verdict-row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+  .cap-bar { height:12px; border-radius: var(--radius-pill); background: var(--surface-recessed); overflow:hidden; display:flex; margin:10px 0 6px; }
+  .cap-bar > span { display:block; height:100%; }
+  .peek-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-top:1px solid var(--border-subtle); }
+  .peek-row:first-child { border-top:0; }
+  .dir-chip { display:inline-flex; align-items:center; gap:6px; }
+  .provisional { font-family: var(--font-mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--clay); }
+
+  /* --- Clickable "Projected finish" card --------------------------------- */
+  .finish-toggle { cursor: pointer; transition: box-shadow var(--duration-2) var(--ease-out),
+                   border-color var(--duration-2) var(--ease-out), transform var(--duration-2) var(--ease-out); }
+  .finish-toggle:hover { box-shadow: var(--shadow-md); border-color: var(--border-strong); transform: translateY(-1px); }
+  .finish-toggle:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  /* persistent affordance pill so it reads as interactive even without hover */
+  .cal-affordance { display:inline-flex; align-items:center; gap:6px; font-family: var(--font-mono); font-size:11px;
+    letter-spacing:.06em; text-transform:uppercase; color: var(--text-secondary);
+    border:1px solid var(--border-default); border-radius: var(--radius-pill); padding:4px 10px; background: var(--surface-page); }
+  .finish-toggle:hover .cal-affordance { color: var(--terracotta-d); border-color: var(--terracotta); }
+  .cal-chev { transition: transform var(--duration-2) var(--ease-out); }
+  .finish-toggle[aria-expanded="true"] .cal-chev { transform: rotate(180deg); }
+  .finish-hint { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; opacity: 0; max-height: 0; overflow:hidden;
+    transition: opacity var(--duration-2) var(--ease-out), max-height var(--duration-2) var(--ease-out); }
+  .finish-toggle:hover .finish-hint { opacity: 1; max-height: 24px; }
+
+  /* --- Slide-down calendar panel ---------------------------------------- */
+  .cal-panel { max-height: 0; overflow: hidden; opacity: 0;
+    transition: max-height var(--duration-4) var(--ease-out), opacity var(--duration-3) var(--ease-out), margin var(--duration-3) var(--ease-out); margin-bottom: 0; }
+  .cal-panel.open { max-height: 720px; opacity: 1; margin-bottom: 16px; }
+  .cal-monthnav { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .cal-monthlabel { font-family: var(--font-display); font-weight:500; font-size:16px; flex:1; }
+  .cal-navbtn { width:32px; height:32px; border-radius: var(--radius-sm); border:1px solid var(--border-default);
+    background: var(--surface-card); cursor:pointer; display:inline-flex; align-items:center; justify-content:center; color: var(--text-secondary); }
+  .cal-navbtn:hover { border-color: var(--border-strong); color: var(--text-primary); }
+  .mini-cal .roadmap-day { min-height: 54px; padding: 5px; }
+  .mini-cal .roadmap-bubble-minutes { font-size: 10px; }
+  .cal-legend { display:flex; gap:14px; flex-wrap:wrap; margin-top:10px; font-size:12px; color: var(--text-secondary); }
+  .cal-legend .sw { width:12px; height:12px; border-radius:3px; display:inline-block; vertical-align:-1px; margin-right:5px; }
+
+  /* --- Materials grouped by type (D14 · Option 2) ----------------------- */
+  .mgroup { background: var(--surface-card); border:1px solid var(--border-subtle); border-radius: var(--radius-md); overflow:hidden; margin-bottom:10px; }
+  .mgroup-head { display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer; background: var(--surface-card); }
+  .mgroup-head:hover { background: var(--surface-recessed); }
+  .mgroup-head .ttl { font-weight:500; font-size:14px; flex:1; }
+  .mgroup-head .ghead-ico { width:24px; height:24px; }
+  .mgroup-head .chev { transition: transform var(--duration-2) var(--ease-out); color: var(--text-tertiary); }
+  .mgroup.collapsed .mgroup-head .chev { transform: rotate(-90deg); }
+  .mgroup.collapsed .mgroup-body { display:none; }
+  .count-pill { font-family: var(--font-mono); font-size:10px; letter-spacing:.06em; padding:1px 7px; border-radius:999px; background: var(--surface-recessed); color: var(--text-secondary); }
+  .mat2-list { border-top:1px solid var(--border-subtle); }
+  .mat2 { display:flex; align-items:center; gap:10px; padding:9px 12px; cursor:pointer; transition: background var(--duration-1) var(--ease-out); }
+  .mat2 + .mat2 { border-top:1px solid var(--border-subtle); }
+  .mat2:hover { background: var(--surface-recessed); }
+  .mat2-body { flex:1; min-width:0; }
+  .mat2-body .material-title { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mat2-body .material-meta { margin-top:2px; }
+  .mat2 .chev { transition: transform var(--duration-2) var(--ease-out); color: var(--text-tertiary); flex-shrink:0; }
+  .mat2.open .chev { transform: rotate(180deg); }
+  .mat2-edit { display:none; padding: 2px 12px 14px 54px; background: var(--surface-recessed); }
+  .mat2.open + .mat2-edit { display:block; }
+  #plRow { cursor: pointer; }
+  /* playlist-picker modal: force viewport overlay + hidden by default (real modal renders conditionally) */
+  #plModal { position: fixed; display: none; }
+  #plModal.show { display: flex; }
+</style>
+</head>
+<body>
+<div class="mock-banner">Proposed · Onboarding /3 — Option A summary + click "Projected finish" to expand the calendar</div>
+
+<div class="onboarding-shell" data-shape="fused">
+  <div class="onboarding-stepdots-wrap">
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+      <span style="width:22px;height:8px;border-radius:999px;background:var(--ink);"></span>
+      <span style="width:8px;height:8px;border-radius:999px;background:var(--rule);"></span>
+    </div>
+    <span class="t-mono onboarding-desktop-caption">Step 3 of 4 · Your materials</span>
+  </div>
+
+  <div class="onboarding-content">
+    <div class="onboarding-step onboarding-materials-grid">
+
+      <!-- LEFT: materials form (unchanged) -->
+      <div class="onboarding-materials-form">
+        <h1 class="onboarding-h1">What are you <em>studying</em>?</h1>
+        <p class="onboarding-lead">Paste links, or add things by hand.</p>
+        <div class="field-group">
+          <label class="field-label">Paste a URL</label>
+          <input class="field" type="url" placeholder="youtube.com/… or any article link" />
+          <div class="field-helper">We'll fetch the title and length for you.</div>
+        </div>
+        <button class="btn btn-secondary btn-sm onboarding-add-manually-btn">
+          <svg class="icon icon-sm" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add manually
+        </button>
+        <div class="mono-caps onboarding-materials-count">3 added · ~5h 20m</div>
+        <!-- Materials grouped by type (D14 · Option 2). Compact rows expand to edit. -->
+        <div class="mgroups">
+          <div class="mgroup">
+            <div class="mgroup-head"><div class="material-icon pl ghead-ico">PL</div><span class="ttl">Playlists</span><span class="count-pill">1 · 4h</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="mgroup-body"><div class="mat2-list">
+              <div class="mat2" id="plRow"><div class="material-icon pl">PL</div><div class="mat2-body"><div class="material-title">Linear Algebra — full playlist</div><div class="material-meta">12 videos · ~4h · 12 selected · Main reading</div></div><span class="tag tag-sm">Main</span><svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></div>
+            </div></div>
+          </div>
+
+          <div class="mgroup">
+            <div class="mgroup-head"><div class="material-icon art ghead-ico">◆</div><span class="ttl">Links &amp; articles</span><span class="count-pill">1 · 35m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="mgroup-body"><div class="mat2-list">
+              <div class="mat2"><div class="material-icon art">ART</div><div class="mat2-body"><div class="material-title">Strang — Notes on Eigenvalues</div><div class="material-meta">~35m · Foundations</div></div><span class="tag tag-sm">Found.</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="mat2-edit"><input class="field" type="text" value="Strang — Notes on Eigenvalues"/><div class="row" style="display:flex;gap:8px;margin-top:8px;"><div class="field-with-suffix" style="flex:1;"><input class="field" type="number" value="35"/><span class="field-with-suffix-text">min</span></div><select class="field" style="flex:1;"><option selected>Foundations</option><option>Main reading</option><option>Practice</option></select></div></div>
+            </div></div>
+          </div>
+
+          <div class="mgroup">
+            <div class="mgroup-head"><div class="material-icon bk ghead-ico">BK</div><span class="ttl">Manual</span><span class="count-pill">1 · 45m</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+            <div class="mgroup-body"><div class="mat2-list">
+              <div class="mat2"><div class="material-icon bk">BK</div><div class="mat2-body"><div class="material-title">Problem set 4 — practice</div><div class="material-meta">~45m · Practice</div></div><span class="tag tag-sm">Practice</span><svg class="icon icon-sm chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></div>
+              <div class="mat2-edit"></div>
+            </div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: summary preview with expandable calendar -->
+      <div class="onboarding-materials-preview-slot">
+        <div class="mono-caps onboarding-materials-preview-label">Your plan · updates as you add</div>
+
+        <!-- Projected finish = clickable toggle -->
+        <div class="verdict-card finish-toggle" id="finishToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="calPanel">
+          <div class="verdict-row">
+            <div>
+              <div class="stat-label" style="margin-bottom:4px;">Projected finish</div>
+              <div class="stat-value md" style="color:var(--moss);">Jul 13</div>
+            </div>
+            <span class="cal-affordance">
+              <span>Calendar</span>
+              <svg class="icon icon-sm cal-chev" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+          <div class="mono-caps" style="margin-top:8px; color:var(--text-tertiary);">
+            <span class="provisional">estimate</span> · 7 days before your Jul 20 deadline
+          </div>
+          <div class="finish-hint">Tap to see your sessions and deadline on a calendar →</div>
+        </div>
+
+        <!-- Slide-down calendar (multi-month with arrows) -->
+        <div class="cal-panel" id="calPanel" aria-hidden="true">
+          <div class="cal-monthnav">
+            <button class="cal-navbtn" id="calPrev" aria-label="Previous month"><svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="15 6 9 12 15 18"/></svg></button>
+            <span class="cal-monthlabel" id="calLabel">July 2026</span>
+            <button class="cal-navbtn" id="calNext" aria-label="Next month"><svg class="icon icon-sm" viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>
+          </div>
+          <div class="mini-cal">
+            <div class="roadmap-calendar-shell">
+              <div class="roadmap-weekdays">
+                <div class="roadmap-weekday">Sun</div><div class="roadmap-weekday">Mon</div><div class="roadmap-weekday">Tue</div>
+                <div class="roadmap-weekday">Wed</div><div class="roadmap-weekday">Thu</div><div class="roadmap-weekday">Fri</div><div class="roadmap-weekday">Sat</div>
+              </div>
+              <div id="calGrid"><!-- weeks injected by JS --></div>
+            </div>
+          </div>
+          <div class="cal-legend">
+            <span><span class="sw" style="background:var(--moss);"></span>booked session</span>
+            <span><span class="sw" style="background:var(--cal-today-fill); border:1px solid var(--terracotta);"></span>today</span>
+            <span><span class="sw" style="background:var(--terracotta);"></span>deadline</span>
+          </div>
+        </div>
+
+        <!-- Capacity vs backlog bar -->
+        <div class="verdict-card">
+          <div class="verdict-row"><span class="stat-label">Your backlog fits your time</span><span class="t-body-sm">5h 20m of 18h capacity</span></div>
+          <div class="cap-bar"><span style="width:30%; background:var(--moss);"></span><span style="flex:1; background:var(--surface-recessed);"></span></div>
+          <div class="t-body-sm" style="color:var(--text-tertiary);">We book sessions until your materials are done, then leave the rest as buffer.</div>
+        </div>
+
+        <div class="onboarding-preview-stats onboarding-preview-desktop-only">
+          <div class="stat"><div class="stat-value sm">6</div><div class="stat-label">sessions</div></div>
+          <div class="stat"><div class="stat-value sm">5h 20m</div><div class="stat-label">total</div></div>
+          <div class="stat"><div class="stat-value sm">7 d</div><div class="stat-label">buffer</div></div>
+        </div>
+
+        <div class="mono-caps" style="margin:6px 0 8px;">What you'll study</div>
+        <div class="chip-row" style="margin-bottom:16px;">
+          <span class="chip dir-chip">▶ Linear Algebra playlist</span>
+          <span class="chip dir-chip">◆ Strang — Eigenvalues</span>
+          <span class="chip dir-chip">✎ Problem set 4</span>
+        </div>
+
+        <div class="onboarding-actions onboarding-preview-actions">
+          <button class="btn btn-primary btn-lg onboarding-continue-btn">
+            Looks good
+            <svg class="icon" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Playlist picker modal (kept as-is from current app: PlaylistPickerPopup) -->
+<div class="modal-overlay playlist-picker-overlay" id="plModal" aria-hidden="true">
+  <div class="modal-card playlist-picker-modal" id="plModalCard">
+    <div class="playlist-picker-header">
+      <div class="modal-eyebrow">Playlist</div>
+      <div class="modal-title">Linear Algebra — full playlist</div>
+      <input type="text" class="field playlist-picker-search" placeholder="Search videos…" />
+      <div class="playlist-picker-toolbar">
+        <button class="btn btn-secondary btn-sm">Deselect all</button>
+        <span class="playlist-picker-count">12 in playlist</span>
+      </div>
+    </div>
+    <div class="playlist-picker-list-wrap">
+      <div class="playlist-picker-list">
+        <div class="playlist-picker-row"><div class="checkbox-box checked"></div><div class="playlist-picker-thumb-fallback"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,2 12,7 3,12" fill="currentColor"/></svg></div><div class="playlist-picker-content"><div class="playlist-picker-title">Lec 1 — The geometry of linear equations</div><div class="playlist-picker-author">MIT OpenCourseWare</div></div><span class="playlist-picker-duration">16 min</span></div>
+        <div class="playlist-picker-row"><div class="checkbox-box checked"></div><div class="playlist-picker-thumb-fallback"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,2 12,7 3,12" fill="currentColor"/></svg></div><div class="playlist-picker-content"><div class="playlist-picker-title">Lec 2 — Elimination with matrices</div><div class="playlist-picker-author">MIT OpenCourseWare</div></div><span class="playlist-picker-duration">18 min</span></div>
+        <div class="playlist-picker-row"><div class="checkbox-box checked"></div><div class="playlist-picker-thumb-fallback"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,2 12,7 3,12" fill="currentColor"/></svg></div><div class="playlist-picker-content"><div class="playlist-picker-title">Lec 3 — Multiplication and inverse matrices</div><div class="playlist-picker-author">MIT OpenCourseWare</div></div><span class="playlist-picker-duration">21 min</span></div>
+        <div class="playlist-picker-row deselected"><div class="checkbox-box"></div><div class="playlist-picker-thumb-fallback"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,2 12,7 3,12" fill="currentColor"/></svg></div><div class="playlist-picker-content"><div class="playlist-picker-title">Lec 4 — Factorization into A = LU</div><div class="playlist-picker-author">MIT OpenCourseWare</div></div><span class="playlist-picker-duration">20 min</span></div>
+        <div class="playlist-picker-row"><div class="checkbox-box checked"></div><div class="playlist-picker-thumb-fallback"><svg width="14" height="14" viewBox="0 0 14 14"><polygon points="3,2 12,7 3,12" fill="currentColor"/></svg></div><div class="playlist-picker-content"><div class="playlist-picker-title">Lec 5 — Transposes, permutations, spaces</div><div class="playlist-picker-author">MIT OpenCourseWare</div></div><span class="playlist-picker-duration">24 min</span></div>
+      </div>
+      <div class="playlist-picker-pagination">
+        <button class="btn btn-ghost btn-sm" disabled>Back</button>
+        <span class="playlist-picker-page-indicator">1 of 2</span>
+        <button class="btn btn-ghost btn-sm">Next</button>
+      </div>
+    </div>
+    <div class="playlist-picker-footer">
+      <span class="playlist-picker-summary">11 selected · 3h 48m</span>
+      <div class="playlist-picker-actions">
+        <button class="btn btn-secondary btn-sm" id="plCancel">Cancel</button>
+        <button class="btn btn-primary btn-sm" id="plConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // --- Plan data (illustrative) -----------------------------------------
+  const TODAY = '2026-06-30';     // Tuesday
+  const FINISH = '2026-07-13';    // Monday — last booked session
+  const DEADLINE = '2026-07-20';  // Monday — 7 days of buffer after finish
+  const BOOKED = new Set([ // study days Mon/Wed/Fri, until materials are done
+    '2026-07-01','2026-07-03','2026-07-06','2026-07-08','2026-07-10','2026-07-13'
+  ]);
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const iso = (y,m,d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+
+  // Range the user can page through: June..August 2026
+  let cur = { y: 2026, m: 6 }; // July
+  const MIN = { y: 2026, m: 5 }, MAX = { y: 2026, m: 7 };
+
+  function renderMonth(y, m) {
+    document.getElementById('calLabel').textContent = `${MONTHS[m]} ${y}`;
+    const first = new Date(y, m, 1).getDay();          // 0=Sun
+    const days  = new Date(y, m + 1, 0).getDate();
+    const prevDays = new Date(y, m, 0).getDate();
+    const cells = [];
+    for (let i = 0; i < first; i++) cells.push({ n: prevDays - first + 1 + i, out: true });
+    for (let d = 1; d <= days; d++) cells.push({ n: d, out: false, date: iso(y, m, d) });
+    while (cells.length % 7 !== 0) cells.push({ n: cells.length % 7, out: true });
+
+    let html = '';
+    for (let w = 0; w < cells.length / 7; w++) {
+      html += '<div class="roadmap-week-row">';
+      for (let i = 0; i < 7; i++) {
+        const c = cells[w * 7 + i];
+        const cls = ['roadmap-day'];
+        if (c.out) cls.push('roadmap-day-outside');
+        if (!c.out && c.date === TODAY) cls.push('roadmap-day-today');
+        if (!c.out && c.date === DEADLINE) cls.push('roadmap-day-deadline');
+        let bubble = '';
+        if (!c.out && BOOKED.has(c.date)) {
+          const label = c.date === FINISH ? 'done' : '1h';
+          bubble = `<div class="roadmap-bubble-stack"><div class="roadmap-bubble"><span class="roadmap-bubble-minutes">${label}</span></div></div>`;
+        }
+        html += `<div class="${cls.join(' ')}"><div class="roadmap-day-head"><span class="roadmap-day-number">${c.n}</span></div>${bubble}</div>`;
+      }
+      html += '</div>';
+    }
+    document.getElementById('calGrid').innerHTML = html;
+
+    // disable arrows at range bounds
+    const atMin = (y === MIN.y && m === MIN.m), atMax = (y === MAX.y && m === MAX.m);
+    document.getElementById('calPrev').disabled = atMin;
+    document.getElementById('calNext').disabled = atMax;
+    document.getElementById('calPrev').style.opacity = atMin ? .4 : 1;
+    document.getElementById('calNext').style.opacity = atMax ? .4 : 1;
+  }
+
+  function step(delta) {
+    let m = cur.m + delta, y = cur.y;
+    if (m < 0) { m = 11; y--; } if (m > 11) { m = 0; y++; }
+    if (y < MIN.y || (y === MIN.y && m < MIN.m)) return;
+    if (y > MAX.y || (y === MAX.y && m > MAX.m)) return;
+    cur = { y, m };
+    renderMonth(y, m);
+  }
+
+  const toggle = document.getElementById('finishToggle');
+  const panel  = document.getElementById('calPanel');
+  function setOpen(open) {
+    toggle.setAttribute('aria-expanded', String(open));
+    panel.setAttribute('aria-hidden', String(!open));
+    panel.classList.toggle('open', open);
+  }
+  toggle.addEventListener('click', () => setOpen(toggle.getAttribute('aria-expanded') !== 'true'));
+  toggle.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle.click(); } });
+  document.getElementById('calPrev').addEventListener('click', (e) => { e.stopPropagation(); step(-1); });
+  document.getElementById('calNext').addEventListener('click', (e) => { e.stopPropagation(); step(1); });
+
+  renderMonth(cur.y, cur.m);
+
+  // Materials: compact-row accordion + group collapse (D14 · Option 2)
+  const plModal = document.getElementById('plModal');
+  const setPl = (open) => { plModal.classList.toggle('show', open); plModal.setAttribute('aria-hidden', String(!open)); };
+  document.querySelectorAll('.mat2').forEach(row => {
+    row.addEventListener('click', e => {
+      if (e.target.closest('input, select, button')) return;
+      if (row.id === 'plRow') { setPl(true); return; }   // playlist → modal (kept as-is)
+      row.classList.toggle('open');                       // others → inline edit
+    });
+  });
+  document.querySelectorAll('.mgroup-head').forEach(h => {
+    h.addEventListener('click', () => h.parentElement.classList.toggle('collapsed'));
+  });
+  // Modal close: overlay click, Cancel, Confirm
+  plModal.addEventListener('click', e => { if (e.target === plModal) setPl(false); });
+  document.getElementById('plCancel').addEventListener('click', () => setPl(false));
+  document.getElementById('plConfirm').addEventListener('click', () => setPl(false));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') setPl(false); });
+</script>
+</body>
+</html>

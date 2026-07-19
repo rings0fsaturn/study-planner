@@ -1,0 +1,10 @@
+{
+  "fn": "updatePosterior",
+  "prior": {
+    "mean": 1,
+    "variance": 0.1,
+    "sessionCount": 0
+  },
+  "observation": 0.8,
+  "observationVariance": 0.1
+}

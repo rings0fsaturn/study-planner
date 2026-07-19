@@ -1,0 +1,44 @@
+[
+  {
+    "date": "2026-01-12",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  },
+  {
+    "date": "2026-01-13",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  },
+  {
+    "date": "2026-01-14",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  },
+  {
+    "date": "2026-01-15",
+    "level": 1,
+    "minutes": 18,
+    "isToday": true
+  },
+  {
+    "date": "2026-01-16",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  },
+  {
+    "date": "2026-01-17",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  },
+  {
+    "date": "2026-01-18",
+    "level": 0,
+    "minutes": 0,
+    "isToday": false
+  }
+]

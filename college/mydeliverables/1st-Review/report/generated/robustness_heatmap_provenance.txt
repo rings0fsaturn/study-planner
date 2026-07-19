@@ -1,0 +1,2 @@
+Robustness heatmap generated from sweep grid with params hash e716cd12dddc.
+Flip cells: 2454; per-archetype worst cases recorded in sweep_results.json.

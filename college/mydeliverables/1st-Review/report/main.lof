@@ -1,0 +1,8 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces System architecture. Solid blue elements (Pillar~A: Bayesian pace calibration, CUSUM change detection, Gaussian-process projection, constraint-based scheduling) run as an open loop in Phase~I; dashed grey elements (Pillar~B: LLM item generation, answer evaluation, cold-start knowledge tracing), the OpenAI dependency, and the verified-mastery feedback edge are introduced in Phase~II. Supabase is the data hub; an offline research pipeline supplies the trained models the engines run.}}{20}{figure.4.1}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\addvspace {10\p@ }

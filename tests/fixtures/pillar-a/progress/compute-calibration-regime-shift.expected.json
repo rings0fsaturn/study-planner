@@ -1,0 +1,72 @@
+{
+  "globalMultiplier": 0.9420708691219984,
+  "globalPosterior": {
+    "mean": 0.9420708691219984,
+    "variance": 0.00021448589671262732,
+    "sessionCount": 35
+  },
+  "roleMultipliers": {
+    "anchor": {
+      "multiplier": 0.8718439631446689,
+      "confidence": 55.6343885127282,
+      "sessionCount": 35
+    }
+  },
+  "trend": {
+    "phases": [
+      {
+        "startSessionIndex": 0,
+        "endSessionIndex": 12,
+        "startDate": "2026-01-01",
+        "endDate": "2026-01-13",
+        "level": 1.0090896106170442,
+        "slope": 0.008272577878296909,
+        "slopeUncertainty": 0.03661751830162386,
+        "sessionCount": 13
+      },
+      {
+        "startSessionIndex": 13,
+        "endSessionIndex": 23,
+        "startDate": "2026-01-14",
+        "endDate": "2026-02-04",
+        "level": 0.7008905487126501,
+        "slope": -0.019652452718804992,
+        "slopeUncertainty": 0.03808474681081538,
+        "sessionCount": 11
+      },
+      {
+        "startSessionIndex": 24,
+        "endSessionIndex": 34,
+        "startDate": "2026-02-05",
+        "endDate": "2026-02-15",
+        "level": 0.6843988985370882,
+        "slope": -0.01432409042448264,
+        "slopeUncertainty": 0.03808474681081538,
+        "sessionCount": 11
+      }
+    ],
+    "currentPhase": {
+      "startSessionIndex": 24,
+      "endSessionIndex": 34,
+      "startDate": "2026-02-05",
+      "endDate": "2026-02-15",
+      "level": 0.6843988985370882,
+      "slope": -0.01432409042448264,
+      "slopeUncertainty": 0.03808474681081538,
+      "sessionCount": 11
+    },
+    "projectionSlope": -0.01432409042448264,
+    "projectionUncertainty": 0.03808474681081538
+  },
+  "promptNeeded": true,
+  "insightsByContext": [
+    {
+      "role": "anchor",
+      "timeOfDay": "evening",
+      "multiplier": 0.8717057977958792,
+      "sessionCount": 35,
+      "label": "anchor in the evening"
+    }
+  ],
+  "nextSessionForecast": null
+}

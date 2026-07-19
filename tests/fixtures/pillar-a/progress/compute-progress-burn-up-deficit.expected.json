@@ -1,0 +1,317 @@
+{
+  "streak": {
+    "current": 0,
+    "longest": 5,
+    "grid": [
+      {
+        "date": "2026-01-05",
+        "level": 3,
+        "minutes": 60,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-06",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-07",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-08",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-09",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      },
+      {
+        "date": "2026-01-10",
+        "level": 0,
+        "minutes": 0,
+        "isToday": true
+      },
+      {
+        "date": "2026-01-11",
+        "level": 0,
+        "minutes": 0,
+        "isToday": false
+      }
+    ]
+  },
+  "burnUp": {
+    "planned": [
+      {
+        "date": "2026-01-01",
+        "minutes": 60
+      },
+      {
+        "date": "2026-01-02",
+        "minutes": 120
+      },
+      {
+        "date": "2026-01-03",
+        "minutes": 180
+      },
+      {
+        "date": "2026-01-04",
+        "minutes": 240
+      },
+      {
+        "date": "2026-01-05",
+        "minutes": 300
+      },
+      {
+        "date": "2026-01-06",
+        "minutes": 360
+      },
+      {
+        "date": "2026-01-07",
+        "minutes": 420
+      },
+      {
+        "date": "2026-01-08",
+        "minutes": 480
+      },
+      {
+        "date": "2026-01-09",
+        "minutes": 540
+      },
+      {
+        "date": "2026-01-10",
+        "minutes": 600
+      }
+    ],
+    "actual": [
+      {
+        "date": "2026-01-01",
+        "minutes": 60
+      },
+      {
+        "date": "2026-01-02",
+        "minutes": 120
+      },
+      {
+        "date": "2026-01-03",
+        "minutes": 180
+      },
+      {
+        "date": "2026-01-04",
+        "minutes": 240
+      },
+      {
+        "date": "2026-01-05",
+        "minutes": 300
+      }
+    ],
+    "gpCurve": [
+      {
+        "date": "2026-01-01",
+        "mean": 60,
+        "lower": 58.28826722921224,
+        "upper": 61.71173277078776
+      },
+      {
+        "date": "2026-01-02",
+        "mean": 120,
+        "lower": 118.62013333309974,
+        "upper": 121.37986666690026
+      },
+      {
+        "date": "2026-01-03",
+        "mean": 180,
+        "lower": 178.74971089482872,
+        "upper": 181.25028910517128
+      },
+      {
+        "date": "2026-01-04",
+        "mean": 240,
+        "lower": 238.62013333309974,
+        "upper": 241.37986666690026
+      },
+      {
+        "date": "2026-01-05",
+        "mean": 300,
+        "lower": 298.28826722921224,
+        "upper": 301.71173277078776
+      },
+      {
+        "date": "2026-01-06",
+        "mean": 360,
+        "lower": 357.8451846445197,
+        "upper": 362.1548153554803
+      },
+      {
+        "date": "2026-01-07",
+        "mean": 420,
+        "lower": 417.3500260510228,
+        "upper": 422.6499739489772
+      },
+      {
+        "date": "2026-01-08",
+        "mean": 480,
+        "lower": 476.83787670103504,
+        "upper": 483.16212329896496
+      },
+      {
+        "date": "2026-01-09",
+        "mean": 540,
+        "lower": 536.333399961154,
+        "upper": 543.666600038846
+      },
+      {
+        "date": "2026-01-10",
+        "mean": 600,
+        "lower": 595.8561687834444,
+        "upper": 604.1438312165556
+      },
+      {
+        "date": "2026-01-11",
+        "mean": 660,
+        "lower": 653.1324692578085,
+        "upper": 666.8675307421915
+      },
+      {
+        "date": "2026-01-12",
+        "mean": 720,
+        "lower": 712.561177568813,
+        "upper": 727.438822431187
+      },
+      {
+        "date": "2026-01-13",
+        "mean": 780,
+        "lower": 772.0793930833064,
+        "upper": 787.9206069166936
+      },
+      {
+        "date": "2026-01-14",
+        "mean": 840,
+        "lower": 831.6887888282909,
+        "upper": 848.3112111717091
+      },
+      {
+        "date": "2026-01-15",
+        "mean": 900,
+        "lower": 891.3846292744095,
+        "upper": 908.6153707255905
+      },
+      {
+        "date": "2026-01-16",
+        "mean": 960,
+        "lower": 951.1573750583224,
+        "upper": 968.8426249416776
+      },
+      {
+        "date": "2026-01-17",
+        "mean": 1020,
+        "lower": 1010.9946193458849,
+        "upper": 1029.0053806541152
+      },
+      {
+        "date": "2026-01-18",
+        "mean": 1080,
+        "lower": 1070.8829914510502,
+        "upper": 1089.1170085489498
+      },
+      {
+        "date": "2026-01-19",
+        "mean": 1140,
+        "lower": 1130.8097297136328,
+        "upper": 1149.1902702863672
+      },
+      {
+        "date": "2026-01-20",
+        "mean": 1200,
+        "lower": 1190.7637481967986,
+        "upper": 1209.2362518032014
+      },
+      {
+        "date": "2026-01-21",
+        "mean": 1260,
+        "lower": 1250.7361606742706,
+        "upper": 1269.2638393257294
+      },
+      {
+        "date": "2026-01-22",
+        "mean": 1320,
+        "lower": 1310.720341851872,
+        "upper": 1329.279658148128
+      },
+      {
+        "date": "2026-01-23",
+        "mean": 1380,
+        "lower": 1370.711673181057,
+        "upper": 1389.288326818943
+      },
+      {
+        "date": "2026-01-24",
+        "mean": 1440,
+        "lower": 1430.7071328033114,
+        "upper": 1449.2928671966886
+      }
+    ],
+    "today": "2026-01-10",
+    "deficit": -300,
+    "dayNumber": 9,
+    "totalDays": 9
+  },
+  "projection": {
+    "finishDate": "2026-01-10",
+    "confidenceInterval": [
+      "2026-01-10",
+      "2026-01-11"
+    ]
+  },
+  "totalMinutes": 300,
+  "totalPlannedMinutes": 600,
+  "completionPercentage": 50,
+  "verdict": "on-track",
+  "driftPastDeadline": false,
+  "upNext": {
+    "date": "2026-01-10",
+    "dayOfWeek": "Saturday",
+    "weekIndex": 0,
+    "plannedMinutes": 60,
+    "candidateMaterialIds": [
+      "mat-1"
+    ],
+    "role": "anchor"
+  },
+  "weeklyStats": {
+    "weekIndex": 1,
+    "weekStartDate": "2026-01-05",
+    "sessionsThisWeek": 1,
+    "minutesThisWeek": 60,
+    "plannedMinutesThisWeek": 360,
+    "minutesByDay": {
+      "2026-01-05": 60
+    },
+    "materialsTouched": [
+      "s-4"
+    ]
+  },
+  "weekSummaryForNarrative": {
+    "weekStartDate": "2026-01-05",
+    "sessionsLogged": 1,
+    "hoursLogged": 1,
+    "verdict": "on-track",
+    "daysWithActivity": 1,
+    "materialsTouched": [
+      "s-4"
+    ]
+  },
+  "replanContext": {
+    "isPlanDrifted": false,
+    "daysOverDeadline": 0,
+    "pinnedSlotCount": 0,
+    "editableSlotCount": 1
+  }
+}

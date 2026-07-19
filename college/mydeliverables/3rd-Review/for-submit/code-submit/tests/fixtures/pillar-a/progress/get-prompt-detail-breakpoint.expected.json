@@ -1,0 +1,126 @@
+{
+  "sessions": [
+    {
+      "sessionId": "s-15",
+      "date": "2026-01-16",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 60
+    },
+    {
+      "sessionId": "s-16",
+      "date": "2026-01-17",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 60
+    },
+    {
+      "sessionId": "s-17",
+      "date": "2026-01-18",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 60
+    },
+    {
+      "sessionId": "s-18",
+      "date": "2026-01-19",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 60
+    },
+    {
+      "sessionId": "s-19",
+      "date": "2026-01-20",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 60
+    },
+    {
+      "sessionId": "s-20",
+      "date": "2026-01-21",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-21",
+      "date": "2026-01-22",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-22",
+      "date": "2026-01-23",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-23",
+      "date": "2026-01-24",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-24",
+      "date": "2026-01-25",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-25",
+      "date": "2026-01-26",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-26",
+      "date": "2026-01-27",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-27",
+      "date": "2026-01-28",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-28",
+      "date": "2026-01-29",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    },
+    {
+      "sessionId": "s-29",
+      "date": "2026-01-30",
+      "timeOfDay": "evening",
+      "sessionTitle": "",
+      "plannedMinutes": 60,
+      "activeMinutes": 42
+    }
+  ],
+  "currentPace": 0.7000000000000001,
+  "previousPace": 1
+}

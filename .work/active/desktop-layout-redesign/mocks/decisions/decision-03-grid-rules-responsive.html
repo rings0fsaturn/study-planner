@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<!--
+  Decision 03 — LIVE: grid rules + size-responsive card internals + mobile fallback.
+  Built on gridstack.js + CSS container queries.
+  - Resize cards: internals reflow (recent 2col<->1col, stats condense, streak shrinks, up-next condenses).
+  - float:false + per-card min/max => cards pack up, no awkward gaps, can't break proportions.
+  - "Tidy up" compacts; "Reset layout" restores default.
+  - Narrow the window < 768px => single static column (the current mobile layout); drag/resize off.
+  Maps to react-grid-layout / dnd-grid in the real React 19 app; container queries are plain CSS.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Decision 03 — Grid rules + responsive cards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400..600&family=Inter+Tight:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack.min.css" />
+  <style>
+    :root {
+      --paper:#F5EFE4; --paper-deep:#EDE3D2; --card:#FBF7EE;
+      --ink:#2A1F18; --ink-soft:#5C4D40; --ink-faint:#8B7B6B;
+      --rule:#D9CDB8; --rule-soft:#E6DCC8;
+      --terracotta:#B85C38; --terracotta-d:#8E4429; --moss:#4A6B3A; --clay:#C28E5A;
+      --streak-0:#EDE3D2;
+      --font-display:'Fraunces','Iowan Old Style',Charter,Georgia,serif;
+      --font-body:'Inter Tight',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      --font-mono:'JetBrains Mono',ui-monospace,'SF Mono',Menlo,monospace;
+      --radius-md:10px; --radius-lg:16px; --radius-pill:999px;
+      --shadow-sm:0 1px 0 rgba(42,31,24,.04),0 2px 4px rgba(42,31,24,.04);
+      --shadow-drag:0 12px 30px -8px rgba(42,31,24,.28);
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--paper); color:var(--ink); font-family:var(--font-body); line-height:1.5; }
+
+    .bar { padding:10px 40px; background:#1b1512; color:#e6dcc8; font-size:13px; font-family:var(--font-mono); display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+    .bar b { color:#fff; font-weight:600; }
+    .bar .spacer { margin-left:auto; }
+    .bar button { background:#2a221c; color:#e6dcc8; border:1px solid #4a3f36; border-radius:var(--radius-pill); padding:6px 14px; font-family:var(--font-body); font-size:13px; cursor:pointer; }
+    .bar button.accent { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+    .mode-pill { font-family:var(--font-body); background:#2a221c; border:1px solid #4a3f36; border-radius:var(--radius-pill); padding:4px 12px; }
+    .mode-pill.mobile { background:var(--terracotta); border-color:var(--terracotta); color:#fff; }
+
+    .topnav { display:flex; align-items:center; gap:36px; padding:0 40px; height:64px; background:var(--card); border-bottom:1px solid var(--rule-soft); }
+    .brand { font-family:var(--font-display); font-style:italic; font-weight:600; font-size:22px; }
+    .links { display:flex; gap:6px; }
+    .links a { text-decoration:none; color:var(--ink-soft); font-size:15px; padding:7px 14px; border-radius:var(--radius-pill); }
+    .links a.active { background:var(--ink); color:var(--paper); }
+    .is-mobile .links { display:none; }
+    .sync { margin-left:auto; font-family:var(--font-mono); font-size:12px; color:var(--ink-soft); background:var(--paper-deep); border-radius:var(--radius-pill); padding:6px 14px; display:inline-flex; align-items:center; gap:8px; }
+    .sync::before { content:""; width:7px; height:7px; border-radius:50%; background:var(--moss); }
+
+    .wrap { max-width:1200px; margin:0 auto; padding:28px 40px 64px; }
+    .eyebrow { font-family:var(--font-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ink-faint); }
+    h1.display { font-family:var(--font-display); font-weight:600; font-size:34px; line-height:1.05; margin:4px 0 6px; }
+    .subtitle { color:var(--ink-soft); margin:0 0 18px; font-size:16px; }
+
+    .grid-stack { background:transparent; }
+    .grid-stack-item-content { inset:0; overflow:visible !important; background:transparent; border:0; padding:0; }
+    .grid-stack-item.ui-draggable-dragging .card { box-shadow:var(--shadow-drag); }
+    .grid-stack-placeholder > .placeholder-content { background:rgba(184,92,56,.12); border:2px dashed var(--terracotta); border-radius:var(--radius-lg); }
+
+    /* each card is a size container -> its contents respond to ITS size */
+    .card { position:relative; height:100%; background:var(--card); border:1px solid var(--rule-soft);
+      border-radius:var(--radius-lg); box-shadow:var(--shadow-sm); padding:20px; overflow:hidden;
+      container-type:size; container-name:card; }
+    .grip { position:absolute; top:12px; right:12px; width:26px; height:26px; border:none; background:transparent; color:var(--ink-faint); cursor:grab; font-size:16px; line-height:1; border-radius:6px; display:flex; align-items:center; justify-content:center; z-index:2; }
+    .grip:hover { background:var(--paper-deep); color:var(--ink-soft); }
+    .is-mobile .grip { display:none; }
+
+    .upnext { background:var(--ink); color:var(--paper); border:none; }
+    .upnext .grip { color:rgba(245,239,228,.5); }
+    .upnext .k { font-family:var(--font-mono); font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--clay); }
+    .upnext .t { font-family:var(--font-display); font-size:24px; font-weight:500; margin:10px 0 8px; }
+    .upnext .m { color:rgba(245,239,228,.7); font-size:14px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .tag { background:var(--paper-deep); color:var(--ink); border-radius:var(--radius-pill); padding:3px 10px; font-size:13px; }
+    .btn-accent { display:inline-block; background:var(--terracotta); color:#fff; border:none; border-radius:var(--radius-md); padding:12px 20px; font:inherit; font-size:15px; font-weight:600; cursor:pointer; margin-top:16px; }
+
+    .streak-head { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px; padding-right:30px; }
+    .streak-head .h { font-family:var(--font-display); font-size:19px; }
+    .streak-head .r { font-family:var(--font-mono); font-size:12px; letter-spacing:.1em; color:var(--ink-faint); }
+    .streak-row { display:grid; grid-template-columns:repeat(7,1fr); gap:8px; }
+    .streak-cell { text-align:center; }
+    .streak-box { height:44px; border-radius:var(--radius-md); background:var(--streak-0); border:1px solid var(--rule-soft); transition:height .12s; }
+    .streak-box.today { border:2px solid var(--ink); }
+    .streak-cell .d { font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); margin-top:6px; }
+
+    .stat .label { font-family:var(--font-mono); font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-faint); }
+    .stat .val { font-family:var(--font-display); font-size:26px; margin-top:8px; }
+    .stat .val.moss { color:var(--moss); }
+    .stat .val.terra { color:var(--terracotta); }
+    .stat .sub { font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; color:var(--moss); margin-top:6px; }
+    .stat .sub.dim { color:var(--ink-faint); }
+
+    .ra-head { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; padding-right:30px; }
+    .ra-head .h { font-family:var(--font-display); font-size:21px; }
+    .btn-ghost { background:var(--card); border:1px solid var(--rule); border-radius:var(--radius-md); padding:8px 14px; font:inherit; font-size:13px; cursor:pointer; }
+    .ra-grid { display:grid; grid-template-columns:1fr; gap:0 40px; }
+    .ra-row { display:flex; align-items:flex-start; justify-content:space-between; padding:11px 0; border-bottom:1px solid var(--rule-soft); }
+    .ra-row .date { font-family:var(--font-mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint); }
+    .ra-row .ttl { font-family:var(--font-display); font-size:16px; margin:3px 0 0; }
+    .ra-row .min { font-family:var(--font-mono); font-size:13px; color:var(--ink-soft); white-space:nowrap; padding-left:20px; }
+
+    /* ===== container-query rules: content aligns to each card's size ===== */
+    @container card (min-width: 560px) { .ra-grid { grid-template-columns:1fr 1fr; } }
+    @container card (max-height: 250px) { .ra-col .ra-row:nth-child(n+3) { display:none; } }
+    @container card (max-height: 175px) { .ra-col .ra-row:nth-child(n+2) { display:none; } }
+
+    @container card (max-height: 120px) {
+      .card.stat { display:flex; flex-direction:row; align-items:baseline; justify-content:space-between; gap:12px; padding-right:40px; }
+      .card.stat .val { margin-top:0; }
+      .card.stat .sub { display:none; }
+    }
+    @container card (max-width: 210px) { .card.stat .val { font-size:20px; } }
+
+    @container card (max-width: 330px) { .streak-box { height:32px; } }
+    @container card (max-width: 250px) { .streak-cell .d { display:none; } .streak-box { height:26px; } }
+
+    @container card (max-height: 205px) { .upnext .m { display:none; } .upnext .btn-accent { margin-top:12px; } }
+    @container card (max-height: 150px) { .upnext .t { font-size:19px; margin:6px 0; } .upnext .btn-accent { display:none; } }
+  </style>
+</head>
+<body>
+  <div class="bar">
+    <b>Decision 03 — live:</b> resize cards to see contents reflow · <span>grip <span style="font-family:var(--font-mono)">⠿</span> to drag</span>
+    <span class="mode-pill" id="mode">desktop / tablet — customizable</span>
+    <span class="spacer"></span>
+    <button id="tidy">Tidy up</button>
+    <button class="accent" id="reset">Reset layout</button>
+  </div>
+
+  <nav class="topnav">
+    <span class="brand">Study Tracker</span>
+    <span class="links"><a href="#" class="active">Home</a><a href="#">Session</a><a href="#">Week</a><a href="#">Roadmaps</a><a href="#">Settings</a></span>
+    <span class="sync">Synced just now</span>
+  </nav>
+
+  <div class="wrap">
+    <div class="eyebrow">Sat · Jul 18</div>
+    <h1 class="display">Good morning, iamrohitsaji.</h1>
+    <p class="subtitle">Arrange it however you like — the cards adapt to whatever size you give them.</p>
+
+    <div class="grid-stack">
+      <div class="grid-stack-item" gs-id="upnext" gs-x="0" gs-y="0" gs-w="7" gs-h="3" gs-min-w="4" gs-min-h="2" gs-max-h="4">
+        <div class="grid-stack-item-content"><div class="card upnext">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="k">Study session · Today</div>
+          <div class="t">Study session · ~120 min</div>
+          <div class="m">Suggested material: <span class="tag">Practice Problems Set</span></div>
+          <button class="btn-accent">Start session</button>
+        </div></div>
+      </div>
+
+      <div class="grid-stack-item" gs-id="streak" gs-x="7" gs-y="0" gs-w="5" gs-h="3" gs-min-w="3" gs-min-h="2" gs-max-h="3">
+        <div class="grid-stack-item-content"><div class="card">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="streak-head"><span class="h">No streak</span><span class="r">0M THIS WEEK</span></div>
+          <div class="streak-row">
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">M</div></div>
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">T</div></div>
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">W</div></div>
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">T</div></div>
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">F</div></div>
+            <div class="streak-cell"><div class="streak-box today"></div><div class="d">S</div></div>
+            <div class="streak-cell"><div class="streak-box"></div><div class="d">S</div></div>
+          </div>
+        </div></div>
+      </div>
+
+      <div class="grid-stack-item" gs-id="stat1" gs-x="0" gs-y="3" gs-w="4" gs-h="2" gs-min-w="2" gs-min-h="1" gs-max-w="6" gs-max-h="2">
+        <div class="grid-stack-item-content"><div class="card stat">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="label">Projected finish · provisional</div>
+          <div class="val moss">Aug 5–Aug 8</div>
+          <div class="sub">2 days early</div>
+        </div></div>
+      </div>
+
+      <div class="grid-stack-item" gs-id="stat2" gs-x="4" gs-y="3" gs-w="4" gs-h="2" gs-min-w="2" gs-min-h="1" gs-max-w="6" gs-max-h="2">
+        <div class="grid-stack-item-content"><div class="card stat">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="label">This week</div>
+          <div class="val">0 min</div>
+          <div class="sub dim">of 6.5h goal</div>
+        </div></div>
+      </div>
+
+      <div class="grid-stack-item" gs-id="stat3" gs-x="8" gs-y="3" gs-w="4" gs-h="2" gs-min-w="2" gs-min-h="1" gs-max-w="6" gs-max-h="2">
+        <div class="grid-stack-item-content"><div class="card stat">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="label">Behind plan</div>
+          <div class="val terra">−23h 03m</div>
+          <div class="sub dim">catch-up suggested</div>
+        </div></div>
+      </div>
+
+      <div class="grid-stack-item" gs-id="recent" gs-x="0" gs-y="5" gs-w="12" gs-h="4" gs-min-w="4" gs-min-h="2">
+        <div class="grid-stack-item-content"><div class="card">
+          <button class="grip" aria-label="Drag card">⠿</button>
+          <div class="ra-head"><span class="h">Recent activity</span><button class="btn-ghost">Log session</button></div>
+          <div class="ra-grid">
+            <div class="ra-col">
+              <div class="ra-row"><div><div class="date">Sat, Jul 4</div><div class="ttl">TypeScript Patterns</div></div><div class="min">1 MIN</div></div>
+              <div class="ra-row"><div><div class="date">Fri, Jul 3</div><div class="ttl">TypeScript Patterns</div></div><div class="min">64 MIN</div></div>
+              <div class="ra-row"><div><div class="date">Wed, Jul 1</div><div class="ttl">TypeScript Patterns</div></div><div class="min">63 MIN</div></div>
+            </div>
+            <div class="ra-col">
+              <div class="ra-row"><div><div class="date">Mon, Jun 29</div><div class="ttl">TypeScript Patterns</div></div><div class="min">58 MIN</div></div>
+              <div class="ra-row"><div><div class="date">Sat, Jun 27</div><div class="ttl">TypeScript Patterns</div></div><div class="min">84 MIN</div></div>
+              <div class="ra-row"><div><div class="date">Fri, Jun 26</div><div class="ttl">TypeScript Patterns</div></div><div class="min">62 MIN</div></div>
+            </div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gridstack/dist/gridstack-all.js"></script>
+  <script>
+    (function () {
+      var KEY = 'st-home-layout-v3';
+      var grid = GridStack.init({
+        column: 12,
+        cellHeight: 84,
+        margin: 10,
+        float: false,
+        handle: '.grip',
+        resizable: { handles: 'e, se, s' },
+        draggable: { cancel: 'button.btn-accent, button.btn-ghost' }
+      });
+
+      var saved = null;
+      try { saved = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch (e) {}
+      if (Array.isArray(saved)) {
+        grid.batchUpdate();
+        saved.forEach(function (n) {
+          var el = document.querySelector('[gs-id="' + n.id + '"]');
+          if (el) grid.update(el, { x: n.x, y: n.y, w: n.w, h: n.h });
+        });
+        grid.commit();
+      }
+      grid.on('change', function () {
+        if (!isMobile) { try { localStorage.setItem(KEY, JSON.stringify(grid.save(false))); } catch (e) {} }
+      });
+
+      document.getElementById('tidy').addEventListener('click', function () { grid.compact(); });
+      document.getElementById('reset').addEventListener('click', function () { localStorage.removeItem(KEY); location.reload(); });
+
+      var mq = window.matchMedia('(max-width: 767px)');
+      var isMobile = false;
+      var modeEl = document.getElementById('mode');
+      function applyMode() {
+        isMobile = mq.matches;
+        if (isMobile) {
+          grid.column(1, 'list');
+          grid.setStatic(true);
+          document.body.classList.add('is-mobile');
+          modeEl.textContent = 'mobile — fixed layout (current app)';
+          modeEl.classList.add('mobile');
+        } else {
+          grid.column(12, 'list');
+          grid.setStatic(false);
+          document.body.classList.remove('is-mobile');
+          modeEl.textContent = 'desktop / tablet — customizable';
+          modeEl.classList.remove('mobile');
+        }
+      }
+      mq.addEventListener('change', applyMode);
+      applyMode();
+    })();
+  </script>
+</body>
+</html>

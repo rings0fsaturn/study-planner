@@ -1,0 +1,67 @@
+\relax 
+\citation{islam2024}
+\@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
+\citation{chen2024}
+\citation{zambrano2024}
+\citation{mai2025}
+\citation{saqr2026}
+\citation{qiao2026}
+\citation{perezsuay2024}
+\citation{lin2024}
+\citation{islam2024}
+\citation{alhazbi2024}
+\citation{debarba2025}
+\citation{islam2024}
+\@writefile{toc}{\contentsline {section}{\numberline {II}Related Work}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {III}System Architecture}{2}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Delivered system architecture. The client is a local-first application that owns everything derived directly from the local event log: session logging, the booking user interface, and the client-side Gaussian-process projection and capacity-based booking engine. The Intelligence Service is a stateless Python/FastAPI service that fits a model to accumulated history: hierarchical Bayesian calibration refined by the context-aware shrinkage calibrator, and CUSUM change detection. Supabase is the data hub for authentication, event synchronization, and snapshot storage. The closed-loop feedback from a verified-mastery signal into calibration is Phase-II work, drawn dashed.}}{3}{}\protected@file@percent }
+\newlabel{fig:arch}{{1}{3}{}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {IV}Methodology}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Pace Calibration}{3}{}\protected@file@percent }
+\newlabel{sec:method-cal}{{\mbox  {IV-A}}{3}{}{subsection.4.1}{}}
+\newlabel{eq:bayes-update}{{1}{3}{}{equation.1}{}}
+\citation{qiao2026}
+\citation{islam2024}
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Candidate models per component and the approach used in the delivered system.}}{4}{}\protected@file@percent }
+\newlabel{tab:candidates}{{I}{4}{}{table.1}{}}
+\newlabel{eq:enriched}{{2}{4}{}{equation.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Change Detection}{4}{}\protected@file@percent }
+\newlabel{sec:method-det}{{\mbox  {IV-B}}{4}{}{subsection.4.2}{}}
+\newlabel{eq:cusum}{{3}{4}{}{equation.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Progress Projection}{4}{}\protected@file@percent }
+\newlabel{sec:method-proj}{{\mbox  {IV-C}}{4}{}{subsection.4.3}{}}
+\newlabel{eq:gp-kernel}{{4}{4}{}{equation.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Schedule Generation}{4}{}\protected@file@percent }
+\newlabel{sec:method-sched}{{\mbox  {IV-D}}{4}{}{subsection.4.4}{}}
+\newlabel{eq:dp}{{5}{4}{}{equation.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Comparison Methodology}{4}{}\protected@file@percent }
+\newlabel{sec:method-compare}{{\mbox  {IV-E}}{4}{}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results and Discussion}{4}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Context-aware shrinkage minus hierarchical-Bayesian on prospective context-prediction error (negative favors the shrinkage calibrator), 95\% bootstrap intervals.}}{5}{}\protected@file@percent }
+\newlabel{tab:res-cal}{{II}{5}{}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}Pace Calibration}{5}{}\protected@file@percent }
+\newlabel{sec:res-cal}{{\mbox  {V-A}}{5}{}{subsection.5.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}Change Detection}{5}{}\protected@file@percent }
+\newlabel{sec:res-det}{{\mbox  {V-B}}{5}{}{subsection.5.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}Progress Projection}{5}{}\protected@file@percent }
+\newlabel{sec:res-proj}{{\mbox  {V-C}}{5}{}{subsection.5.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Interval coverage against the nominal 0.95 (dashed) by history-length band, initial synthetic regime. The plain Gaussian-process interval under-covers badly; the split-conformal correction used in the delivered system restores near-nominal coverage.}}{5}{}\protected@file@percent }
+\newlabel{fig:coverage}{{2}{5}{}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-D}}Schedule Generation}{5}{}\protected@file@percent }
+\newlabel{sec:res-sched}{{\mbox  {V-D}}{5}{}{subsection.5.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-E}}Discussion}{5}{}\protected@file@percent }
+\newlabel{sec:res-discuss}{{\mbox  {V-E}}{5}{}{subsection.5.5}{}}
+\citation{islam2024}
+\bibcite{islam2024}{1}
+\bibcite{chen2024}{2}
+\bibcite{zambrano2024}{3}
+\bibcite{mai2025}{4}
+\bibcite{saqr2026}{5}
+\bibcite{qiao2026}{6}
+\bibcite{perezsuay2024}{7}
+\bibcite{lin2024}{8}
+\bibcite{alhazbi2024}{9}
+\bibcite{debarba2025}{10}
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion and Future Work}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{6}{}\protected@file@percent }
+\gdef \@abspage@last{6}

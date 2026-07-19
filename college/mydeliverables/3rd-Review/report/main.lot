@@ -1,0 +1,20 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {2.1}{\ignorespaces Summary of Pillar-A approach families, with strengths and limitations for this project.}}{18}{table.caption.13}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {3.1}{\ignorespaces Hardware environment.}}{19}{table.caption.14}%
+\contentsline {table}{\numberline {3.2}{\ignorespaces Software environment by tier.}}{20}{table.caption.15}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {4.1}{\ignorespaces Candidate models per component and the model selected for the delivered Phase-I system.}}{24}{table.caption.17}%
+\contentsline {table}{\numberline {4.2}{\ignorespaces Evaluation metrics by component.}}{25}{table.caption.19}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {5.1}{\ignorespaces Development environment: tools and libraries.}}{29}{table.caption.22}%
+\contentsline {table}{\numberline {5.2}{\ignorespaces Datasets used in Phase~I and their sources.}}{30}{table.caption.23}%
+\contentsline {table}{\numberline {5.3}{\ignorespaces Main packages and their roles.}}{31}{table.caption.24}%
+\addvspace {10\p@ }
+\contentsline {table}{\numberline {6.1}{\ignorespaces Pace calibration: mean recovery error (lower is better) by history-length band, frozen regime. The oracle is the upper-bound reference.}}{38}{table.caption.32}%
+\contentsline {table}{\numberline {6.2}{\ignorespaces Enriched-shrinkage minus hierarchical-Bayesian on the prospective context-prediction error (negative favours enriched-shrinkage), with 95\% bootstrap intervals.}}{39}{table.caption.33}%
+\contentsline {table}{\numberline {6.3}{\ignorespaces Change detection: mean detection latency (sessions, lower is better) and false-alarm rate by shift type, frozen regime. ADWIN did not fire on this data.}}{39}{table.caption.34}%
+\contentsline {table}{\numberline {6.4}{\ignorespaces Progress projection: interval coverage (nominal 0.95) and point error in days, by band. Point error is shared between the plain and conformal intervals.}}{40}{table.caption.35}%
+\contentsline {table}{\numberline {6.5}{\ignorespaces Schedule generation: mean absolute deadline drift (days) by material mix, reality-matched regime. Capacity violations were zero for the selected allocator.}}{41}{table.caption.37}%
+\addvspace {10\p@ }

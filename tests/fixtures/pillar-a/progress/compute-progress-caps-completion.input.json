@@ -1,0 +1,51 @@
+{
+  "fn": "computeProgress",
+  "sessions": [
+    {
+      "date": "2026-01-01",
+      "source": "active",
+      "plannedMinutes": 60,
+      "activeMinutes": 60,
+      "duration": 120,
+      "materialRole": "anchor",
+      "startedAt": "2026-01-15T14:00:00Z",
+      "sessionId": "s-1"
+    }
+  ],
+  "roadmap": {
+    "startDate": "2026-01-01",
+    "deadline": "2026-01-01",
+    "weeks": 4,
+    "weeklyHours": 6,
+    "slots": [
+      {
+        "date": "2026-01-01",
+        "dayOfWeek": "Thursday",
+        "weekIndex": 0,
+        "plannedMinutes": 60,
+        "candidateMaterialIds": [
+          "mat-1"
+        ],
+        "role": "anchor"
+      }
+    ]
+  },
+  "calibration": {
+    "globalMultiplier": 1,
+    "globalPosterior": {
+      "mean": 1,
+      "variance": 0.1,
+      "sessionCount": 0
+    },
+    "roleMultipliers": {},
+    "trend": {
+      "phases": [],
+      "currentPhase": null,
+      "projectionSlope": 0,
+      "projectionUncertainty": 1
+    },
+    "promptNeeded": false,
+    "insightsByContext": []
+  },
+  "today": "2026-01-01"
+}
