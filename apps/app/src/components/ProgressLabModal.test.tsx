@@ -48,6 +48,10 @@ function renderModal(overrides: Partial<ComponentProps<typeof ProgressLabModal>>
         referenceLabel="Today"
         weekStartISO="2026-07-13"
         weekEndISO="2026-07-19"
+        deadlineISO="2026-08-31"
+        forecastFinishISO="2026-09-12"
+        forecastBasis="analytic"
+        totalPlannedMinutes={600}
         {...overrides}
       />
     </MemoryRouter>,
@@ -119,7 +123,7 @@ describe('ProgressLabModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('shows the current finish at zero and draws a linked moss scenario only after pace changes', () => {
+  it('shows Plan and Forecast narrative at Current pace, then adds the selected pace finish', () => {
     renderModal({
       capacityScenarioInput: {
         remainingEstimatedMinutes: 340,
@@ -134,8 +138,13 @@ describe('ProgressLabModal', () => {
 
     const slider = screen.getByRole('slider', { name: 'Extra minutes per study day' })
     expect(slider).toHaveValue('0')
-    expect(screen.getByText('Scenario finish')).toBeInTheDocument()
+    expect(screen.getByTestId('finish-narrative-plan')).toHaveTextContent('Aug 31, 2026')
+    expect(screen.getByTestId('finish-narrative-forecast')).toHaveTextContent('Sep 12, 2026')
+    expect(screen.getByTestId('finish-narrative-forecast')).toHaveTextContent('12 days late vs deadline')
+    expect(screen.getByTestId('finish-narrative-forecast')).toHaveTextContent('current trajectory')
+    expect(screen.getByText('estimate')).toBeInTheDocument()
     expect(screen.queryByTestId('capacity-scenario-line')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('finish-flag-scenario')).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Replan with this pace' })).toHaveAttribute(
       'href',
       '/replan?paceDeltaMinutes=0',
@@ -143,22 +152,46 @@ describe('ProgressLabModal', () => {
 
     fireEvent.change(slider, { target: { value: '15' } })
     expect(screen.getByTestId('capacity-scenario-line')).toBeInTheDocument()
+    expect(screen.getByTestId('finish-flag-scenario')).toHaveTextContent('Your pace · Jul 29')
+    expect(screen.getByTestId('finish-narrative-scenario')).toHaveTextContent('Jul 29, 2026')
+    expect(screen.getByTestId('finish-narrative-scenario')).toHaveTextContent('33 days early vs deadline')
     expect(screen.getByRole('link', { name: 'Replan with this pace' })).toHaveAttribute(
       'href',
       '/replan?paceDeltaMinutes=15',
     )
   })
 
-  it('disables unavailable scenarios and hides them completely for historical weeks', () => {
-    const view = renderModal()
+  it('shows explicit unavailable inputs and keeps historical Plan inspection', () => {
+    const view = renderModal({
+      deadlineISO: undefined,
+      forecastFinishISO: undefined,
+      totalPlannedMinutes: undefined,
+    })
     expect(screen.getByRole('slider', { name: 'Extra minutes per study day' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Replan with this pace' })).toBeDisabled()
     expect(screen.getByText('Pace scenario is unavailable until roadmap capacity is ready.')).toBeInTheDocument()
+    expect(screen.getByTestId('finish-narrative-plan')).toHaveTextContent('roadmap deadline is missing')
+    expect(screen.getByTestId('finish-narrative-forecast')).toHaveTextContent('projection finish is ready')
 
     view.unmount()
     renderModal({ historical: true })
     expect(screen.queryByRole('slider', { name: 'Extra minutes per study day' })).not.toBeInTheDocument()
     expect(screen.queryByText('Try a pace')).not.toBeInTheDocument()
+    expect(screen.getByTestId('finish-narrative-plan')).toHaveTextContent('Aug 31, 2026')
+    expect(screen.queryByTestId('finish-narrative-forecast')).not.toBeInTheDocument()
+    expect(screen.getByTestId('burn-up-goal-line')).toBeInTheDocument()
+    expect(screen.getByTestId('finish-flag-plan')).toBeInTheDocument()
+    expect(screen.queryByTestId('finish-flag-forecast')).not.toBeInTheDocument()
+    expect(screen.getByTestId('crosshair-hit-area')).toBeInTheDocument()
+  })
+
+  it('marks only analytic forecasts as estimates and names a missing planned total', () => {
+    const view = renderModal({ forecastBasis: 'gp' })
+    expect(screen.queryByText('estimate')).not.toBeInTheDocument()
+
+    view.unmount()
+    renderModal({ totalPlannedMinutes: undefined })
+    expect(screen.getByTestId('finish-narrative-plan')).toHaveTextContent('planned total is missing')
   })
 
   it('traps focus and restores the opener after backdrop dismissal', async () => {

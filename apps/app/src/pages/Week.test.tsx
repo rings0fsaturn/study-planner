@@ -1,8 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import type { ReactNode } from 'react'
 import { Week } from './Week'
 import type { ProgressSnapshot, CalibrationState } from '@study-tracker/progress'
+
+vi.mock('@visx/responsive', () => ({
+  ParentSize: ({ children }: { children: (size: { width: number; height: number }) => ReactNode }) =>
+    children({ width: 760, height: 360 }),
+}))
 
 let mockProgress: ProgressSnapshot | null = null
 let mockCalibration: CalibrationState | null = null
@@ -341,10 +347,17 @@ describe('Week', () => {
     expect(opener).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(opener)
 
-    expect(screen.getByRole('dialog', { name: 'Study trajectory and pace scenario' })).toBeInTheDocument()
+    const lab = within(screen.getByRole('dialog', { name: 'Study trajectory and pace scenario' }))
     expect(opener).toHaveAttribute('aria-expanded', 'true')
-    expect(screen.getByRole('slider', { name: 'Extra minutes per study day' })).toBeEnabled()
-    expect(screen.getByRole('link', { name: 'Replan with this pace' })).toHaveAttribute(
+    expect(lab.getByRole('slider', { name: 'Extra minutes per study day' })).toBeEnabled()
+    expect(lab.getByTestId('burn-up-goal-line')).toBeInTheDocument()
+    expect(lab.getByTestId('finish-flag-plan')).toHaveTextContent('Plan · Jun 7')
+    expect(lab.getByTestId('finish-flag-forecast')).toHaveTextContent('Forecast · Jun 15')
+    expect(lab.getByTestId('finish-narrative-plan')).toHaveTextContent('Jun 7, 2026')
+    expect(lab.getByTestId('finish-narrative-forecast')).toHaveTextContent('Jun 15, 2026')
+    expect(lab.getByTestId('finish-narrative-forecast')).toHaveTextContent('8 days late vs deadline')
+    expect(lab.getByText('estimate')).toBeInTheDocument()
+    expect(lab.getByRole('link', { name: 'Replan with this pace' })).toHaveAttribute(
       'href',
       '/replan?paceDeltaMinutes=0',
     )
@@ -364,9 +377,16 @@ describe('Week', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Open Progress Lab' }))
 
-    expect(screen.getByText(/Progress Lab · Historical week/)).toBeInTheDocument()
-    expect(screen.getByText(/at week end/)).toBeInTheDocument()
-    expect(screen.queryByRole('slider', { name: 'Extra minutes per study day' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: 'Replan with this pace' })).not.toBeInTheDocument()
+    const lab = within(screen.getByRole('dialog', { name: 'Study trajectory and pace scenario' }))
+    expect(lab.getByText(/Progress Lab · Historical week/)).toBeInTheDocument()
+    expect(lab.getByText(/at week end/)).toBeInTheDocument()
+    expect(lab.getByTestId('burn-up-goal-line')).toBeInTheDocument()
+    expect(lab.getByTestId('finish-flag-plan')).toHaveTextContent('Plan · Jun 7')
+    expect(lab.queryByTestId('finish-flag-forecast')).not.toBeInTheDocument()
+    expect(lab.getByTestId('finish-narrative-plan')).toHaveTextContent('Jun 7, 2026')
+    expect(lab.queryByTestId('finish-narrative-forecast')).not.toBeInTheDocument()
+    expect(lab.getByTestId('crosshair-hit-area')).toBeInTheDocument()
+    expect(lab.queryByRole('slider', { name: 'Extra minutes per study day' })).not.toBeInTheDocument()
+    expect(lab.queryByRole('link', { name: 'Replan with this pace' })).not.toBeInTheDocument()
   })
 })

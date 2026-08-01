@@ -14,13 +14,3 @@ project_doc_max_bytes = "65536"
 
 [mcp_servers.deep-insights]
 enabled = false
-
-# code-memory: index files read or edited through Codex tools.
-[[hooks.PostToolUse]]
-matcher = "^(Bash|apply_patch|Edit|Write)$"
-
-[[hooks.PostToolUse.hooks]]
-type = "command"
-command = 'bash "$(git rev-parse --show-toplevel)/.codex/hooks/post-read-index.sh"'
-timeout = 30
-statusMessage = "Indexing file reads"

@@ -1,0 +1,237 @@
+<!doctype html>
+<!--
+  FINAL working mock - Progress Lab pace indicators (Option X).
+  Folds in every decision:
+    D-01 forward-projection green line (Option X: capacityScenario finish math UNCHANGED)
+    D-02 narrative three-finish panel (Plan deadline / GP forecast / Pace scenario)
+    D-03 crosshair coordinate cursor (variation B: guides + per-line dots + readout)
+    D-04 clear end dates (variation A: goal line + dated finish flags, domain extended, lines clipped)
+  Option X specifics (see DECISIONS.md "Replan-impact review"):
+    - "Current pace" (slider 0) shows the FORECAST from ProgressSnapshot.projection.finishDate.
+      NO green line is drawn at 0 (matches today's gating).
+    - "+N min" draws the capacity scenario line, ending at computeCapacityScenario(...).finishDate
+      (unchanged math → Replan untouched). These are optimistic "if you commit to the plan pace + N".
+  Region → decision annotations are inline HTML comments.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Progress Lab - final (Option X)</title>
+  <style>
+    :root{
+      --paper:#f5efe4;--paper-deep:#ede3d2;--card:#fbf7ee;--ink:#2a1f18;
+      --ink-soft:#5c4d40;--ink-faint:#8b7b6b;--rule:#d9cdb8;--rule-soft:#e6dcc8;
+      --rust:#a0432a;--moss:#4a6b3a;
+      --font-display:Georgia,"Iowan Old Style",serif;
+      --font-body:"Arial Narrow",Arial,sans-serif;
+      --font-mono:ui-monospace,"SFMono-Regular",Menlo,monospace;
+    }
+    *{box-sizing:border-box}html,body{min-height:100%}
+    body{margin:0;color:var(--ink);background:var(--paper);font-family:var(--font-body)}
+    button,input{color:inherit;font:inherit}button{cursor:pointer}
+    .eyebrow{color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    .note{position:fixed;inset:0 0 auto;z-index:9;display:flex;justify-content:space-between;gap:16px;padding:8px 16px;color:#e7eede;background:#22331f;font:11px var(--font-mono)}
+    .note b{color:#fff}
+    .stage{display:grid;place-items:center;padding:46px 18px 22px}
+    .lab{display:flex;flex-direction:column;width:min(1280px,97vw);height:min(700px,86vh);overflow:hidden;border:1px solid var(--rule);border-radius:16px;background:var(--card);box-shadow:0 24px 60px rgba(42,31,24,.24)}
+    .lab-head{display:flex;justify-content:space-between;gap:20px;padding:16px 24px 12px;border-bottom:1px solid var(--rule-soft)}
+    .lab-head h2{margin:4px 0 0;font:500 25px/1.1 var(--font-display)}
+    .lab-head p{margin:5px 0 0;color:var(--ink-soft);font-size:13px}
+    .close{flex:none;width:36px;height:36px;border:1px solid var(--rule);border-radius:50%;background:transparent}
+    .range-bar{display:flex;align-items:center;gap:14px;padding:8px 24px;border-bottom:1px solid var(--rule-soft);background:#f8f2e8}
+    .segmented{display:inline-flex;padding:3px;border:1px solid var(--rule);border-radius:999px;background:var(--card)}
+    .segmented button{padding:5px 10px;border:0;border-radius:999px;color:var(--ink-soft);background:transparent;font-size:11px}
+    .segmented button.active{color:var(--paper);background:var(--ink)}
+    .range-readout{margin-left:auto;color:var(--ink-faint);font:10px var(--font-mono)}
+    .lab-body{display:grid;grid-template-columns:minmax(0,1fr) 336px;flex:1;min-height:0;overflow:hidden}
+    .chart-column{display:flex;min-width:0;min-height:0;padding:16px 18px 18px;border-right:1px solid var(--rule-soft)}
+    .burn-card{display:grid;grid-template-rows:auto minmax(0,1fr) auto;width:100%;height:100%;min-height:0;overflow:hidden;border:1px solid var(--rule-soft);border-radius:10px;background:var(--card)}
+    .burn-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 4px;color:var(--ink-faint);font:10px var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+    .chart-stage{position:relative;min-height:0;overflow:hidden}
+    .chart-svg{display:block;width:100%;height:100%;min-height:0;cursor:crosshair}
+    .burn-foot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 16px 12px}
+    .deficit{color:var(--rust);font:500 20px/1 var(--font-display)}
+    .legend{display:flex;align-items:center;gap:12px;color:var(--ink-faint);font:9px var(--font-mono);letter-spacing:.04em;text-transform:uppercase;flex-wrap:wrap}
+    .legend span{display:flex;align-items:center;gap:5px}
+    .legend i{display:block;width:20px;height:2px;background:var(--rust)}
+    .legend i.planned{height:0;border-top:2px dashed var(--ink-faint);background:none}
+    .legend i.gp{height:0;border-top:2px dotted var(--rust);background:none}
+    .legend i.scenario{height:0;border-top:2.5px dashed var(--moss);background:none}
+    .rail{min-height:0;overflow:auto;padding:18px;background:#f8f2e8}
+    .section{padding-bottom:16px;margin-bottom:16px;border-bottom:1px solid var(--rule)}
+    .section:last-child{border:0;margin:0;padding:0}
+    .layer-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;font-size:13px}
+    .switch{position:relative;width:34px;height:19px;border:0;border-radius:99px;background:#c8baa7}
+    .switch:after{content:"";position:absolute;top:3px;left:3px;width:13px;height:13px;border-radius:50%;background:#fff;transition:transform 140ms}
+    .switch.on{background:var(--rust)}.switch.on:after{transform:translateX(15px)}
+    .pace-title{margin:4px 0 2px;font:500 19px var(--font-display)}
+    .slider{width:100%;margin-top:12px;accent-color:var(--moss)}
+    .slider-labels{display:flex;justify-content:space-between;color:var(--ink-faint);font:9px var(--font-mono)}
+    .primary{width:100%;margin-top:16px;padding:10px 16px;border:1px solid var(--ink);border-radius:999px;color:var(--paper);background:var(--ink);font-weight:700}
+    .narr p{margin:12px 0 0;font-size:13.5px;line-height:1.5;color:var(--ink-soft)}
+    .narr b{color:var(--ink)}.narr b.rust{color:var(--rust)}.narr b.moss{color:var(--moss)}
+    .narr .scen-line{padding:9px 10px;background:#eff3e9;border-radius:8px;margin-top:10px}
+    .prov{color:var(--ink-faint);font-size:11px;font-style:italic}
+  </style>
+</head>
+<body>
+  <div class="note"><span><b>FINAL mock · Option X.</b> Slider at Current = forecast (no green line); +N draws the capacity line. Hover to inspect.</span><span>capacityScenario / Replan untouched</span></div>
+
+  <div class="stage">
+    <article class="lab">
+      <header class="lab-head">
+        <div>
+          <div class="eyebrow">Progress Lab · Active roadmap</div>
+          <h2>Study trajectory and pace scenario</h2>
+          <p>Three finishes - plan, forecast, and what a faster pace would buy - each with a date on the chart.</p>
+        </div>
+        <button class="close" aria-label="Close">✕</button>
+      </header>
+
+      <div class="range-bar">
+        <div class="eyebrow">Range</div>
+        <div class="segmented" id="ranges">
+          <button class="active" data-range="full">Full plan</button>
+          <button data-range="month">30 days</button>
+          <button data-range="week">This week</button>
+        </div>
+        <div class="range-readout" id="rr">Jun 08 to Aug 30 · to last finish</div>
+      </div>
+
+      <div class="lab-body">
+        <!-- CHART: D-01 line, D-03 crosshair, D-04 goal line + flags -->
+        <section class="chart-column">
+          <div class="burn-card">
+            <div class="burn-head"><span>Hours studied vs plan</span><span>Day 43 of 63</span></div>
+            <div class="chart-stage"><svg class="chart-svg" id="chart" viewBox="0 0 820 460"></svg></div>
+            <div class="burn-foot">
+              <div class="deficit">−19h 33m behind plan</div>
+              <!-- D-02/D-03: legend now names every line -->
+              <div class="legend">
+                <span><i></i>Actual</span>
+                <span><i class="planned"></i>Planned</span>
+                <span><i class="gp"></i>GP forecast</span>
+                <span><i class="scenario"></i>Your pace</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <aside class="rail">
+          <div class="section">
+            <div class="eyebrow">Chart layers</div>
+            <div class="layer-row"><span>Planned staircase</span><button class="switch on" data-layer="planned" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>GP forecast</span><button class="switch on" data-layer="projection" aria-pressed="true"></button></div>
+            <div class="layer-row"><span>Confidence band</span><button class="switch on" data-layer="confidence" aria-pressed="true"></button></div>
+          </div>
+          <!-- D-02: narrative three-finish panel -->
+          <div class="section">
+            <div class="eyebrow">Try a pace</div>
+            <div class="pace-title" id="pace-title">Current study pace</div>
+            <input class="slider" id="pace" type="range" min="0" max="60" step="15" value="0">
+            <div class="slider-labels"><span>Current</span><span>+60 min</span></div>
+            <div class="narr">
+              <p>Stick to your planned slots and you finish <b>Aug 10</b> - your deadline.</p>
+              <p>At your recent pace, you're tracking to <b class="rust">≈ Aug 27</b>, about <b class="rust">17 days late</b>. <span class="prov">estimate</span></p>
+              <p class="scen-line" id="scen">That's your current trajectory. Commit to more minutes per study day to pull it in.</p>
+            </div>
+            <button class="primary">Replan with this pace</button>
+          </div>
+        </aside>
+      </div>
+    </article>
+  </div>
+
+  <script>
+  (function(){
+    var BASE=new Date(Date.UTC(2026,5,8)),TODAY=43,DEADLINE=63,END=84,YMAX=3600,GOAL=3340;
+    function dLabel(day){var d=new Date(BASE.getTime()+Math.round(day)*864e5);return d.toLocaleDateString('en-US',{month:'short',day:'2-digit',timeZone:'UTC'});}
+    function hLabel(min){min=Math.max(0,Math.round(min));var h=Math.floor(min/60),m=min%60;return m?h+'h '+m+'m':h+'h';}
+    var planned=[[0,0],[6,330],[13,700],[20,1080],[27,1470],[34,1850],[41,2230],[43,2340],[48,2620],[55,3000],[62,3300],[63,3340],[END,3340]];
+    var actual=[[0,0],[5,150],[10,300],[15,470],[20,610],[25,760],[30,880],[35,980],[39,1040],[43,1080]];
+    var gp=[[0,0],[8,240],[16,470],[24,720],[32,900],[40,1040],[43,1080],[50,1520],[57,1960],[64,2410],[71,2860],[75,3060]]; // GP curve DATA ends here (does not reach total within horizon)
+    var FORECAST={day:80,date:'≈ Aug 27',delta:'17 days late'};   // ProgressSnapshot.projection.finishDate (analytic fallback)
+    // Option X: +N scenario finishes = computeCapacityScenario(...).finishDate (UNCHANGED math; optimistic "if you commit")
+    var SCEN={0:null,15:{fd:54,date:'Aug 1',delta:'9 days early'},30:{fd:51,date:'Jul 29',delta:'12 days early'},45:{fd:49,date:'Jul 27',delta:'14 days early'},60:{fd:47,date:'Jul 25',delta:'16 days early'}};
+    var PLAN_FIN=63;
+    var state={range:'full',planned:true,projection:true,confidence:true,pace:0,cursor:null};
+    var svg=document.getElementById('chart');
+    function rStart(){return state.range==='week'?TODAY-5:state.range==='month'?TODAY-23:0;}
+    function rEnd(){return state.range==='week'?TODAY+2:state.range==='month'?TODAY+7:END;}
+    function plannedAt(day){var v=0;planned.forEach(function(p){if(p[0]<=day)v=p[1];});return v;}
+    function interp(pts,day){if(day<=pts[0][0])return pts[0][1];if(day>=pts[pts.length-1][0])return pts[pts.length-1][1];for(var i=1;i<pts.length;i++){if(pts[i][0]>=day){var a=pts[i-1],b=pts[i];return a[1]+(b[1]-a[1])*((day-a[0])/(b[0]-a[0]));}}return 0;}
+    function actualAt(day){return day>TODAY?null:interp(actual,day);}
+    function gpAt(day){return Math.min(GOAL,interp(gp,day));}
+    function scenAt(day){if(state.pace===0||day<TODAY)return null;var n=SCEN[state.pace];return 1080+(GOAL-1080)*Math.min(1,(day-TODAY)/(n.fd-TODAY));}
+    function smooth(pts){if(!pts.length)return'';var d='M'+pts[0][0]+' '+pts[0][1];for(var i=1;i<pts.length;i++){var a=pts[i-1],b=pts[i],mx=(a[0]+b[0])/2;d+='C'+mx+' '+a[1]+' '+mx+' '+b[1]+' '+b[0]+' '+b[1];}return d;}
+    function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+    function render(){
+      var W=Math.max(360,svg.clientWidth||820),H=Math.max(220,svg.clientHeight||460);
+      svg.setAttribute('viewBox','0 0 '+W+' '+H);
+      var L=62,R=W-24,T=26,B=H-40,s=rStart(),e=rEnd();
+      var x=function(d){return L+((Math.max(s,Math.min(e,d))-s)/(e-s))*(R-L);},y=function(m){return B-(m/YMAX)*(B-T);};
+      var xInv=function(px){return s+((px-L)/(R-L))*(e-s);},yInv=function(py){return ((B-py)/(B-T))*YMAX;};
+      var tx=x(TODAY),gy=y(GOAL),out=['<rect x="0" y="0" width="'+W+'" height="'+H+'" fill="#fbf7ee"/>'];
+      if(e>TODAY)out.push('<rect x="'+tx+'" y="'+T+'" width="'+(R-tx)+'" height="'+(B-T)+'" fill="#ede3d2" opacity=".45"/>');
+      out.push('<rect x="'+L+'" y="'+T+'" width="'+(R-L)+'" height="'+(gy-T)+'" fill="#4a6b3a" opacity=".05"/>'); // done zone
+      var af=actual.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      var poly=af.map(function(p){return x(p[0])+','+y(p[1]);}).concat(af.slice().reverse().map(function(p){return x(p[0])+','+y(plannedAt(p[0]));})).join(' ');
+      out.push('<polygon points="'+poly+'" fill="#a0432a" opacity=".10"/>');
+      var gpf=gp.filter(function(p){return p[0]>=s&&p[0]<=e;});
+      if(state.confidence){var band=gpf.map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*20;return x(p[0])+','+y(Math.min(YMAX,p[1]+w));}).concat(gpf.slice().reverse().map(function(p){var w=p[0]<=TODAY?40:40+(p[0]-TODAY)*20;return x(p[0])+','+y(Math.max(0,p[1]-w));})).join(' ');out.push('<polygon points="'+band+'" fill="#a0432a" opacity=".12"/>');}
+      if(state.planned){var pf=planned.filter(function(p){return p[0]>=s&&p[0]<=Math.min(e,PLAN_FIN);});var step='M'+x(pf[0][0])+' '+y(pf[0][1]);pf.slice(1).forEach(function(p){step+='H'+x(p[0])+'V'+y(p[1]);});out.push('<path d="'+step+'" fill="none" stroke="#8b7b6b" stroke-width="1.8" stroke-dasharray="6 4"/>');}
+      if(state.projection){
+        out.push('<path d="'+smooth(gpf.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="1.8" stroke-dasharray="3 3"/>');
+        // faint dotted continuation from GP line end to the forecast finish flag (crosses the total at the projected date)
+        if(gpf.length&&FORECAST.day>=s&&FORECAST.day<=e){var last=gpf[gpf.length-1];out.push('<path d="M'+x(last[0])+' '+y(last[1])+'L'+x(FORECAST.day)+' '+gy+'" stroke="#a0432a" stroke-width="1.4" stroke-dasharray="1 4" opacity=".55"/>');}
+      }
+      if(state.pace>0){var n=SCEN[state.pace],gd='M'+tx+' '+y(1080),lastDay=Math.min(e,n.fd);for(var day=TODAY+1;day<=lastDay;day++){gd+='L'+x(day)+' '+y(scenAt(day));}out.push('<path d="'+gd+'" fill="none" stroke="#4a6b3a" stroke-width="2.6" stroke-dasharray="6 5"/>');}
+      out.push('<path d="'+smooth(af.map(function(p){return[x(p[0]),y(p[1])];}))+'" fill="none" stroke="#a0432a" stroke-width="2.4"/>');
+      af.forEach(function(p){out.push('<circle cx="'+x(p[0])+'" cy="'+y(p[1])+'" r="3" fill="#a0432a" stroke="#fbf7ee" stroke-width="1.4"/>');});
+      if(TODAY>=s&&TODAY<=e){out.push('<path d="M'+tx+' '+T+'V'+B+'" stroke="#5c4d40" stroke-width="1" stroke-dasharray="4 3"/><text x="'+tx+'" y="'+(T-8)+'" text-anchor="middle" fill="#5c4d40" font-family="monospace" font-size="9">TODAY</text>');}
+      out.push('<path d="M'+L+' '+T+'V'+B+'H'+R+'" fill="none" stroke="#e6dcc8" stroke-width="1.2"/>');
+      [0,600,1200,1800,2400,3000,3600].forEach(function(m){out.push('<path d="M'+(L-8)+' '+y(m)+'H'+L+'" stroke="#e6dcc8"/><text x="'+(L-13)+'" y="'+(y(m)+4)+'" text-anchor="end" fill="#8b7b6b" font-family="monospace" font-size="10">'+(m/60)+'h</text>');});
+      [s,TODAY,DEADLINE,e].filter(function(v,i,a){return v>=s&&v<=e&&a.indexOf(v)===i;}).forEach(function(d){out.push('<path d="M'+x(d)+' '+B+'V'+(B+7)+'" stroke="#d9cdb8"/><text x="'+x(d)+'" y="'+(B+20)+'" text-anchor="middle" fill="#8b7b6b" font-family="monospace" font-size="10">'+dLabel(d)+'</text>');});
+
+      // D-04: goal line + dated finish flags
+      out.push('<path d="M'+L+' '+gy+'H'+R+'" stroke="#b7a98d" stroke-width="1.3" stroke-dasharray="2 4"/>');
+      out.push('<text x="'+(L+4)+'" y="'+(gy-6)+'" fill="#8b7b6b" font-family="monospace" font-size="9" letter-spacing="1">PLAN COMPLETE · 55h 40m</text>');
+      var finishes=[{n:'Plan',day:PLAN_FIN,c:'#8b7b6b',dc:'#5c4d40'},{n:'Forecast',day:FORECAST.day,c:'#a0432a',dc:'#a0432a'}];
+      if(state.pace>0)finishes.push({n:'Your pace',day:SCEN[state.pace].fd,c:'#4a6b3a',dc:'#4a6b3a'});
+      finishes=finishes.filter(function(f){return f.day>=s&&f.day<=e;});
+      finishes.forEach(function(f,i){var fx=x(f.day),ly=gy-13-i*15;out.push('<path d="M'+fx+' '+gy+'V'+(ly+3)+'" stroke="'+f.c+'" stroke-width="1" opacity=".55"/><circle cx="'+fx+'" cy="'+gy+'" r="4.5" fill="'+f.c+'" stroke="#fbf7ee" stroke-width="1.5"/>');var t=f.n+' · '+dLabel(f.day),anchor=fx>R-70?'end':'middle',lx=fx>R-70?fx+4:fx;out.push('<text x="'+lx+'" y="'+ly+'" text-anchor="'+anchor+'" fill="'+f.dc+'" font-family="monospace" font-size="10" font-weight="700">'+esc(t)+'</text>');});
+
+      // D-03: crosshair (variation B) on hover
+      var c=state.cursor;
+      if(c&&c.px>=L&&c.px<=R&&c.py>=T&&c.py<=B){
+        var cday=Math.max(s,Math.min(e,xInv(c.px))),cx=x(cday);
+        var series=[{k:'Planned',col:'#8b7b6b',v:plannedAt(cday)}];
+        var av=actualAt(cday); if(av!=null)series.push({k:'Actual',col:'#a0432a',v:av});
+        if(state.projection&&(cday>TODAY||av==null))series.push({k:'GP forecast',col:'#a0432a',v:gpAt(cday)});
+        var sv=scenAt(cday); if(sv!=null)series.push({k:'Your pace',col:'#4a6b3a',v:sv});
+        out.push('<path d="M'+cx+' '+T+'V'+B+'" stroke="#2a1f18" stroke-width="1" stroke-dasharray="3 3" opacity=".5"/>');
+        out.push('<path d="M'+L+' '+c.py+'H'+R+'" stroke="#2a1f18" stroke-width="1" stroke-dasharray="3 3" opacity=".4"/>');
+        var hy=hLabel(yInv(c.py));out.push('<g><rect x="'+(L-hy.length*6.5-10)+'" y="'+(c.py-9)+'" width="'+(hy.length*6.5+8)+'" height="18" rx="4" fill="#2a1f18"/><text x="'+(L-6)+'" y="'+(c.py+4)+'" text-anchor="end" fill="#fbf7ee" font-family="monospace" font-size="10">'+hy+'</text></g>');
+        var dl=dLabel(cday);out.push('<g><rect x="'+(cx-dl.length*3.3-6)+'" y="'+(B+2)+'" width="'+(dl.length*6.6+12)+'" height="18" rx="4" fill="#2a1f18"/><text x="'+cx+'" y="'+(B+15)+'" text-anchor="middle" fill="#fbf7ee" font-family="monospace" font-size="10">'+dl+'</text></g>');
+        series.forEach(function(sr){out.push('<circle cx="'+cx+'" cy="'+y(sr.v)+'" r="4.5" fill="'+sr.col+'" stroke="#fbf7ee" stroke-width="1.6"/>');});
+        var boxW=150,rowH=17,boxH=20+series.length*rowH,bx=cx>W/2?cx-boxW-14:cx+14,by=Math.max(T+2,Math.min(B-boxH,c.py-boxH/2));
+        out.push('<g><rect x="'+bx+'" y="'+by+'" width="'+boxW+'" height="'+boxH+'" rx="8" fill="#fffdf7" stroke="#d9cdb8"/><text x="'+(bx+11)+'" y="'+(by+15)+'" fill="#5c4d40" font-family="monospace" font-size="10" font-weight="700">'+esc(dl)+'</text>');
+        series.forEach(function(sr,i){var ry=by+31+i*rowH;out.push('<circle cx="'+(bx+13)+'" cy="'+(ry-4)+'" r="4" fill="'+sr.col+'"/><text x="'+(bx+24)+'" y="'+ry+'" fill="#5c4d40" font-family="monospace" font-size="10">'+esc(sr.k)+'</text><text x="'+(bx+boxW-10)+'" y="'+ry+'" text-anchor="end" fill="#2a1f18" font-family="monospace" font-size="10" font-weight="700">'+hLabel(sr.v)+'</text>');});
+        out.push('</g>');
+      }
+      svg.innerHTML=out.join('');
+    }
+    function updateScen(){var n=SCEN[state.pace];document.getElementById('pace-title').textContent=state.pace===0?'Current study pace':'+'+state.pace+' min per study day';document.getElementById('scen').innerHTML=state.pace===0?'That\'s your current trajectory. Commit to more minutes per study day to pull it in.':'Commit to <b class="moss">+'+state.pace+' min</b> per study day and you\'d finish <b class="moss">'+n.date+'</b> - '+n.delta+' vs the deadline.';}
+    svg.addEventListener('mousemove',function(ev){var r=svg.getBoundingClientRect();state.cursor={px:(ev.clientX-r.left)*(svg.clientWidth/r.width),py:(ev.clientY-r.top)*(svg.clientHeight/r.height)};render();});
+    svg.addEventListener('mouseleave',function(){state.cursor=null;render();});
+    document.querySelectorAll('#ranges button').forEach(function(b){b.addEventListener('click',function(){state.range=b.dataset.range;document.querySelectorAll('#ranges button').forEach(function(n){n.classList.toggle('active',n===b);});document.getElementById('rr').textContent=state.range==='full'?'Jun 08 to Aug 30 · to last finish':state.range==='month'?'30-day window':'This week';render();});});
+    document.querySelectorAll('.switch').forEach(function(b){b.addEventListener('click',function(){var on=b.classList.toggle('on');b.setAttribute('aria-pressed',String(on));state[b.dataset.layer]=on;render();});});
+    document.getElementById('pace').addEventListener('input',function(){state.pace=Number(this.value);updateScen();render();});
+    updateScen();render();
+    if(window.ResizeObserver)new ResizeObserver(render).observe(svg);
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,95 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="How it works" description="Learn how Study Tracker helps you track your study progress.">
+  <section class="page-content">
+    <div class="container">
+      <h1 class="t-display-2">How it works</h1>
+      <div class="steps">
+        <article class="step">
+          <span class="step-num t-mono">01</span>
+          <h2 class="t-display-3">Add your materials</h2>
+          <p class="t-body">Paste URLs to YouTube videos, articles, or add manual entries for textbooks and notes. The app fetches titles and estimates automatically.</p>
+        </article>
+        <article class="step">
+          <span class="step-num t-mono">02</span>
+          <h2 class="t-display-3">Build your roadmap</h2>
+          <p class="t-body">Set your deadline, weekly hours, and let the app create a session-by-session schedule that fits your life.</p>
+        </article>
+        <article class="step">
+          <span class="step-num t-mono">03</span>
+          <h2 class="t-display-3">Study and track</h2>
+          <p class="t-body">Start sessions from the home screen. Embedded YouTube, article opens in new tabs, or just the timer for physical materials.</p>
+        </article>
+        <article class="step">
+          <span class="step-num t-mono">04</span>
+          <h2 class="t-display-3">Review and adjust</h2>
+          <p class="t-body">Weekly progress gives you a narrative of how the week went. Re-plan with concrete options when your pace changes.</p>
+        </article>
+      </div>
+      <div class="cta">
+        <a href="/study/sign-in" class="btn btn-accent btn-lg">Get started</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-content {
+    padding: var(--space-8) 0;
+  }
+
+  .page-content .container {
+    max-width: var(--container-default);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .page-content h1 {
+    margin-bottom: var(--space-7);
+    text-align: center;
+  }
+
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-6);
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-5);
+    align-items: start;
+    padding: var(--space-5);
+    background: var(--surface-card);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  .step-num {
+    color: var(--terracotta);
+    font-size: 12px;
+  }
+
+  .step h2 {
+    margin-bottom: var(--space-2);
+  }
+
+  .step p {
+    color: var(--text-secondary);
+    max-width: 500px;
+  }
+
+  .cta {
+    margin-top: var(--space-7);
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .step {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

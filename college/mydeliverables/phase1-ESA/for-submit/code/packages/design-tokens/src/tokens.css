@@ -1,0 +1,120 @@
+/* =================================================================
+   MARGINALIA — STUDY TRACKER DESIGN SYSTEM
+   Design tokens: colors, spacing, typography, motion, elevation.
+   ================================================================= */
+
+/* ---- PAPER & INK ----
+   The entire UI lives on warm cream with warm near-black ink.
+   Three paper depths, three ink weights, two rule weights. */
+:root {
+  --paper:        #F5EFE4;
+  --paper-deep:   #EDE3D2;
+  --card:         #FBF7EE;
+  --ink:          #2A1F18;
+  --ink-soft:     #5C4D40;
+  --ink-faint:    #8B7B6B;
+  --rule:         #D9CDB8;
+  --rule-soft:    #E6DCC8;
+
+  /* ---- ACCENTS ---- */
+  --terracotta:    #B85C38;
+  --terracotta-d:  #8E4429;
+  --moss:          #4A6B3A;
+  --moss-soft:     #7A9362;
+  --rust:          #A0432A;
+  --clay:          #C28E5A;
+
+  /* ---- STREAK RAMP ---- */
+  --streak-0: #EDE3D2;
+  --streak-1: #C9D4B0;
+  --streak-2: #A2B98A;
+  --streak-3: #769A66;
+  --streak-4: #4A6B3A;
+
+  /* ---- SEMANTIC TOKENS ---- */
+  --surface-page:        var(--paper);
+  --surface-recessed:    var(--paper-deep);
+  --surface-card:        var(--card);
+  --surface-inverted:    var(--ink);
+  --cal-today-fill:      color-mix(in srgb, var(--terracotta) 12%, var(--surface-card));
+  --cal-week-band:       var(--surface-recessed);
+
+  --text-primary:        var(--ink);
+  --text-secondary:      var(--ink-soft);
+  --text-tertiary:       var(--ink-faint);
+  --text-on-inverted:    var(--paper);
+  --text-on-inverted-dim: rgba(245, 239, 228, 0.65);
+  --text-on-inverted-eyebrow: var(--clay);
+
+  --border-default:      var(--rule);
+  --border-subtle:       var(--rule-soft);
+  --border-strong:       var(--ink-faint);
+  --border-focus:        var(--ink);
+
+  --action-primary:      var(--ink);
+  --action-primary-hover: #1A130E;
+  --action-accent:       var(--terracotta);
+  --action-accent-hover: var(--terracotta-d);
+
+  --status-good:         var(--moss);
+  --status-attention:    var(--terracotta);
+  --status-behind:       var(--rust);
+
+  /* ---- TYPE FAMILIES ---- */
+  --font-display: 'Fraunces', 'Iowan Old Style', 'Charter', Georgia, serif;
+  --font-body:    'Inter Tight', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  /* ---- SPACING SCALE ---- */
+  --space-0:  0;
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+  --space-9:  96px;
+
+  /* ---- RADII ---- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-pill: 999px;
+
+  /* ---- ELEVATION ---- */
+  --shadow-sm: 0 1px 0 rgba(42, 31, 24, 0.04), 0 2px 4px rgba(42, 31, 24, 0.04);
+  --shadow-md: 0 1px 0 rgba(42, 31, 24, 0.05), 0 6px 16px rgba(42, 31, 24, 0.06);
+  --shadow-modal: 0 1px 0 rgba(42, 31, 24, 0.05), 0 24px 48px -16px rgba(42, 31, 24, 0.18);
+  --shadow-inset-faint: inset 0 0 0 1px rgba(42, 31, 24, 0.04);
+
+  /* ---- BORDERS ---- */
+  --border-width-hair: 1px;
+  --border-width-default: 1px;
+  --border-width-emphasis: 2px;
+
+  /* ---- MOTION ---- */
+  --ease-out:    cubic-bezier(0.2, 0, 0, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.36, 0.64, 1);
+
+  --duration-1: 100ms;
+  --duration-2: 160ms;
+  --duration-3: 240ms;
+  --duration-4: 360ms;
+
+  /* ---- LAYOUT ---- */
+  --container-narrow:  640px;
+  --container-default: 880px;
+  --container-wide:    1240px;
+
+  /* ---- Z-INDEX SCALE ---- */
+  --z-base:       1;
+  --z-raised:     10;
+  --z-sticky:     100;
+  --z-overlay:    1000;
+  --z-modal:      1100;
+  --z-toast:      1200;
+}

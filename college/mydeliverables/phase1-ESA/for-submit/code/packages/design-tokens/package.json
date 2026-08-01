@@ -1,0 +1,24 @@
+{
+  "name": "@study-tracker/design-tokens",
+  "version": "1.0.0",
+  "exports": {
+    ".": {
+      "import": "./src/tokens.css",
+      "default": "./src/tokens.css"
+    },
+    "./tokens.css": {
+      "import": "./src/tokens.css",
+      "default": "./src/tokens.css"
+    },
+    "./components.css": {
+      "import": "./src/components.css",
+      "default": "./src/components.css"
+    },
+    "./global.css": {
+      "import": "./src/global.css",
+      "default": "./src/global.css"
+    }
+  },
+  "peerDependencies": {},
+  "devDependencies": {}
+}

@@ -142,6 +142,7 @@ Read the relevant rule before changing that area, and cite it by name in plans.
 | `playwright-config` | E2E config issues (`webServer` at top level, always `-c`) |
 | `pnpm-build-registry` | Corepack 403/DNS on public npm (use `COREPACK_NPM_REGISTRY`) |
 | `docker-colima-setup` | Docker/Colima builds, corporate registry + CA, port forwarding |
+| `github-cli-and-token` | `gh` token from gitignored `.env.git.local`; transient `api.github.com` TLS/EOF is flakiness to retry, not a config bug |
 | `latex-report-build` | "latexmk not found"; TinyTeX PATH for the dissertation |
 | `flow-diagram-tikz-gen` | Building vector-PDF architecture diagrams via standalone TikZ |
 | `ieee-conference-class-setup` | Wrong `IEEEtran` class options; conference-mode command lockouts |

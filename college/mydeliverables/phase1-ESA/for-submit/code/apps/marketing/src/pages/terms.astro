@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Terms of Service" description="Study Tracker terms of service.">
+  <section class="page-content">
+    <div class="container">
+      <h1 class="t-display-2">Terms of Service</h1>
+      <div class="prose">
+        <p class="t-body-sm">Last updated: January 2025</p>
+        <h2>Acceptable use</h2>
+        <p>Study Tracker is provided for personal, non-commercial use. You agree to use the service in accordance with these terms and applicable laws.</p>
+        <h2>Account responsibility</h2>
+        <p>You are responsible for maintaining the security of your account credentials. Do not share your password or allow others to access your account.</p>
+        <h2>Disclaimer</h2>
+        <p>The app is provided "as is" without warranties of any kind. We do not guarantee specific outcomes from using the service.</p>
+        <h2>Changes to terms</h2>
+        <p>We may update these terms from time to time. Continued use of the service constitutes acceptance of updated terms.</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-content {
+    padding: var(--space-8) 0;
+  }
+
+  .page-content .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .page-content h1 {
+    margin-bottom: var(--space-6);
+  }
+
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .prose h2 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    margin-top: var(--space-4);
+    color: var(--text-primary);
+  }
+
+  .prose p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+</style>

@@ -1,0 +1,44 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="About" description="Learn about Study Tracker's mission and philosophy.">
+  <section class="page-content">
+    <div class="container">
+      <h1 class="t-display-2">About Study Tracker</h1>
+      <div class="prose">
+        <p class="t-body-lg">Study Tracker was built with a simple belief: the best study tools don't manage you — they mirror your discipline.</p>
+        <p>We're not interested in gamification, streaks-as-metrics, or social features that turn learning into competition. What matters is the quiet satisfaction of making progress on something you've decided to learn.</p>
+        <p>The app is designed to be honest. It shows you where you are, not where someone thinks you should be. If you're falling behind, it offers options. If you're ahead, it celebrates quietly. No fanfare, no pressure.</p>
+        <p>This is a tool for people who don't need to be motivated — they just need a clear view of their progress.</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-content {
+    padding: var(--space-8) 0;
+  }
+
+  .page-content .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .page-content h1 {
+    margin-bottom: var(--space-6);
+  }
+
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .prose p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+</style>

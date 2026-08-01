@@ -1,0 +1,97 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Home">
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <h1 class="t-display-1">A quiet companion for the work you've chosen.</h1>
+        <p class="t-body-lg hero-desc">Study Tracker respects your discipline. It mirrors your progress, never enforces it. Just you, your materials, and a clear view of how it's going.</p>
+        <div class="hero-actions">
+          <a href="/study/sign-in" class="btn btn-accent btn-lg">Get started</a>
+          <a href="/how-it-works" class="btn btn-secondary btn-lg">Learn more</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="features">
+    <div class="container">
+      <h2 class="t-display-2">Built for self-directed learners</h2>
+      <div class="feature-grid">
+        <article class="card card-elevated">
+          <h3 class="card-title">Track your sessions</h3>
+          <p class="card-meta">Log time with YouTube videos, articles, or your own materials. The app adapts to what you're actually studying.</p>
+        </article>
+        <article class="card card-elevated">
+          <h3 class="card-title">See your progress</h3>
+          <p class="card-meta">Streaks, projected finish dates, and weekly verdicts. All derived from your actual activity.</p>
+        </article>
+        <article class="card card-elevated">
+          <h3 class="card-title">Re-plan when needed</h3>
+          <p class="card-meta">Life happens. Adjust your roadmap with concrete options: more hours, extended deadline, or cut scope.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero {
+    padding: var(--space-9) 0;
+    background-image:
+      radial-gradient(circle at 18% 8%, rgba(184, 92, 56, 0.025), transparent 38%),
+      radial-gradient(circle at 82% 55%, rgba(74, 107, 58, 0.03), transparent 48%);
+  }
+
+  .hero .container {
+    max-width: var(--container-default);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .hero-content {
+    max-width: 600px;
+  }
+
+  .hero h1 {
+    margin-bottom: var(--space-5);
+  }
+
+  .hero-desc {
+    margin-bottom: var(--space-6);
+    color: var(--text-secondary);
+  }
+
+  .hero-actions {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .features {
+    padding: var(--space-8) 0;
+  }
+
+  .features .container {
+    max-width: var(--container-default);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .features h2 {
+    margin-bottom: var(--space-6);
+    text-align: center;
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .feature-grid .card-meta {
+    margin-bottom: 0;
+  }
+</style>

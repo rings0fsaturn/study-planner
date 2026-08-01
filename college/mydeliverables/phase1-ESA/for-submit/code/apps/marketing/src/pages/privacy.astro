@@ -1,0 +1,57 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+---
+
+<BaseLayout title="Privacy Policy" description="Study Tracker privacy policy.">
+  <section class="page-content">
+    <div class="container">
+      <h1 class="t-display-2">Privacy Policy</h1>
+      <div class="prose">
+        <p class="t-body-sm">Last updated: January 2025</p>
+        <h2>Data we collect</h2>
+        <p>Study Tracker stores your account information (email), study materials, session logs, and roadmap data. We do not sell or share your data with third parties.</p>
+        <h2>Data ownership</h2>
+        <p>You own your data. You can request deletion of your account and all associated data at any time through the app settings.</p>
+        <h2>Local storage</h2>
+        <p>The app stores a local copy of your data in your browser for performance. This data stays on your device and is not transmitted to us.</p>
+        <h2>Analytics</h2>
+        <p>We use Plausible Analytics for aggregate, privacy-respecting usage data. No personal information is collected or stored.</p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .page-content {
+    padding: var(--space-8) 0;
+  }
+
+  .page-content .container {
+    max-width: var(--container-narrow);
+    margin: 0 auto;
+    padding: 0 var(--space-5);
+  }
+
+  .page-content h1 {
+    margin-bottom: var(--space-6);
+  }
+
+  .prose {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .prose h2 {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 500;
+    margin-top: var(--space-4);
+    color: var(--text-primary);
+  }
+
+  .prose p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+</style>

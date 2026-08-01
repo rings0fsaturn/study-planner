@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+.venv/
+.dev/
+.env
+.env.local
+__pycache__/
+*.pyc
+research/results/
+.DS_Store

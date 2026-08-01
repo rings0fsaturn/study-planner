@@ -186,34 +186,41 @@ describe('Home', () => {
   })
 
   it('labels projected finish as provisional', () => {
-    const roadmapCreatedAt = '2026-07-01T00:00:00.000Z'
-    mockProgressState.progress = makeProgressSnapshot()
-    mockEvents = [
-      {
-        id: 1,
-        kind: 'RoadmapCreated',
-        payload: {
-          startDate: '2026-07-01',
-          deadline: '2026-07-31',
-          weeks: 4,
-          selectedStudyDays: ['Mon', 'Wed', 'Fri'],
-          weekdayHours: 1,
-          weekendHours: 0,
-          weeklyHours: 3,
-          materialIds: [],
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-18T12:00:00.000Z'))
+
+    try {
+      const roadmapCreatedAt = '2026-07-01T00:00:00.000Z'
+      mockProgressState.progress = makeProgressSnapshot()
+      mockEvents = [
+        {
+          id: 1,
+          kind: 'RoadmapCreated',
+          payload: {
+            startDate: '2026-07-01',
+            deadline: '2026-07-31',
+            weeks: 4,
+            selectedStudyDays: ['Mon', 'Wed', 'Fri'],
+            weekdayHours: 1,
+            weekendHours: 0,
+            weeklyHours: 3,
+            materialIds: [],
+          },
+          createdAt: roadmapCreatedAt,
         },
-        createdAt: roadmapCreatedAt,
-      },
-    ]
+      ]
 
-    render(
-      <MemoryRouter initialEntries={['/home']}>
-        <Home />
-      </MemoryRouter>,
-    )
+      render(
+        <MemoryRouter initialEntries={['/home']}>
+          <Home />
+        </MemoryRouter>,
+      )
 
-    expect(screen.getByText('Projected finish · provisional')).toBeInTheDocument()
-    expect(screen.getByText('Jul 20')).toBeInTheDocument()
+      expect(screen.getByText('Projected finish · provisional')).toBeInTheDocument()
+      expect(screen.getByText('Jul 20')).toBeInTheDocument()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('does not show the old up-next card after the roadmap is abandoned', () => {

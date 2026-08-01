@@ -1,0 +1,19 @@
+{
+  "name": "@study-tracker/marketing",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "astro": "^4.5.0",
+    "@study-tracker/design-tokens": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.5.0",
+    "typescript": "^5.4.0"
+  }
+}
