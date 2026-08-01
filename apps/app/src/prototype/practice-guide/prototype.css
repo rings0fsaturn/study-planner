@@ -1,0 +1,308 @@
+/* PROTOTYPE — throwaway styles for the #17 inline-hint live guide.
+   Uses Marginalia design tokens (loaded app-wide). Delete with the prototype. */
+
+.pgp {
+  --ghost-ink: color-mix(in srgb, var(--terracotta) 65%, var(--ink-faint));
+  max-width: var(--container-wide, 1100px);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-5) 120px;
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.pgp-head { margin-bottom: var(--space-5); }
+.pgp-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+.pgp-title { font-family: var(--font-display); font-size: 1.7rem; margin: var(--space-1) 0; }
+.pgp-sub { color: var(--text-secondary); max-width: 60ch; line-height: 1.5; }
+
+/* example tabs (coding / written) */
+.pgp-tabs { display: flex; gap: var(--space-2); margin: var(--space-4) 0 var(--space-2); }
+.pgp-tab {
+  border: var(--border-width-default, 1px) solid var(--border-default);
+  background: var(--surface-card);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+.pgp-tab[data-active='true'] {
+  background: var(--surface-inverted);
+  color: var(--text-on-inverted);
+  border-color: var(--surface-inverted);
+}
+
+/* ---- shared editor surface ---- */
+.pgp-prompt {
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+  margin-bottom: var(--space-3);
+}
+.pgp-prompt-fam { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.06em; }
+.pgp-prompt-text { margin-top: var(--space-1); line-height: 1.5; }
+
+.pgp-editor-wrap {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--card);
+}
+.pgp-editor-row { display: flex; }
+.pgp-gutter {
+  position: relative;
+  padding: var(--space-3) var(--space-2);
+  background: var(--surface-recessed);
+  border-right: 1px solid var(--border-subtle);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  text-align: right;
+  user-select: none;
+  min-width: 2.4rem;
+}
+.pgp-gutter-line { line-height: 1.6; }
+.pgp-lamp {
+  position: absolute;
+  left: 6px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--terracotta) 60%, transparent);
+  animation: pgp-pulse 1.6s ease-out infinite;
+}
+@keyframes pgp-pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--terracotta) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--terracotta) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--terracotta) 0%, transparent); }
+}
+.pgp-textarea {
+  flex: 1;
+  border: 0;
+  outline: none;
+  resize: vertical;
+  padding: var(--space-3);
+  min-height: 130px;
+  background: transparent;
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.6;
+  tab-size: 4;
+}
+.pgp-textarea.prose { font-family: var(--font-body); font-size: 0.95rem; line-height: 1.7; }
+
+/* trigger toolbar */
+.pgp-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--surface-recessed);
+  flex-wrap: wrap;
+}
+.pgp-toolbar .spacer { flex: 1; }
+.pgp-hint-idle { font-size: 0.75rem; color: var(--text-tertiary); font-style: italic; }
+
+/* test panel (coding) */
+.pgp-tests { border-top: 1px solid var(--border-subtle); }
+.pgp-test {
+  display: flex; gap: var(--space-2); align-items: baseline;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-mono); font-size: 0.78rem;
+  border-bottom: 1px solid var(--rule-soft);
+}
+.pgp-test:last-child { border-bottom: 0; }
+.pgp-test .st { width: 1.2rem; }
+.pgp-test .pass { color: var(--status-good); }
+.pgp-test .fail { color: var(--status-attention); }
+.pgp-test .detail { color: var(--text-tertiary); margin-left: auto; }
+
+/* ---- tier badge / kind chip ---- */
+.pgp-kind {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-default);
+  color: var(--text-secondary);
+  background: var(--surface-card);
+}
+.pgp-kind[data-kind='nudge']    { color: var(--moss); border-color: var(--moss-soft); }
+.pgp-kind[data-kind='hint']     { color: var(--clay); border-color: var(--clay); }
+.pgp-kind[data-kind='targeted'] { color: var(--terracotta); border-color: var(--terracotta); }
+.pgp-kind[data-kind='reveal']   { color: var(--text-on-inverted); background: var(--rust); border-color: var(--rust); }
+
+.pgp-ladder-dots { display: inline-flex; gap: 4px; margin-left: var(--space-2); }
+.pgp-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rule); }
+.pgp-dot[data-on='true'] { background: var(--terracotta); }
+
+/* ---- Variant A: inline ghost text ---- */
+.pgp-ta-wrap { position: relative; flex: 1; }
+/* anchored inline suggestion — floats at the active line, like a Copilot inline widget */
+.pgp-ghost-anchored {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  z-index: 3;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--terracotta);
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--terracotta) 8%, var(--card));
+  box-shadow: var(--shadow-md);
+}
+.pgp-ghost-anchored::before {
+  /* little connector tick up to the active line */
+  content: '';
+  position: absolute;
+  top: -5px; left: 14px;
+  width: 8px; height: 8px;
+  background: color-mix(in srgb, var(--terracotta) 8%, var(--card));
+  border-left: 1px solid var(--terracotta);
+  border-top: 1px solid var(--terracotta);
+  transform: rotate(45deg);
+}
+.pgp-ghost-line {
+  display: flex; align-items: baseline; gap: var(--space-2);
+  font-family: var(--font-mono); font-size: 0.68rem;
+  color: var(--text-tertiary); margin-bottom: 4px;
+}
+.pgp-ghost-line .lineno {
+  color: var(--terracotta); font-weight: 600;
+}
+.pgp-ghost-line code {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  background: var(--surface-recessed);
+  padding: 1px 6px; border-radius: 4px;
+  max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pgp-ghost {
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px dashed var(--border-strong);
+  background: color-mix(in srgb, var(--terracotta) 5%, var(--card));
+}
+.pgp-ghost-text {
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  font-style: italic;
+  color: var(--ghost-ink);
+  line-height: 1.6;
+}
+.pgp-ghost-text.prose { font-family: var(--font-body); }
+.pgp-ghost-meta { display: flex; align-items: center; gap: var(--space-2); margin-bottom: 6px; }
+.pgp-ghost-keys { margin-left: auto; font-family: var(--font-mono); font-size: 0.68rem; color: var(--text-tertiary); }
+.pgp-kbd {
+  font-family: var(--font-mono); font-size: 0.66rem;
+  border: 1px solid var(--border-default); border-bottom-width: 2px;
+  border-radius: 4px; padding: 1px 5px; background: var(--surface-card); color: var(--text-secondary);
+}
+.pgp-reveal-body {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-inverted);
+  color: var(--text-on-inverted);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+  line-height: 1.55;
+}
+.pgp-reveal-body.prose { font-family: var(--font-body); font-size: 0.9rem; }
+.pgp-reveal-note { font-size: 0.7rem; color: var(--text-tertiary); margin-top: 6px; font-style: italic; }
+
+/* ---- Variant B: margin coach rail ---- */
+.pgp-split { display: grid; grid-template-columns: 1fr 300px; gap: var(--space-4); align-items: start; }
+@media (max-width: 800px) { .pgp-split { grid-template-columns: 1fr; } }
+.pgp-rail {
+  position: sticky; top: var(--space-4);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  padding: var(--space-4);
+  min-height: 180px;
+}
+.pgp-rail-empty { color: var(--text-tertiary); font-size: 0.82rem; line-height: 1.5; font-style: italic; }
+.pgp-rail-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-3); }
+.pgp-rail-title { font-family: var(--font-display); font-size: 1rem; }
+.pgp-stepper { display: flex; flex-direction: column; gap: 0; margin: var(--space-3) 0; }
+.pgp-step { display: flex; gap: var(--space-2); align-items: flex-start; padding: var(--space-2) 0; opacity: 0.4; }
+.pgp-step[data-state='shown'] { opacity: 1; }
+.pgp-step[data-state='current'] { opacity: 1; }
+.pgp-step-marker {
+  width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+  border: 1px solid var(--border-strong); display: grid; place-items: center;
+  font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-secondary);
+  background: var(--surface-card);
+}
+.pgp-step[data-state='shown'] .pgp-step-marker,
+.pgp-step[data-state='current'] .pgp-step-marker { background: var(--terracotta); color: var(--text-on-inverted); border-color: var(--terracotta); }
+.pgp-step-text { font-size: 0.84rem; line-height: 1.45; }
+
+/* ---- Variant C: anchored coach popover ---- */
+.pgp-popover {
+  position: fixed;
+  right: var(--space-6); bottom: 96px;
+  width: 340px; max-width: calc(100vw - 32px);
+  background: var(--surface-card);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  padding: var(--space-4);
+  z-index: var(--z-toast, 60);
+  animation: pgp-rise var(--duration-2, 180ms) var(--ease-out, ease-out);
+}
+@keyframes pgp-rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.pgp-pop-head { display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2); }
+.pgp-pop-tutor {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--surface-inverted); color: var(--text-on-inverted);
+  display: grid; place-items: center; font-family: var(--font-display); font-size: 0.8rem;
+}
+.pgp-pop-who { font-size: 0.72rem; color: var(--text-tertiary); }
+.pgp-pop-bubble { font-size: 0.9rem; line-height: 1.55; margin: var(--space-2) 0; }
+.pgp-pop-x { margin-left: auto; background: none; border: none; cursor: pointer; color: var(--text-tertiary); font-size: 1rem; }
+
+/* buttons reuse .btn from design system where possible; small helpers here */
+.pgp-actions { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-top: var(--space-3); align-items: center; }
+.pgp-mini { font-size: 0.7rem; color: var(--text-tertiary); }
+
+/* ---- floating variant switcher ---- */
+.pgp-switcher {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--space-1);
+  background: var(--surface-inverted); color: var(--text-on-inverted);
+  border-radius: var(--radius-pill);
+  padding: 6px 6px; box-shadow: var(--shadow-modal);
+  z-index: var(--z-toast, 70); font-family: var(--font-mono);
+}
+.pgp-switcher button {
+  background: transparent; border: none; color: var(--text-on-inverted);
+  cursor: pointer; padding: 6px 10px; border-radius: var(--radius-pill); font-size: 1rem;
+}
+.pgp-switcher button:hover { background: rgba(245,239,228,0.15); }
+.pgp-switcher .label { font-size: 0.78rem; padding: 0 var(--space-2); min-width: 210px; text-align: center; }
+.pgp-switcher .label b { color: var(--clay); }
+
+.pgp-note {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border-left: 3px solid var(--terracotta);
+  background: var(--surface-recessed);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem; color: var(--text-secondary); line-height: 1.55;
+}
+.pgp-note code { font-family: var(--font-mono); font-size: 0.78rem; }
