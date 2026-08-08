@@ -25,3 +25,27 @@ Object.defineProperty(window, 'matchMedia', {
     dispatchEvent: () => false,
   }),
 })
+
+if (typeof localStorage.getItem !== 'function') {
+  const store = new Map<string, string>()
+  const storage: Storage = {
+    get length() {
+      return store.size
+    },
+    clear: () => store.clear(),
+    getItem: (key) => store.get(key) ?? null,
+    key: (index) => Array.from(store.keys())[index] ?? null,
+    removeItem: (key) => { store.delete(key) },
+    setItem: (key, value) => { store.set(key, value) },
+  }
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: storage,
+  })
+  Object.defineProperty(globalThis, 'localStorage', {
+    configurable: true,
+    writable: true,
+    value: storage,
+  })
+}
