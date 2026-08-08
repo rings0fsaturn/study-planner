@@ -48,8 +48,8 @@ after abandon. Phase C (layout) is deferred.
 
 Constraints (unchanged): mobile-first React 19 SPA, event-sourced Dexie store, `BrowserRouter
 basename="/study"` — **never put `/study` in `to`/`navigate` paths** (rule
-[`react-router-v7-basename.md`](../../../.claude/rules/react-router-v7-basename.md)). E2E tests are
-authored but **not run** in this environment (see [`../../../CLAUDE.md`](../../../CLAUDE.md)); Vitest
+[`react-router-v7-basename.md`](../../../.agents/rules/12-react-router-basename.agents.md)). E2E tests are
+authored but **not run** in this environment (see [`../../../AGENTS.md`](../../../AGENTS.md)); Vitest
 unit tests should still be authored and the app suite must be run under **Node ≥ 20** (default shell
 Node v18 cannot run the app Vitest suite — see parent plan Phase 1 notes; use the project's
 `v22.17.1`).

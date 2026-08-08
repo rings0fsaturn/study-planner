@@ -24,8 +24,7 @@
    math. This plan is **presentational** and consumes existing data. `capacityScenario.test.ts`
    and `Replan.test.tsx` must remain byte-identical and green - that is the proof the rework
    left Replan untouched (see D-07).
-6. Read the cited rule before touching each area: `.claude/rules/<name>.md` (Sonnet) /
-   `.agents/rules/<name>.agents.md` (Codex).
+ 6. Read the cited rule before touching each area: `.agents/rules/<name>.agents.md`.
 
 ## Summary
 
@@ -309,4 +308,4 @@ git diff --stat apps/app/src/roadmap/replan/capacityScenario.ts apps/app/src/pag
 - Mocks: `.work/active/progress-lab-pace-indicators/mocks/{final.html,DECISIONS.md,decisions/*}`
 - Shipped modal plan: `.work/plans/active/2026-07-18-week-progress-lab/PLAN.md` (D-06/D-07)
 - Related (read-only): `.work/plans/active/2026-07-18-projection-inconsistency/`
-- Rules: `.claude/rules/{react-router-v7-basename,form-design-spacing,playwright-config,playwright-full-app-lifecycle}.md` (+ `.agents` mirrors)
+ - Rules: `.agents/rules/{12-react-router-basename,13-form-layout,10-runtime-and-e2e}.agents.md`

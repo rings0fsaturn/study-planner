@@ -234,7 +234,7 @@ _Status:_ ✅ Verified
 - [ ] `useCalibration.ts` builds the request from mapped events + derives `nextContext` (deadline + `planned_total_sessions = slots.length` + up-next slot via the same logic as `ProgressEngine.getUpNextSlot`); POSTs to the service; returns `CalibrationState` on success and `null` while loading / on error (so `Home`/`Week` null-guards hold). TS `computeCalibration` no longer imported by the app.
 - [ ] `VITE_INTELLIGENCE_URL` documented in `apps/app/.env.example`.
 - [ ] `useCalibration.test.ts` added (request carries `planned_horizon`; success maps state; rejection → null), using the Dexie test setup; `pnpm --filter app test` + `pnpm --filter app typecheck` pass.
-- [ ] Playwright spec for the Home pace/forecast path is **written** (mocked `/v1/calibration`) but **not run** (per `CLAUDE.md` E2E constraint).
+- [ ] Playwright spec for the Home pace/forecast path is **written** (mocked `/v1/calibration`) but **not run** (per `AGENTS.md` E2E constraint).
 
 ### Implementer report (Codex/Sonnet fills)
 
@@ -291,7 +291,7 @@ _Per-criterion verdict:_
 - ✅ `intelligenceClient.ts` reads `VITE_INTELLIGENCE_URL` (localhost fallback), throws on non-2xx.
 - ✅ `useCalibration.ts` no longer imports `computeCalibration`; builds the request from mapped events; derives `nextContext` with `planned_horizon{deadline, planned_total_sessions=slots.length}` + up-next slot via the shared `getUpNextSlot`; returns `null` while loading / on error (Home/Week null-guards hold).
 - ✅ `VITE_INTELLIGENCE_URL` documented in `.env.example`; `useCalibration.test.ts` covers request construction / success / rejection→null; `pnpm --filter app test` (`369`) + typecheck pass.
-- ✅ Playwright `e2e/calibration-service.spec.ts` written, not run (CLAUDE.md E2E constraint).
+- ✅ Playwright `e2e/calibration-service.spec.ts` written, not run (AGENTS.md E2E constraint).
 
 _Issues / required changes (non-blocking):_
 - **Deviation (accepted):** `ProgressEngine.ts` was modified (not in the plan's file index) to make `getProjectedFinish`/`getUpNextSlot` generic over a `RoadmapSlotLike` shape so the hook can reuse them. Backward-compatible — existing `RoadmapCreatedPayload` callers still satisfy the constraint and the filter/return logic is unchanged.

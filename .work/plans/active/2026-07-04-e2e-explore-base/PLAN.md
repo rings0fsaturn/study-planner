@@ -84,7 +84,7 @@ The `e2e/` suite has **no shared test infrastructure** — every spec re-inlines
 
 ## Context & background
 
-**The repo.** pnpm monorepo: Astro marketing site (`:4321`), Vite/React 19 SPA served at `/study/*` (`:5173`), FastAPI Intelligence Service (`:8000`). E2E lives in `e2e/` and is driven by `e2e/playwright.config.ts` (top-level `webServer` runs `pnpm dev:full` = app + intelligence; projects `marketing`, `app`, `app-mobile`). See `CLAUDE.md`.
+**The repo.** pnpm monorepo: Astro marketing site (`:4321`), Vite/React 19 SPA served at `/study/*` (`:5173`), FastAPI Intelligence Service (`:8000`). E2E lives in `e2e/` and is driven by `e2e/playwright.config.ts` (top-level `webServer` runs `pnpm dev:full` = app + intelligence; projects `marketing`, `app`, `app-mobile`). See `AGENTS.md`.
 
 **The problem, concretely (grounded 2026-07-04):**
 
@@ -105,7 +105,7 @@ The `e2e/` suite has **no shared test infrastructure** — every spec re-inlines
 **Support docs:**
 
 - `.work/STATUS.md` — read-first status index (this becomes a new `[APP][INFRA]` Active row).
-- `CLAUDE.md` → "E2E test" section (how the agent runs E2E here).
+- `AGENTS.md` → "E2E test" section (how the agent runs E2E here).
 - Rules: `playwright-config`, `playwright-full-app-lifecycle`, `astro-selectors`, `react-router-v7-basename`, `pnpm-build-registry`, `eventstore-per-user-db`, `dexie-test-setup`.
 - Existing specs to mirror/replace: `e2e/roadmap-booking-live.spec.ts` (live-login + seed patterns), `e2e/material-session-decoupling.spec.ts` (hermetic + seed/read patterns), `e2e/session-log.spec.ts` (the broken one we refactor).
 
@@ -117,7 +117,7 @@ The `e2e/` suite has **no shared test infrastructure** — every spec re-inlines
 
 **Context:** Rohit wants "standard files where new tests can be written from on top" so exploratory boilerplate isn't rewritten and the same issues stop recurring.
 
-**Decision:** Build `e2e/support/` (fixtures, auth, appReady, seed, selectors) + a single flagship `e2e/app-explore.spec.ts` that consumes the base + an `e2e/README.md` + a mirrored rule `e2e-explore-base`. Future tests import from `e2e/support/`.
+**Decision:** Build `e2e/support/` (fixtures, auth, appReady, seed, selectors) + a single flagship `e2e/app-explore.spec.ts` that consumes the base + an `e2e/README.md` + a canonical `e2e-explore-base` rule. Future tests import from `e2e/support/`.
 
 **Rationale:** The recurring pain is duplicated setup and drift. Centralising it once, with a walkthrough spec that doubles as the living template, kills both.
 
@@ -289,11 +289,7 @@ All paths relative to repo root. Everything here is authored by the **implementi
 | `e2e/app-explore.spec.ts` | new | 3 | flagship UI-driven full-journey walkthrough (D-03, D-06) |
 | `e2e/session-log.spec.ts` | modify | 4 | refactor onto the base; fix `'Sign in'`→`'Continue'`, drop `try/catch` swallow + sleeps (D-07) |
 | `e2e/README.md` | new | 5 | how to write a test on the base; run commands; anti-patterns (D-05) |
-| `.claude/rules/e2e-explore-base.md` | new | 5 | canonical rule for the base |
-| `.agents/rules/e2e-explore-base.agents.md` | new | 5 | 1:1 mirror of the rule |
-| `CLAUDE.md` | modify | 5 | add rule row to the rules table |
-| `AGENTS.md` | modify | 5 | add rule row (mirror) |
-
+| `.agents/rules/e2e-explore-base.agents.md` | new | 5 | canonical rule for the base |
 > **Cowork-side (already done, not your task):** `.work/plans/active/2026-07-04-e2e-explore-base/PLAN.md` + `VERIFICATION.md`, and the `.work/STATUS.md` row. Commit them in Step 0.
 
 ## Phases
@@ -952,7 +948,7 @@ grep -c "catch (error)" e2e/session-log.spec.ts               # expect 0 (no fai
 
 ---
 
-### Phase 5: Document the base — `e2e/README.md` + mirrored `e2e-explore-base` rule
+### Phase 5: Document the base — `e2e/README.md` + `e2e-explore-base` rule
 
 **Status:** ☐ Not started
 **Depends on:** Phase 1, Phase 2, Phase 3, Phase 4
@@ -961,24 +957,23 @@ grep -c "catch (error)" e2e/session-log.spec.ts               # expect 0 (no fai
 #### Codebase state assumed at start
 
 - `e2e/support/*` and `e2e/app-explore.spec.ts` exist and pass.
-- Rules live in `.claude/rules/<name>.md` (canonical) mirrored 1:1 to `.agents/rules/<name>.agents.md`; both `CLAUDE.md` and `AGENTS.md` carry a rules table (rule `agent-friendly-docs`; Mandatory Rule 4).
+- Rules live in `.agents/rules/<name>.agents.md` (canonical); `AGENTS.md` carries the rules table (rule `agent-friendly-docs`; Mandatory Rule 4).
 
 #### Verification (run BEFORE starting)
 
 ```bash
-ls .claude/rules/*.md | head -3 && ls .agents/rules/*.agents.md | head -3   # mirror convention exists
-grep -n "playwright-config" CLAUDE.md AGENTS.md                              # rules table location
+ls .agents/rules/*.agents.md | head -3   # canonical rules
+grep -n "playwright-config" AGENTS.md                              # rules table location
 ```
 
 #### Steps
 
 1. **Create `e2e/README.md`** covering: the `e2e/support/` layout; how to write a new spec (`import { test, expect } from './support/fixtures'`, use `signedInPage`, seed with `seedEvents`, select via `selectors.ts`); the run command (`env COREPACK_NPM_REGISTRY=https://registry.npmjs.org pnpm exec playwright test -c e2e/playwright.config.ts <spec> --project=app`); hermetic-vs-live modes; and the **anti-patterns** the base forbids (`waitForTimeout`, inlined `signIn`/`createTestUser`, hardcoded button labels, failure-swallowing `try/catch`).
 
-2. **Create `.claude/rules/e2e-explore-base.md`** — canonical rule. Content: "When writing any app E2E, build on `e2e/support/` — don't re-inline auth/seed/selectors. Sign-in button is `'Continue'` not `'Sign in'`. Never `waitForTimeout`; use `waitForAppReady`. Hermetic default, live opt-in. Requires `dev:full` + `COREPACK_NPM_REGISTRY`." Cross-link `playwright-config`, `playwright-full-app-lifecycle`, `eventstore-per-user-db`.
+2. **Create `.agents/rules/e2e-explore-base.agents.md`** — canonical rule. Content: "When writing any app E2E, build on `e2e/support/` — don't re-inline auth/seed/selectors. Sign-in button is `'Continue'` not `'Sign in'`. Never `waitForTimeout`; use `waitForAppReady`. Hermetic default, live opt-in. Requires `dev:full` + `COREPACK_NPM_REGISTRY`." Cross-link `10-runtime-and-e2e` and `30-eventstore-boundaries`.
 
-3. **Create `.agents/rules/e2e-explore-base.agents.md`** — a **verbatim 1:1 mirror** of step 2 (Mandatory Rule 4).
 
-4. **Add a row to the rules table in `CLAUDE.md`** and the matching table in `AGENTS.md`:
+3. **Add a row to the rules table in `AGENTS.md`**:
 
    ```markdown
    | `e2e-explore-base` | Reusable Playwright base (fixtures/helpers/selectors); write new E2E on top of `e2e/support/` |
@@ -986,18 +981,18 @@ grep -n "playwright-config" CLAUDE.md AGENTS.md                              # r
 
 #### Tests
 
-- Docs only — no runtime test. Sanity: `test -f .claude/rules/e2e-explore-base.md && test -f .agents/rules/e2e-explore-base.agents.md`.
+- Docs only — no runtime test. Sanity: `test -f .agents/rules/e2e-explore-base.agents.md`.
 
 #### Verification (DONE)
 
 ```bash
-diff <(sed -n '/./p' .claude/rules/e2e-explore-base.md) <(sed -n '/./p' .agents/rules/e2e-explore-base.agents.md) && echo "mirror in sync"
-grep -c "e2e-explore-base" CLAUDE.md AGENTS.md   # expect >=1 each
+test -f .agents/rules/e2e-explore-base.agents.md && echo "canonical rule exists"
+grep -c "e2e-explore-base" AGENTS.md   # expect >=1
 ```
 
 #### Rollback
 
-Delete the two rule files + `e2e/README.md`; revert the two table rows.
+Delete the rule file + `e2e/README.md`; revert the table row.
 
 #### Notes (filled in during implementation)
 
@@ -1045,9 +1040,9 @@ Delete the two rule files + `e2e/README.md`; revert the two table rows.
 
 ## References
 
-- Rules: `.claude/rules/playwright-config.md`, `.claude/rules/playwright-full-app-lifecycle.md`, `.claude/rules/astro-selectors.md`, `.claude/rules/react-router-v7-basename.md`, `.claude/rules/pnpm-build-registry.md`, `.claude/rules/eventstore-per-user-db.md`, `.claude/rules/eventstore-architecture.md`, `.claude/rules/dexie-test-setup.md`.
+- Rules: `.agents/rules/10-runtime-and-e2e.agents.md`, `.agents/rules/10-runtime-and-e2e.agents.md`, `.agents/rules/11-playwright-selectors.agents.md`, `.agents/rules/12-react-router-basename.agents.md`, `.agents/rules/50-pnpm-build-registry.agents.md`, `.agents/rules/30-eventstore-boundaries.agents.md`, `.agents/rules/30-eventstore-boundaries.agents.md`, `.agents/rules/32-dexie-testing.agents.md`.
 - Config: `e2e/playwright.config.ts` (top-level `webServer`, projects `marketing`/`app`/`app-mobile`).
 - Existing specs (patterns + the bug): `e2e/roadmap-booking-live.spec.ts`, `e2e/material-session-decoupling.spec.ts`, `e2e/session-log.spec.ts`, `e2e/smoke.spec.ts`.
 - Source of ground-truth selectors: `apps/app/src/pages/SignIn.tsx`, `apps/app/src/App.tsx`, `apps/app/src/onboarding/steps/*`, `apps/app/src/onboarding/components/MaterialRow.tsx`, `apps/app/src/pages/Home.tsx`, `apps/app/src/pages/Log.tsx`, `apps/app/src/roadmap/RoadmapCalendar.tsx`, `apps/app/src/roadmap/booking/*`, `apps/app/src/pages/Roadmaps.tsx`, `apps/app/src/sync/types.ts`, `apps/app/src/sync/SyncProvider.tsx`, `apps/app/src/events/EventStoreProvider.tsx`.
-- Run env: `CLAUDE.md` → "E2E test"; live creds path `.work/specs/test-login-cred.txt` (git-ignored) or `E2E_LIVE_EMAIL`/`E2E_LIVE_PASSWORD`.
+- Run env: `AGENTS.md` → "E2E test"; live creds path `.work/specs/test-login-cred.txt` (git-ignored) or `E2E_LIVE_EMAIL`/`E2E_LIVE_PASSWORD`.
 - Status index: `.work/STATUS.md`.

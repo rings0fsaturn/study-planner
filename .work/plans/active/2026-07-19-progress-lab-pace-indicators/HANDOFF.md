@@ -50,9 +50,9 @@ proof Replan is untouched (verified every phase via an empty `git diff`).
 
 ## Rules to read before you touch each area
 
-`.claude/rules/react-router-v7-basename.md` (no `/study` in the Replan link),
-`.claude/rules/form-design-spacing.md` (rail/narrative token spacing),
-`.claude/rules/playwright-config.md` + `.claude/rules/playwright-full-app-lifecycle.md` (E2E).
+`.agents/rules/12-react-router-basename.agents.md` (no `/study` in the Replan link),
+`.agents/rules/13-form-layout.agents.md` (rail/narrative token spacing),
+`.agents/rules/10-runtime-and-e2e.agents.md` + `.agents/rules/10-runtime-and-e2e.agents.md` (E2E).
 (Codex mirrors: `.agents/rules/<name>.agents.md`.)
 
 ## Definition of done

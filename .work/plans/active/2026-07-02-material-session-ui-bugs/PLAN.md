@@ -67,8 +67,8 @@ The status markers are a fast read, but they are not the source of truth. The ph
 - **Phase 4's visual contract is the approved mock** [`mocks/proposed/study-day-indicator.html`](./mocks/proposed/study-day-indicator.html) (renders with **real** app CSS copied into `mocks/real-css/`). Build the study-day indicator to it.
 - **Phase 7's visual contract is the approved mock** [`mocks/proposed/bug8-bubble-truncation.html`](./mocks/proposed/bug8-bubble-truncation.html) (baseline + 4 candidates, real CSS + real DOM, live in 390px iframes). Rohit picked Option C (D-10) — build to that.
 - **Phase 8's visual contract is the approved mock** [`mocks/proposed/bug6-branded-loading.html`](./mocks/proposed/bug6-branded-loading.html) (baseline + 3 candidates C1/C2/C3, real CSS + real DOM, phone + desktop viewports, long-wait-state toggle). Rohit picked **Option C1** (D-09) — build to that.
-- **Project rules** live in `.agents/rules/*.agents.md` (Codex) / `.claude/rules/*.md` (Sonnet); cite the relevant one per phase.
-- **E2E tests: author only, do not run** (environment constraint — see repo `CLAUDE.md`). Vitest unit tests DO run.
+- **Project rules** live in `.agents/rules/*.agents.md`; cite the relevant one per phase.
+- **E2E tests: author only, do not run** (environment constraint — see repo `AGENTS.md`). Vitest unit tests DO run.
 - **These are independent post-ship items** (BUG-1..BUG-8 across Phases 1–8, plus one feature — suggested upcoming sessions — in Phase 9). Phases have **no cross-dependencies** — each can be picked up and shipped on its own. Ordered by when they were added, not by dependency. (The soft 7-phase cap is intentionally exceeded because this doc is being used as a running post-ship-fix collection for one subsystem; each phase remains a self-contained slice.)
 
 ---
@@ -197,7 +197,7 @@ This plan intentionally resolves the upstream target-line OQ for the product bur
 
 Also decided in the same session, as direct sub-parts of D-09:
 - **Long-wait secondary copy (yes):** after ~3 seconds without the restore settling, the caption swaps "Setting up this device" → "Still bringing things over", and the subcaption swaps "Bringing over your study history — this only happens once." → "Larger histories take a little longer. Hang tight." Rationale: a screen that stays byte-identical across a multi-second wait reads as frozen past a certain point — the same reasoning that ruled out Option E (no visible UI, see below) applies at a smaller scale here. This ~3s swap threshold (`LONG_WAIT_COPY_THRESHOLD_MS`) is a fixed constant, deliberately independent of the safety-timeout value — it's cosmetic (which sentence shows), not a safety valve, so it does not get the same configurability treatment as the timeout itself.
-- **Safety timeout: 8000ms, made configurable rather than debated to a new number.** In-codebase precedent found during grill-me: `apps/app/src/lib/intelligenceClient.ts:4` already uses `TIMEOUT_MS = 8000` for its own fetch timeout, so 8000 was already this app's convention, not an arbitrary Phase-8-only guess — and the real test account's actual restore payload (294 events) is well under the 5MB snapshot-bucket limit (`.claude/rules/supabase-schema.md`), so 8000ms is generous headroom for the known common case, not a tight fit. Rather than debate a number with no production telemetry to ground it, `SyncProvider` gets a new optional prop `initialRestoreSafetyTimeoutMs?: number`, defaulted from a module constant that reads `import.meta.env.VITE_INITIAL_RESTORE_TIMEOUT_MS` (parsed as a number, falling back to 8000 if unset/non-numeric/non-positive) — the same env-var-with-fallback pattern `VITE_INTELLIGENCE_URL` already uses (documented in `CLAUDE.md`'s Environment Variables section). This means the number can be tuned later via `.env` + rebuild, without touching `SyncProvider`'s internals, and tests can pass a short value instead of fast-forwarding fake timers by a full production-sized 8000ms.
+- **Safety timeout: 8000ms, made configurable rather than debated to a new number.** In-codebase precedent found during grill-me: `apps/app/src/lib/intelligenceClient.ts:4` already uses `TIMEOUT_MS = 8000` for its own fetch timeout, so 8000 was already this app's convention, not an arbitrary Phase-8-only guess — and the real test account's actual restore payload (294 events) is well under the 5MB snapshot-bucket limit (`.agents/rules/35-supabase-migrations-and-rls.agents.md`), so 8000ms is generous headroom for the known common case, not a tight fit. Rather than debate a number with no production telemetry to ground it, `SyncProvider` gets a new optional prop `initialRestoreSafetyTimeoutMs?: number`, defaulted from a module constant that reads `import.meta.env.VITE_INITIAL_RESTORE_TIMEOUT_MS` (parsed as a number, falling back to 8000 if unset/non-numeric/non-positive) — the same env-var-with-fallback pattern `VITE_INTELLIGENCE_URL` already uses (documented in `AGENTS.md`'s Environment Variables section). This means the number can be tuned later via `.env` + rebuild, without touching `SyncProvider`'s internals, and tests can pass a short value instead of fast-forwarding fake timers by a full production-sized 8000ms.
 
 **Rationale:** C1 is the one option that stays *calm* rather than *interruptive* for a screen that's rare (once per device, ever) but not an achievement worth a splash-screen-style takeover; it's a direct, literal expression of the brand's own stated "quiet companion" personality (`.auth-mark-tag`) rather than a different, more assertive personality with no precedent elsewhere in the app.
 **Alternatives considered:**
@@ -305,7 +305,7 @@ Data facts to rely on (verified in code, do not re-derive):
 | `apps/app/src/roadmap/RoadmapCalendar.tsx` | modify | 9 | Derive suggestions + accept handler (emits `SessionBooked`) |
 | `apps/app/src/roadmap/roadmap.css` | modify | 9 | `.roadmap-chip-suggested` ghost style |
 | `apps/app/src/roadmap/suggestedBookings.test.ts` | new | 9 | Distribution, collision-skip, empty-when-nothing-remaining |
-| `CLAUDE.md` | modify | 8 | Document `VITE_INITIAL_RESTORE_TIMEOUT_MS` in Environment Variables |
+| `AGENTS.md` | modify | 8 | Document `VITE_INITIAL_RESTORE_TIMEOUT_MS` in Environment Variables |
 | `apps/app/.env.example` | modify | 8 | Add `VITE_INITIAL_RESTORE_TIMEOUT_MS` template entry (commented, matching `VITE_INTELLIGENCE_URL`'s style) |
 
 ## Phases
@@ -522,7 +522,7 @@ grep -n "setAddSessionDate\|<DaySheet" apps/app/src/roadmap/RoadmapCalendar.tsx
   In the compact-path test, set `mockViewport.isCompact = true`, open an empty in-month day, assert the `+ Add session` action appears in the `DaySheet`, click it, assert the day sheet closes, assert `AddSessionSheet` opens with that date, then create the booking and assert `SessionBooked`.
 - Add or update a read-only compact test.
   Render a historical/read-only calendar with `mockViewport.isCompact = true`, open a day, and assert `+ Add session` is absent.
-  Follow `.agents/rules/dexie-test-setup.agents.md` if any test starts using a real Dexie store.
+  Follow `.agents/rules/32-dexie-testing.agents.md` if any test starts using a real Dexie store.
 - Author (do not run) a Playwright case in `e2e/material-session-decoupling.spec.ts`: at ≤560px, open an empty day → Add session → booking appears.
   The test must set a viewport below 560px, for example `page.setViewportSize({ width: 390, height: 844 })`, before visiting `/study/roadmap`.
   This is required because the existing desktop booking E2E coverage never exercises the compact `DaySheet` path.
@@ -613,7 +613,7 @@ grep -n "roadmap-chip-done" apps/app/src/onboarding/steps/Step3Preview.tsx
    Add a **"Study day"** legend entry (static span with `roadmap-legend-swatch roadmap-studyday-swatch`) alongside the status legend.
 4. **`Step3Preview.tsx` + `onboarding.css`:** (a) add `roadmap-day-studyday` to each mini-calendar in-month cell where `day.isInMonth && isStudyDay(day.date, state.selectedStudyDays)`; (b) recolor the session bubble from `roadmap-chip-done` → `roadmap-chip-booked` and add `title` + `aria-label` (e.g. ``Booked study session · ${formatMinutes(booking.estimatedDuration)} · ${format(parseISO(booking.date),'EEE, MMM d')}``); (c) add a "study day" entry to `.cal-legend`; (d) add `.cal-swatch.studyday` in `apps/app/src/onboarding/onboarding.css` with the same moss tint as `.roadmap-studyday-swatch`; (e) update `.cal-swatch.booked` so the legend no longer presents a moss/green booked session swatch after the booked bubble moves to the outline style; (f) the mini-calendar already has `onboarding-mini-calendar` so the Step-1 hover override applies.
    Keep the buffer caption; the tint replaces the "why the 7th" prose.
-5. Honour rules: `.agents/rules/css-workspace-packages.agents.md`, `.agents/rules/form-design-spacing.agents.md`. Match the approved mock.
+5. Honour rules: `.agents/rules/14-design-token-package-exports.agents.md`, `.agents/rules/13-form-layout.agents.md`. Match the approved mock.
 
 #### Tests
 - `CalendarCell.test.tsx` / `RoadmapCalendar.test.tsx`: a study-day in-month cell gets `roadmap-day-studyday`; a non-study day does not; legend shows "Study day".
@@ -934,7 +934,7 @@ Confirmed with Rohit against the real-CSS mock ([`mocks/proposed/bug8-bubble-tru
 
 #### Tests
 - No Vitest unit test for the visual truncation behavior itself: this is a pure `@media`-query CSS change with no new class or conditional render, and jsdom does not evaluate media queries for layout (it has no real viewport/layout engine) — a unit test asserting "the label is hidden" would not actually exercise the browser behavior it claims to cover. This follows the same precedent as Phase 2 (BUG-1 sheet centering), which was also verified by grep + a documented visual/Playwright check rather than a Vitest assertion.
-- Author a Playwright visual check (this environment can run E2E per `CLAUDE.md` — run it, don't just author it, if practical): at a 390×844 viewport, open `/study/onboarding/3/preview` with a seeded booking, and screenshot the mini-calendar bubble to confirm it now shows icon + duration only, no clipped label.
+- Author a Playwright visual check (this environment can run E2E per `AGENTS.md` — run it, don't just author it, if practical): at a 390×844 viewport, open `/study/onboarding/3/preview` with a seeded booking, and screenshot the mini-calendar bubble to confirm it now shows icon + duration only, no clipped label.
 - Run: `pnpm --filter @study-tracker/app typecheck` (CSS-only change, confirms nothing else broke).
 
 #### Verification (DONE)
@@ -1304,7 +1304,7 @@ pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider   # baseline gr
    }
    ```
    This is the exact CSS from the approved mock's Option C1, minus the C2/C3-only rules (`.boot-screen-ink`, `.boot-glow`, `.on-ink` modifiers, `.boot-card*`) which don't ship.
-9. **Document the new env var.** In `CLAUDE.md`'s Environment Variables section, extend the existing `apps/app/.env.local` line to add `VITE_INITIAL_RESTORE_TIMEOUT_MS` (optional, defaults to `8000`ms — see D-09), the same way `VITE_INTELLIGENCE_URL` is already documented there. In `apps/app/.env.example`, read the file first to see its current `VITE_INTELLIGENCE_URL` entry's exact style/comment convention, then add a `VITE_INITIAL_RESTORE_TIMEOUT_MS` entry matching that same style (commented out, since it's optional and defaults to 8000).
+9. **Document the new env var.** In `AGENTS.md`'s Environment Variables section, extend the existing `apps/app/.env.local` line to add `VITE_INITIAL_RESTORE_TIMEOUT_MS` (optional, defaults to `8000`ms — see D-09), the same way `VITE_INTELLIGENCE_URL` is already documented there. In `apps/app/.env.example`, read the file first to see its current `VITE_INTELLIGENCE_URL` entry's exact style/comment convention, then add a `VITE_INITIAL_RESTORE_TIMEOUT_MS` entry matching that same style (commented out, since it's optional and defaults to 8000).
 
 #### Tests
 - In `apps/app/src/sync/SyncEngine.test.ts`, inside the existing `describe('restoreFromCloud', ...)` block:
@@ -1312,10 +1312,10 @@ pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider   # baseline gr
   - Add `it('keeps initialRestorePending true until a cold-start restore settles (success case)')` — empty local DB (matching the existing "restores local events from snapshot" test's setup at ~line 572), assert `initialRestorePending` is `true` synchronously after calling `restoreFromCloud()` but before awaiting it, then `false` after it resolves.
   - Add `it('clears initialRestorePending even when a cold-start restore errors')` — reuse the existing "refuses snapshot with future schemaVersion" test's setup (~line 645, an error path) and assert `initialRestorePending` is `false` after `restoreFromCloud()` resolves despite the error.
 - In `apps/app/src/sync/SyncProvider.test.tsx`, inside the existing `describe('SyncProvider', ...)` block (a new nested `describe('initial restore gating (D-07/D-08/D-09)', ...)` is a natural place, alongside the file's existing `describe('restoreFromCloud on mount', ...)` etc.):
-  - Add `it('withholds children while the initial restore is pending, then renders the boot screen, then children once it clears')` — spy on `SyncEngine.prototype.restoreFromCloud` (per `.claude/rules/sync-provider-testing.md` — prototype spy, not instance, since the engine is constructed inside a `useEffect`) with a controllable/deferred promise (`new Promise<void>((resolve) => { resolveRestore = resolve })`, `mockReturnValue`d), render `SyncProvider`, assert `screen.getByText('Study Tracker')` (the `BootScreen` wordmark) is present and the child test content (`screen.queryByTestId(...)`) is absent while unresolved, then `await act(async () => { resolveRestore(); await restorePromise })`, and assert the wordmark is gone and the child content is present.
+  - Add `it('withholds children while the initial restore is pending, then renders the boot screen, then children once it clears')` — spy on `SyncEngine.prototype.restoreFromCloud` (per `.agents/rules/34-sync-provider-testing.agents.md` — prototype spy, not instance, since the engine is constructed inside a `useEffect`) with a controllable/deferred promise (`new Promise<void>((resolve) => { resolveRestore = resolve })`, `mockReturnValue`d), render `SyncProvider`, assert `screen.getByText('Study Tracker')` (the `BootScreen` wordmark) is present and the child test content (`screen.queryByTestId(...)`) is absent while unresolved, then `await act(async () => { resolveRestore(); await restorePromise })`, and assert the wordmark is gone and the child content is present.
   - Add `it('renders children after the safety timeout even if restoreFromCloud never settles')` — spy on `SyncEngine.prototype.restoreFromCloud` returning `new Promise(() => {})` (never resolves), render `<SyncProvider initialRestoreSafetyTimeoutMs={50} ...>`, and `await waitFor(() => expect(screen.getByTestId(...)).toBeInTheDocument())`. No `vi.useFakeTimers()` needed — because the timeout is now an injectable prop (D-09) rather than a hardcoded 8000ms, the test can just use a genuinely short real value and this file's existing fake-timer-free style is preserved.
   - Add a new top-level `describe('resolveInitialRestoreSafetyTimeoutMs', ...)` block (import it from `./SyncProvider`, alongside the existing `SyncProvider`/`useSync`/`SyncEngine` imports at the top of the file) with four cases: `undefined` → `8000`; `'3000'` → `3000`; `'abc'` (non-numeric) → `8000`, not `NaN`; `'0'` and `'-100'` (non-positive) → `8000`. This is a plain function test, no rendering needed.
-- Update `CLAUDE.md`'s Environment Variables section and `apps/app/.env.example` per Step 9 — doc-only, no test, but include in the phase's diff.
+- Update `AGENTS.md`'s Environment Variables section and `apps/app/.env.example` per Step 9 — doc-only, no test, but include in the phase's diff.
 - Run: `pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider`
 
 #### Verification (DONE)
@@ -1323,20 +1323,20 @@ pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider   # baseline gr
 grep -n "initialRestorePending" apps/app/src/sync/types.ts apps/app/src/sync/SyncEngine.ts apps/app/src/sync/SyncProvider.tsx   # present in all three
 grep -n "resolveInitialRestoreSafetyTimeoutMs\|BootScreen\|initialRestoreSafetyTimeoutMs" apps/app/src/sync/SyncProvider.tsx     # present
 grep -n "\.boot-screen\b" packages/design-tokens/src/components.css   # new CSS present
-grep -n "VITE_INITIAL_RESTORE_TIMEOUT_MS" CLAUDE.md apps/app/.env.example   # documented in both
+grep -n "VITE_INITIAL_RESTORE_TIMEOUT_MS" AGENTS.md apps/app/.env.example   # documented in both
 pnpm --filter @study-tracker/app typecheck && pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider
 ```
 Plus a live re-check of the original repro: fresh Playwright profile (`chromium.launchPersistentContext` with a brand-new, never-used `userDataDir`), sign in, immediately `page.goto()` a `RequireOnboarding`-gated route (e.g. `/study/roadmaps`), and confirm it no longer transiently visits `/onboarding/1` before settling — it should show the Option C1 boot screen (mark drawing in, then wordmark/caption), then land directly on the correct destination. While doing this check, note the actual observed wall-clock duration of the cold-start restore (e.g. via the browser's network panel or a `console.time`/`console.timeEnd` bracketing `restoreFromCloud()`) and record it in this phase's Notes — this is the real telemetry D-09 explicitly deferred gathering to this step, so a future adjustment to `VITE_INITIAL_RESTORE_TIMEOUT_MS` has data behind it instead of another guess. Also verify the reduced-motion fallback: `page.emulateMedia({ reducedMotion: 'reduce' })` before triggering the cold-start path, confirm the mark renders fully-drawn/static with no animation.
 
 #### Rollback
-Revert `apps/app/src/sync/types.ts`, `SyncEngine.ts`, and `SyncProvider.tsx` to drop `initialRestorePending`/`resolveInitialRestoreSafetyTimeoutMs`/`BootScreen`/the two timers (remove `initialRestorePending` from `SyncState`, the constructor, the fast-path clear, the `finally` clear, and `SyncProvider`'s new constants/components/props/initial state/timers/render branch). Remove the `.boot-*` block from `packages/design-tokens/src/components.css`. Revert the `CLAUDE.md`/`apps/app/.env.example` doc additions. The two onboarding gates were never touched, so no rollback needed there.
+Revert `apps/app/src/sync/types.ts`, `SyncEngine.ts`, and `SyncProvider.tsx` to drop `initialRestorePending`/`resolveInitialRestoreSafetyTimeoutMs`/`BootScreen`/the two timers (remove `initialRestorePending` from `SyncState`, the constructor, the fast-path clear, the `finally` clear, and `SyncProvider`'s new constants/components/props/initial state/timers/render branch). Remove the `.boot-*` block from `packages/design-tokens/src/components.css`. Revert the `AGENTS.md`/`apps/app/.env.example` doc additions. The two onboarding gates were never touched, so no rollback needed there.
 
 #### Notes (filled in during implementation)
 - Implemented `initialRestorePending` in `SyncState`, `SyncEngine`, and `SyncProvider`.
 - The already-hydrated fast path clears the flag immediately before `flushQueue()`/`pullAndMerge()`.
 - The public `restoreFromCloud()` wrapper clears the flag in `finally`, covering every slow-path success/error/early-return exit.
 - `SyncProvider` now withholds children behind the D-09 Option C1 `BootScreen` while the initial restore is pending, then falls back after configurable `initialRestoreSafetyTimeoutMs`.
-- The timeout defaults through `resolveInitialRestoreSafetyTimeoutMs(import.meta.env.VITE_INITIAL_RESTORE_TIMEOUT_MS)` with an 8000ms fallback, and `apps/app/.env.example` plus `CLAUDE.md` document the optional override.
+- The timeout defaults through `resolveInitialRestoreSafetyTimeoutMs(import.meta.env.VITE_INITIAL_RESTORE_TIMEOUT_MS)` with an 8000ms fallback, and `apps/app/.env.example` plus `AGENTS.md` document the optional override.
 - Added SyncEngine tests for fast-path clear, cold-start pending-until-success, and cold-start error clear.
 - Added SyncProvider tests for boot-screen gating, safety-timeout fallback, and timeout parsing.
 - Updated `SyncIndicator.test.tsx` fixtures for the new required `SyncState.initialRestorePending` field.
@@ -1420,7 +1420,7 @@ pnpm --filter @study-tracker/app test -- RoadmapCalendar   # baseline green
    - In `handleCalendarBubbleSelect`, branch on `bubble.status === 'suggested'` → `void handleAcceptSuggestion(bubble)` instead of opening a detail/editor.
    - Add `handleAcceptSuggestion(bubble)` → `logEvent('SessionBooked', { roadmapCreatedAt: selectedRoadmap.roadmapCreatedAt, bookingId: crypto.randomUUID(), date: bubble.date, estimatedDuration: bubble.plannedMinutes, ...(bubble.materialId ? { materialId: bubble.materialId } : {}) })`. (Mirrors `handleCreateBooking`.)
    - Ensure the mobile `DaySheet` path also accepts a suggested row (its `onSelectBubble` → same branch). Read-only view passes no suggestions (guarded above).
-7. Honour `.agents/rules/roadmap-engine.agents.md` (engine stays pure/deterministic — suggestions are derived in the app layer; the `suggested:*` ids are display-only and never persisted; the accepted booking gets a fresh `crypto.randomUUID()`).
+7. Honour `.agents/rules/41-roadmap-engine.agents.md` (engine stays pure/deterministic — suggestions are derived in the app layer; the `suggested:*` ids are display-only and never persisted; the accepted booking gets a fresh `crypto.randomUUID()`).
 
 #### Tests
 - `apps/app/src/roadmap/suggestedBookings.test.ts` (new): remaining 5h with 2h/day cap on Mon/Wed/Fri from today → suggestions of 120/120/60 on the next three study days; a day with a confirmed booking is skipped; `done`/zero-remaining materials produce no suggestions; empty `selectedStudyDays` → `[]`.
@@ -1469,4 +1469,4 @@ Delete `suggestedBookings.ts`, revert the `suggested` status/style/bindCells arg
 - Upstream decoupling plan: [`../2026-06-30-material-session-decoupling/PLAN.md`](../2026-06-30-material-session-decoupling/PLAN.md)
 - Verification log: [`VERIFICATION.md`](./VERIFICATION.md)
 - Rules: `.agents/rules/{css-workspace-packages,form-design-spacing,react-router-v7-basename,roadmap-engine,dexie-test-setup}.agents.md`
-- Rules for Phase 8 (added post-review): `.claude/rules/{sync-architecture,auth-init-timeout,sync-provider-testing}.md` (mirrors: `.agents/rules/{sync-architecture,auth-init-timeout,sync-provider-testing}.agents.md`)
+- Rules for Phase 8 (added post-review): `.agents/rules/{33-sync-boundaries,20-auth-boundaries,34-sync-provider-testing}.agents.md`

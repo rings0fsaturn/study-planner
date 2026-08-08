@@ -105,7 +105,7 @@ The status markers are a fast read, but they are not the source of truth. The ph
 - Refactor plan — [`plans/active/2026-06-30-material-session-decoupling/PLAN.md`](../2026-06-30-material-session-decoupling/PLAN.md)
 - Status index — [`.work/STATUS.md`](../../../STATUS.md)
 - Test credentials for the live demo — `.work/specs/test-login-cred.txt`
-- Full-app lifecycle rule — `.claude/rules/playwright-full-app-lifecycle.md`
+- Full-app lifecycle rule — `.agents/rules/10-runtime-and-e2e.agents.md`
 
 ## Decisions log
 
@@ -521,7 +521,7 @@ pnpm --filter @study-tracker/app typecheck            # expect clean
 pnpm --filter @study-tracker/app lint                 # expect clean (no new warnings)
 ```
 
-Then a live smoke check (see `.claude/rules/playwright-full-app-lifecycle.md`): start the app, sign in with the test creds, run `__seed()` in the browser console, and confirm Home + Week populate without console errors. Full live acceptance is Phase 3.
+Then a live smoke check (see `.agents/rules/10-runtime-and-e2e.agents.md`): start the app, sign in with the test creds, run `__seed()` in the browser console, and confirm Home + Week populate without console errors. Full live acceptance is Phase 3.
 
 #### Rollback
 
@@ -648,7 +648,7 @@ Then reseed live (`__wipe()` then `__seed()`) and confirm `/study/roadmaps` Hist
 #### Codebase state assumed at start
 
 - Both roadmaps seed cleanly; typecheck + lint pass.
-- The app can be run locally with the test account (`.work/specs/test-login-cred.txt`); see `.claude/rules/playwright-full-app-lifecycle.md`.
+- The app can be run locally with the test account (`.work/specs/test-login-cred.txt`); see `.agents/rules/10-runtime-and-e2e.agents.md`.
 
 #### Verification (run BEFORE starting to confirm prereqs are met)
 
@@ -736,4 +736,4 @@ Verification-only; if `PACE_KNOB` was changed, `git revert` that commit to resto
 - Event payload contracts — `apps/app/src/sync/types.ts` (`RoadmapCreatedPayload`, `SessionBookedPayload`, `RoadmapMarked*Payload`), `apps/app/src/session/types.ts` (`SessionLoggedPayload`)
 - Read path — `apps/app/src/progress/mapEvents.ts` (`findActiveRoadmap`, `foldBookingEvents`, `slotFromBooking`), `apps/app/src/roadmap/roadmapLifecycle.ts` (`deriveRoadmapLifecycle`, `completedBookingCount`), `packages/progress/src/progress.ts` (`computeProgress`), `packages/progress/src/projectFinish.ts`, `packages/progress/src/materialLedger.ts`
 - Surfaces — `apps/app/src/pages/Home.tsx`, `apps/app/src/pages/Week.tsx`, `apps/app/src/pages/Roadmaps.tsx`, `apps/app/src/components/BurnUpChart.tsx`, `apps/app/src/components/DailyMinutesChart.tsx`
-- Live-app lifecycle + creds — `.claude/rules/playwright-full-app-lifecycle.md`, `.work/specs/test-login-cred.txt`
+- Live-app lifecycle + creds — `.agents/rules/10-runtime-and-e2e.agents.md`, `.work/specs/test-login-cred.txt`

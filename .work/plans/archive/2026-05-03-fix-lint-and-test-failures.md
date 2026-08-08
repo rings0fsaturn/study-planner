@@ -73,8 +73,8 @@ The lint failure is a configuration gap — `apps/app/` never had an ESLint conf
 **Support docs:**
 
 - `packages/progress-engine/eslint.config.js` — reference ESLint flat config pattern
-- `.claude/rules/dexie-test-setup.md` — Dexie test patterns
-- `.claude/rules/onboarding-architecture.md` — onboarding flow architecture
+- `.agents/rules/32-dexie-testing.agents.md` — Dexie test patterns
+- `.agents/rules/40-onboarding-flow.agents.md` — onboarding flow architecture
 - `apps/app/src/session/types.ts` — `ActiveSessionRecord` type definition
 
 ## Decisions log
@@ -608,13 +608,13 @@ Revert `apps/app/src/onboarding/steps/Step3Preview.tsx` and `apps/app/src/onboar
 - **ESLint rule tuning beyond basic TS rules** — the config mirrors `progress-engine`'s minimal ruleset. Adding `eslint-plugin-react-hooks` or `eslint-plugin-jsx-a11y` is desirable but separate work.
 - **Fixing any lint warnings surfaced by the new ESLint config** — the goal is to make `pnpm lint` not crash, not to achieve zero warnings.
 - **PlaylistPickerPopup CSS for pagination controls** — the pagination HTML uses existing `btn btn-ghost btn-sm` classes. Custom pagination styling can be added later if needed.
-- **E2E tests** — per CLAUDE.md, E2E tests cannot be run due to environment issues, so only unit/integration tests are verified.
+- **E2E tests** — per AGENTS.md, E2E tests cannot be run due to environment issues, so only unit/integration tests are verified.
 
 ## References
 
 - `packages/progress-engine/eslint.config.js` — reference ESLint flat config pattern
 - `packages/progress-engine/package.json` — reference for ESLint devDependencies versions
-- `.claude/rules/dexie-test-setup.md` — Dexie test patterns
-- `.claude/rules/onboarding-architecture.md` — onboarding flow architecture
+- `.agents/rules/32-dexie-testing.agents.md` — Dexie test patterns
+- `.agents/rules/40-onboarding-flow.agents.md` — onboarding flow architecture
 - `apps/app/src/session/types.ts:213` — `ActiveSessionRecord` type with `pauseIntervals`
 - `packages/progress-engine/src/constants.ts` — `ROLE_TO_LABEL` mapping (`anchor → 'Main reading'`)

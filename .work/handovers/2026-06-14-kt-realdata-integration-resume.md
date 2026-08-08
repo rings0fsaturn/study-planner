@@ -111,7 +111,7 @@ commit each phase boundary.
 - `college/scope/research-tasklist.md` has local modifications from the data-acquisition/planning
   reconciliation; do not casually overwrite them.
 - Worktree has many unrelated dirty files under `.agents`, `.codex`, `.cursor`, `AGENTS.md`,
-  `CLAUDE.md`, `pnpm-workspace.yaml`, and other paths. Preserve scoped staging only.
+  `AGENTS.md`, `pnpm-workspace.yaml`, and other paths. Preserve scoped staging only.
 - `handovers/` is gitignored; this handover is an agent-context artifact, not a source commit.
 
 ## Last known-good state

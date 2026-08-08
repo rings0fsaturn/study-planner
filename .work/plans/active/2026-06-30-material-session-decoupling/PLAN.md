@@ -57,8 +57,8 @@ A phase-by-phase implementation plan. Each phase is a **vertical slice** — an 
   `docs(plan): add material-session-decoupling PLAN + VERIFICATION`. (Cowork cannot commit — the native side establishes the baseline.)
 - **After each phase**, fill your section of [`VERIFICATION.md`](./VERIFICATION.md) (files changed, commit SHA, what you did, deviations + why, self-check vs. the phase's acceptance criteria) and expect review. **A phase is not done until the reviewer marks it `✅ Verified`**; change requests may follow.
 - **The visual contract is the mock set** in [`mocks/`](./mocks/) — each screen's locked `mocks/proposed/*.html` is the pixel/interaction target; build to it. Use the real design-system classes (the mocks copy them verbatim into `mocks/css/`).
-- **The design source of truth is** [`DECISIONS.md`](./DECISIONS.md) (D1–D22). The research contract is [`../../handovers/2026-07-01-research-verdicts-for-ui-impl.md`](../../handovers/2026-07-01-research-verdicts-for-ui-impl.md). Project rules are the project-local `.agents/rules/*.agents.md` files (not `.claude/rules/*`).
-- **E2E tests: author only, do not run** (environment constraint — see repo `CLAUDE.md`). Vitest unit tests DO run.
+- **The design source of truth is** [`DECISIONS.md`](./DECISIONS.md) (D1–D22). The research contract is [`../../handovers/2026-07-01-research-verdicts-for-ui-impl.md`](../../handovers/2026-07-01-research-verdicts-for-ui-impl.md). Project rules are the project-local `.agents/rules/*.agents.md` files.
+- **E2E tests: author only, do not run** (environment constraint — see repo `AGENTS.md`). Vitest unit tests DO run.
 
 ---
 
@@ -415,7 +415,7 @@ sed -n '1,220p' .work/plans/active/2026-06-30-material-session-decoupling/mocks/
 1. **`Step3Preview.tsx` — replace the slot preview with the summary+calendar** exactly per the mock: (a) delete `SchedulePreview`, `SwapFab`, `useSwapStateMachine`, `computeSwapEdits`, `handleResolveTie`, `handleRename`, `previewEdits`, `unresolved-tie` logic and the `displayRoadmap`/`generateRoadmap` slot path; (b) compute `generateBookings(...)` for the summary; (c) render the **Projected finish** verdict card (provisional eyebrow — the real value comes from Phase 6; here show `capacityCheck`-based estimate), the **backlog-fits-capacity** bar, the **sessions/total/buffer** stat row, the **material directory** chips, and the **expandable calendar** (reuse `roadmap-calendar-shell` classes; month `‹ ›` arrows; booked study-days marked). The finish card is a toggle that slides the calendar panel (per mock JS behaviour: `aria-expanded`, chevron rotate, hover affordance).
 2. **`Step3Materials.tsx` — grouped-by-type directory** (D-10): replace the flat `material-list` with collapsible sections **Videos / Playlists / Links & articles / Manual** (count + total), compact expand-on-edit rows; playlist rows open **`PlaylistPickerPopup`** (unchanged). Keep paste/add-manually/metadata-fetch logic.
 3. **`handleCommit`** (in `Step3Preview.tsx`): emit events in this order: `MaterialAdded` per committed material (unchanged) → `RoadmapCreated` with **capacity + deadline + `materialIds`, no `slots`** (D-01/D-02) → one `SessionBooked` per generated booking using the deterministic booking IDs from `generateBookings` → `OnboardingCompleted` if this is the first onboarding. Do not leave bookings implicit; D-02 says bookings are first-class events from day one. Keep the new-roadmap-draft guard that routes back to `/roadmaps` when another active roadmap exists.
-4. Honour rules: `.agents/rules/react-router-v7-basename.agents.md` (never put `/study` in `to`), `.agents/rules/form-design-spacing.agents.md`, `.agents/rules/css-workspace-packages.agents.md`.
+4. Honour rules: `.agents/rules/12-react-router-basename.agents.md` (never put `/study` in `to`), `.agents/rules/13-form-layout.agents.md`, `.agents/rules/14-design-token-package-exports.agents.md`.
 
 #### Tests
 - Update `apps/app/src/onboarding/**` tests that referenced tie/swap → remove. Add a Vitest test: committing onboarding emits `MaterialAdded` events, `RoadmapCreated{materialIds, slots: undefined}`, N `SessionBooked`, and `OnboardingCompleted` in order; generated booking IDs are stable across preview/commit.
@@ -462,8 +462,8 @@ grep -n "logSession('completed'\|resolution" apps/app/src/session/SessionLifecyc
 6. Feed the material ledger and calibration: `SessionLogged` now carries `bookingId`/`materialPosition`/`materialConsumedMinutes`; Phase 2 derivations pick them up. Keep calibration feed intact by verifying `materialConsumedMinutes` is present for interrupted/partial active sessions and the Phase-2 denominator helper uses it. Do **not** rely on the dial's `plannedSessionMinutes` as the calibration denominator.
 
 #### Tests
-- `apps/app/src/session/SessionLifecycle.test.ts`: add `interrupt()` emits `SessionLogged{resolution:'interrupted', bookingId, materialPosition, materialConsumedMinutes}` and leaves material open; `end()` carries `bookingId` and complete-position denominator. Follow `.agents/rules/dexie-test-setup.agents.md`.
-- `EndSessionSheet` + `PreSessionSetup` component tests (React Testing Library) — smart default, dial value → `start`, direct `/session` without location state derives today's booking, ad-hoc start emits `SessionBooked` before `SessionStarted`. Follow `.agents/rules/sync-provider-testing.agents.md` where providers wrap.
+- `apps/app/src/session/SessionLifecycle.test.ts`: add `interrupt()` emits `SessionLogged{resolution:'interrupted', bookingId, materialPosition, materialConsumedMinutes}` and leaves material open; `end()` carries `bookingId` and complete-position denominator. Follow `.agents/rules/32-dexie-testing.agents.md`.
+- `EndSessionSheet` + `PreSessionSetup` component tests (React Testing Library) — smart default, dial value → `start`, direct `/session` without location state derives today's booking, ad-hoc start emits `SessionBooked` before `SessionStarted`. Follow `.agents/rules/34-sync-provider-testing.agents.md` where providers wrap.
 - Author (not run) Playwright: Home → pre-session → start → running; interrupt logs partial; Continue bypasses pre-session (D-06).
 - Run: `pnpm --filter app test -- session`
 
@@ -511,7 +511,7 @@ sed -n '1,220p' .work/plans/active/2026-06-30-material-session-decoupling/mocks/
 5. Route `/roadmap` unchanged; readOnly history view keeps working via the same booking derivation over the selected roadmap's events. Read-only history can show material progress but must not render booking edit/add controls.
 
 #### Tests
-- `calendarModel.test.ts`, `RoadmapCalendar.test.tsx`: booking statuses render; add-session emits `SessionBooked`; editor emits `BookingEdited`/`BookingCleared`; Mark progress emits `MaterialProgressMarked` and does not emit `SessionLogged`. Use role/class selectors; `.agents/rules/astro-selectors.agents.md` only applies if marketing/Astro is touched (n/a).
+- `calendarModel.test.ts`, `RoadmapCalendar.test.tsx`: booking statuses render; add-session emits `SessionBooked`; editor emits `BookingEdited`/`BookingCleared`; Mark progress emits `MaterialProgressMarked` and does not emit `SessionLogged`. Use role/class selectors; `.agents/rules/11-playwright-selectors.agents.md` only applies if marketing/Astro is touched (n/a).
 - Author (not run) Playwright: add a session on an empty day; edit a booking's material/duration; remove a booking.
 - Run: `pnpm --filter app test -- RoadmapCalendar calendarModel`
 

@@ -8,7 +8,7 @@ figures for the M.Tech dissertation's Implementation chapter. **Do not modify an
 - Repo root: `/Users/rsaji/projects/1/college-mtech/study-planner-web`.
 - Boot the full app: `./full-app start full` — starts the FastAPI intelligence service at
   `http://127.0.0.1:8000` and the Vite app at `http://localhost:5173/study/`. See
-  `.claude/rules/playwright-full-app-lifecycle.md`. If pnpm/corepack complains about the registry, use
+  `.agents/rules/10-runtime-and-e2e.agents.md`. If pnpm/corepack complains about the registry, use
   `COREPACK_NPM_REGISTRY=https://registry.npmjs.org`.
 - Verify before browsing: `curl -i http://127.0.0.1:8000/health` and `curl -i http://localhost:5173/study/sign-in`.
 - Sign in with the dev account in `.work/specs/test-login-cred.txt`. That account has a seeded **"Tests"

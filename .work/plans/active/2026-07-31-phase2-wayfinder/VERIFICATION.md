@@ -1,6 +1,6 @@
 # VERIFICATION — 2026-07-31-phase2-wayfinder
 
-Running log for the Phase 2 wayfinder chart. Canonical artifact is the GitHub map ([#9](https://github.com/NotTheRealRohit/study-planner-web/issues/9)); this log tracks charting progress.
+Running log for the Phase 2 wayfinder chart. Canonical artifact is the GitHub map ([#9](https://github.com/rings0fsaturn/study-planner/issues/9)); this log tracks charting progress.
 
 ## Status
 
@@ -19,7 +19,7 @@ Running log for the Phase 2 wayfinder chart. Canonical artifact is the GitHub ma
 
 ## Log
 
-- **2026-07-31** Charted the Phase 2 wayfinder map on GitHub Issues (repo `NotTheRealRohit/study-planner-web`). Named destination via grilling = **spec + working prototypes**; established the **capstone / feature-rich / no-deferrals** standing principle. Locked 7 design decisions (guidance style, trigger, inline-hint surface, full-RAG grounding, full KT coupling, hybrid code execution, out-of-scope fence). Created wayfinder labels, map **#9**, 8 frontier tickets **#10–#17**, 4 blocked tickets **#18–#21** (blocking via `Blocked by:` body refs). Fired two research subagents: open-notebook reuse (report at `research/external/open-notebook-findings.md`; verdict = port patterns, don't run the service) and code-sandbox comparison.
+- **2026-07-31** Charted the Phase 2 wayfinder map on GitHub Issues (repo `rings0fsaturn/study-planner`). Named destination via grilling = **spec + working prototypes**; established the **capstone / feature-rich / no-deferrals** standing principle. Locked 7 design decisions (guidance style, trigger, inline-hint surface, full-RAG grounding, full KT coupling, hybrid code execution, out-of-scope fence). Created wayfinder labels, map **#9**, 8 frontier tickets **#10–#17**, 4 blocked tickets **#18–#21** (blocking via `Blocked by:` body refs). Fired two research subagents: open-notebook reuse (report at `research/external/open-notebook-findings.md`; verdict = port patterns, don't run the service) and code-sandbox comparison.
 - **2026-07-31** Resolved research ticket **#16** (Code execution sandbox selection): **self-host Judge0 CE** over HTTP (native grading verdicts, 90+ langs, `isolate` isolation; keep over-the-wire re GPL-3.0). Piston = fallback. Report at `research/external/code-sandbox-comparison.md`; resolution comment posted; issue closed; decision recorded on map #9.
   Next: work the frontier — suggested order is the infra trio (#12 content storage → #13 vector store → #14 AI backend, which unblock #18), or build the #17 inline-hint prototype first. Run `/wayfinder 9`.
 - **2026-07-31** Set the tackle order as 4 waves (see PLAN.md "Execution order"): Wave 0 frame (#10 → #11 → #15), Wave 1 de-risk (#17 prototype, parallel), Wave 2 AI infra trio (#14 → #12 → #13, unblocks #18), Wave 3 downstream (#18 → #19 → #20 → #21). Rationale: blocking graph + prototype the fuzzy #17 guide early. Each frontier ticket tagged with its wave in the ticket tables.

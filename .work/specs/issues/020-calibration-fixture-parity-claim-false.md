@@ -7,7 +7,7 @@ covers_user_stories: []
 
 ## Parent
 
-PRD: `PRD-study-tracker-web.md` · CLAUDE.md directive: "Keep the two implementations
+PRD: `PRD-study-tracker-web.md` · AGENTS.md directive: "Keep the two implementations
 behaviorally aligned." · Found in: `.work/plans/active/2026-07-03 third-review-report-work/research/01-app-architecture-and-data-flow.md`
 §3.5 and §5 finding #2 (architecture/research audit, 2026-07-03).
 

@@ -69,7 +69,7 @@ d109e69 Phase 4: starting (status: in progress)
 | [`services/intelligence/tests/test_v1_integration.py`](../../../services/intelligence/tests/test_v1_integration.py) | HTTP fixture parity test harness; reuse fixture mapping for README curl examples |
 | [`packages/py-roadmap-engine/src/py_roadmap_engine/engine.py`](../../../packages/py-roadmap-engine/src/py_roadmap_engine/engine.py) | Python roadmap scheduler port; public API already green |
 | [`tests/fixtures/pillar-a/`](../../../tests/fixtures/pillar-a/) | Golden request/response fixtures for curl examples and tests |
-| [`.claude/memory/flows/pillar-a-fastapi-intelligence-service.md`](../../../.claude/memory/flows/pillar-a-fastapi-intelligence-service.md) | Agent memory flow for Python engines → FastAPI routes |
+| `pillar-a-fastapi-intelligence-service` (memory flow) | Agent memory flow for Python engines → FastAPI routes |
 
 ## What was implemented in Phase 4
 
@@ -135,7 +135,7 @@ env COREPACK_NPM_REGISTRY=https://registry.npmjs.org pnpm --filter roadmap-engin
 # 30 passed
 ```
 
-Why the env var matters: on this machine plain `pnpm` can fail because Corepack attempts the public npm registry and gets `403`. The repo-local workaround is documented in `.claude/rules/pnpm-build-registry.md`; use `COREPACK_NPM_REGISTRY=https://registry.npmjs.org` for pnpm verification.
+Why the env var matters: on this machine plain `pnpm` can fail because Corepack attempts the public npm registry and gets `403`. The repo-local workaround is documented in `.agents/rules/50-pnpm-build-registry.agents.md`; use `COREPACK_NPM_REGISTRY=https://registry.npmjs.org` for pnpm verification.
 
 ## In-flight repo state
 

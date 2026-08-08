@@ -25,11 +25,11 @@ update_protocol: >
   the workstream's own canonical file, and bump last_updated. This index is convenience; the
   linked canonical file is the source of truth if they disagree — fix the drift, do not paper over it.
 agents:
-  claude_code: reads CLAUDE.md + .claude/rules/*.md
+  claude_code: reads AGENTS.md + .agents/rules/*.agents.md
   codex: reads AGENTS.md + .agents/rules/*.agents.md (model gpt-5.5; project_doc_fallback .agents.md)
   cowork: plans, designs, and reviews ONLY — never implements (division is absolute)
 related:
-  - ../CLAUDE.md
+  - ../AGENTS.md
   - ../AGENTS.md
   - README.md
   - specs/prd/PRD-study-tracker-web.md
@@ -69,7 +69,7 @@ related:
 ## 0. Operating model & conventions (read once)
 
 - **Two-environment workflow.** *Cowork* (this planning/review agent) plans, designs, and reviews; *Codex (gpt-5.5, primary)* and *Claude Code (Sonnet, secondary)* implement. The division is absolute — Cowork never writes code/tests/config and never runs mutating git (the sandbox bricks `.git` locks); the native side commits.
-- **Context layers mirror 1:1.** Claude Code: `CLAUDE.md` + `.claude/rules/<name>.md` (canonical). Codex: `AGENTS.md` + `.agents/rules/<name>.agents.md` (mirror). A rule edit must update both.
+- **Context layers are unified.** All agents read `AGENTS.md` + `.agents/rules/<name>.agents.md` (canonical). A rule edit updates the single canonical file.
 - **Artifact homes.** Plans → `plans/YYYY-MM-DD-<slug>/PLAN.md` (+ `VERIFICATION.md`); tickets → `issues/`; requirements → `prd/`; cross-session batons → `handovers/`; research docs/trackers → `research/doc/` and `college/scope/`; dissertation → `college/mydeliverables/`.
 - **Review loop.** Implementer commits planning docs first (Step 0), implements a phase, fills `VERIFICATION.md` (files, SHA, deviations); reviewer diffs the real commit and marks `✅ Verified` or `🔁 Changes requested`.
 - **`.cursor/` and `.opencode/` are legacy/dead. Never touch `.codex/**` (runtime).**
@@ -101,7 +101,7 @@ Mobile-first: Astro marketing site (`studytracker.app/*`) + Vite/React 19 SPA (`
 | 16 | Password reset + email-confirmation polish | ✅ | `ResetPassword.tsx`, `AuthConfirmed.tsx` |
 | 17 | Plausible Analytics | 🤔 | referenced in privacy policy text; analytics script not confirmed |
 
-**App next:** PWA (13); confirm/finish Plausible (17) and the Week streaming narrative (11). **Known constraint:** E2E tests are *written but not run* (environment issue — see CLAUDE.md).
+**App next:** PWA (13); confirm/finish Plausible (17) and the Week streaming narrative (11). **Known constraint:** E2E tests are *written but not run* (environment issue — see AGENTS.md).
 
 ## 2. Research Tier — 8-phase build  ·  status: 🟡 (6 of 8 phases done)
 
@@ -179,7 +179,7 @@ Isolated-env KT benchmark (pyKT / pyBKT) on public datasets.
 ## 6. Dissertation / College deliverables  ·  status: 🟡 Phase I delivered; R2/R3 ahead
 
 M.Tech dissertation and review artifacts.
-**Home:** `college/mydeliverables/`. **LaTeX report:** `college/mydeliverables/1st-Review/report/main.tex` (build via TinyTeX — see `.claude/rules/latex-report-build.md`; figures via `flow-diagram-tikz-gen.md`).
+**Home:** `college/mydeliverables/`. **LaTeX report:** `college/mydeliverables/1st-Review/report/main.tex` (build via TinyTeX — see `.agents/rules/60-latex-report-build.agents.md`; figures via `flow-diagram-tikz-gen.md`).
 
 | Milestone | Status | Artifacts |
 |---|---|---|
@@ -213,5 +213,5 @@ Feeds the A6 Phase-6 decision (§4).
 ## 9. Infra / housekeeping notes
 
 - **Earlier 2026-06-20 housekeeping note:** Cowork had flagged A6 `VERIFICATION.md` reviewer edits, `plans/active/2026-06-14-pillar-a-rigour-VERIFICATION.md` edits, `research/doc/2026-06-20-change-detection-literature-survey.md`, and generated `unified_detector_{results.json,summary.md}` as possible native-side Step 0 cleanup. Re-check `git status` before acting on that older list; the enriched calibration production-integration work itself is clean through `00d1e12`.
-- **Build gotchas (see `.claude/rules/`):** pnpm build needs internal registry (`COREPACK_NPM_REGISTRY`); LaTeX via TinyTeX on PATH; Dexie schema migrations must version-up; React Router `basename="/study"` (never include `/study` in `to`).
+- **Build gotchas (see `.agents/rules/`):** pnpm build needs internal registry (`COREPACK_NPM_REGISTRY`); LaTeX via TinyTeX on PATH; Dexie schema migrations must version-up; React Router `basename="/study"` (never include `/study` in `to`).
 - **This tracker's reconciliation:** last full reconcile 2026-06-20. If a marker here conflicts with a workstream's canonical file, the canonical file wins — fix the row.

@@ -213,7 +213,7 @@ unrecorded gap in app-development effort — its own deferral list explicitly de
 
 **1st-Review wrap** (dissertation paperwork): `aa7e257` adds a standalone-TikZ
 system-architecture diagram; `ba34193` is a bulk snapshot of report/deck/lit-survey
-artifacts, the `.agents/skills/` library, and new `.claude/rules/`.
+artifacts, the `.agents/skills/` library, and new `.agents/rules/`.
 
 **The Python workspace origin — all within 1h36m on 2026-06-08, 08:28-10:04:**
 `38dcc59`(08:28) is an unrelated same-morning app bug fix (SyncEngine dedup on re-login), not
@@ -410,7 +410,7 @@ Phase 4: request-id logging, `/readiness`, per-user rate limiting. `18dd144` Pha
 browser session surfaced **ES256, not HS256** access tokens, extending `require_user` to
 branch on JWT `alg` with JWKS-based verification for asymmetric keys. Review paused 4 days;
 `94195d0` (06-25) flagged a Phase-2 typed-error leak, fixed same evening by `abbac65` (see
-`.claude/rules/fetch-typed-error-normalization.md`), closed by `9d553cf`.
+`.agents/rules/22-fetch-error-normalization.agents.md`), closed by `9d553cf`.
 
 ### Cross-era status check
 
@@ -421,7 +421,7 @@ branch on JWT `alg` with JWKS-based verification for asymmetric keys. Review pau
   exactly, including line-level dependency-chain details. This entire architecture traces
   cleanly to this era and has not been touched since.
 - **`pnpm dev:full` — partially superseded.** The command name is still the documented entry
-  point (`CLAUDE.md`), but its `concurrently`+`wait-on` implementation from this era was
+  point (`AGENTS.md`), but its `concurrently`+`wait-on` implementation from this era was
   replaced by the `./full-app` lifecycle-manager CLI one era later (`16394a0`, 2026-07-02).
 - **`nextSessionForecast`** — shipped here, confirmed still a dead field client-side (doc 01
   §3.2), consistent with this era's own scope (D-04 was additive plumbing only).

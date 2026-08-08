@@ -172,9 +172,9 @@ visually verified by rasterizing the compiled PDF (per TIKZ_DIAGRAM_GUIDE).
   directory evolved from the 1st-review `main.tex`; preserve the submitted 1st-review artifact intact.
 - **A2** — Title page stays framed as **"Project Phase - 1"** (this is the Phase-1 culmination report).
 - **A3** — Keep the **hand-maintained `thebibliography`** block (no `.bib`/biber), per
-  `.claude/rules/latex-report-build.md`.
+  `.agents/rules/60-latex-report-build.agents.md`.
 - **A4** — Architecture diagrams are **standalone-TikZ vector PDFs**, per
-  `.claude/rules/flow-diagram-tikz-gen.md` and `college/mydeliverables/TIKZ_DIAGRAM_GUIDE.md`.
+  `.agents/rules/61-tikz-flow-diagrams.agents.md` and `college/mydeliverables/TIKZ_DIAGRAM_GUIDE.md`.
 
 ## 6. Open questions ☐
 

@@ -83,7 +83,7 @@ The ML approach was designed through an extensive /grill-me session and validate
 - Algorithm test script: `../../specs/issues/images/hyperparam_sweep.py` (reference implementation in Python)
 - Design mockups: `design/screens.html` (Section C: Home, Section E: Log, Section F: Weekly progress)
 - Burn-up chart design: `../../specs/issues/images/expectedDesign/burnupchart.png` (The Ledger variant)
-- Existing architecture rules: `.claude/rules/progress-engine.md`, `.claude/rules/eventstore-architecture.md`
+- Existing architecture rules: `.agents/rules/41-roadmap-engine.agents.md`, `.agents/rules/30-eventstore-boundaries.agents.md`
 
 ## Decisions log
 
@@ -467,8 +467,8 @@ SessionLogged events (all sources)
 | `packages/roadmap-engine/package.json` | modify | 1 | Update package name |
 | `apps/app/package.json` | modify | 1 | Update dependency name |
 | ~28 import sites in `apps/app/src/` | modify | 1 | Update import paths |
-| `.claude/rules/progress-engine.md` | modify | 1 | Update rule title/content |
-| `CLAUDE.md` | modify | 1 | Update commands and references |
+| `.agents/rules/41-roadmap-engine.agents.md` | modify | 1 | Update rule title/content |
+| `AGENTS.md` | modify | 1 | Update commands and references |
 | `packages/progress/package.json` | new | 2 | Package manifest |
 | `packages/progress/tsconfig.json` | new | 2 | TypeScript config |
 | `packages/progress/vitest.config.ts` | new | 2 | Test runner config |
@@ -547,9 +547,9 @@ If any of these fail, STOP — the codebase isn't in the expected state. Surface
    - `apps/app/src/onboarding/OnboardingFlow.test.tsx` (3 references)
    - `apps/app/src/onboarding/steps/Step3Preview.test.tsx` (6 references)
 
-5. **Update `.claude/rules/progress-engine.md`:** Rename to `roadmap-engine.md`. Update title to "Roadmap Engine". Update package name references.
+5. **Update `.agents/rules/41-roadmap-engine.agents.md`:** Rename to `roadmap-engine.md`. Update title to "Roadmap Engine". Update package name references.
 
-6. **Update `CLAUDE.md`:** Change `pnpm --filter progress-engine test` to `pnpm --filter roadmap-engine test`. Update the directory map entry. Update the architecture rules table.
+6. **Update `AGENTS.md`:** Change `pnpm --filter progress-engine test` to `pnpm --filter roadmap-engine test`. Update the directory map entry. Update the architecture rules table.
 
 7. **Run `pnpm install`** from workspace root to update the lockfile.
 
@@ -1553,7 +1553,7 @@ Resolved in Phase 7: shared mapper at `apps/app/src/progress/mapEvents.ts` is us
 - Best-params visualizations: `issues/images/best_params_*.png`
 - Burn-up chart design: `../../specs/issues/images/expectedDesign/burnupchart.png`
 - Design screens: `design/screens.html` (Sections C, E, F)
-- Existing architecture: `.claude/rules/eventstore-architecture.md`, `.claude/rules/progress-engine.md`
-- Dexie test patterns: `.claude/rules/dexie-test-setup.md`
+- Existing architecture: `.agents/rules/30-eventstore-boundaries.agents.md`, `.agents/rules/41-roadmap-engine.agents.md`
+- Dexie test patterns: `.agents/rules/32-dexie-testing.agents.md`
 - Session types: `apps/app/src/session/types.ts`
 - Sync types (RoadmapCreatedPayload): `apps/app/src/sync/types.ts`

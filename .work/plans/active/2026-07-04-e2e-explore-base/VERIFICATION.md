@@ -141,13 +141,13 @@ record it explicitly and note it must be run green on a machine that has the key
 
 ---
 
-## Phase 5 — Docs + mirrored rule
+## Phase 5 — Docs + canonical rule
 
 ### Acceptance criteria (reviewer pre-filled)
 
 - [ ] `e2e/README.md` documents: `e2e/support/` layout, how to author a new spec on the base, the run command (with `COREPACK_NPM_REGISTRY`), hermetic-vs-live modes, and the forbidden anti-patterns (`waitForTimeout`, inlined setup, hardcoded labels, failure-swallowing `try/catch`).
-- [ ] `.claude/rules/e2e-explore-base.md` created and `.agents/rules/e2e-explore-base.agents.md` is a **verbatim 1:1 mirror** (`diff` of non-blank lines is empty).
-- [ ] `CLAUDE.md` and `AGENTS.md` rules tables each gain an `e2e-explore-base` row.
+- [ ] `.agents/rules/e2e-explore-base.agents.md` created as the canonical rule.
+- [ ] `AGENTS.md` rules table gains an `e2e-explore-base` row.
 - [ ] Cross-links to `playwright-config`, `playwright-full-app-lifecycle`, `eventstore-per-user-db` present.
 
 ### Implementer report

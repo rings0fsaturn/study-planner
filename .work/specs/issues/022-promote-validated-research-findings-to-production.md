@@ -85,7 +85,7 @@ a design call, not just an engineering task.
 Port the split-conformal correction concept — not necessarily the exact synthetic-archetype
 calibration mechanism — into `packages/progress/src/projectFinish.ts` (TS, live) and, for
 parity, `packages/py-progress/src/py_progress/progress.py` (Python; currently unused per
-issue #021, but `CLAUDE.md` asks the two stay behaviorally aligned). Concretely:
+issue #021, but `AGENTS.md` asks the two stay behaviorally aligned). Concretely:
 
 1. Decide the production calibration population for conformal residuals (candidates: all
    completed roadmaps to date across all users, refreshed periodically; or a fixed

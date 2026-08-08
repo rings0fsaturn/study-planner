@@ -98,7 +98,7 @@ Do not stage or restore that unrelated deletion.
 - [x] Implement `initialRestorePending` in `SyncState` and `SyncEngine`.
 - [x] Implement `SyncProvider` timeout parsing, boot screen, timers, and child gating.
 - [x] Add Option C1 `.boot-*` CSS in `packages/design-tokens/src/components.css`.
-- [x] Document `VITE_INITIAL_RESTORE_TIMEOUT_MS` in `CLAUDE.md` and `apps/app/.env.example`.
+- [x] Document `VITE_INITIAL_RESTORE_TIMEOUT_MS` in `AGENTS.md` and `apps/app/.env.example`.
 - [x] Run Phase 8 focused tests and typecheck.
 - [x] Run the fresh-profile browser re-check and reduced-motion check through `./full-app`.
 - [x] Fill Phase 8 `VERIFICATION.md`, update `PLAN.md`, update `.work/STATUS.md`, and refresh this scratchpad.
@@ -107,7 +107,7 @@ Do not stage or restore that unrelated deletion.
 ## In-flight edits
 - Phase 8 SyncEngine edits complete and focused tests green: `apps/app/src/sync/types.ts`, `apps/app/src/sync/SyncEngine.ts`, and `apps/app/src/sync/SyncEngine.test.ts`.
 - Phase 8 provider edits complete and focused tests green: `apps/app/src/sync/SyncProvider.tsx` and `apps/app/src/sync/SyncProvider.test.tsx`.
-- Phase 8 CSS/docs/type fixture edits complete: `packages/design-tokens/src/components.css`, `CLAUDE.md`, `apps/app/.env.example`, and `apps/app/src/components/SyncIndicator.test.tsx`.
+- Phase 8 CSS/docs/type fixture edits complete: `packages/design-tokens/src/components.css`, `AGENTS.md`, `apps/app/.env.example`, and `apps/app/src/components/SyncIndicator.test.tsx`.
 - Phase 8 implementation/report files were committed in `f6313f8`.
 - Do not stage unrelated third-review/dissertation files: `.work/plans/active/2026-07-03 third-review-report-work/research/04-application-evolution-trace.md`, deleted `SCRATCHPAD-research-2.md`, untracked `SCRATCHPAD-research-3.md`, or untracked `college/mydeliverables/REPORT_WRITING_GUIDE.md`.
 - Do not touch or stage the unrelated deleted `.work/plans/active/2026-07-03 third-review-report-work/research/SCRATCHPAD-research-2.md` or untracked sibling `SCRATCHPAD-research-3.md`.
@@ -118,7 +118,7 @@ Do not stage or restore that unrelated deletion.
 - D-05: do not use legacy slot-grid splitting for the fixed product burn-up chart.
 - `BurnUpData.startDate` and `BurnUpData.deadline` remain optional.
 - Week's low-data gate stays in place.
-- E2E specs may be authored but not run (though this environment can run them — see `CLAUDE.md`; Phases 6-8 lean toward actually running visual/Playwright checks where practical).
+- E2E specs may be authored but not run (though this environment can run them — see `AGENTS.md`; Phases 6-8 lean toward actually running visual/Playwright checks where practical).
 - Reuse existing Marginalia palette and chart restraint; spend the UI change on clarity, not a new visual identity.
 - Design deviation in force: high-range tick values target roughly six readable intervals rather than the plan's literal 2h step for large domains.
 - Do not touch unrelated dirty rule/doc files or `_perm_test.txt`.

@@ -78,7 +78,7 @@ The app is local-first and event-sourced. A roadmap is **not a stored record** �
 
 **Engine duality (important):** a Python port exists — `packages/py-roadmap-engine/` exposes `generate_roadmap` / `regenerate_roadmap`, served at `POST /v1/roadmap/generate`, `POST /v1/roadmap/regenerate`, and `POST /v1/progress` (`services/intelligence/app/routers/roadmap.py`). **The frontend does not call these yet** — only `/v1/calibration` is wired. Per D-12, the deferred Replan seam is specified to route to the Python `regenerate` endpoint.
 
-Constraints: mobile-first responsive; `BrowserRouter basename="/study"` (never put `/study` in `to` props — see rule `react-router-v7-basename`); design tokens only, no raw pixel colors (rule `form-design-spacing`); Dexie schema changes must version up (rule `dexie-schema-migration`); E2E tests are **written but not run** in this environment (write them, don't run them — see `CLAUDE.md`).
+Constraints: mobile-first responsive; `BrowserRouter basename="/study"` (never put `/study` in `to` props — see rule `react-router-v7-basename`); design tokens only, no raw pixel colors (rule `form-design-spacing`); Dexie schema changes must version up (rule `dexie-schema-migration`); E2E tests are **written but not run** in this environment (write them, don't run them — see `AGENTS.md`).
 
 **Testing strategy (required — D-15).** Every UI phase ships a **Playwright visual walkthrough**: a spec that drives the feature one interaction at a time and captures a `page.screenshot` at each state, so when the suite is later run (it is not run here) it produces a step-by-step visual record that surfaces layout/interaction bugs the static mockup can't. The walkthrough lives in `e2e/roadmap.spec.ts` as an ordered sequence of `test.step(...)` blocks; each phase appends its steps. Steps assert behaviour (element visible, modal open/closed, month label changed, status colors applied) **and** screenshot before/after the action into `e2e/__screens__/roadmap/<NN>-<step>.png`. Use role/class selectors, not bare element selectors. Run config is `playwright test -c e2e/playwright.config.ts` (rule `playwright-config`) — author only; do not execute (environment-blocked). Unit/pure logic (status derivation, calendar model, lifecycle) is covered by Vitest as specified per phase; the Playwright walkthrough covers the *wired* behaviour end to end.
 
@@ -88,7 +88,7 @@ Constraints: mobile-first responsive; `BrowserRouter basename="/study"` (never p
 - Replan ticket — `.work/specs/issues/010-replan-flow-with-three-options.md`
 - Design — `design/screens.html` (§H Roadmap detail, §I Roadmaps history, K15/K16 desktop)
 - Roadmap engine guide — `design/algo/ROADMAP_ENGINE_GUIDE.md`
-- Rules — `.claude/rules/eventstore-architecture.md`, `react-router-v7-basename.md`, `dexie-schema-migration.md`, `fetch-typed-error-normalization.md`, `onboarding-architecture.md`
+- Rules — `.agents/rules/30-eventstore-boundaries.agents.md`, `react-router-v7-basename.md`, `dexie-schema-migration.md`, `fetch-typed-error-normalization.md`, `onboarding-architecture.md`
 
 ## Decisions log
 
@@ -225,7 +225,7 @@ Constraints: mobile-first responsive; `BrowserRouter basename="/study"` (never p
 ### D-14: Status & elevation visual contract (resolves OQ-01)
 
 **Status:** ✅ Agreed
-**Context:** The draft mockup overloaded terracotta (it ringed "today" *and* outlined "pending"), and a warm ring around the current week read as an error/warning. The user asked for a redesign with the two design skills (`.claude/skills/frontend-design/SKILL.md`, `.claude/skills/interface-design/SKILL.md`): distinguish *today* from *this week*, fill today's cell, and stop signalling "something's wrong" on the current week.
+**Context:** The draft mockup overloaded terracotta (it ringed "today" *and* outlined "pending"), and a warm ring around the current week read as an error/warning. The user asked for a redesign with the two design skills (`.agents/skills/frontend-design/SKILL.md`, `.agents/skills/interface-design/SKILL.md`): distinguish *today* from *this week*, fill today's cell, and stop signalling "something's wrong" on the current week.
 **Decision:** Lock the following token-based contract. All values are design tokens (rule `form-design-spacing` — no raw hex). The calendar reads as a unified grid (shared hairline borders), not floating cards.
 
 **Status chips** (icon pairs the color so it is never color-only — accessibility):
@@ -261,7 +261,7 @@ Grid borders: hairline `var(--border-subtle)` (≈ `rgba(ink, .07–.12)`); cont
 
 **Status:** ✅ Agreed
 **Context:** The user noted the approved visual "looks good, but there can be bugs" and asked for Playwright tests that "visually walk through each action to see behaviour works well."
-**Decision:** Each UI phase appends ordered `test.step(...)` blocks to a single `e2e/roadmap.spec.ts` walkthrough that drives every interaction and captures a screenshot at each state into `e2e/__screens__/roadmap/`. Assertions cover behaviour (visibility, modal open/close, month label change, applied status classes); screenshots provide the visual record. Authored against the existing Playwright config; **not executed here** (environment-blocked per CLAUDE.md). Vitest still covers the pure logic per phase.
+**Decision:** Each UI phase appends ordered `test.step(...)` blocks to a single `e2e/roadmap.spec.ts` walkthrough that drives every interaction and captures a screenshot at each state into `e2e/__screens__/roadmap/`. Assertions cover behaviour (visibility, modal open/close, month label change, applied status classes); screenshots provide the visual record. Authored against the existing Playwright config; **not executed here** (environment-blocked per AGENTS.md). Vitest still covers the pure logic per phase.
 **Rationale:** A static mockup can't catch wiring/layout/interaction regressions; a screenshot-per-step walkthrough makes behaviour reviewable and gives a re-runnable safety net once the environment allows.
 **Alternatives considered:** Pixel visual-regression (e.g. `toHaveScreenshot`) → deferred: baselines can't be generated without running, and the visual contract is still settling; raw screenshots are enough to eyeball now. Unit tests only → rejected: don't exercise the wired interactions the user cares about.
 **User pushback / disagreement:** none — this is the user's explicit request.
@@ -401,7 +401,7 @@ grep -n "ROLE_TO_LABEL" apps/app/src/pages/Home.tsx      # material-join pattern
 #### Tests
 
 - Add `apps/app/src/roadmap/calendarModel.test.ts` (Vitest): month-grid boundaries (month starting mid-week, 31-day month, Feb), cell binding (slot→bubble, unplanned→bubble, material title join).
-- Add `e2e/roadmap.spec.ts` — start the **visual walkthrough** (D-15; Playwright, **write only — do not run**, per CLAUDE.md). `test.step`s: (a) seed a roadmap + sessions, visit `/study/roadmap`, assert month grid + progress card + legend, `screenshot 01-grid`; (b) assert the **D-14 contract** is applied — current-week row uses `--cal-week-band`, today's cell uses `--cal-today-fill` with a "Today" pill, a `done` chip is moss + `ti-check`, a `skipped` chip is rust + `ti-x`, no terracotta ring anywhere, `screenshot 02-status-colors`; (c) no-roadmap user → empty state, `screenshot 03-empty`. Use role/class selectors.
+- Add `e2e/roadmap.spec.ts` — start the **visual walkthrough** (D-15; Playwright, **write only — do not run**, per AGENTS.md). `test.step`s: (a) seed a roadmap + sessions, visit `/study/roadmap`, assert month grid + progress card + legend, `screenshot 01-grid`; (b) assert the **D-14 contract** is applied — current-week row uses `--cal-week-band`, today's cell uses `--cal-today-fill` with a "Today" pill, a `done` chip is moss + `ti-check`, a `skipped` chip is rust + `ti-x`, no terracotta ring anywhere, `screenshot 02-status-colors`; (c) no-roadmap user → empty state, `screenshot 03-empty`. Use role/class selectors.
 - Run: `pnpm --filter app test`
 
 #### Verification (DONE — run after implementation)
@@ -523,7 +523,7 @@ Remove modal file; revert cell callbacks to no-ops.
 #### Codebase state assumed at start
 
 - `CalendarCell` renders bubbles (desktop) and `SessionDetailModal` exists.
-- `useMatchMedia` hook exists at `apps/app/src/lib/` (per CLAUDE.md directory map).
+- `useMatchMedia` hook exists at `apps/app/src/lib/` (per AGENTS.md directory map).
 
 #### Verification (run BEFORE starting)
 
@@ -704,7 +704,7 @@ Resolved via a design-skill redesign pass and user sign-off ("visually looks goo
 - **Inline editing / drag-to-reschedule** — deferred (D-11).
 - **Server-side progress/generation cutover for onboarding** — onboarding keeps the TS engine; only replan is specified to route to Python.
 - **PWA / analytics / streaming narrative** — separate queued items in STATUS.
-- **Running E2E** — environment-blocked; specs are written but not executed (CLAUDE.md).
+- **Running E2E** — environment-blocked; specs are written but not executed (AGENTS.md).
 
 ## References
 
@@ -714,6 +714,6 @@ Resolved via a design-skill redesign pass and user sign-off ("visually looks goo
 - Roadmap engine guide — `design/algo/ROADMAP_ENGINE_GUIDE.md`
 - Python regenerate contract — `services/intelligence/app/schemas/roadmap.py`, `services/intelligence/app/routers/roadmap.py`
 - Calibration client pattern — `apps/app/src/lib/intelligenceClient.ts`
-- Event/data model — `.claude/rules/eventstore-architecture.md`; `apps/app/src/sync/types.ts`; `apps/app/src/progress/mapEvents.ts`
+- Event/data model — `.agents/rules/30-eventstore-boundaries.agents.md`; `apps/app/src/sync/types.ts`; `apps/app/src/progress/mapEvents.ts`
 - Rules — `react-router-v7-basename.md`, `dexie-schema-migration.md`, `fetch-typed-error-normalization.md`, `form-design-spacing.md`, `onboarding-architecture.md`
 - Calendar UX survey (Google/Notion/Apple/Fantastical/Motion/Sunsama/Akiflow/TickTick/RemNote/Anki FSRS) — captured in the planning conversation (2026-06-26)

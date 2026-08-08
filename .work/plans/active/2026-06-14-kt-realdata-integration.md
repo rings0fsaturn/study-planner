@@ -31,7 +31,7 @@ A phase-by-phase implementation plan. Each phase is a **vertical slice** — an 
 - **Do not modify the Decisions log, the Operating manual preamble, the TL;DR, the Architecture overview, the Files-touched index, the Open questions, the Out-of-scope list, or the References.** Those are immutable above-the-phases content. If you discover a decision is wrong, surface to the human — don't silently revise.
 - **Do not re-plan or re-architect.** If the plan seems wrong, that's a signal to stop and surface, not to improvise.
 - **Do not implement multiple phases without surfacing for human review** between them, unless the user explicitly asked for batch execution upfront.
-- **Do not run the heavy isolated-env training in this environment.** Per repo norm ("E2E/heavy envs: write, don't run here") and `CLAUDE.md` ("E2E test cannot be performed due to Environment issues, So only write the test dont try to run"), the deep-model training and pyBKT fits are **written with smoke guards and marked manual-run**. You write the code and the smoke path; the candidate runs the full grid offline.
+- **Do not run the heavy isolated-env training in this environment.** Per repo norm ("E2E/heavy envs: write, don't run here") and `AGENTS.md` ("E2E test cannot be performed due to Environment issues, So only write the test dont try to run"), the deep-model training and pyBKT fits are **written with smoke guards and marked manual-run**. You write the code and the smoke path; the candidate runs the full grid offline.
 
 ## If you get stuck
 
@@ -101,7 +101,7 @@ research/kt-bench/data/                         (gitignored: .gitignore "researc
     poj_log.csv                                 (produced by the ACcoding adapter)
 ```
 
-**Gotchas carried from Phase 4 (do not relitigate):** isolated venv on system Python 3.9.6 with `pykt-toolkit==0.0.38` (0.0.39 not on PyPI), `torch==2.3.1`; clean-env `join.py`/`pybkt_runner.py` must **never import torch/pyKT** (enforced by `test_kt_join.py`); the pyBKT import shim in `pybkt_runner.py` stays; `WANDB_MODE=offline`; if torch/dataset pulls fail use the corporate-mirror / CA patterns in [`.claude/rules/docker-colima-setup.md`](../../../.claude/rules/docker-colima-setup.md) and [`.claude/rules/pnpm-build-registry.md`](../../../.claude/rules/pnpm-build-registry.md).
+**Gotchas carried from Phase 4 (do not relitigate):** isolated venv on system Python 3.9.6 with `pykt-toolkit==0.0.38` (0.0.39 not on PyPI), `torch==2.3.1`; clean-env `join.py`/`pybkt_runner.py` must **never import torch/pyKT** (enforced by `test_kt_join.py`); the pyBKT import shim in `pybkt_runner.py` stays; `WANDB_MODE=offline`; if torch/dataset pulls fail use the corporate-mirror / CA patterns in [`.agents/rules/51-docker-colima.agents.md`](../../../.agents/rules/51-docker-colima.agents.md) and [`.agents/rules/50-pnpm-build-registry.agents.md`](../../../.agents/rules/50-pnpm-build-registry.agents.md).
 
 ## Decisions log
 
@@ -606,5 +606,5 @@ Audit follow-up: the active `research/results/kt` directory still contained igno
 - `research/kt-bench/.venv/.../pykt/preprocess/{poj_preprocess.py,nips_task34_preprocess.py,data_proprocess.py,utils.py}` — reader contracts (verified above).
 - `research/comparison/src/research_comparison/kt/{join.py,pybkt_runner.py}` + `tests/test_kt_join.py` — the clean-env seam.
 - `Makefile` `kt` target (lines 21-30).
-- [`.claude/rules/docker-colima-setup.md`](../../../.claude/rules/docker-colima-setup.md), [`.claude/rules/pnpm-build-registry.md`](../../../.claude/rules/pnpm-build-registry.md) — corporate-mirror / CA fallbacks for torch/dataset pulls.
+- [`.agents/rules/51-docker-colima.agents.md`](../../../.agents/rules/51-docker-colima.agents.md), [`.agents/rules/50-pnpm-build-registry.agents.md`](../../../.agents/rules/50-pnpm-build-registry.agents.md) — corporate-mirror / CA fallbacks for torch/dataset pulls.
 - ACcoding upstream — https://zenodo.org/record/6522395 ; pyKT — https://pykt.org ; pyBKT — https://github.com/CAHLR/pyBKT.

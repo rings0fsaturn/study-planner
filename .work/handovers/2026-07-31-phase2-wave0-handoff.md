@@ -15,7 +15,7 @@ Wave 0 tickets (grilling decisions, one per session, order flexible — start wi
 ```
 /wayfinder 9 10
 
-Work through the Phase 2 wayfinder map (GitHub issue #9, repo NotTheRealRohit/study-planner-web)
+Work through the Phase 2 wayfinder map (GitHub issue #9, repo rings0fsaturn/study-planner)
 in "work through the map" mode. This session: resolve Wave 0, ticket #10 (App IA & navigation for
 Assessments + Practice). One decision ticket per session — do NOT resolve more than one.
 

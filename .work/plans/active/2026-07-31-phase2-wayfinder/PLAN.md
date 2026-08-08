@@ -2,8 +2,8 @@
 
 **Task id:** `2026-07-31-phase2-wayfinder`
 **Type:** wayfinder charting (planning; destination = spec + working prototypes)
-**Tracker:** GitHub Issues on `NotTheRealRohit/study-planner-web` (the map + tickets are the canonical artifact; this doc is the `.work/` index/pointer).
-**Map:** [#9 Phase 2 map: Assessments + LLM-guided Practice](https://github.com/NotTheRealRohit/study-planner-web/issues/9)
+**Tracker:** GitHub Issues on `rings0fsaturn/study-planner` (the map + tickets are the canonical artifact; this doc is the `.work/` index/pointer).
+**Map:** [#9 Phase 2 map: Assessments + LLM-guided Practice](https://github.com/rings0fsaturn/study-planner/issues/9)
 
 > This is an M.Tech **capstone**: build feature-rich and complete — no ship-fast / MVP / deferral tradeoffs.
 
@@ -59,23 +59,23 @@ Legend: ☐ open · ✅ done.
 
 | # | Ticket | Type | Wave | Status |
 |---|---|---|---|---|
-| [#10](https://github.com/NotTheRealRohit/study-planner-web/issues/10) | App IA & navigation for Assessments + Practice | grilling | 0 | ✅ closed |
-| [#11](https://github.com/NotTheRealRohit/study-planner-web/issues/11) | Assessment types, formats & scoring spec | grilling | 0 | ✅ closed |
-| [#12](https://github.com/NotTheRealRohit/study-planner-web/issues/12) | Content ingestion & storage design | grilling | 2 | ☐ open |
-| [#13](https://github.com/NotTheRealRohit/study-planner-web/issues/13) | Vector store, embeddings & async job mechanism | grilling | 2 | ☐ open |
-| [#14](https://github.com/NotTheRealRohit/study-planner-web/issues/14) | AI backend home & streaming | grilling | 2 | ☐ open |
-| [#15](https://github.com/NotTheRealRohit/study-planner-web/issues/15) | Persistence & local-first fit | grilling | 0 | ✅ closed |
-| [#16](https://github.com/NotTheRealRohit/study-planner-web/issues/16) | Code execution sandbox selection | research | — | ✅ closed — Judge0 CE |
-| [#17](https://github.com/NotTheRealRohit/study-planner-web/issues/17) | Inline-hint live guide (prototype) | prototype | 1 | ☐ open |
+| [#10](https://github.com/rings0fsaturn/study-planner/issues/10) | App IA & navigation for Assessments + Practice | grilling | 0 | ✅ closed |
+| [#11](https://github.com/rings0fsaturn/study-planner/issues/11) | Assessment types, formats & scoring spec | grilling | 0 | ✅ closed |
+| [#12](https://github.com/rings0fsaturn/study-planner/issues/12) | Content ingestion & storage design | grilling | 2 | ☐ open |
+| [#13](https://github.com/rings0fsaturn/study-planner/issues/13) | Vector store, embeddings & async job mechanism | grilling | 2 | ☐ open |
+| [#14](https://github.com/rings0fsaturn/study-planner/issues/14) | AI backend home & streaming | grilling | 2 | ☐ open |
+| [#15](https://github.com/rings0fsaturn/study-planner/issues/15) | Persistence & local-first fit | grilling | 0 | ✅ closed |
+| [#16](https://github.com/rings0fsaturn/study-planner/issues/16) | Code execution sandbox selection | research | — | ✅ closed — Judge0 CE |
+| [#17](https://github.com/rings0fsaturn/study-planner/issues/17) | Inline-hint live guide (prototype) | prototype | 1 | ☐ open |
 
 ### Blocked (wired, wait for upstream)
 
 | # | Ticket | Type | Wave | Blocked by |
 |---|---|---|---|---|
-| [#18](https://github.com/NotTheRealRohit/study-planner-web/issues/18) | Grounded assessment-generation pipeline | grilling | 3 | #12 #13 #14 |
-| [#19](https://github.com/NotTheRealRohit/study-planner-web/issues/19) | Grading → mastery signal mapping | grilling | 3 | #11 #15 |
-| [#20](https://github.com/NotTheRealRohit/study-planner-web/issues/20) | KT model & adaptive-difficulty loop | grilling | 3 | #19 |
-| [#21](https://github.com/NotTheRealRohit/study-planner-web/issues/21) | Practice session model (written + coding) | grilling | 3 | #17 |
+| [#18](https://github.com/rings0fsaturn/study-planner/issues/18) | Grounded assessment-generation pipeline | grilling | 3 | #12 #13 #14 |
+| [#19](https://github.com/rings0fsaturn/study-planner/issues/19) | Grading → mastery signal mapping | grilling | 3 | #11 #15 |
+| [#20](https://github.com/rings0fsaturn/study-planner/issues/20) | KT model & adaptive-difficulty loop | grilling | 3 | #19 |
+| [#21](https://github.com/rings0fsaturn/study-planner/issues/21) | Practice session model (written + coding) | grilling | 3 | #17 |
 
 ### Fog (not yet specified) / see map
 

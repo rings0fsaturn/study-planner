@@ -20,7 +20,7 @@ sources: >
 ## 0. Executive Summary — what's actually live
 
 The repo ships **two parallel implementations** for two of its four core engines (progress-analytics
-and roadmap-generation), per `CLAUDE.md`'s "keep the two implementations behaviorally aligned"
+and roadmap-generation), per `AGENTS.md`'s "keep the two implementations behaviorally aligned"
 directive. Tracing actual call sites (not just what exists) shows the live/dead split is **not** a
 clean "TS for X, Python for Y" story — it varies capability-by-capability, and two of the four
 Python-side integration points are dead code with zero callers from the app:
@@ -126,7 +126,7 @@ neither of which is a registered route (falls through to the catch-all).
 | 3/preview | `Step3Preview.tsx` | Calls `generateBookings()` (roadmap-engine, client-side) → calendar preview + capacity warnings. **This is where commit actually happens** (below) | inherits step-3 gating |
 | 4 | `Step4Confirm.tsx` | Read-only summary of already-persisted events. **Emits nothing itself** | `materials.length >= 1` |
 
-**Documentation drift found:** `.claude/rules/onboarding-architecture.md` states *"Step4Confirm emits
+**Documentation drift found:** `.agents/rules/40-onboarding-flow.agents.md` states *"Step4Confirm emits
 three events: `OnboardingCompleted`, `MaterialAdded`, `RoadmapCreated`."* The actual code has moved
 all of that (plus `SessionBooked`) into `Step3Preview.handleCommit()` (`onboarding/steps/Step3Preview.tsx:156-224`):
 
@@ -392,7 +392,7 @@ cold-start threshold. See `02-research-to-app-mapping.md` §1 for the full, corr
 
 ### 4.1 EventStore — the backbone
 
-**Dexie schema is v5** (`.claude/rules/eventstore-architecture.md` is stale at v3):
+**Dexie schema is v5** (`.agents/rules/30-eventstore-boundaries.agents.md` is stale at v3):
 
 ```ts
 v1: { events: '++id, kind, createdAt' }
@@ -526,12 +526,12 @@ crashed/closed tab to `'error'`. Draft is cleared on successful commit (§1.4).
 ### 4.5 AuthGate — DI-wrapped Supabase Auth
 
 Constructor takes a structural `AuthGateDeps` subset of the Supabase `auth` namespace, enabling
-hand-written fakes in tests (per `.claude/rules/auth-testing-fakes.md`). Notable business rule at the
+hand-written fakes in tests (per `.agents/rules/21-auth-testing.agents.md`). Notable business rule at the
 gate layer: `signIn()` returns `{ user: null, error: new Error('Email not confirmed') }` if
 `!data.user.email_confirmed_at`, even when Supabase itself returned no error.
 
 `AuthProvider`'s init races two paths to flip `loading → false`: the real `getSession()`/`getUser()`
-promise, and a hard 500ms `setTimeout` (per `.claude/rules/auth-init-timeout.md`) — whichever fires
+promise, and a hard 500ms `setTimeout` (per `.agents/rules/20-auth-boundaries.agents.md`) — whichever fires
 first wins. `recoveryMode` is driven independently by the `onAuthStateChange` event stream
 (`PASSWORD_RECOVERY` → true; `USER_UPDATED`/`SIGNED_OUT` → false). `AuthProvider` has zero imports from
 `events/` or `sync/` — auth is a strictly upstream concern.
@@ -554,7 +554,7 @@ event reach the cloud" depends on which module emitted it, not on the event's `k
 | 3 | Roadmap "packed-slot" engine + Python mirror + `/v1/roadmap/regenerate` HTTP seam: fully built and tested, zero live callers. **Corroborated, not just inferred**: `.work/plans/active/2026-06-30-material-session-decoupling/DECISIONS.md` D1/§5c explicitly retires this "prescriptive day-by-day packing" design in favor of the booking model — the orphaning was a deliberate consequence of a documented decision, not an oversight. | `replanRoadmap.ts`, `py_roadmap_engine/`, `routers/roadmap.py`, `DECISIONS.md` D1/§5c | Low-medium — orphaned infra; maintenance/clarity cost and a `.work/STATUS.md` documentation-accuracy issue, but the underlying design choice is sound and already recorded |
 | 4 | `POST /v1/progress` and `POST /v1/calibration/prompt-detail` — fully built, documented, tested; zero callers in the app | `services/intelligence/app/routers/progress.py`, `calibration.py:24-28` | Low — dead endpoints, same category as #3 |
 | 5 | `pages/StudyPlaceholder.tsx` unmounted; `/terms`/`/privacy` links with no matching routes | `App.tsx`, `SignIn.tsx` | Low — dead code / broken links |
-| 6 | `.claude/rules/onboarding-architecture.md` and `eventstore-architecture.md` are stale (describe Step4Confirm emitting events that actually fire from Step3Preview; describe schema v3 when live schema is v5) | rule files | Low — docs drift, easy fix |
+| 6 | `.agents/rules/40-onboarding-flow.agents.md` and `eventstore-architecture.md` are stale (describe Step4Confirm emitting events that actually fire from Step3Preview; describe schema v3 when live schema is v5) | rule files | Low — docs drift, easy fix |
 | 7 | `Step4Confirm.tsx` reads a `roadmap.slots` field that `Step3Preview`'s commit no longer populates | `Step4Confirm.tsx:24-29`, `Step3Preview.tsx:192-202` | Low — latent inconsistency, likely dead-reads-undefined rather than a visible bug |
 | 8 | Split-conformal GP-interval correction remains unpromoted (a distinct, still-open finding — see §3.5 correction above and `02-research-to-app-mapping.md` §1). The scheduling-algorithm "gap" and the ETA cold-start-composite "gap" originally listed here were **withdrawn on 2026-07-03** after cross-referencing `.work/plans/active/2026-06-30-material-session-decoupling/` and `.work/plans/active/2026-06-30-research-eta-model-selection/`: scheduling was explicitly retired by design decision (not a gap), and the ETA composite *was* promoted to production one day after validation (also not a gap). | `projectFinish.ts` (composite: promoted); `conformal` (correction: not promoted anywhere) | Low-medium — narrower and more current than originally scoped; see Doc 2 for the corrected accounting |
 

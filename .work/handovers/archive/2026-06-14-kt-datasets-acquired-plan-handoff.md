@@ -144,7 +144,7 @@ The smoke→real swap is **auditable**: each `folds.json` records `raw_source`, 
 - `pyBKT` in the clean env needs a narrow process-local import shim (sklearn/`AttributeError`
   on Python 3.14) — already in `pybkt_runner.py`; don't remove it.
 - If torch/dataset pulls fail on this machine, use the corporate-mirror / CA-bundle patterns in
-  `.claude/rules/docker-colima-setup.md` and `.claude/rules/pnpm-build-registry.md`.
+  `.agents/rules/51-docker-colima.agents.md` and `.agents/rules/50-pnpm-build-registry.agents.md`.
 - Repo norm: **heavy/isolated-env steps are written, not run, in CI** ("E2E/heavy envs: write,
   don't run here"). The plan should mark train/coldstart as manual-run with smoke guards.
 

@@ -139,7 +139,7 @@ docker-compose.yml                      # NEW (Phase 6)
 | Item | Status |
 |---|---|
 | Fixture export script design | **Assumed** agent will build in Phase 2 — no spec beyond file naming |
-| `uv` installed on dev machine | **Assumed** — not documented in `CLAUDE.md` yet |
+| `uv` installed on dev machine | **Assumed** — not documented in `AGENTS.md` yet |
 | CI job for pytest | **Deferred** — optional, not blocking |
 | `addMaterialToRoadmap` / `removeMaterialFromRoadmap` HTTP endpoints | **Assumed** deferred — plan lists generate/regenerate only; add if full API parity wanted |
 

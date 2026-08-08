@@ -704,7 +704,7 @@ grep -n "deadline\|slots" apps/app/src/sync/types.ts                   # Roadmap
 
 - Add `apps/app/src/progress/useCalibration.test.ts` (Vitest): mock `postCalibration`; assert the hook (a) builds a request containing `planned_horizon` when a roadmap exists, (b) returns the mapped `CalibrationState` on success, (c) returns `null` on fetch rejection. Use the existing Dexie test setup (`dexie-test-setup` rule) and a fake EventStore.
 - Run: `pnpm --filter app test`
-- **E2E:** per `CLAUDE.md`, E2E **cannot be run in this environment** — *write* a Playwright spec asserting Home renders the pace/forecast after a mocked `/v1/calibration` response, but do not run it.
+- **E2E:** per `AGENTS.md`, E2E **cannot be run in this environment** — *write* a Playwright spec asserting Home renders the pace/forecast after a mocked `/v1/calibration` response, but do not run it.
 
 #### Verification (DONE — run after implementation)
 
@@ -770,5 +770,5 @@ failed under the current date (`2026-06-20`); they were stabilized separately in
 - Production calibration — `packages/py-progress/src/py_progress/calibration.py`, types `py_progress/types.py`, config `py_progress/config.py`
 - Service — `services/intelligence/app/{main.py,routers/calibration.py,schemas/progress.py,serialize.py}`, README `services/intelligence/README.md`
 - UI — `apps/app/src/progress/{useCalibration.ts,useProgress.ts,usePromptDetail.ts,mapEvents.ts}`, `apps/app/src/pages/{Home.tsx,Week.tsx}`, `apps/app/src/sync/types.ts`
-- Rules — `.claude/rules/dexie-test-setup.md`, `.claude/rules/auth-testing-fakes.md`, `.claude/rules/pnpm-build-registry.md`, `.claude/rules/docker-colima-setup.md` (service via Docker)
+- Rules — `.agents/rules/32-dexie-testing.agents.md`, `.agents/rules/21-auth-testing.agents.md`, `.agents/rules/50-pnpm-build-registry.agents.md`, `.agents/rules/51-docker-colima.agents.md` (service via Docker)
 - MASTER_TRACKER §3/§4/§7 — research outcomes + detection null

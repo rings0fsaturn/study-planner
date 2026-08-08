@@ -98,7 +98,7 @@ see `college/mydeliverables/TIKZ_DIAGRAM_GUIDE.md`), copy the new `arch_*.pdf` b
 - **Colors in chapter TikZ must be xcolor built-ins** (`blue!25`, `orange!12`, `black!45`, …) or defined in `main.tex`. `amber` is defined only in the standalone `arch_*.tex` — it is NOT available in the chapters (this caused "Undefined color `amber`").
 - **Screenshots**: `\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_X.png}` — caps BOTH dimensions so tall mobile shots and wide desktop shots both fit.
 - **Harmless overfull**: one 2.6 pt line in Ch2 §2.3 (GP intro). Ignore; guide treats sub-line overfulls as acceptable.
-- **Preamble already loads** (in `main.tex`): inputenc, fontenc, graphicx, booktabs, array, enumitem, float, caption, subcaption, amsmath, amssymb, tikz (+arrows.meta/positioning/calc), pgfplots (compat=1.18, +fillbetween), listings, hyperref, geometry. A `\screenshotplaceholder` macro is defined but now unused (safe to leave/remove). References are a hand-maintained `thebibliography` (no `.bib`/biber — see `.claude/rules/latex-report-build.md`), numbered by first citation.
+- **Preamble already loads** (in `main.tex`): inputenc, fontenc, graphicx, booktabs, array, enumitem, float, caption, subcaption, amsmath, amssymb, tikz (+arrows.meta/positioning/calc), pgfplots (compat=1.18, +fillbetween), listings, hyperref, geometry. A `\screenshotplaceholder` macro is defined but now unused (safe to leave/remove). References are a hand-maintained `thebibliography` (no `.bib`/biber — see `.agents/rules/60-latex-report-build.agents.md`), numbered by first citation.
 
 ---
 
@@ -141,11 +141,11 @@ Compact snapshot of what's available (frozen regime unless noted):
 ## 7. Git state (read-only note — Cowork cannot commit)
 
 - The whole `college/mydeliverables/3rd-Review/` tree and the task-folder planning docs (`DECISIONS.md`, `PLAN.md`, `VERIFICATION.md`, `SCRATCHPAD.md`, `screenshot-capture-prompt.md`, `capture-screenshots.mjs`) are **untracked/uncommitted**. Also `research/04-*.md` modified and `research/SCRATCHPAD-research-2.md` deleted from a prior session.
-- **Native-side Step 0:** commit the report + docs so later diffs are meaningful. **Never run mutating git in Cowork** (`.claude/rules` / project rule: the sandbox can't unlink lock files → bricks the repo).
+- **Native-side Step 0:** commit the report + docs so later diffs are meaningful. **Never run mutating git in Cowork** (`.agents/rules` / project rule: the sandbox can't unlink lock files → bricks the repo).
 
 ## 8. Reference docs
 - Decisions/plan/verification/scratchpad: task folder (see §2).
 - Research grounding: `research/01-app-architecture-and-data-flow.md`, `02-research-to-app-mapping.md`, `03-research-to-literature-mapping.md`, `04-application-evolution-trace.md` (task folder).
 - Style: `college/mydeliverables/REPORT_WRITING_GUIDE.md`, `TIKZ_DIAGRAM_GUIDE.md`.
-- Build: `.claude/rules/latex-report-build.md`, `.claude/rules/flow-diagram-tikz-gen.md`.
+- Build: `.agents/rules/60-latex-report-build.agents.md`, `.agents/rules/61-tikz-flow-diagrams.agents.md`.
 - Status index: `.work/STATUS.md` (dissertation row).

@@ -79,8 +79,8 @@ The fix treats each playlist as one material. The engine never knows about indiv
 
 - `../../specs/issues/011-playlist-as-one-material.md` — issue with acceptance criteria
 - `design/algo/ROADMAP_ENGINE_GUIDE.md` — engine algorithm decisions
-- `.claude/rules/roadmap-engine.md` — engine architecture rule
-- `.claude/rules/eventstore-architecture.md` — event schema
+- `.agents/rules/41-roadmap-engine.agents.md` — engine architecture rule
+- `.agents/rules/30-eventstore-boundaries.agents.md` — event schema
 
 ## Decisions log
 
@@ -864,8 +864,8 @@ Remove `computePlaylistCursor` and revert to passing full `videos` array without
 - `../../specs/issues/011-playlist-as-one-material.md` — full issue with acceptance criteria
 - `../../specs/issues/012-slot-merge-drag-drop.md` — deferred follow-up issue
 - `design/algo/ROADMAP_ENGINE_GUIDE.md` — roadmap engine algorithm decisions (16 design decisions + Q21 redesign)
-- `.claude/rules/roadmap-engine.md` — engine architecture summary
-- `.claude/rules/eventstore-architecture.md` — Dexie schema (v3), event shape
-- `.claude/rules/sync-architecture.md` — write-ahead queue, snapshot/restore flow
+- `.agents/rules/41-roadmap-engine.agents.md` — engine architecture summary
+- `.agents/rules/30-eventstore-boundaries.agents.md` — Dexie schema (v3), event shape
+- `.agents/rules/33-sync-boundaries.agents.md` — write-ahead queue, snapshot/restore flow
 - `packages/roadmap-engine/src/roadmap-engine.ts` — engine source (no changes needed)
 - `apps/app/src/session/SessionLifecycle.ts` — session state machine

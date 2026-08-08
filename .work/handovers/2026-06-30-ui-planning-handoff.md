@@ -50,7 +50,7 @@ read-only on code (`apps/ packages/ …`), describe the UI, don't implement it.
   keyed by booking.
 - **Reuse the design system:** `packages/design-tokens` (Marginalia), `apps/app/src/components` (AppShell,
   NavBar, Field, Button, Card, Tag). Honour the existing rules: React Router `basename="/study"` (never put
-  `/study` in `to`), form spacing tokens, etc. (see `.claude/rules/`).
+  `/study` in `to`), form spacing tokens, etc. (see `.agents/rules/`).
 - **Multi-roadmap lifecycle exists** (recently-built Roadmaps dashboard: active/queued/abandoned, date-window
   attribution, `findActiveRoadmap`) — the booking model must slot into it; ground in the current code before
   planning (STATUS.md "Roadmaps dashboard" rows).

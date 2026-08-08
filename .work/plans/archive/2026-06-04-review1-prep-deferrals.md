@@ -33,7 +33,7 @@ Priority for the next 2 days is **Review 1 content**, not repo polish.
   - Trigger: when working from an environment that can reach the real repo.
 
 - [ ] **Remote push / remote sync** — no push access to
-  `github.com/NotTheRealRohit/study-planner-web` from here.
+  `github.com/rings0fsaturn/study-planner` from here.
   - Why deferred: explicitly "worry about remote later."
   - Trigger: when push access is available.
 

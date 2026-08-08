@@ -663,7 +663,7 @@ If any of these fail, STOP.
    j. Verify streak updates to "2-day streak"
    k. Verify recent activity shows both sessions
 
-   **Note:** Per CLAUDE.md, E2E tests cannot be run due to environment issues — write the test but do not attempt to run it.
+   **Note:** Per AGENTS.md, E2E tests cannot be run due to environment issues — write the test but do not attempt to run it.
 
 #### Tests
 

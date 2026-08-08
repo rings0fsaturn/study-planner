@@ -78,7 +78,7 @@ The roadmap engine's Stage 5 (material assignment) creates a "boundary slot" per
 
 - Roadmap engine algorithm: `packages/roadmap-engine/src/roadmap-engine.ts`
 - Engine design guide: `design/algo/ROADMAP_ENGINE_GUIDE.md`
-- Onboarding architecture: `.claude/rules/onboarding-architecture.md`
+- Onboarding architecture: `.agents/rules/40-onboarding-flow.agents.md`
 
 ## Decisions log
 
@@ -644,4 +644,4 @@ pnpm lint       # no lint errors
 - OnboardingProvider reducer: `apps/app/src/onboarding/OnboardingProvider.tsx`
 - Step3Preview: `apps/app/src/onboarding/steps/Step3Preview.tsx`
 - SchedulePreview: `apps/app/src/onboarding/components/SchedulePreview.tsx`
-- Onboarding architecture rule: `.claude/rules/onboarding-architecture.md`
+- Onboarding architecture rule: `.agents/rules/40-onboarding-flow.agents.md`

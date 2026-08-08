@@ -114,7 +114,7 @@ parameters, repo layout, KT protocol, validation scope, output wiring (decisions
 - **kt-bench torch env** may need the Colima/registry pattern — see
   `.cursor/rules/docker-colima-setup.md` and `pnpm-build-registry.md` for the corporate-mirror
   approach if pulls fail.
-- Root `CLAUDE.md` / `AGENTS.md` carry the broader repo norms.
+- Root `AGENTS.md` carry the broader repo norms.
 
 ## Suggested shape of the implementation plan
 

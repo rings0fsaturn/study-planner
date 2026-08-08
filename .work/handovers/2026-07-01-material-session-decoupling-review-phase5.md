@@ -98,5 +98,5 @@ confirm each acceptance criterion (booking calendar, ETA card, directory + Mark 
 - Reviews **one phase at a time**; expects `VERIFICATION.md` Reviewer-findings filled with per-criterion
   verdicts and a clear ✅/🔁.
 - Model: Opus 4.8 (1M). Env: Node via `fnm use 22`; pnpm via `$PNPM_HOME`; Playwright/Chromium installed.
-- `.work/` is tracked on purpose (CLAUDE.md) — this handover lives in `.work/handovers/`, not a
+- `.work/` is tracked on purpose (AGENTS.md) — this handover lives in `.work/handovers/`, not a
   gitignored root path.

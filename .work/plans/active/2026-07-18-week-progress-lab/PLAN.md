@@ -280,6 +280,6 @@ pnpm exec playwright test -c e2e/playwright.config.ts e2e/week-progress-lab.spec
 
 - `.work/active/week-chart-modal/mocks/baseline.html`
 - `.work/active/week-chart-modal/mocks/DECISIONS.md`
-- `.agents/rules/react-router-v7-basename.agents.md`
-- `.agents/rules/playwright-config.agents.md`
-- `.agents/rules/roadmap-engine.agents.md`
+- `.agents/rules/12-react-router-basename.agents.md`
+- `.agents/rules/10-runtime-and-e2e.agents.md`
+- `.agents/rules/41-roadmap-engine.agents.md`

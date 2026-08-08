@@ -85,15 +85,15 @@ What's broken / missing for the user (product owner) goals:
 4. **Editing spawns siblings.** `deriveRoadmapLifecycle` treats every `RoadmapCreated` *and* `RoadmapReplanned` as a separate entry and marks earlier ones `superseded`; a re-plan would clutter history with forks.
 5. **Deadline passing is invisible** — nothing surfaces that an active plan's end date has come and gone.
 
-Constraints: mobile-first React 19 SPA, event-sourced local store (Dexie), `BrowserRouter basename="/study"` (never put `/study` in `to`). Dexie schema is at **version 5**; this plan intentionally needs **no new table** (draft state reuses the existing `onboardingDraft` row; new state is *derived* from events, not stored). E2E tests are authored but NOT run in this environment (sandbox constraint — see [`../../../CLAUDE.md`](../../../CLAUDE.md)); Vitest unit tests should still be authored.
+Constraints: mobile-first React 19 SPA, event-sourced local store (Dexie), `BrowserRouter basename="/study"` (never put `/study` in `to`). Dexie schema is at **version 5**; this plan intentionally needs **no new table** (draft state reuses the existing `onboardingDraft` row; new state is *derived* from events, not stored). E2E tests are authored but NOT run in this environment (sandbox constraint — see [`../../../AGENTS.md`](../../../AGENTS.md)); Vitest unit tests should still be authored.
 
 **Support docs:**
 
 - Prior plan this extends — [`plans/active/2026-06-26-roadmap-calendar/PLAN.md`](../2026-06-26-roadmap-calendar/PLAN.md)
 - Replan UI follow-up issue — [`specs/issues/010-replan-flow-with-three-options.md`](../../specs/issues/010-replan-flow-with-three-options.md)
-- Onboarding architecture rule — [`.claude/rules/onboarding-architecture.md`](../../../.claude/rules/onboarding-architecture.md)
-- EventStore / Dexie rules — [`.claude/rules/eventstore-architecture.md`](../../../.claude/rules/eventstore-architecture.md), [`.claude/rules/dexie-schema-migration.md`](../../../.claude/rules/dexie-schema-migration.md)
-- Router rule — [`.claude/rules/react-router-v7-basename.md`](../../../.claude/rules/react-router-v7-basename.md)
+- Onboarding architecture rule — [`.agents/rules/40-onboarding-flow.agents.md`](../../../.agents/rules/40-onboarding-flow.agents.md)
+- EventStore / Dexie rules — [`.agents/rules/30-eventstore-boundaries.agents.md`](../../../.agents/rules/30-eventstore-boundaries.agents.md), [`.agents/rules/31-dexie-schema-migrations.agents.md`](../../../.agents/rules/31-dexie-schema-migrations.agents.md)
+- Router rule — [`.agents/rules/12-react-router-basename.agents.md`](../../../.agents/rules/12-react-router-basename.agents.md)
 - Design tokens — [`packages/design-tokens/src/tokens.css`](../../../packages/design-tokens/src/tokens.css)
 
 ## Decisions log
@@ -879,10 +879,10 @@ Restore `ReplanStub` at `/replan`; delete `Replan.tsx` and `commitReplan.ts`; re
 
 - Prior verified plan (calendar + history + terminal events) — [`plans/active/2026-06-26-roadmap-calendar/PLAN.md`](../2026-06-26-roadmap-calendar/PLAN.md)
 - Replan UI follow-up — [`specs/issues/010-replan-flow-with-three-options.md`](../../specs/issues/010-replan-flow-with-three-options.md)
-- Onboarding architecture — [`.claude/rules/onboarding-architecture.md`](../../../.claude/rules/onboarding-architecture.md)
-- EventStore per-user DB — [`.claude/rules/eventstore-per-user-db.md`](../../../.claude/rules/eventstore-per-user-db.md)
-- Dexie schema migration (note: this plan needs NO new table) — [`.claude/rules/dexie-schema-migration.md`](../../../.claude/rules/dexie-schema-migration.md)
-- Dexie test setup (fake-indexeddb, unique DB names) — [`.claude/rules/dexie-test-setup.md`](../../../.claude/rules/dexie-test-setup.md)
-- React Router basename rule (never put `/study` in `to`) — [`.claude/rules/react-router-v7-basename.md`](../../../.claude/rules/react-router-v7-basename.md)
+- Onboarding architecture — [`.agents/rules/40-onboarding-flow.agents.md`](../../../.agents/rules/40-onboarding-flow.agents.md)
+- EventStore per-user DB — [`.agents/rules/30-eventstore-boundaries.agents.md`](../../../.agents/rules/30-eventstore-boundaries.agents.md)
+- Dexie schema migration (note: this plan needs NO new table) — [`.agents/rules/31-dexie-schema-migrations.agents.md`](../../../.agents/rules/31-dexie-schema-migrations.agents.md)
+- Dexie test setup (fake-indexeddb, unique DB names) — [`.agents/rules/32-dexie-testing.agents.md`](../../../.agents/rules/32-dexie-testing.agents.md)
+- React Router basename rule (never put `/study` in `to`) — [`.agents/rules/12-react-router-basename.agents.md`](../../../.agents/rules/12-react-router-basename.agents.md)
 - Design tokens (Marginalia) — [`packages/design-tokens/src/tokens.css`](../../../packages/design-tokens/src/tokens.css)
-- Fetch typed-error normalization (for `parseRoadmapOutput` hardening) — [`.claude/rules/fetch-typed-error-normalization.md`](../../../.claude/rules/fetch-typed-error-normalization.md)
+- Fetch typed-error normalization (for `parseRoadmapOutput` hardening) — [`.agents/rules/22-fetch-error-normalization.agents.md`](../../../.agents/rules/22-fetch-error-normalization.agents.md)

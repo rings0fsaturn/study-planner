@@ -348,14 +348,14 @@ Phases 7 and 8 remain not started.
 - [x] D-09 (loading-state visual + exact timeout value): Option C1 shipped with configurable `VITE_INITIAL_RESTORE_TIMEOUT_MS` defaulting to 8000ms, plus reduced-motion verification.
 
 **Implementer report:** 2026-07-03
-- Files changed: `apps/app/src/sync/types.ts`, `apps/app/src/sync/SyncEngine.ts`, `apps/app/src/sync/SyncEngine.test.ts`, `apps/app/src/sync/SyncProvider.tsx`, `apps/app/src/sync/SyncProvider.test.tsx`, `apps/app/src/components/SyncIndicator.test.tsx`, `packages/design-tokens/src/components.css`, `CLAUDE.md`, `apps/app/.env.example`, `.work/plans/active/2026-07-02-material-session-ui-bugs/PLAN.md`, `.work/plans/active/2026-07-02-material-session-ui-bugs/VERIFICATION.md`, `.work/plans/active/2026-07-02-material-session-ui-bugs/SCRATCHPAD.md`, `.work/STATUS.md`.
+- Files changed: `apps/app/src/sync/types.ts`, `apps/app/src/sync/SyncEngine.ts`, `apps/app/src/sync/SyncEngine.test.ts`, `apps/app/src/sync/SyncProvider.tsx`, `apps/app/src/sync/SyncProvider.test.tsx`, `apps/app/src/components/SyncIndicator.test.tsx`, `packages/design-tokens/src/components.css`, `AGENTS.md`, `apps/app/.env.example`, `.work/plans/active/2026-07-02-material-session-ui-bugs/PLAN.md`, `.work/plans/active/2026-07-02-material-session-ui-bugs/VERIFICATION.md`, `.work/plans/active/2026-07-02-material-session-ui-bugs/SCRATCHPAD.md`, `.work/STATUS.md`.
 - Added `initialRestorePending` to `SyncState`.
 - Defaulted `SyncEngine` to pending, cleared it immediately on the already-hydrated fast path, and cleared it unconditionally in the public `restoreFromCloud()` wrapper's `finally`.
 - Added SyncEngine tests for the fast path, slow-path success, and slow-path error cases.
 - Implemented `SyncProvider` gating with `BootScreen`, `initialRestoreTimedOut`, `showLongWaitCopy`, `resolveInitialRestoreSafetyTimeoutMs`, and `initialRestoreSafetyTimeoutMs`.
 - Added SyncProvider tests for boot-screen child withholding, safety-timeout fallback, and timeout parsing.
 - Added the Option C1 `.boot-*` styles to `packages/design-tokens/src/components.css`.
-- Documented optional `VITE_INITIAL_RESTORE_TIMEOUT_MS` in `CLAUDE.md` and `apps/app/.env.example`.
+- Documented optional `VITE_INITIAL_RESTORE_TIMEOUT_MS` in `AGENTS.md` and `apps/app/.env.example`.
 - Updated `SyncIndicator.test.tsx` fixtures to include `initialRestorePending: false` for the required `SyncState` field.
 - Prereq verification:
   - `grep -n "status: 'idle'\|status: 'syncing'\|status: 'error'\|status: 'offline'" apps/app/src/sync/types.ts` found the pre-phase four-state union.
@@ -369,7 +369,7 @@ Phases 7 and 8 remain not started.
   - `grep -n "initialRestorePending" apps/app/src/sync/types.ts apps/app/src/sync/SyncEngine.ts apps/app/src/sync/SyncProvider.tsx` found the field and all write sites.
   - `grep -n "resolveInitialRestoreSafetyTimeoutMs\|BootScreen\|initialRestoreSafetyTimeoutMs" apps/app/src/sync/SyncProvider.tsx` found the provider config, component, and prop.
   - `grep -n "\.boot-screen\b" packages/design-tokens/src/components.css` found the new CSS at line 1053.
-  - `grep -n "VITE_INITIAL_RESTORE_TIMEOUT_MS" CLAUDE.md apps/app/.env.example` found both doc entries.
+  - `grep -n "VITE_INITIAL_RESTORE_TIMEOUT_MS" AGENTS.md apps/app/.env.example` found both doc entries.
   - `pnpm --filter @study-tracker/app typecheck` passed.
   - `pnpm --filter @study-tracker/app test -- SyncEngine SyncProvider` passed with 59 files and 532 tests.
 - Live browser verification:

@@ -11,7 +11,7 @@ Companion to [`PLAN.md`](PLAN.md). The **review round-trip** artifact for the bu
 
 **Step 0 (before any code):** commit these planning docs verbatim — `docs(plan): add dev-production-readiness plan + verification`. Cowork cannot commit (it bricks `.git` locks in the sandbox); the native side establishes the baseline so later diffs are meaningful. If a reviewer leaves edits here, the next Step 0 commits the review before acting on it.
 
-**Global rules every phase is checked against:** Dexie schema bumps re-declare all tables and add a new version (`dexie-schema-migration`); Dexie tests use fake-indexeddb + unique DB names (`dexie-test-setup`); auth tests use hand-written fakes, never `jest.mock` (`auth-testing-fakes`); never include `/study` in router `to` (`react-router-v7-basename`); no secrets committed (use `.env.example` placeholders); E2E is written, **not run** (`CLAUDE.md`); the `CalibrationState` contract and CUSUM/GP/scheduling stay untouched (carried from the prior plan's D-03/D-04).
+**Global rules every phase is checked against:** Dexie schema bumps re-declare all tables and add a new version (`dexie-schema-migration`); Dexie tests use fake-indexeddb + unique DB names (`dexie-test-setup`); auth tests use hand-written fakes, never `jest.mock` (`auth-testing-fakes`); never include `/study` in router `to` (`react-router-v7-basename`); no secrets committed (use `.env.example` placeholders); E2E is written, **not run** (`AGENTS.md`); the `CalibrationState` contract and CUSUM/GP/scheduling stay untouched (carried from the prior plan's D-03/D-04).
 
 ---
 

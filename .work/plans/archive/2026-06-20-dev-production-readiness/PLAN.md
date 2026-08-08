@@ -80,12 +80,12 @@ Grounded in the codebase on 2026-06-20:
 - **Client:** `intelligenceClient.ts` is 11 lines — `fetch` + `Content-Type`, throws on non-2xx. No timeout, retry, or `Authorization` header.
 - **Token source:** `apps/app/src/lib/supabase.ts` exports the `supabase` singleton; `supabase.auth.getSession()` → `data.session.access_token` (Supabase access JWT). `AuthGate.getSession()` wraps the same.
 - **UI:** `Home.tsx:78` and `Week.tsx:27` both do `const calibration = useCalibrationState();` then feed `useProgressSnapshot(calibration)` / `usePromptDetail(calibration)`. There is **no `ErrorBoundary` and no toast** anywhere in `apps/app/src` (grep clean). When calibration is null, pace/progress/prompt simply don't render — a down service looks identical to "no data."
-- **Dexie:** `apps/app/src/events/EventStoreProvider.tsx` `createEventStore` declares `version(1)`…`version(4)` (current tables: `events`, `sync_queue`, `sync_meta`, `onboardingDraft`, `activeSession`). Per-user DB `StudyTracker_<userId>`. (Note: `CLAUDE.md` still says "v3" — it's stale; the code is at v4.)
+- **Dexie:** `apps/app/src/events/EventStoreProvider.tsx` `createEventStore` declares `version(1)`…`version(4)` (current tables: `events`, `sync_queue`, `sync_meta`, `onboardingDraft`, `activeSession`). Per-user DB `StudyTracker_<userId>`. (Note: `AGENTS.md` still says "v3" — it's stale; the code is at v4.)
 - **App composition:** `apps/app/src/App.tsx` defines `AppRoutes()` (the top-level `<Routes>`); provider nesting is `AuthProvider → EventStoreRouter → SyncRouter → AppRoutes`.
 - **Dev scripts:** root `package.json` — `dev` = `pnpm -r --parallel run dev` (Astro + Vite only). `docker-compose.yml` runs the service but has **no healthcheck**. `Dockerfile` CMD is `uvicorn app.main:app --host 0.0.0.0 --port 8000`.
 - **Supabase JWTs** are HS256 signed with the project **JWT secret**, with `aud="authenticated"` and `sub=<user id>`.
 
-**Constraints / rules to honor:** Dexie schema bumps must add a new version re-declaring all tables (`.claude/rules/dexie-schema-migration.md`); Dexie tests need fake-indexeddb + unique DB names (`dexie-test-setup.md`); auth tests use hand-written fakes, never `jest.mock` (`auth-testing-fakes.md`); React Router uses `basename="/study"` — never include `/study` in `to` (`react-router-v7-basename.md`); pnpm install/build may need `COREPACK_NPM_REGISTRY` (`pnpm-build-registry.md`); Docker via Colima per `docker-colima-setup.md`. **E2E is written but not run** in this environment (`CLAUDE.md`).
+**Constraints / rules to honor:** Dexie schema bumps must add a new version re-declaring all tables (`.agents/rules/31-dexie-schema-migrations.agents.md`); Dexie tests need fake-indexeddb + unique DB names (`dexie-test-setup.md`); auth tests use hand-written fakes, never `jest.mock` (`auth-testing-fakes.md`); React Router uses `basename="/study"` — never include `/study` in `to` (`react-router-v7-basename.md`); pnpm install/build may need `COREPACK_NPM_REGISTRY` (`pnpm-build-registry.md`); Docker via Colima per `docker-colima-setup.md`. **E2E is written but not run** in this environment (`AGENTS.md`).
 
 **Support docs:** prior plan + verification (`plans/2026-06-20-enriched-shrink-production-integration/`); `DEPLOYMENT.md`; `services/intelligence/README.md`.
 
@@ -460,7 +460,7 @@ grep -rn "ErrorBoundary" apps/app/src                                # absent
 
 #### Steps
 
-1. **Add Dexie `version(5)` with a `calibrationCache` table** in `EventStoreProvider.tsx` `createEventStore` (re-declare ALL tables — `.claude/rules/dexie-schema-migration.md`), appended after the existing `version(4)` block:
+1. **Add Dexie `version(5)` with a `calibrationCache` table** in `EventStoreProvider.tsx` `createEventStore` (re-declare ALL tables — `.agents/rules/31-dexie-schema-migrations.agents.md`), appended after the existing `version(4)` block:
    ```ts
    db.version(5).stores({
      events: '++id, kind, createdAt',
@@ -722,4 +722,4 @@ and no auth/service banner.
 - Service — `services/intelligence/app/{main.py,routers/calibration.py,schemas/progress.py}`, `services/intelligence/README.md`, `services/intelligence/Dockerfile`, `docker-compose.yml`
 - App composition — `apps/app/src/App.tsx`, `apps/app/src/events/EventStoreProvider.tsx`, `apps/app/src/pages/{Home.tsx,Week.tsx}`
 - Supabase JWT verification — PyJWT `jwt.decode(token, secret, algorithms=["HS256"], audience="authenticated")`
-- Rules — `.claude/rules/{dexie-schema-migration,dexie-test-setup,auth-testing-fakes,react-router-v7-basename,pnpm-build-registry,docker-colima-setup}.md`
+- Rules — `.agents/rules/{31-dexie-schema-migrations,32-dexie-testing,21-auth-testing,12-react-router-basename,50-pnpm-build-registry,51-docker-colima}.agents.md`
