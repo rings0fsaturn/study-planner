@@ -1,0 +1,4 @@
+full-app text eol=lf
+scripts/full_app.py text eol=lf
+scripts/dev-intelligence.mjs text eol=lf
+*.sh text eol=lf

@@ -11,11 +11,17 @@ if (!process.env.SUPABASE_URL && existsSync('apps/app/.env.local')) {
   }
 }
 
-if (!process.env.SUPABASE_JWT_SECRET) {
+if (!process.env.SUPABASE_URL) {
   console.error(
-    'SUPABASE_JWT_SECRET is required for dev:intelligence. Set it in the shell or services/intelligence/.env. Use the Supabase project JWT secret, not the anon or service role key.',
+    'SUPABASE_URL is required for dev:intelligence. Set it in the shell or services/intelligence/.env.',
   );
   process.exit(1);
+}
+
+if (!process.env.SUPABASE_JWT_SECRET) {
+  console.warn(
+    'SUPABASE_JWT_SECRET is not set. This project verifies ES256/RS256 tokens via the JWKS endpoint (SUPABASE_URL), so this is fine. If this project ever signs HS256 tokens, set the Supabase project JWT secret in the shell or services/intelligence/.env (not the anon or service role key).',
+  );
 }
 
 const child = spawn(
