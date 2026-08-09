@@ -47,7 +47,7 @@ Read each selected rule file completely.
 | Rule | Read when |
 |---|---|
 | [`50-pnpm-build-registry.agents.md`](50-pnpm-build-registry.agents.md) | Running a build when Corepack cannot reach the public npm registry. |
-| [`51-docker-colima.agents.md`](51-docker-colima.agents.md) | Building or running the Intelligence Service with Docker or Colima. |
+| [`51-docker-runtime.agents.md`](51-docker-runtime.agents.md) | Running the containerized full stack with the `docker-app` launcher or Docker Compose. |
 | [`52-github-cli-and-token.agents.md`](52-github-cli-and-token.agents.md) | Running any `gh` command, using the gitignored token, or diagnosing transient `api.github.com` TLS/EOF failures. |
 
 ## Reports and Papers

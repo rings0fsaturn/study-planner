@@ -1,0 +1,155 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "$0")"
+
+PROJECT_NAME=""
+ENV_FILE=""
+
+usage() {
+  cat <<'EOF'
+docker-app — manage the study-planner Docker stack (web + intelligence)
+
+Usage:
+  ./docker-app [options] <command> [args...]
+
+Options:
+  --env-file PATH      Use PATH as the compose env file.
+                       Default: apps/app/.env.local if present, else .env.
+  --project-name NAME  Pass --project-name NAME to docker compose.
+  -h, --help           Show this help.
+
+Commands:
+  start      Build (when needed) and start the stack detached.
+  stop       Stop and remove the stack containers.
+  restart    Stop the stack, then build (when needed) and start it again.
+  status     Show container status (docker compose ps).
+  logs       Follow stack logs; extra args are forwarded to docker compose
+             (e.g. a service name prints that service's logs without following).
+  config     Validate and print the resolved compose configuration.
+  help       Show this help.
+
+Examples:
+  ./docker-app start
+  ./docker-app --env-file docker/.env.example start
+  ./docker-app logs
+  ./docker-app logs intelligence
+  ./docker-app stop
+EOF
+}
+
+fail() {
+  echo "docker-app: $1" >&2
+  exit 1
+}
+
+resolve_env_file() {
+  if [[ -n "$ENV_FILE" ]]; then
+    [[ -f "$ENV_FILE" ]] || fail "env file not found: $ENV_FILE"
+    echo "$ENV_FILE"
+    return
+  fi
+  if [[ -f apps/app/.env.local ]]; then
+    echo "apps/app/.env.local"
+    return
+  fi
+  if [[ -f .env ]]; then
+    echo ".env"
+    return
+  fi
+  fail "no env file found. Copy docker/.env.example to .env and fill it in, or pass --env-file PATH."
+}
+
+require_compose() {
+  command -v docker >/dev/null 2>&1 || fail "docker CLI not found. Install Docker Engine and the Compose plugin first."
+  docker compose version >/dev/null 2>&1 || fail "docker compose plugin not available. Install Docker Compose (v2+)."
+}
+
+compose() {
+  local env_file
+  env_file="$(resolve_env_file)"
+  if [[ -n "$PROJECT_NAME" ]]; then
+    docker compose --project-name "$PROJECT_NAME" --env-file "$env_file" "$@"
+  else
+    docker compose --env-file "$env_file" "$@"
+  fi
+}
+
+main() {
+  local command=""
+  local compose_args=()
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -h | --help)
+        usage
+        exit 0
+        ;;
+      --env-file)
+        [[ $# -ge 2 ]] || fail "--env-file requires a path argument"
+        ENV_FILE="$2"
+        shift 2
+        continue
+        ;;
+      --env-file=*)
+        ENV_FILE="${1#*=}"
+        ;;
+      --project-name)
+        [[ $# -ge 2 ]] || fail "--project-name requires a name argument"
+        PROJECT_NAME="$2"
+        shift 2
+        continue
+        ;;
+      --project-name=*)
+        PROJECT_NAME="${1#*=}"
+        ;;
+      --)
+        shift
+        compose_args+=("$@")
+        break
+        ;;
+      -*)
+        if [[ -z "$command" ]]; then
+          fail "unknown option: $1 (see ./docker-app help)"
+        fi
+        compose_args+=("$1")
+        ;;
+      *)
+        if [[ -z "$command" ]]; then
+          command="$1"
+        else
+          compose_args+=("$1")
+        fi
+        ;;
+    esac
+    shift
+  done
+
+  if [[ -z "$command" ]]; then
+    usage
+    exit 2
+  fi
+
+  require_compose
+
+  case "$command" in
+    start) compose up --build -d "${compose_args[@]}" ;;
+    stop) compose down "${compose_args[@]}" ;;
+    restart)
+      compose down
+      compose up --build -d "${compose_args[@]}"
+      ;;
+    status) compose ps "${compose_args[@]}" ;;
+    logs)
+      if [[ ${#compose_args[@]} -eq 0 ]]; then
+        compose logs -f
+      else
+        compose logs "${compose_args[@]}"
+      fi
+      ;;
+    config) compose config "${compose_args[@]}" ;;
+    help) usage ;;
+    *) fail "unknown command: $command (see ./docker-app help)" ;;
+  esac
+}
+
+main "$@"

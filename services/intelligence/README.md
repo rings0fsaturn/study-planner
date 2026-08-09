@@ -63,25 +63,34 @@ This binds the intelligence service to `127.0.0.1:8000` and starts the app at
 lsof -nP -iTCP:8000 -sTCP:LISTEN
 ```
 
-## Run with Docker Compose
+## Run with Docker
 
-From the repository root:
-
-```bash
-docker compose up --build -d
-```
-
-This starts the Intelligence Service on `http://127.0.0.1:8000` together with
-the web container (marketing site + React app on `http://localhost:8080`).
-Stop it with:
+The full stack (marketing site + React app + this service) runs in Docker via
+`docker compose`. Use the root launcher from the repository root:
 
 ```bash
-docker compose down
+./docker-app start
 ```
 
-Set `SUPABASE_URL` (and `SUPABASE_JWT_SECRET` for HS256-signed projects) in
-the shell or in a root `.env` file before building; see `docker/.env.example`
-for the full variable list.
+This builds and starts both containers. The service is on
+`http://127.0.0.1:8000`, the web container (marketing site + React app) on
+`http://localhost:8080`.
+
+Lifecycle:
+
+```bash
+./docker-app status
+./docker-app logs intelligence
+./docker-app restart
+./docker-app stop
+```
+
+See the [root README](../../README.md) for env file setup, environment variables,
+and troubleshooting.
+
+Set `SUPABASE_URL` (and `SUPABASE_JWT_SECRET` for HS256-signed projects) in the
+env file used by compose (`apps/app/.env.local` or `.env`); see
+`docker/.env.example` for the full variable list.
 
 The Dockerfile uses public base images (`python:3.12-slim`,
 `ghcr.io/astral-sh/uv`). Hosts that must pull from an internal mirror can
@@ -89,78 +98,44 @@ override the build args:
 
 ```bash
 PYTHON_IMAGE=<mirror>/library/python:3.12-slim UV_IMAGE=<mirror>/astral/uv:0.11.19 \
-  docker compose up --build -d
+  ./docker-app start
 ```
 
-## Docker / Colima Troubleshooting
+## Docker Troubleshooting
 
-Baseline checks — start with Docker, not Colima; Colima status can be less useful than the
-Docker daemon state:
+Baseline checks — start with the Docker daemon and compose:
 
 ```bash
-docker info              # Context: colima
-docker ps --format '{{.Names}} {{.Ports}}'
-colima status
+docker info
+docker compose version
+./docker-app status
+./docker-app logs intelligence
+curl -sS http://127.0.0.1:8000/health
 ```
 
-Don't stop/restart Colima just because a command is confusing — unrelated containers may be
-running (e.g. `wiremock-simulator` on port `9999`; never kill its SSH forward).
-
-### Missing Compose / Buildx plugins
-
-If `docker compose version` or `docker buildx version` fail, install the Homebrew plugin
-packages and point Docker at them:
+If a published port is unreachable, verify the service inside the container
+before touching service code:
 
 ```bash
-brew install docker-compose docker-buildx
+docker compose --env-file apps/app/.env.local exec -T intelligence python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read().decode())"
 ```
 
-```json
-// ~/.docker/config.json
-{
-  "cliPluginsExtraDirs": [
-    "/opt/homebrew/lib/docker/cli-plugins"
-  ]
-}
-```
-
-Verify with `docker info` — the `Plugins:` section should list `buildx` and `compose`.
-
-### Host curl can't reach a published port
-
-`docker port` can show `0.0.0.0:8000->8000/tcp` while macOS localhost still refuses the
-connection. Verify from inside the container, then the Lima VM, before changing app code:
-
-```bash
-docker compose exec -T intelligence python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=5).read().decode())"
-
-env LIMA_HOME=/Users/rsaji/.colima/_lima limactl shell colima ss -ltnp
-env LIMA_HOME=/Users/rsaji/.colima/_lima limactl shell colima curl -sS http://127.0.0.1:8000/health
-```
-
-If the service works in the container and VM but not from macOS, open a temporary SSH
-forward for verification, then remove only that forward:
-
-```bash
-ssh -F /Users/rsaji/.colima/ssh_config -N -L 127.0.0.1:8000:127.0.0.1:8000 colima
-# ... verify with curl, then ...
-ssh -F /Users/rsaji/.colima/ssh_config -O cancel -L 127.0.0.1:8000:127.0.0.1:8000 colima
-```
-
-Do not kill the existing `9999` SSH forward — it belongs to the WireMock simulator.
+If `docker compose version` or `docker buildx version` fail, install the Docker
+Compose and Buildx plugins for your Docker installation, then verify with
+`docker info` — the `Plugins:` section should list `buildx` and `compose`.
 
 ### Standard verification flow
 
 ```bash
-docker compose config
-docker compose up --build -d
-docker compose ps
+./docker-app config
+./docker-app start
+./docker-app status
 curl -sS http://127.0.0.1:8000/health
-docker compose down
+./docker-app stop
 ```
 
-If host curl cannot connect, use the port-forwarding checks above before touching service
-code.
+If host curl cannot connect, use the in-container check above before touching
+service code.
 
 ## Curl examples
 

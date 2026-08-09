@@ -23,7 +23,7 @@ python3 -m venv .venv
 ```
 
 If a package download fails on the corporate network, use the same CA and mirror
-pattern documented in `.agents/rules/51-docker-colima.agents.md` and
+pattern documented in `.agents/rules/51-docker-runtime.agents.md` and
 `.agents/rules/50-pnpm-build-registry.agents.md`; keep any machine-specific config
 outside this repo.
 

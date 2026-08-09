@@ -60,10 +60,17 @@ Application test credentials are stored in `.work/specs/test-login-cred.txt` and
 ## Common Commands
 
 ```bash
-# Managed product runtime
+# Managed local development runtime (Vite/Astro/uvicorn processes)
 ./full-app status full
 ./full-app start full
 ./full-app stop full
+
+# Containerized product runtime (Docker Compose stack)
+./docker-app start
+./docker-app status
+./docker-app logs
+./docker-app restart
+./docker-app stop
 
 # Frontend development
 pnpm dev

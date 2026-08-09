@@ -30,7 +30,7 @@ flowchart TB
     end
 
     %% ===================== INTELLIGENCE SERVICE =====================
-    subgraph SVC["🧠 Intelligence Service — Python · FastAPI · Docker/Colima  (single source of truth for heavy ML)"]
+    subgraph SVC["🧠 Intelligence Service — Python · FastAPI · Docker  (single source of truth for heavy ML)"]
         direction TB
         API["FastAPI router"]
         PA["Pillar A engines<br/>Bayesian calibration · CUSUM<br/>Kalman · GP projection · scheduler"]
