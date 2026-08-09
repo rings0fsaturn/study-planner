@@ -37,9 +37,9 @@ private-replacements.txt (specific literals first)
 static-replacements.txt (generic regex last)
 ```
 
-**Example failure mode**: `regex:(?i)payment-provider==>payment-provider` applied to `acme_proxy_cacerts.pem` produces `payment-provider_proxy_cacerts.pem` -- a renamed internal reference, not a removal.
+**Example failure mode**: `regex:(?i)acme==>vendor` applied to `acme_proxy_cacerts.pem` produces `vendor_proxy_cacerts.pem` -- a renamed internal reference, not a removal.
 
-**Fix**: Add `literal:acme_proxy_cacerts.pem==>***REMOVED***` BEFORE the payment-provider regex.
+**Fix**: Add `literal:acme_proxy_cacerts.pem==>***REMOVED***` BEFORE the acme regex.
 The literal match consumes the full string; the regex never sees it.
 
 ## Account for CA and Certificate Content Separately

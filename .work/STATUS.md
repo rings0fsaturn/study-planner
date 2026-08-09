@@ -1,7 +1,7 @@
 ---
 title: study-planner-web — STATUS (read-first index)
 status: active living document
-last_updated: 2026-08-09 (Learner Growth wayfinder charted)
+last_updated: 2026-08-09 (Docker full-app + internal infra dependency removal)
 location_note: >
   This is .work/STATUS.md — the single read-first index, living at the root of .work/ (inside the
   repo, tracked on purpose so git clean can't delete it). Paths below are relative to .work/ (non-.work
@@ -29,6 +29,8 @@ update_protocol: >
 > [`README.md`](README.md). Keep this short — push depth down and link it.
 
 ## Active
+
+- **[APP][INFRA] Dockerized full app + internal infra dependency removal.** ✅ Implemented and live-verified 2026-08-09. `docker-compose.yml` now runs the whole product: `web` (multi-stage Node/nginx image serving the Astro site at `/` and the React app at `/study` with SPA fallback, proxying `/api/v1/*` to the service) and `intelligence` (public `python:3.12-slim` / `ghcr.io/astral-sh/uv` base images). Removed the internal corporate image-mirror defaults and the corporate CA build secret from Docker, compose, READMEs, agent rules, historical plans, and the 3rd-Review submission copy; public npm registry is the default (operator override documented in rule 50). New: `docker/frontend.Dockerfile`, `docker/nginx.conf`, `docker/.env.example`; `.dockerignore` now excludes secrets and heavy dirs; root `package.json` pins `packageManager: pnpm@10.33.2`. Live verification passed (both containers healthy; marketing `/`, app `/study/sign-in`, deep SPA route, `/health`, and `/api/v1/` proxy all as expected; bundle inlines `/api`). Intentionally preserved content, not dependencies: a YouTube video title in `capture-screenshots.mjs` and the sanitization guide `filter-guide.txt`. Run with `docker compose --env-file apps/app/.env.local up --build -d`. → plan [`plans/active/2026-08-09-docker-full-app-and-public-registry-migration/PLAN.md`](plans/active/2026-08-09-docker-full-app-and-public-registry-migration/PLAN.md) · log [`VERIFICATION.md`](plans/active/2026-08-09-docker-full-app-and-public-registry-migration/VERIFICATION.md)
 
 - **[APP] Learner Growth wayfinder charted — achievements, evidence-backed sharing, community (independent of Phase 2).** ✅ Charting done 2026-08-09; decisions pending. Wayfinder map + tickets live on **GitHub Issues** (`rings0fsaturn/study-planner`): map [#23], frontier ticket **#24 Scope and release shape**, blocked tickets #25–#31. Destination = **implementation-ready spec + prototypes** (nothing implemented until approved) for (1) progress/mastery **achievements**, (2) **evidence-backed shareable achievement pages** (LinkedIn/social, shows *what the learner did*), (3) a moderated **community forum** for chat + Q&A. Charted defaults (re-decidable on the tickets): spec+prototypes shape, async Q&A first, no public profiles initially, opt-in immutable snapshot shares, mastery consumed from Phase 2's contract (no parallel model). Dependency spine: #24→#25→#26→#28→#30, #25→#27, #24→#29→#28, #24→#31. Fog: community IA, moderation/safety, community UX prototype, public projection + backend schema, achievement computation/cache, notifications, search, evaluation/rollout. Out of scope: multiplayer/peer, leaderboards, platform posting APIs, raw event-log exposure, parallel mastery model, anonymous unmoderated posting. **Next:** work the frontier — run `/wayfinder 23` (ticket #24 first). → plan [`plans/active/2026-08-09-learner-growth-wayfinder/PLAN.md`](plans/active/2026-08-09-learner-growth-wayfinder/PLAN.md) · log [`VERIFICATION.md`](plans/active/2026-08-09-learner-growth-wayfinder/VERIFICATION.md)
 
@@ -132,7 +134,7 @@ update_protocol: >
 ## Gotchas
 
 - **E2E tests are written but NOT run** (environment constraint — see [`../AGENTS.md`](../AGENTS.md)).
-- **pnpm build needs the internal registry:** set `COREPACK_NPM_REGISTRY` (see [`../.agents/rules/50-pnpm-build-registry.agents.md`](../.agents/rules/50-pnpm-build-registry.agents.md)).
+- **pnpm builds against the public npm registry by default:** hosts that block `registry.npmjs.org` can pass `COREPACK_NPM_REGISTRY` as an operator override (see [`../.agents/rules/50-pnpm-build-registry.agents.md`](../.agents/rules/50-pnpm-build-registry.agents.md)).
 - **LaTeX** builds via TinyTeX on PATH ([`../.agents/rules/60-latex-report-build.agents.md`](../.agents/rules/60-latex-report-build.agents.md)).
 - **Dexie schema changes must version-up** ([`../.agents/rules/31-dexie-schema-migrations.agents.md`](../.agents/rules/31-dexie-schema-migrations.agents.md)).
 - **React Router** `basename="/study"` — never include `/study` in `to` ([`../.agents/rules/12-react-router-basename.agents.md`](../.agents/rules/12-react-router-basename.agents.md)).

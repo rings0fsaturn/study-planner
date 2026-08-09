@@ -16,3 +16,18 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+
+# Secrets: never ship local env files into an image layer
+.env
+.env.local
+.env.*.local
+
+# Heavy and irrelevant to image builds
+college/
+research/
+.work/
+e2e/
+tmp/
+*.zip
+*.rar
+*.bundle

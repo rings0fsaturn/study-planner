@@ -68,9 +68,7 @@ lsof -nP -iTCP:8000 -sTCP:LISTEN
 From the repository root:
 
 ```bash
-SUPABASE_URL=https://<project>.supabase.co \
-SUPABASE_JWT_SECRET=<project JWT secret> \
-  docker compose up --build -d
+docker compose up --build -d
 ```
 
 The service listens on `http://127.0.0.1:8000`. Stop it with:
@@ -79,16 +77,15 @@ The service listens on `http://127.0.0.1:8000`. Stop it with:
 docker compose down
 ```
 
-The Dockerfile defaults to the internal Docker image mirror available to local
-Colima. Compose also passes the local CA bundle at
-`/etc/ssl/certs/ca-certificates.crt` as a build secret so `uv`
-can verify Python package downloads through the corporate proxy. Override
-`CA_BUNDLE` if your CA bundle lives elsewhere.
+Set `SUPABASE_URL` (and `SUPABASE_JWT_SECRET` for HS256-signed projects) in
+the shell or in a root `.env` file before building.
 
-On a host that can pull public images directly, override the build args:
+The Dockerfile uses public base images (`python:3.12-slim`,
+`ghcr.io/astral-sh/uv`). Hosts that must pull from an internal mirror can
+override the build args:
 
 ```bash
-PYTHON_IMAGE=python:3.12-slim UV_IMAGE=ghcr.io/astral-sh/uv:0.11.19 \
+PYTHON_IMAGE=<mirror>/library/python:3.12-slim UV_IMAGE=<mirror>/astral/uv:0.11.19 \
   docker compose up --build -d
 ```
 

@@ -1,5 +1,5 @@
-ARG PYTHON_IMAGE=docker.io/library/python:3.12-slim
-ARG UV_IMAGE=docker.io/astral/uv:0.11.19
+ARG PYTHON_IMAGE=python:3.12-slim
+ARG UV_IMAGE=ghcr.io/astral-sh/uv:0.11.19
 
 FROM ${UV_IMAGE} AS uv
 FROM ${PYTHON_IMAGE}

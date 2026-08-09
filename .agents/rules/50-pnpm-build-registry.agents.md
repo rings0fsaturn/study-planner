@@ -1,18 +1,27 @@
 ---
 name: pnpm-build-registry
-description: Route Corepack through the configured registry when public pnpm resolution fails on this machine.
+description: Use the public npm registry by default and route Corepack through an explicit override only when a host blocks it.
 ---
 
 # pnpm Build Registry
 
-Run the normal repository build first unless the current environment is already known to block the public npm registry.
-If Corepack fails while resolving pnpm from `registry.npmjs.org`, inspect the configured npm registry:
+This repository builds against the public npm registry (`registry.npmjs.org`) by default.
+No registry is configured in package metadata and none should be hard-coded.
+
+Run the normal repository build:
+
+```bash
+pnpm build
+```
+
+If a host blocks `registry.npmjs.org` and Corepack fails while resolving pnpm,
+inspect the operator-configured npm registry:
 
 ```bash
 npm config get registry
 ```
 
-Then pass that registry to Corepack for the build:
+Then pass that registry to Corepack as an explicit operator override:
 
 ```bash
 configured_registry="$(npm config get registry)"
@@ -20,7 +29,7 @@ env COREPACK_NPM_REGISTRY="$configured_registry" pnpm build
 ```
 
 Do not disable TLS verification or rewrite the lockfile to solve registry reachability.
-Do not hard-code a machine-specific registry into application package metadata.
+Do not commit machine-specific registry settings or proxy configuration.
 
 Verify that both `apps/marketing/dist/` and `apps/app/dist/` are produced.
 Treat the Vite large-chunk notice as a warning unless the command exits nonzero or the changed code materially worsens the bundle.

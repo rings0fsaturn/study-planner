@@ -98,7 +98,7 @@ The `e2e/` suite has **no shared test infrastructure** — every spec re-inlines
 
 **Constraints:**
 
-- **Run env:** `pnpm dev:full` needs `COREPACK_NPM_REGISTRY=https://registry.npmjs.org` (public npm is DNS/403-blocked — see rule `pnpm-build-registry`) and the intelligence service needs `SUPABASE_JWT_SECRET`. Chromium is installed. `apps/app/.env.local` (loaded by the config via `dotenv`) carries `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` for hermetic users.
+- **Run env:** `pnpm dev:full` runs against the public npm registry (see rule `pnpm-build-registry` for hosts that block it) and the intelligence service needs `SUPABASE_JWT_SECRET`. Chromium is installed. `apps/app/.env.local` (loaded by the config via `dotenv`) carries `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` for hermetic users.
 - **Router:** `BrowserRouter basename="/study"` — write `page.goto('/study/...')` for absolute nav; never double the prefix (rule `react-router-v7-basename`).
 - **Selectors:** the app runs on Vite (not Astro) at `:5173`, so the Astro-dev-toolbar trap (rule `astro-selectors`) does not apply to the app project — but prefer role/label selectors anyway.
 

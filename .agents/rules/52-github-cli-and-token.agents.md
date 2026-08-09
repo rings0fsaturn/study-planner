@@ -30,7 +30,7 @@ Do not "fix" it by adding an HTTP/HTTPS proxy, disabling TLS verification, swapp
 
 The diagnosis tell is that the failures are intermittent and host-split: `curl` can return `200` from `api.github.com` in under a second while `github.com` aborts in the same probe.
 No proxy is configured on this machine (`scutil --proxy` shows proxies disabled; there are no `http_proxy`/`https_proxy` variables).
-The `NODE_EXTRA_CA_CERTS=...` entry is a transparent TLS-interception CA bundle that is present and correct; it is not the cause.
+The `NODE_EXTRA_CA_CERTS=...` entry points at a transparent TLS-interception CA bundle that is present and correct; it is not the cause.
 
 ## The fix: bounded retry
 

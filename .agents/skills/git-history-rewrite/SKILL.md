@@ -208,7 +208,7 @@ cat "$CONTROL_DIR/private-replacements.txt" "$CONTROL_DIR/static-replacements.tx
 ```
 
 **Why ordering matters**: If the generic regex runs first, it can rename parts of a value that should have been deleted entirely.
-For example, `regex:(?i)payment-provider==>payment-provider` applied to `acme_proxy_cacerts.pem` produces `payment-provider_proxy_cacerts.pem` — a renamed internal reference, not a removed one.
+For example, `regex:(?i)acme==>vendor` applied to `acme_proxy_cacerts.pem` produces `vendor_proxy_cacerts.pem` — a renamed internal reference, not a removed one.
 
 ### Step 3b: `file_info_callback.py`
 

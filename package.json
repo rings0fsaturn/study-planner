@@ -3,6 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "dev:marketing": "pnpm --filter @study-tracker/marketing dev",
     "dev:app": "pnpm --filter @study-tracker/app dev",
