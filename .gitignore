@@ -20,12 +20,21 @@ test-results/
 .claude/worktrees/
 /handovers/
 
+# Archives and transient scratch
+*.zip
+*.rar
+/tmp/
+
 # Python / uv
 .venv/
 __pycache__/
 *.py[cod]
 .pytest_cache/
 .ruff_cache/
+
+# Supabase CLI local state
+apps/app/supabase/.temp/
+apps/app/supabase/.branches/
 
 # code-memory: agent-only index, do not commit
 .codex/memory/
