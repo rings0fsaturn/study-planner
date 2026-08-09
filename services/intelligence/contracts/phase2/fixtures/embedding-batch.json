@@ -1,0 +1,1 @@
+{"provider":"gemini","model":"gemini-embedding-001","taskType":"retrieval_document","dimension":768,"ownerId":"user-1","traceId":"trace-embed","requestId":"req-embed","correlationId":"corr-embed","inputs":[{"chunkId":"chunk-1","text":"Normalization reduces duplicate scale."},{"chunkId":"chunk-2","text":"Vectors support retrieval grounding."}],"timeoutMs":10000}

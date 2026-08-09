@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/gemini/embedding-request.schema.json",
+  "title": "GeminiEmbeddingRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "model", "taskType", "dimension", "traceId", "requestId", "correlationId", "inputs"],
+  "properties": {
+    "provider": { "const": "gemini" },
+    "model": { "const": "gemini-embedding-001" },
+    "taskType": { "enum": ["retrieval_document", "retrieval_query"] },
+    "dimension": { "const": 768 },
+    "ownerId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "requestId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "inputs": { "type": "array", "minItems": 1, "maxItems": 100, "items": { "type": "object", "additionalProperties": false, "required": ["chunkId", "text"], "properties": { "chunkId": { "type": "string", "minLength": 1 }, "text": { "type": "string", "minLength": 1, "maxLength": 20000 } } } },
+    "timeoutMs": { "const": 10000 }
+  }
+}

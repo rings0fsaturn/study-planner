@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/generation-blueprint.schema.json",
+  "title": "GenerationBlueprint",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "questionCount", "difficulty", "skillTags"],
+  "properties": {
+    "format": { "type": "string", "enum": ["objective", "written", "coding"] },
+    "questionCount": { "type": "integer", "minimum": 1, "maximum": 100 },
+    "difficulty": { "type": "integer", "minimum": 1, "maximum": 5 },
+    "skillTags": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+  }
+}

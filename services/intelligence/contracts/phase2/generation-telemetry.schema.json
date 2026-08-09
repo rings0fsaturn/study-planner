@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/generation-telemetry.schema.json",
+  "title": "GenerationTelemetry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["traceId", "ownerId", "task", "model", "promptTemplateVersion", "outcome", "latencyMs", "inputTokens", "outputTokens"],
+  "properties": { "traceId": { "type": "string" }, "ownerId": { "type": "string" }, "task": { "enum": ["ingestion", "embedding", "assessment_generation", "written_grading", "guide_hint", "guide_reveal"] }, "model": { "type": "string" }, "promptTemplateVersion": { "type": "string" }, "outcome": { "enum": ["ok", "partial", "safety_block", "quota_failure", "timeout", "malformed_output", "provider_error"] }, "latencyMs": { "type": "number", "minimum": 0 }, "inputTokens": { "type": "integer", "minimum": 0 }, "outputTokens": { "type": "integer", "minimum": 0 }, "repairAttempted": { "type": "boolean" }, "questionsRequested": { "type": "integer", "minimum": 0 }, "questionsAccepted": { "type": "integer", "minimum": 0 } }
+}

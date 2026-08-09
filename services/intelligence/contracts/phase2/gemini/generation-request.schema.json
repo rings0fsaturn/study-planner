@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/gemini/generation-request.schema.json",
+  "title": "GeminiGenerationRequest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "task", "model", "artifactIds", "traceId", "requestId", "correlationId", "promptTemplateVersion", "contents", "generationConfig", "responseSchema"],
+  "properties": {
+    "provider": { "const": "gemini" },
+    "task": { "enum": ["assessment_generation", "written_grading", "guide_hint", "guide_reveal"] },
+    "model": { "const": "gemini-2.5-flash" },
+    "artifactIds": { "type": "array", "minItems": 1, "items": { "type": "string", "minLength": 1 } },
+    "ownerId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "requestId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "promptTemplateVersion": { "type": "string", "pattern": "^v[0-9]+$" },
+    "contents": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["role", "parts"], "properties": { "role": { "enum": ["user", "model"] }, "parts": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": false, "required": ["text"], "properties": { "text": { "type": "string", "minLength": 1 } } } } } } },
+    "systemInstruction": { "type": "object", "additionalProperties": false, "required": ["parts"], "properties": { "parts": { "type": "array", "minItems": 1, "items": { "type": "object", "required": ["text"], "properties": { "text": { "type": "string" } } } } } },
+    "ragContext": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["chunkId", "materialId", "quote"], "properties": { "chunkId": { "type": "string" }, "materialId": { "type": "string" }, "quote": { "type": "string" }, "startSeconds": { "type": "number", "minimum": 0 } } } },
+    "responseSchema": { "type": "object", "required": ["type", "properties"], "properties": { "type": { "const": "OBJECT" }, "properties": { "type": "object" }, "required": { "type": "array", "items": { "type": "string" } }, "propertyOrdering": { "type": "array", "items": { "type": "string" } } } },
+    "generationConfig": { "type": "object", "additionalProperties": false, "required": ["temperature", "topP", "maxOutputTokens", "responseMimeType"], "properties": { "temperature": { "type": "number", "minimum": 0, "maximum": 2 }, "topP": { "type": "number", "exclusiveMinimum": 0, "maximum": 1 }, "maxOutputTokens": { "type": "integer", "minimum": 1, "maximum": 65536 }, "responseMimeType": { "const": "application/json" }, "seed": { "type": "integer", "minimum": 0 } } },
+    "safetySettings": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["category", "threshold"], "properties": { "category": { "type": "string" }, "threshold": { "type": "string" } } } },
+    "timeoutMs": { "const": 30000 }
+  }
+}

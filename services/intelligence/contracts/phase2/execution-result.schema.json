@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/execution-result.schema.json",
+  "title": "NormalizedExecutionGradingResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["outcome", "compile", "runtime", "publicFeedback"],
+  "properties": {
+    "outcome": { "type": "string", "enum": ["passed", "failed", "compile_error", "runtime_error", "timeout", "sandbox_error"] },
+    "compile": { "$ref": "#/$defs/processResult" },
+    "runtime": { "$ref": "#/$defs/processResult" },
+    "publicFeedback": { "type": "string", "maxLength": 4000 },
+    "score": { "type": "number", "minimum": 0, "maximum": 1 },
+    "correct": { "type": "boolean" }
+  },
+  "$defs": {
+    "processResult": {
+      "type": "object", "additionalProperties": false, "required": ["status"],
+      "properties": {
+        "status": { "type": "string", "enum": ["not_run", "succeeded", "failed", "timed_out", "sandbox_denied"] },
+        "exitCode": { "type": ["integer", "null"] },
+        "stdout": { "type": "string", "maxLength": 20000 },
+        "stderr": { "type": "string", "maxLength": 20000 },
+        "durationMs": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

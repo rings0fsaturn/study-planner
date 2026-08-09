@@ -1,0 +1,1 @@
+{"outcome":"timeout","compile":{"status":"succeeded","exitCode":0,"stdout":"","stderr":"","durationMs":20},"runtime":{"status":"timed_out","exitCode":null,"stdout":"","stderr":"Execution exceeded the time limit.","durationMs":2000},"publicFeedback":"Execution was stopped by the sandbox time limit.","score":0,"correct":false}

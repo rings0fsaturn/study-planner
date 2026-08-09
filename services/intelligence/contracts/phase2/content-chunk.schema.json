@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/content-chunk.schema.json",
+  "title": "ContentChunk",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["chunkId", "materialId", "text", "ordinal"],
+  "properties": {
+    "chunkId": { "type": "string", "minLength": 1 },
+    "materialId": { "type": "string", "minLength": 1 },
+    "text": { "type": "string", "minLength": 1 },
+    "ordinal": { "type": "integer", "minimum": 0 },
+    "startSeconds": { "type": "number", "minimum": 0 }
+  }
+}

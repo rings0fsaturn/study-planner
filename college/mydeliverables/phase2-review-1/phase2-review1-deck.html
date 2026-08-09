@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 Review-1 — Assessments + LLM-Guided Practice</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #F5EFE4;
+      --paper-deep: #EDE3D2;
+      --card: #FBF7EE;
+      --ink: #2A1F18;
+      --ink-soft: #5C4D40;
+      --ink-faint: #8B7B6B;
+      --rule: #D9CDB8;
+      --rule-soft: #E6DCC8;
+      --terra: #B85C38;
+      --terra-d: #8E4429;
+      --moss: #4A6B3A;
+      --moss-soft: #E8F0E3;
+      --clay: #A9762F;
+      --clay-soft: #F5E9D6;
+      --disp: 'Fraunces', Georgia, serif;
+      --body: 'Inter Tight', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    html, body { height: 100%; background: #2A241C; font-family: var(--body); overflow: hidden; }
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #frame { width: 1280px; height: 720px; position: relative; transform-origin: center; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+    .slide { position: absolute; inset: 0; background: var(--paper); display: none; overflow: hidden; }
+    .slide.active { display: block; }
+    .pad { padding: 48px 64px; width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .pes { position: absolute; top: 22px; right: 30px; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--ink-faint); }
+    .pes .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--terra); }
+    .hd { display: flex; align-items: baseline; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 22px; }
+    .hd .num { font-family: var(--mono); font-size: 15px; color: var(--terra); }
+    .hd .ttl { font-family: var(--disp); font-size: 32px; font-weight: 600; color: var(--ink); letter-spacing: -0.3px; }
+    .hd .ct { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+    .lead { font-family: var(--disp); font-size: 28px; font-weight: 400; line-height: 1.25; color: var(--ink); }
+    .sub { font-size: 17px; color: var(--ink-soft); line-height: 1.5; margin-top: 12px; max-width: 86%; }
+    .footnote { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-top: auto; padding-top: 14px; line-height: 1.45; }
+    .navbar { position: absolute; bottom: 16px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); z-index: 5; }
+    .pbar { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--terra); z-index: 6; transition: width .2s; }
+    .hint { position: fixed; bottom: 14px; right: 18px; font-family: var(--mono); font-size: 11px; color: rgba(245,239,228,.5); z-index: 20; }
+    .btn { cursor: pointer; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--card); }
+    .btn:hover { background: var(--paper-deep); }
+
+    /* Title slide */
+    .title-slide .pad { justify-content: center; }
+    .eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 2.5px; color: var(--terra); margin-bottom: 18px; text-transform: uppercase; }
+    .title-main { font-family: var(--disp); font-size: 54px; font-weight: 600; line-height: 1.05; color: var(--ink); }
+    .title-sub { font-size: 20px; color: var(--ink-soft); line-height: 1.45; margin-top: 18px; max-width: 80%; }
+    .title-rule { width: 64px; height: 4px; background: var(--terra); margin: 24px 0 20px; border-radius: 2px; }
+    .meta-row { display: flex; gap: 40px; margin-top: 36px; font-size: 15px; color: var(--ink-soft); }
+    .meta-row .label { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--ink-faint); display: block; margin-bottom: 3px; text-transform: uppercase; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; margin-top: 28px; padding: 10px 16px; background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 30px; font-size: 15px; color: var(--moss); font-weight: 500; }
+    .status-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--moss); }
+
+    /* Cards */
+    .cards-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0; }
+    .card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+    .card .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--terra); text-transform: uppercase; margin-bottom: 12px; }
+    .card .title { font-family: var(--disp); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 12px; line-height: 1.2; }
+    .card ul { list-style: none; font-size: 14px; color: var(--ink-soft); line-height: 1.55; }
+    .card li { position: relative; padding-left: 16px; margin-bottom: 7px; }
+    .card li::before { content: "—"; position: absolute; left: 0; color: var(--terra); }
+    .card .count { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--moss); margin-bottom: 4px; }
+
+    /* Loop diagram */
+    .loop-wrap { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; padding: 10px 0; }
+    .loop-step { background: var(--card); border: 1px solid var(--rule); border-top: 3px solid var(--terra); border-radius: 10px; padding: 14px 12px; text-align: center; min-width: 138px; }
+    .loop-step .lab { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.25; }
+    .loop-step .desc { font-size: 11px; color: var(--ink-faint); margin-top: 4px; line-height: 1.3; }
+    .loop-arrow { color: var(--terra); font-size: 20px; }
+    .decision-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .dchip { font-family: var(--mono); font-size: 11px; padding: 6px 12px; border-radius: 20px; border: 1px solid var(--rule); background: var(--paper-deep); color: var(--ink-soft); }
+
+    /* Architecture / pipeline */
+    .arch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; flex: 1; min-height: 0; }
+    .arch-col { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; }
+    .arch-col .head { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 10px; border-bottom: 2px solid var(--ink); margin-bottom: 14px; }
+    .arch-col.client .head { color: var(--terra); border-color: var(--terra); }
+    .arch-col.service .head { color: var(--moss); border-color: var(--moss); }
+    .arch-col.data .head { color: var(--clay); border-color: var(--clay); }
+    .arch-col ul { list-style: none; font-size: 13.5px; color: var(--ink-soft); line-height: 1.6; }
+    .arch-col li { margin-bottom: 6px; }
+    .pipeline-flow { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 10px; flex-wrap: wrap; }
+    .pstep { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 6px; padding: 6px 10px; font-family: var(--mono); font-size: 11px; color: var(--ink); }
+    .guarantees { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .gbox { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 8px; padding: 10px 12px; font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+    .gbox b { color: var(--ink); }
+
+    /* Pending */
+    .pending-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; }
+    .pending-col .colhead { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 8px; border-bottom: 2px solid var(--ink); margin-bottom: 14px; }
+    .pending-col.open .colhead { color: var(--terra); border-color: var(--terra); }
+    .pending-col.impl .colhead { color: var(--ink-faint); border-color: var(--ink-faint); }
+    .pitem { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+    .pitem .ptitle { font-size: 15px; font-weight: 600; color: var(--ink); margin-bottom: 6px; display: flex; align-items: center; gap: 8px; }
+    .pitem .ptitle .issue { font-family: var(--mono); font-size: 10px; padding: 2px 7px; border-radius: 10px; border: 1px solid var(--rule); color: var(--ink-faint); }
+    .pitem p { font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+    .pitem.muted { opacity: .85; }
+
+    /* Timeline */
+    .timeline { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; }
+    .week { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+    .week .wkhead { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--terra); margin-bottom: 10px; }
+    .week .wktitle { font-family: var(--disp); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 14px; }
+    .week ul { list-style: none; font-size: 14px; color: var(--ink-soft); line-height: 1.6; }
+    .week li { position: relative; padding-left: 18px; margin-bottom: 8px; }
+    .week li::before { content: "→"; position: absolute; left: 0; color: var(--moss); }
+    .success-box { background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 10px; padding: 16px 18px; margin-top: 16px; }
+    .success-box .slabel { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--moss); text-transform: uppercase; margin-bottom: 6px; }
+    .success-box .sbody { font-size: 15px; color: var(--ink); line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="frame">
+
+      <!-- Slide 1: Title -->
+      <section class="slide active title-slide">
+        <div class="pes"><div class="dot"></div>PHASE 2 · REVIEW-1</div>
+        <div class="pad">
+          <div class="eyebrow">UE20CS971 · PROJECT PHASE-2 · REVIEW-1</div>
+          <div class="title-main">Assessments +<br>LLM-Guided Practice</div>
+          <div class="title-sub">Phase 2 progress update: planning and the contract foundation are complete. Implementation begins next.</div>
+          <div class="title-rule"></div>
+          <div class="status-pill">Foundation ready — contracts approved, decisions locked</div>
+          <div class="meta-row">
+            <div><span class="label">Presenter</span>Rohit Saji · PES2PGE24DS201</div>
+            <div><span class="label">Guide</span>Prof. Ramesh Prakash Guledgudd</div>
+            <div><span class="label">Program</span>M.Tech · Data Science &amp; AI · PES University</div>
+            <div><span class="label">Date</span>09 August 2026</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 2: What was completed this week -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>02 / 06</div>
+        <div class="pad">
+          <div class="hd"><span class="num">02</span><span class="ttl">This week: from ideas to implementation contracts</span><span class="ct">Completed</span></div>
+          <div class="cards-3">
+            <div class="card">
+              <div class="kicker">Decisions closed</div>
+              <div class="count">12</div>
+              <ul>
+                <li>Assessments &amp; Practice IA</li>
+                <li>Assessment formats &amp; scoring</li>
+                <li>Local-first persistence fit</li>
+                <li>Gemini backend &amp; streaming</li>
+                <li>Content ingestion &amp; RAG</li>
+                <li>Practice session model</li>
+                <li>KT &amp; adaptive-difficulty loop</li>
+                <li>Judge0 CE coding execution</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">Contract pack approved</div>
+              <div class="count">#22</div>
+              <ul>
+                <li>OpenAPI 3.1 endpoint surface</li>
+                <li>JSON Schema object contracts</li>
+                <li>Gemini request/response envelopes</li>
+                <li>Durable events &amp; service objects</li>
+                <li>Pipeline transformations</li>
+                <li>Provider errors &amp; retries</li>
+                <li>Representative fixtures</li>
+                <li>Validation test harness</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">Implementation status</div>
+              <div class="count" style="color:var(--clay)">0</div>
+              <ul>
+                <li>No major Phase 2 feature coded this week</li>
+                <li>Foundation is now ready to implement</li>
+                <li>Remaining work: UI decisions, service wiring, evaluation harness</li>
+                <li>Honest framing: this is ambiguity reduction, not a shipped feature</li>
+              </ul>
+            </div>
+          </div>
+          <div class="footnote">All contract artifacts live in <b>services/intelligence/contracts/phase2/</b>. <b>tests/test_contracts.py</b> validates the pack.</div>
+        </div>
+      </section>
+
+      <!-- Slide 3: Decisions that lock product direction -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>03 / 06</div>
+        <div class="pad">
+          <div class="hd"><span class="num">03</span><span class="ttl">We defined the Phase 2 product loop</span><span class="ct">Locked</span></div>
+          <div class="loop-wrap">
+            <div class="loop-step"><div class="lab">Material</div><div class="desc">server-owned library + RAG grounding</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Generate</div><div class="desc">material-scoped questions</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Practice</div><div class="desc">written &amp; coding runs</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Grade</div><div class="desc">server-authoritative</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Mastery</div><div class="desc">per-skill BKT update</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Adapt</div><div class="desc">one-band difficulty</div></div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step"><div class="lab">Roadmap</div><div class="desc">advisory feedback</div></div>
+          </div>
+          <div class="decision-strip">
+            <span class="dchip">Tiered Socratic guidance</span>
+            <span class="dchip">Hybrid on-demand triggers</span>
+            <span class="dchip">Anchored inline / coach-popover</span>
+            <span class="dchip">Full RAG — not deferred</span>
+            <span class="dchip">Hybrid client/server execution</span>
+            <span class="dchip">Local-first events + server-owned content</span>
+          </div>
+          <div class="footnote"><b>Guidance principle:</b> the guide orients-then-asks. It never gives the answer. The inline-hint prototype exists as a throwaway reference only.</div>
+        </div>
+      </section>
+
+      <!-- Slide 4: Approved contract and data boundary -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>04 / 06</div>
+        <div class="pad">
+          <div class="hd"><span class="num">04</span><span class="ttl">The contract pack makes the system implementable</span><span class="ct">Approved</span></div>
+          <div class="arch-grid">
+            <div class="arch-col client">
+              <div class="head">Local-first client</div>
+              <ul>
+                <li>Dexie event store</li>
+                <li>Thin pointer events</li>
+                <li>Queued attempts</li>
+                <li>Redacted offline cache</li>
+                <li>Sync &amp; retry identity</li>
+              </ul>
+            </div>
+            <div class="arch-col service">
+              <div class="head">Intelligence service</div>
+              <ul>
+                <li>Ingestion worker</li>
+                <li>Chunking &amp; embeddings</li>
+                <li>Assessment generation</li>
+                <li>Written / coding grading</li>
+                <li>Guide streaming</li>
+                <li>Mastery projection</li>
+              </ul>
+            </div>
+            <div class="arch-col data">
+              <div class="head">Server-owned data</div>
+              <ul>
+                <li>Materials &amp; content chunks</li>
+                <li>pgvector embeddings</li>
+                <li>Assessments &amp; questions</li>
+                <li>Hidden grading blocks</li>
+                <li>Jobs &amp; telemetry</li>
+                <li>Durable event envelope</li>
+              </ul>
+            </div>
+          </div>
+          <div class="pipeline-flow">
+            <span class="pstep">extract</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">chunk</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">embed</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">generate</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">validate</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">grade</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">mastery</span><span style="color:var(--terra)">→</span>
+            <span class="pstep">recommend</span>
+          </div>
+          <div class="guarantees">
+            <div class="gbox"><b>Hidden content stays server-side.</b> Answers, rubrics, reference solutions, and tests never reach the client.</div>
+            <div class="gbox"><b>Owner-scoped.</b> Every remote read/write is bound to the authenticated user.</div>
+            <div class="gbox"><b>Safe failures.</b> Partial generation never fabricates questions. Provider errors normalize to retryable codes.</div>
+          </div>
+          <div class="footnote">Contracts: <b>openapi.yaml</b> · <b>PIPELINES.md</b> · <b>TRACEABILITY.md</b> · <b>gemini/README.md</b> · <b>tests/test_contracts.py</b></div>
+        </div>
+      </section>
+
+      <!-- Slide 5: What is still pending -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>05 / 06</div>
+        <div class="pad">
+          <div class="hd"><span class="num">05</span><span class="ttl">Pending work: decisions and implementation</span><span class="ct">Next</span></div>
+          <div class="pending-cols">
+            <div class="pending-col open">
+              <div class="colhead">Pending decisions</div>
+              <div class="pitem">
+                <div class="ptitle">Material library &amp; ingestion UX <span class="issue">#24</span></div>
+                <p>Library, detail, upload progress, retry/replace, delete, multi-material picker.</p>
+              </div>
+              <div class="pitem">
+                <div class="ptitle">Assessment review &amp; feedback surface <span class="issue">#25</span></div>
+                <p>Per-question results, written rubric breakdown, coding test-case table, citations, retry.</p>
+              </div>
+              <div class="pitem">
+                <div class="ptitle">Roadmap feedback UX <span class="issue">#26</span></div>
+                <p>How mastery and adaptive difficulty surface in Roadmap and Progress views.</p>
+              </div>
+              <div class="pitem">
+                <div class="ptitle">Generation-quality evaluation harness <span class="issue">#23</span></div>
+                <p>Groundedness, difficulty calibration, dedup/diversity, mastery-estimator bake-off.</p>
+              </div>
+            </div>
+            <div class="pending-col impl">
+              <div class="colhead">Pending implementation</div>
+              <div class="pitem muted">
+                <div class="ptitle">Service endpoints &amp; migrations</div>
+                <p>Material, assessment, job, and grading persistence.</p>
+              </div>
+              <div class="pitem muted">
+                <div class="ptitle">Ingestion worker &amp; embedding pipeline</div>
+                <p>Extract, chunk, embed, status via Realtime.</p>
+              </div>
+              <div class="pitem muted">
+                <div class="ptitle">Generation &amp; grading flows</div>
+                <p>Objective, written, and coding paths with redacted client responses.</p>
+              </div>
+              <div class="pitem muted">
+                <div class="ptitle">Practice runtime &amp; mastery integration</div>
+                <p>Resumable runs, server grades, BKT update, adaptive recommendation.</p>
+              </div>
+              <div class="pitem muted">
+                <div class="ptitle">Real UI integration</div>
+                <p>Beyond the throwaway inline-hint prototype.</p>
+              </div>
+            </div>
+          </div>
+          <div class="footnote">Issue numbers reflect the current live tracker after migration. Always use titles alongside numbers in conversation.</div>
+        </div>
+      </section>
+
+      <!-- Slide 6: Next two weeks -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>06 / 06</div>
+        <div class="pad">
+          <div class="hd"><span class="num">06</span><span class="ttl">Next two weeks: build one complete vertical slice</span><span class="ct">Plan</span></div>
+          <div class="timeline">
+            <div class="week">
+              <div class="wkhead">Week 1</div>
+              <div class="wktitle">Service &amp; persistence spine</div>
+              <ul>
+                <li>Material &amp; assessment endpoints</li>
+                <li>Server-owned content persistence</li>
+                <li>Ingestion status &amp; async jobs</li>
+                <li>Generation with validation &amp; redacted responses</li>
+                <li>Preserve local-first events &amp; owner scoping</li>
+                <li>Contract tests for success, timeout, quota, malformed, partial</li>
+              </ul>
+            </div>
+            <div class="week">
+              <div class="wkhead">Week 2</div>
+              <div class="wktitle">Practice &amp; feedback slice</div>
+              <ul>
+                <li>Practice run from generated assessment</li>
+                <li>Objective / written / coding attempt path</li>
+                <li>Server-authoritative grading</li>
+                <li>Durable attempt/grade events</li>
+                <li>First mastery update &amp; adaptive recommendation</li>
+                <li>Initial roadmap-feedback surface</li>
+              </ul>
+            </div>
+          </div>
+          <div class="success-box">
+            <div class="slabel">Definition of success for the next review</div>
+            <div class="sbody">A demonstrable end-to-end slice: <b>material → generated question → practice attempt → server grade → mastery signal → adaptive recommendation</b>. The goal is to prove the contract spine works before we expand UI breadth.</div>
+          </div>
+          <div class="footnote">The past week removed ambiguity from the Phase 2 design. The next two weeks shift from decisions to a working end-to-end slice.</div>
+        </div>
+      </section>
+
+      <div class="navbar">
+        <span class="btn" onclick="prev()">← Prev</span>
+        <span id="counter">1 / 6</span>
+        <span class="btn" onclick="next()">Next →</span>
+      </div>
+      <div class="pbar" id="pbar" style="width:16.66%"></div>
+    </div>
+  </div>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let current = 0;
+    const total = slides.length;
+
+    function show(i) {
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+      document.getElementById('counter').textContent = (i + 1) + ' / ' + total;
+      document.getElementById('pbar').style.width = ((i + 1) / total * 100) + '%';
+    }
+
+    function next() {
+      if (current < total - 1) { current++; show(current); }
+    }
+
+    function prev() {
+      if (current > 0) { current--; show(current); }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') next();
+      if (e.key === 'ArrowLeft') prev();
+    });
+
+    function scaleFrame() {
+      const frame = document.getElementById('frame');
+      const sx = window.innerWidth / 1280;
+      const sy = window.innerHeight / 720;
+      const s = Math.min(sx, sy, 1);
+      frame.style.transform = 'scale(' + s + ')';
+    }
+
+    window.addEventListener('resize', scaleFrame);
+    scaleFrame();
+  </script>
+</body>
+</html>

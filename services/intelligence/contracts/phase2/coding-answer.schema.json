@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/coding-answer.schema.json",
+  "title": "CodingAnswer",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["language", "source", "config"],
+  "properties": {
+    "language": { "type": "string", "enum": ["python", "javascript", "typescript", "java", "cpp", "csharp", "go", "rust"] },
+    "source": { "type": "string", "minLength": 1, "maxLength": 100000 },
+    "config": {
+      "type": "object", "additionalProperties": false,
+      "required": ["stdin", "timeLimitMs", "memoryLimitMb"],
+      "properties": {
+        "stdin": { "type": "string", "maxLength": 20000 },
+        "timeLimitMs": { "type": "integer", "minimum": 100, "maximum": 30000 },
+        "memoryLimitMb": { "type": "integer", "minimum": 16, "maximum": 1024 }
+      }
+    }
+  }
+}

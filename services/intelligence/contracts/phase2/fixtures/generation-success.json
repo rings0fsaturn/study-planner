@@ -1,0 +1,1 @@
+{"provider":"gemini","model":"gemini-2.5-flash","traceId":"trace-success","candidates":[{"index":0,"text":"{\"prompt\":\"What is normalization?\"}","finishReason":"STOP"}],"structuredOutput":{"prompt":"What is normalization?"},"finishReason":"STOP","safetyFeedback":[],"usage":{"promptTokens":100,"outputTokens":20,"totalTokens":120},"outcome":"ok"}

@@ -1,0 +1,132 @@
+openapi: 3.1.0
+info:
+  title: Study Tracker Phase 2 Intelligence API
+  version: 1.1.0
+  description: Public, owner-scoped contract. Hidden answer keys, rubrics, reference solutions, and hidden tests are server-only.
+  x-contract-status: approved
+servers:
+  - url: /
+paths:
+  /v1/materials:
+    post:
+      operationId: createMaterial
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/MaterialCreate' } } } }
+      responses: { '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' }, '409': { $ref: '#/components/responses/Conflict' }, '429': { $ref: '#/components/responses/Quota' } }
+  /v1/materials/{materialId}/ingestion:
+    get:
+      operationId: getIngestionStatus
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/MaterialId' }]
+      responses: { '200': { description: Ingestion status, content: { application/json: { schema: { $ref: '#/components/schemas/IngestionStatus' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' } }
+  /v1/assessments/generate:
+    post:
+      operationId: generateAssessment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/GenerationRequest' } } } }
+      responses: { '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' }, '409': { $ref: '#/components/responses/Conflict' }, '429': { $ref: '#/components/responses/Quota' } }
+  /v1/assessments/{assessmentId}:
+    get:
+      operationId: getAssessment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/AssessmentId' }]
+      responses: { '200': { description: Redacted assessment, content: { application/json: { schema: { $ref: '#/components/schemas/Assessment' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' } }
+  /v1/practice-runs:
+    post:
+      operationId: createPracticeRun
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/PracticeRunCreate' } } } }
+      responses: { '201': { description: Created, content: { application/json: { schema: { $ref: '#/components/schemas/PracticeRun' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' } }
+  /v1/practice-runs/{runId}/attempts:
+    post:
+      operationId: submitAttempt
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/RunId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/AttemptSubmit' } } } }
+      responses: { '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' }, '409': { $ref: '#/components/responses/Conflict' } }
+  /v1/attempts/{attemptId}/grade:
+    post:
+      operationId: gradeAttempt
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/AttemptId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      responses: { '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' } }
+  /v1/jobs/{jobId}:
+    get:
+      operationId: getJob
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/JobId' }]
+      responses: { '200': { description: Owner-scoped asynchronous job status and public result, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' } }
+  /v1/mastery:
+    get:
+      operationId: getMastery
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { in: query, name: materialId, schema: { $ref: '#/components/schemas/Id' } }, { in: query, name: skillTag, schema: { type: string } }]
+      responses: { '200': { description: Rebuildable mastery projection, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/MasteryProjection' } } } } }, '401': { $ref: '#/components/responses/Unauthorized' } }
+  /v1/guide/stream:
+    post:
+      operationId: streamGuide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/GuideRequest' } } } }
+      responses: { '200': { description: SSE stream; each data value is a HintFrame, content: { text/event-stream: { schema: { $ref: '#/components/schemas/HintFrame' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' }, '429': { $ref: '#/components/responses/Quota' } }
+  /v1/guide/reveal:
+    post:
+      operationId: revealGuide
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RevealRequest' } } } }
+      responses: { '200': { description: Gated acknowledgement only; no hidden content, content: { application/json: { schema: { $ref: '#/components/schemas/RevealResponse' } } } }, '403': { $ref: '#/components/responses/Forbidden' }, '401': { $ref: '#/components/responses/Unauthorized' } }
+  /v1/roadmap/feedback:
+    post:
+      operationId: submitRoadmapFeedback
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/IdempotencyKey' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/RoadmapFeedback' } } } }
+      responses: { '202': { description: Accepted advisory signal, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT, description: Supabase access token; sub is the ownership key. }
+  parameters:
+    RequestId: { in: header, name: X-Request-ID, required: true, schema: { $ref: '#/components/schemas/Id' } }
+    IdempotencyKey: { in: header, name: Idempotency-Key, required: true, schema: { type: string, minLength: 16, maxLength: 128 } }
+    MaterialId: { in: path, name: materialId, required: true, schema: { $ref: '#/components/schemas/Id' } }
+    AssessmentId: { in: path, name: assessmentId, required: true, schema: { $ref: '#/components/schemas/Id' } }
+    RunId: { in: path, name: runId, required: true, schema: { $ref: '#/components/schemas/Id' } }
+    AttemptId: { in: path, name: attemptId, required: true, schema: { $ref: '#/components/schemas/Id' } }
+    JobId: { in: path, name: jobId, required: true, schema: { $ref: '#/components/schemas/Id' } }
+  responses:
+    BadRequest: { description: Invalid request, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+    Unauthorized: { description: Missing or invalid JWT, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+    Forbidden: { description: Ownership or reveal gate denied, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+    NotFound: { description: Object not found in owner scope, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+    Conflict: { description: Idempotency or state conflict, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+    Quota: { description: Provider or user quota exhausted, content: { application/json: { schema: { $ref: '#/components/schemas/ServiceError' } } } }
+  schemas:
+    Id: { type: string, pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$' }
+    Timestamp: { type: string, format: date-time }
+    DifficultyBand: { type: integer, minimum: 1, maximum: 5 }
+    MaterialCreate: { type: object, additionalProperties: false, required: [clientId, kind, title, source], properties: { clientId: { $ref: '#/components/schemas/Id' }, kind: { type: string, enum: [manual, url, youtube, file] }, title: { type: string, minLength: 1, maxLength: 300 }, source: { type: string, minLength: 1 }, roadmapId: { $ref: '#/components/schemas/Id' } } }
+    Material: { type: object, additionalProperties: false, required: [id, ownerId, title, kind, ingestionState, createdAt], properties: { id: { $ref: '#/components/schemas/Id' }, ownerId: { $ref: '#/components/schemas/Id' }, title: { type: string }, kind: { type: string, enum: [manual, url, youtube, file] }, ingestionState: { type: string, enum: [pending, extracting, chunking, embedding, ready, failed] }, chunkCount: { type: integer, minimum: 0 }, groundingVersion: { type: string }, createdAt: { $ref: '#/components/schemas/Timestamp' }, updatedAt: { $ref: '#/components/schemas/Timestamp' } } }
+    IngestionStatus: { type: object, additionalProperties: false, required: [materialId, state, progress, updatedAt], properties: { materialId: { $ref: '#/components/schemas/Id' }, state: { type: string }, progress: { type: number, minimum: 0, maximum: 1 }, retryable: { type: boolean }, error: { $ref: '#/components/schemas/ServiceError' }, updatedAt: { $ref: '#/components/schemas/Timestamp' } } }
+    AssessmentRecipe: { type: object, additionalProperties: false, required: [formats, questionCount], properties: { formats: { type: array, minItems: 1, items: { type: string, enum: [objective, written, coding] } }, questionCount: { type: integer, minimum: 1, maximum: 100 }, difficulty: { $ref: '#/components/schemas/DifficultyBand' }, skillTags: { type: array, items: { type: string } } } }
+    GenerationRequest: { type: object, additionalProperties: false, required: [clientId, materialIds, recipe, correlationId], properties: { clientId: { $ref: '#/components/schemas/Id' }, materialIds: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Id' } }, recipe: { $ref: '#/components/schemas/AssessmentRecipe' }, correlationId: { $ref: '#/components/schemas/Id' }, masterySnapshotVersion: { type: string } } }
+    Question: { type: object, additionalProperties: false, required: [id, assessmentId, materialId, format, prompt, skillTags, authoredDifficulty], properties: { id: { $ref: '#/components/schemas/Id' }, assessmentId: { $ref: '#/components/schemas/Id' }, materialId: { $ref: '#/components/schemas/Id' }, format: { type: string }, prompt: { type: string }, options: { type: array, items: { type: string } }, skillTags: { type: array, minItems: 1, items: { type: string } }, authoredDifficulty: { $ref: '#/components/schemas/DifficultyBand' }, citations: { type: array, items: { $ref: '#/components/schemas/Citation' } } } }
+    Assessment: { type: object, additionalProperties: false, required: [id, ownerId, materialIds, status, questions, createdAt], properties: { id: { $ref: '#/components/schemas/Id' }, ownerId: { $ref: '#/components/schemas/Id' }, materialIds: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Id' } }, status: { type: string, enum: [generating, ready, partial, failed] }, questions: { type: array, items: { $ref: '#/components/schemas/Question' } }, warnings: { type: array, items: { $ref: '#/components/schemas/Warning' } }, groundingStale: { type: boolean }, createdAt: { $ref: '#/components/schemas/Timestamp' } } }
+    PracticeRunCreate: { type: object, additionalProperties: false, required: [clientId, mode, questionIds, correlationId], properties: { clientId: { $ref: '#/components/schemas/Id' }, mode: { type: string, enum: [written, coding, mixed] }, questionIds: { type: array, minItems: 1, items: { $ref: '#/components/schemas/Id' } }, materialIds: { type: array, items: { $ref: '#/components/schemas/Id' } }, correlationId: { $ref: '#/components/schemas/Id' } } }
+    PracticeRun: { type: object, additionalProperties: false, required: [id, ownerId, mode, status, problemCount, createdAt], properties: { id: { $ref: '#/components/schemas/Id' }, ownerId: { $ref: '#/components/schemas/Id' }, mode: { type: string }, status: { type: string }, problemCount: { type: integer, minimum: 1 }, materialIds: { type: array, items: { $ref: '#/components/schemas/Id' } }, createdAt: { $ref: '#/components/schemas/Timestamp' } } }
+    AttemptSubmit: { type: object, additionalProperties: false, required: [clientAttemptId, questionId, answer, submittedAt, correlationId], properties: { clientAttemptId: { $ref: '#/components/schemas/Id' }, questionId: { $ref: '#/components/schemas/Id' }, answer: {}, submittedAt: { $ref: '#/components/schemas/Timestamp' }, elapsedSeconds: { type: integer, minimum: 0 }, correlationId: { $ref: '#/components/schemas/Id' } } }
+    QuestionGraded: { type: object, additionalProperties: false, required: [attemptId, questionId, materialId, score, correct, gradedAt, grader], properties: { attemptId: { $ref: '#/components/schemas/Id' }, questionId: { $ref: '#/components/schemas/Id' }, materialId: { $ref: '#/components/schemas/Id' }, score: { type: number, minimum: 0, maximum: 1 }, correct: { type: boolean }, perSkill: { type: array, items: { $ref: '#/components/schemas/PerSkillObservation' } }, explanation: { type: string }, grader: { type: string, enum: [objective, gemini_rubric, judge0] }, modelVersion: { type: string }, gradedAt: { $ref: '#/components/schemas/Timestamp' } } }
+    PerSkillObservation: { type: object, additionalProperties: false, required: [skillTag, score, correct], properties: { skillTag: { type: string }, score: { type: number, minimum: 0, maximum: 1 }, correct: { type: boolean }, confidence: { type: number, minimum: 0, maximum: 1 } } }
+    MasteryProjection: { type: object, additionalProperties: false, required: [materialId, skillTag, mastery, uncertainty, confidence, n, modelVersion], properties: { materialId: { $ref: '#/components/schemas/Id' }, skillTag: { type: string }, mastery: { type: number, minimum: 0, maximum: 1 }, uncertainty: { type: number, minimum: 0, maximum: 1 }, confidence: { type: number, minimum: 0, maximum: 1 }, n: { type: integer, minimum: 0 }, recentTrend: { type: number }, modelVersion: { type: string } } }
+    GuideRequest: { type: object, additionalProperties: false, required: [questionId, learnerWork, tier, correlationId], properties: { questionId: { $ref: '#/components/schemas/Id' }, learnerWork: { type: string, maxLength: 20000 }, activeLine: { type: integer, minimum: 1 }, tier: { type: string, enum: [nudge, concept, strategy, worked_step] }, correlationId: { $ref: '#/components/schemas/Id' }, materialIds: { type: array, items: { $ref: '#/components/schemas/Id' } } } }
+    HintFrame: { $ref: './gemini/guide-hint-frame.schema.json' }
+    RevealRequest: { type: object, additionalProperties: false, required: [questionId, attemptId, confirmation, correlationId], properties: { questionId: { $ref: '#/components/schemas/Id' }, attemptId: { $ref: '#/components/schemas/Id' }, confirmation: { const: true }, correlationId: { $ref: '#/components/schemas/Id' } } }
+    RevealResponse: { $ref: './gemini/gated-reveal-response.schema.json' }
+    RoadmapFeedback: { type: object, additionalProperties: false, required: [roadmapId, signal, correlationId], properties: { roadmapId: { $ref: '#/components/schemas/Id' }, signal: { type: string }, correlationId: { $ref: '#/components/schemas/Id' }, context: { type: object } } }
+    Citation: { type: object, additionalProperties: false, required: [chunkId, materialId, quote], properties: { chunkId: { $ref: '#/components/schemas/Id' }, materialId: { $ref: '#/components/schemas/Id' }, quote: { type: string, minLength: 1, maxLength: 2000 }, startSeconds: { type: number, minimum: 0 } } }
+    Warning: { type: object, additionalProperties: false, required: [code, message], properties: { code: { type: string }, message: { type: string }, questionId: { $ref: '#/components/schemas/Id' } } }
+    AsyncJob: { type: object, additionalProperties: false, required: [jobId, kind, status, ownerId, correlationId, createdAt], properties: { jobId: { $ref: '#/components/schemas/Id' }, kind: { type: string, enum: [ingestion, generation, grading, roadmap_feedback] }, status: { type: string, enum: [queued, running, succeeded, partial, failed, cancelled] }, ownerId: { $ref: '#/components/schemas/Id' }, correlationId: { $ref: '#/components/schemas/Id' }, resultId: { $ref: '#/components/schemas/Id' }, result: {}, error: { $ref: '#/components/schemas/ServiceError' }, createdAt: { $ref: '#/components/schemas/Timestamp' }, completedAt: { $ref: '#/components/schemas/Timestamp' } } }
+    ServiceError: { type: object, additionalProperties: false, required: [code, message, requestId, retryable], properties: { code: { type: string, enum: [invalid_request, unauthorized, forbidden, not_found, conflict, safety_block, quota_exhausted, provider_unavailable, provider_timeout, malformed_output, validation_failed, internal_error] }, message: { type: string }, requestId: { $ref: '#/components/schemas/Id' }, correlationId: { $ref: '#/components/schemas/Id' }, retryable: { type: boolean }, retryAfterSeconds: { type: integer, minimum: 1 } } }

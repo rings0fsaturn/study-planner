@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/gemini/generation-response.schema.json",
+  "title": "NormalizedGeminiResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "model", "traceId", "candidates", "finishReason", "usage", "outcome"],
+  "properties": {
+    "provider": { "const": "gemini" },
+    "model": { "type": "string", "enum": ["gemini-2.5-flash", "gemini-embedding-001"] },
+    "traceId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "providerRequestId": { "type": "string" },
+    "candidates": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["index", "text"], "properties": { "index": { "type": "integer", "minimum": 0 }, "text": { "type": "string" }, "finishReason": { "type": "string" } } } },
+    "structuredOutput": { "type": "object" },
+    "finishReason": { "enum": ["STOP", "MAX_TOKENS", "SAFETY", "RECITATION", "OTHER", "TIMEOUT"] },
+    "safetyFeedback": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["category", "blocked"], "properties": { "category": { "type": "string" }, "blocked": { "type": "boolean" }, "probability": { "type": "string" } } } },
+    "usage": { "type": "object", "additionalProperties": false, "required": ["promptTokens", "outputTokens", "totalTokens"], "properties": { "promptTokens": { "type": "integer", "minimum": 0 }, "outputTokens": { "type": "integer", "minimum": 0 }, "totalTokens": { "type": "integer", "minimum": 0 } } },
+    "outcome": { "enum": ["ok", "partial", "safety_block", "quota_failure", "timeout", "malformed_output", "provider_error"] },
+    "error": { "$ref": "../provider-error.schema.json" }
+  }
+}

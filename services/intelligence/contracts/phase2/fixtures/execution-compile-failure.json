@@ -1,0 +1,1 @@
+{"outcome":"compile_error","compile":{"status":"failed","exitCode":1,"stdout":"","stderr":"SyntaxError","durationMs":12},"runtime":{"status":"not_run"},"publicFeedback":"The submission did not compile.","score":0,"correct":false}

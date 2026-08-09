@@ -1,0 +1,21 @@
+[
+  {"file":"generation-success.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"generation-malformed.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"generation-safety-block.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"generation-quota-failure.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"generation-timeout.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"generation-partial.json","schema":"../gemini/generation-response.schema.json"},
+  {"file":"written-grading.json","schema":"../gemini/written-grading-response.schema.json"},
+  {"file":"embedding-batch.json","schema":"../gemini/embedding-request.schema.json"},
+  {"file":"coding-answer.json","schema":"../coding-answer.schema.json"},
+  {"file":"execution-pass.json","schema":"../execution-result.schema.json"},
+  {"file":"execution-compile-failure.json","schema":"../execution-result.schema.json"},
+  {"file":"execution-sandbox-timeout.json","schema":"../execution-result.schema.json"},
+  {"file":"guide-start.json","schema":"../gemini/guide-hint-frame.schema.json"},
+  {"file":"guide-delta.json","schema":"../gemini/guide-hint-frame.schema.json"},
+  {"file":"guide-citation.json","schema":"../gemini/guide-hint-frame.schema.json"},
+  {"file":"guide-done.json","schema":"../gemini/guide-hint-frame.schema.json"},
+  {"file":"guide-error.json","schema":"../gemini/guide-hint-frame.schema.json"},
+  {"file":"provider-timeout.json","schema":"../provider-error.schema.json"},
+  {"file":"gated-reveal.json","schema":"../gemini/gated-reveal-response.schema.json"}
+]

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/provider-error.schema.json",
+  "title": "NormalizedProviderError",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["code", "message", "retryable", "requestId", "correlationId"],
+  "properties": {
+    "code": { "type": "string", "enum": ["safety_block", "quota_exhausted", "provider_unavailable", "provider_timeout", "malformed_output"] },
+    "message": { "type": "string", "minLength": 1 },
+    "retryable": { "type": "boolean" },
+    "requestId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "retryAfterSeconds": { "type": "integer", "minimum": 1 }
+  }
+}

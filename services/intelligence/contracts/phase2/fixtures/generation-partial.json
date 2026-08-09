@@ -1,0 +1,1 @@
+{"provider":"gemini","model":"gemini-2.5-flash","traceId":"trace-partial","candidates":[{"index":0,"text":"accepted","finishReason":"STOP"}],"structuredOutput":{"acceptedQuestions":1},"finishReason":"STOP","safetyFeedback":[],"usage":{"promptTokens":200,"outputTokens":40,"totalTokens":240},"outcome":"partial"}

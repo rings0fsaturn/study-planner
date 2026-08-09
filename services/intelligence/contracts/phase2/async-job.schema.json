@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/async-job.schema.json",
+  "title": "AsyncJob",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["jobId", "kind", "status", "ownerId", "correlationId", "createdAt"],
+  "properties": {
+    "jobId": { "type": "string", "minLength": 1 },
+    "kind": { "type": "string", "enum": ["ingestion", "generation", "grading", "roadmap_feedback"] },
+    "status": { "type": "string", "enum": ["queued", "running", "succeeded", "partial", "failed", "cancelled"] },
+    "ownerId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "resultId": { "type": "string", "minLength": 1 },
+    "result": {},
+    "error": { "$ref": "provider-error.schema.json" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" }
+  }
+}
