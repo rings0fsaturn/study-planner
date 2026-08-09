@@ -104,7 +104,7 @@ flowchart TB
 
 - **Solid edges = Phase I (open-loop):** log → store → sync → server-computed
   analytics (Pillar A) → cached → displayed. Core logging works offline; analytics
-  refresh when online.
+  refresh when ONLINE.
 - **Dashed / orange = Phase II (novelty):** the assessment subsystem (Pillar B) plus
   the **closed loop** — KT mastery becomes the *honest signal* feeding verified
   recalibration back into scheduling.
