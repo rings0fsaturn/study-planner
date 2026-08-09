@@ -5,19 +5,20 @@ description: Use the GitHub CLI for issue-tracker work via the gitignored token,
 
 # GitHub CLI and Token
 
-Read this before any `gh` command against `github.com` from this repository, above all the wayfinder issue-tracker workflow (map and tickets on `NotTheRealRohit/study-planner-web`).
+Read this before any `gh` command against `github.com` from this repository, above all the wayfinder issue-tracker workflow (map and tickets on `rings0fsaturn/study-planner`).
 
 ## Token usage
 
 The `gh` CLI authenticates with a token held in `.env.git.local` at the repository root.
 This file is gitignored (`.gitignore` matches `.env.*.local`); keep it that way and never move the token into a tracked file.
-Export the token into the shell before calling `gh`:
+Export the token into the shell before calling `gh`.
+`.env.git.local` may carry CRLF line endings on a Windows checkout, which leaves a trailing `\r` on the token value; strip it with `tr -d '\r'` so `gh` does not fail with `invalid header field value for Authorization`:
 
 ```bash
-export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2-)
+export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2- | tr -d '\r')
 ```
 
-The `gh` binary is at `/opt/homebrew/bin/gh`.
+The `gh` binary is at `/usr/bin/gh`.
 Never print, echo, log, cat, or commit the token, and never paste its value into a message, a commit, or an issue body.
 Reading the file to extract only the `TOKEN=` line is fine; dumping the whole file to stdout is not, because it exposes the secret.
 
@@ -36,9 +37,9 @@ The `NODE_EXTRA_CA_CERTS=...` entry is a transparent TLS-interception CA bundle 
 Wrap every `gh` call in a short retry loop and it succeeds within a few attempts:
 
 ```bash
-export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2-)
+export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2- | tr -d '\r')
 for i in 1 2 3 4 5; do
-  /opt/homebrew/bin/gh issue view 9 --repo NotTheRealRohit/study-planner-web && break || sleep 3
+  /usr/bin/gh issue view 9 --repo rings0fsaturn/study-planner && break || sleep 3
 done
 ```
 

@@ -1,1 +1,0 @@
-../../.agents/rules/52-github-cli-and-token.agents.md
