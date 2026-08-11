@@ -23,7 +23,7 @@ If a rule or planning document conflicts with the code, verify the behavior and 
 Use only the repository-local rules and skills for work in this checkout:
 
 - Rules: [`.agents/rules/`](.agents/rules/)
-- Skills: [`.agents/skills/`](.agents/skills/), [`~/.agents/skills/`](~/.agents/skills/)
+- Skills: [`.agents/skills/`](.agents/skills/), [`~/.agents/skills/`](~/.agents/skills/), [`.opencode/skills/`](.opencode/skills/)
 
 
 When a skill is named or triggered, read `.agents/skills/<skill>/SKILL.md` and follow that local copy.

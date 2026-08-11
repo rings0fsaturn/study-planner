@@ -1,0 +1,61 @@
+## On System 2 (the lagging machine)
+
+**1. Go into your existing repo and check its current state:**
+```bash
+cd /path/to/project
+git log --oneline -5     # note where you currently are
+git status               # make sure your working tree is clean
+```
+Commit or stash anything uncommitted before proceeding, so nothing gets lost.
+
+**2. Verify the bundle before using it.** This is the important step — it confirms the bundle is valid and tells you whether your repo has the prerequisite commits an incremental bundle needs:
+```bash
+git bundle verify /path/to/project.bundle
+```
+If it says the bundle is OK and lists the refs, you're good. If it complains that it *requires* some commit you don't have, your repo is too far behind for that incremental bundle — go back and make a complete (`--all`) bundle on system 1 instead.
+
+**3. Fetch from the bundle.** Treat the bundle file as a remote:
+```bash
+git fetch /path/to/project.bundle 'refs/heads/*:refs/remotes/bundle/*'
+```
+This pulls all branches from the bundle into namespaced tracking refs like `bundle/main`, `bundle/develop`, without touching your local branches yet. (If you only care about one branch, you can simplify to `git fetch /path/to/project.bundle main`.)
+
+**4. Inspect what came in** before merging anything:
+```bash
+git log --oneline bundle/main -10
+git log --oneline HEAD..bundle/main    # commits you're missing
+```
+
+**5. Update your local branch.** Check out the branch you want to advance, then bring it up to date:
+```bash
+git checkout main
+git merge --ff-only bundle/main
+```
+
+`--ff-only` is deliberate: if system 2 only fell behind and has no local commits of its own, this fast-forwards cleanly to the latest state. If it refuses (because you have local commits that diverged), you'll instead want:
+```bash
+git merge bundle/main        # creates a merge commit
+# or, to replay your local work on top:
+git rebase bundle/main
+```
+
+**6. Confirm you're current and history is intact:**
+```bash
+git log --oneline -10
+git branch -a
+```
+You should now see all the latest commits with their full history.
+
+## Cleanup (optional)
+
+Remove the temporary tracking refs if you don't want them lingering:
+```bash
+git update-ref -d refs/remotes/bundle/main
+```
+Or if you set it up as a named remote, just `git remote remove bundle`.
+
+---
+
+A couple of things worth flagging for your specific case:
+
+The `--ff-only` in step 5 is your safety check. If system 2 was *purely* behind (no unique local commits), it fast-forwards and your history matches system 1 exactly. If it errors out, that's Git telling you the two have diverged — stop and look at `git log HEAD..bundle/main` and `git log bundle/main..HEAD` to see both sides before deciding to merge or rebase.
