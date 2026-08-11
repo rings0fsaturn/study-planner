@@ -31,3 +31,25 @@ _Avoid_: Material selector, source dropdown
 **Contentless material**:
 A material record that identifies a study subject without an ingested body of content.
 _Avoid_: Empty material, placeholder material
+
+## Assessment Review
+
+**Assessment review**:
+The learner-facing record of an assessment run that explains performance and mistakes after grading.
+_Avoid_: Results dump, grade screen
+
+**Question review**:
+The feedback unit for one graded question, including its outcome, explanation, and applicable evidence.
+_Avoid_: Answer card, item feedback
+
+**Per-skill signal**:
+A concise indication of how one graded question informs a skill, without presenting the full mastery projection.
+_Avoid_: Mastery score, roadmap recommendation
+
+**Attempt history**:
+The preserved sequence of graded submissions for a question, with the latest attempt presented as the current review.
+_Avoid_: Retry log, submission dump
+
+**Partial result**:
+An assessment review state where some questions have graded outcomes and other questions remain pending or unavailable.
+_Avoid_: Failed assessment, incomplete grade
