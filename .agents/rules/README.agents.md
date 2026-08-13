@@ -20,6 +20,7 @@ Read each selected rule file completely.
 | [`12-react-router-basename.agents.md`](12-react-router-basename.agents.md) | Adding routes, links, redirects, navigation, or route assertions. |
 | [`13-form-layout.agents.md`](13-form-layout.agents.md) | Building or reviewing forms and field-group spacing. |
 | [`14-design-token-package-exports.agents.md`](14-design-token-package-exports.agents.md) | Changing shared CSS exports or imports from the design-token package. |
+| [`15-browser-use-cli.agents.md`](15-browser-use-cli.agents.md) | Using the browser-use CLI and its dedicated WSL automation Chromium, including the browser start and stop lifecycle. |
 
 ## Auth, Storage, and Sync
 
