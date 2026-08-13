@@ -39,6 +39,17 @@ function SessionIcon() {
   );
 }
 
+function MaterialsIcon() {
+  return (
+    <svg className="icon" viewBox="0 0 24 24">
+      <rect x="3" y="3" width="7" height="7" rx="1.5" />
+      <rect x="14" y="3" width="7" height="7" rx="1.5" />
+      <rect x="3" y="14" width="7" height="7" rx="1.5" />
+      <rect x="14" y="14" width="7" height="7" rx="1.5" />
+    </svg>
+  );
+}
+
 function SettingsIcon() {
   return (
     <svg className="icon" viewBox="0 0 24 24">
@@ -53,6 +64,7 @@ const NAV_ITEMS = [
   { to: '/session', label: 'Session', icon: SessionIcon, prefix: '/session' },
   { to: '/week', label: 'Week', icon: WeekIcon, prefix: '/week' },
   { to: '/roadmaps', label: 'Roadmaps', icon: RoadmapIcon, prefix: '/roadmap' },
+  { to: '/materials', label: 'Materials', icon: MaterialsIcon, prefix: '/materials' },
   { to: '/settings', label: 'Settings', icon: SettingsIcon, prefix: '/settings' },
 ] as const;
 

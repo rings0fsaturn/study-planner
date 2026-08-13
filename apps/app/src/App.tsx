@@ -36,7 +36,11 @@ import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
-import MaterialLibraryPrototype from './prototype/material-library/MaterialLibraryPrototype';
+import { MaterialsProvider } from './materials/MaterialsProvider';
+import { MaterialLibrary } from './pages/materials/MaterialLibrary';
+import { MaterialCreate } from './pages/materials/MaterialCreate';
+import { MaterialDetail } from './pages/materials/MaterialDetail';
+import { PracticeThis } from './pages/materials/PracticeThis';
 import { DevSeeder } from './dev/DevSeeder';
 
 const metadataFetcher: MetadataFetcher = import.meta.env.DEV
@@ -160,9 +164,6 @@ function AppRoutes() {
       {import.meta.env.DEV && (
         <Route path="/roadmap-feedback-prototype" element={<RoadmapFeedbackPrototype />} />
       )}
-      {import.meta.env.DEV && (
-        <Route path="/material-library-prototype" element={<MaterialLibraryPrototype />} />
-      )}
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
@@ -179,6 +180,10 @@ function AppRoutes() {
         <Route path="/week" element={<Week />} />
         <Route path="/roadmap" element={<Roadmap />} />
         <Route path="/roadmaps" element={<Roadmaps />} />
+        <Route path="/materials" element={<MaterialLibrary />} />
+        <Route path="/materials/new" element={<MaterialCreate />} />
+        <Route path="/materials/:materialId" element={<MaterialDetail />} />
+        <Route path="/materials/:materialId/practice" element={<PracticeThis />} />
         <Route path="/replan" element={<Replan />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
@@ -214,14 +219,16 @@ function App() {
     <BrowserRouter basename="/study">
       <AuthProvider>
         <EventStoreRouter>
-          {import.meta.env.DEV && <DevSeeder />}
-          <SyncRouter>
-            <div className="app">
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-            </div>
-          </SyncRouter>
+          <MaterialsProvider>
+            {import.meta.env.DEV && <DevSeeder />}
+            <SyncRouter>
+              <div className="app">
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+              </div>
+            </SyncRouter>
+          </MaterialsProvider>
         </EventStoreRouter>
       </AuthProvider>
     </BrowserRouter>
