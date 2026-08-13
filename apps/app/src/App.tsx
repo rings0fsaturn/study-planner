@@ -35,6 +35,8 @@ import { Step3Preview } from './onboarding/steps/Step3Preview';
 import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
+import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
+import MaterialLibraryPrototype from './prototype/material-library/MaterialLibraryPrototype';
 import { DevSeeder } from './dev/DevSeeder';
 
 const metadataFetcher: MetadataFetcher = import.meta.env.DEV
@@ -154,6 +156,12 @@ function AppRoutes() {
       <Route path="/chart-test" element={<BurnUpChartTest />} />
       {import.meta.env.DEV && (
         <Route path="/practice-prototype" element={<PracticeGuidePrototype />} />
+      )}
+      {import.meta.env.DEV && (
+        <Route path="/roadmap-feedback-prototype" element={<RoadmapFeedbackPrototype />} />
+      )}
+      {import.meta.env.DEV && (
+        <Route path="/material-library-prototype" element={<MaterialLibraryPrototype />} />
       )}
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route

@@ -1,0 +1,616 @@
+/* PROTOTYPE — throwaway styles for wayfinder #33 (Material Library and Attachment UX). */
+
+.ml-page {
+  min-height: 100vh;
+  padding: 2.5rem 1.25rem 7rem;
+  color: var(--text-primary);
+  background: var(--surface-page);
+  font-family: var(--font-body);
+}
+
+.ml-header {
+  max-width: 1120px;
+  margin: 0 auto 1.5rem;
+}
+
+.ml-eyebrow {
+  color: var(--text-tertiary);
+  font: 0.7rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ml-title {
+  max-width: 720px;
+  margin: 0.4rem 0 0.6rem;
+  font: 2.25rem var(--font-display);
+  line-height: 1.05;
+}
+
+.ml-sub {
+  max-width: 720px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+.ml-statebar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.25rem;
+}
+
+.ml-statebtn {
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: 0.72rem var(--font-mono);
+  transition: background var(--duration-2) var(--ease-out), border-color var(--duration-2) var(--ease-out);
+}
+
+.ml-statebtn:hover {
+  border-color: var(--ink-faint);
+  background: var(--paper-deep);
+}
+
+.ml-statebtn.is-active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.ml-main {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-bottom: 5rem;
+}
+
+.ml-view {
+  animation: ml-fade-in 240ms var(--ease-out);
+}
+
+@keyframes ml-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.ml-back {
+  margin-bottom: 1rem;
+}
+
+/* ---- Toolbar ---- */
+.ml-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.ml-toolbar-filters {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ml-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.ml-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--ink);
+}
+
+.ml-count {
+  font: 0.7rem var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ml-toolbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ---- Card grid (canonical layout: compact desktop, spacious mobile) ---- */
+.ml-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1rem;
+}
+
+.ml-grid .material-row {
+  position: relative;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+  cursor: pointer;
+  transition: border-color var(--duration-2) var(--ease-out), background var(--duration-2) var(--ease-out);
+}
+
+.ml-grid .material-row:hover {
+  border-color: var(--ink-faint);
+  background: var(--paper-deep);
+}
+
+.ml-grid .material-icon {
+  width: 40px;
+  height: 40px;
+  font-size: 12px;
+}
+
+.ml-grid .material-body {
+  width: 100%;
+  min-width: 0;
+}
+
+.ml-card-actions-wrap {
+  position: relative;
+  width: 100%;
+  margin-top: 0.75rem;
+}
+
+.ml-card-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.ml-card-actions .btn {
+  flex: 1;
+}
+
+.ml-card-more {
+  flex: 0 0 auto;
+}
+
+.ml-overflow-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.5rem);
+  z-index: 6;
+  min-width: 190px;
+  padding: 0.25rem;
+  background: var(--surface-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.14);
+}
+
+.ml-overflow-menu button {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font: 0.85rem var(--font-body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.ml-overflow-menu button:hover {
+  background: var(--paper-deep);
+}
+
+.ml-overflow-menu button.danger {
+  color: var(--rust);
+}
+
+.ml-menu-catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+}
+
+.ml-row-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.ml-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ml-status-detail {
+  font: 0.7rem var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ml-wait-note {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.ml-stale-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  margin-left: 0.4rem;
+  vertical-align: middle;
+}
+
+/* ---- Detail (readiness-led) ---- */
+.ml-detail {
+  max-width: 720px;
+}
+
+.ml-detail-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.ml-detail-meta {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.ml-detail-status {
+  flex-shrink: 0;
+}
+
+.ml-detail-block {
+  margin-bottom: 1.5rem;
+}
+
+.ml-detail-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.ml-detail-actions-lower {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.ml-ref-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ml-ref-list li {
+  padding: 0.5rem 0.75rem;
+  background: var(--paper-deep);
+  border-radius: var(--radius-sm);
+  font-size: 0.9rem;
+}
+
+/* ---- Replace keep-ID (inline mode) ---- */
+.ml-replace-form {
+  margin: 1rem 0 1.5rem;
+}
+
+.ml-source-grid-sm {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  max-width: 560px;
+}
+
+/* ---- Progress ---- */
+.ml-progress {
+  margin: 0.75rem 0;
+}
+
+.ml-progress-label {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font: 0.65rem var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ml-progress-label .is-done {
+  color: var(--moss);
+}
+
+.ml-progress-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.75rem;
+}
+
+/* ---- Create ---- */
+.ml-source-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.ml-create-form {
+  max-width: 560px;
+}
+
+.ml-create-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+}
+
+/* ---- Failed / stale / delete / practice actions ---- */
+.ml-failed-actions,
+.ml-stale-actions,
+.ml-delete-actions,
+.ml-practice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.25rem;
+}
+
+/* ---- Picker sheet (bottom sheet on mobile, side panel on desktop) ---- */
+.ml-sheet-layer {
+  position: relative;
+}
+
+.ml-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: rgba(24, 26, 24, 0.35);
+}
+
+.ml-sheet {
+  position: fixed;
+  z-index: 91;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-card);
+  box-shadow: 0 -10px 36px rgba(0, 0, 0, 0.14);
+}
+
+.ml-picker {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 1.25rem;
+}
+
+.ml-picker-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ml-picker-list {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.ml-picker-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+}
+
+.ml-picker-count {
+  font: 0.72rem var(--font-mono);
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ml-picker-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.checkbox-row.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.checkbox-row.is-disabled .checkbox-box {
+  background: var(--paper-deep);
+}
+
+/* ---- Practice ---- */
+.ml-practice-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
+/* ---- Empty states ---- */
+.ml-empty {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-secondary);
+}
+
+.ml-empty h3 {
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ml-empty p {
+  margin-bottom: 1rem;
+}
+
+/* ---- Screen-reader only checkbox in picker rows ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* =================================================================
+   RESPONSIVE
+   ================================================================= */
+@media (min-width: 701px) {
+  .ml-sheet {
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(460px, 100%);
+    border-left: 1px solid var(--border-subtle);
+  }
+}
+
+@media (max-width: 700px) {
+  .ml-page {
+    padding: 1.5rem 0.75rem 7rem;
+  }
+
+  .ml-title {
+    font-size: 1.8rem;
+  }
+
+  .ml-statebar {
+    gap: 0.3rem;
+  }
+
+  .ml-statebtn {
+    padding: 0.4rem 0.55rem;
+    font-size: 0.65rem;
+  }
+
+  .ml-toolbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ml-toolbar-actions {
+    width: 100%;
+  }
+
+  .ml-toolbar-actions .btn {
+    flex: 1;
+  }
+
+  .ml-grid {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+
+  .ml-grid .material-row {
+    padding: 1.25rem;
+  }
+
+  .ml-grid .material-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 14px;
+  }
+
+  .ml-detail-head {
+    flex-direction: column;
+  }
+
+  .ml-detail-actions,
+  .ml-failed-actions,
+  .ml-stale-actions,
+  .ml-delete-actions,
+  .ml-practice-actions,
+  .ml-create-actions {
+    flex-direction: column;
+  }
+
+  .ml-detail-actions .btn,
+  .ml-failed-actions .btn,
+  .ml-stale-actions .btn,
+  .ml-delete-actions .btn,
+  .ml-practice-actions .btn,
+  .ml-create-actions .btn {
+    width: 100%;
+  }
+
+  .ml-source-grid,
+  .ml-source-grid-sm {
+    grid-template-columns: 1fr;
+  }
+
+  .ml-sheet {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: 88vh;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    overflow: hidden;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .ml-sheet::before {
+    content: '';
+    align-self: center;
+    width: 44px;
+    height: 4px;
+    margin: 0.6rem auto 0;
+    border-radius: 999px;
+    background: var(--border-default);
+    flex-shrink: 0;
+  }
+
+  .ml-picker {
+    padding: 0.75rem 1rem 1rem;
+  }
+
+  .ml-picker-header {
+    flex-direction: column;
+  }
+
+  .ml-picker-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .ml-picker-actions {
+    width: 100%;
+  }
+
+  .ml-picker-actions .btn {
+    flex: 1;
+  }
+}

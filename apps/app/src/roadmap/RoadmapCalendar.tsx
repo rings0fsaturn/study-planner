@@ -429,6 +429,15 @@ export function RoadmapCalendar({
           </div>
           <h1 className="roadmap-title">{title}</h1>
           <p className="roadmap-subtitle">{dateRange}</p>
+          {import.meta.env.DEV && (
+            <Link
+              className="btn btn-secondary btn-sm"
+              to={`/roadmap-feedback-prototype?roadmap=${encodeURIComponent(selectedRoadmap?.roadmapCreatedAt ?? '')}`}
+              data-testid="roadmap-feedback-prototype-link"
+            >
+              See learning feedback
+            </Link>
+          )}
         </div>
 
         <section className="roadmap-eta-card" aria-label="Projected finish">
