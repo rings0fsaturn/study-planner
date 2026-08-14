@@ -138,6 +138,84 @@ def test_update_chunk_embedding_posts_halfvec_string() -> None:
     assert captured["body"] == {"embedding": _embedding_to_halfvec([0.5] * EMBEDDING_DIMENSIONS)}
 
 
+def test_update_chunk_embeddings_posts_one_bulk_rpc_call() -> None:
+    captured: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured.append(
+            {
+                "method": request.method,
+                "url": str(request.url),
+                "body": json.loads(request.content),
+            }
+        )
+        return httpx.Response(204, content=b"")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    repo.update_chunk_embeddings(
+        "mat-1",
+        [
+            ("chunk-1", [0.5] * EMBEDDING_DIMENSIONS),
+            ("chunk-2", [0.25] * EMBEDDING_DIMENSIONS),
+        ],
+    )
+
+    assert len(captured) == 1
+    assert captured[0]["method"] == "POST"
+    assert captured[0]["url"].endswith("/rest/v1/rpc/ingestion_update_chunk_embeddings")
+    chunks = captured[0]["body"]["p_chunks"]
+    assert [chunk["chunkId"] for chunk in chunks] == ["chunk-1", "chunk-2"]
+    assert chunks[0]["embedding"] == _embedding_to_halfvec([0.5] * EMBEDDING_DIMENSIONS)
+    assert captured[0]["body"]["p_material_id"] == "mat-1"
+
+
+def test_update_chunk_embeddings_with_no_rows_makes_no_request() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise AssertionError("no request should be made for an empty batch")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+    repo.update_chunk_embeddings("mat-1", [])
+
+
+def test_flag_chunk_patches_skipped_with_material_guard() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["method"] = request.method
+        captured["url"] = str(request.url)
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(204, content=b"")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    repo.flag_chunk("mat-1", "chunk-1")
+
+    assert captured["method"] == "PATCH"
+    assert captured["url"].endswith(
+        "/rest/v1/content_chunks?id=eq.chunk-1&material_id=eq.mat-1"
+    )
+    assert captured["body"] == {"skipped": True}
+
+
+def test_set_job_running_excludes_terminal_statuses() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["url"] = str(request.url)
+        return httpx.Response(204, content=b"")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    repo.set_job_running("job-1")
+
+    assert "status=not.in.(succeeded,failed,cancelled)" in captured["url"]
+
+
 def test_get_material_maps_row_to_model() -> None:
     captured: dict[str, object] = {}
 

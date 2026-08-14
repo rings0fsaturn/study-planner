@@ -19,11 +19,15 @@ EMBED_QUEUE = "material_embed"
 PUBLISH_QUEUE = "material_publish"
 
 DEFAULT_VISIBILITY_SECONDS = 30
+DEFAULT_POLL_QUANTITY = 1
 
 
 class WorkQueue(Protocol):
     def poll(
-        self, queue: str, visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS
+        self,
+        queue: str,
+        visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS,
+        quantity: int = DEFAULT_POLL_QUANTITY,
     ) -> list[QueueMessage]: ...
     def complete(self, queue: str, msg_id: int, success: bool) -> None: ...
     def send(self, queue: str, payload: dict) -> None: ...
@@ -75,11 +79,14 @@ class SupabaseWorkQueue:
         )
 
     def poll(
-        self, queue: str, visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS
+        self,
+        queue: str,
+        visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS,
+        quantity: int = DEFAULT_POLL_QUANTITY,
     ) -> list[QueueMessage]:
         response = self._post(
             f"{self._base}/rest/v1/rpc/ingestion_poll",
-            {"p_queue": queue, "p_vt": visibility_seconds},
+            {"p_queue": queue, "p_vt": visibility_seconds, "p_qty": quantity},
         )
         try:
             rows = response.json()

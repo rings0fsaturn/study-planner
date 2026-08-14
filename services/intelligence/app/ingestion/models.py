@@ -9,6 +9,19 @@ MaterialKind = Literal["manual", "url", "youtube", "file"]
 IngestionState = Literal["pending", "extracting", "chunking", "embedding", "ready", "failed"]
 JobStatus = Literal["queued", "running", "succeeded", "partial", "failed", "cancelled"]
 
+# Single source of truth for learner-visible progress per ingestion stage.
+# The worker writes these values into materials.ingestion_progress and the
+# API echoes the stored value; this map is only the fallback when a row has
+# no stored progress yet.
+PROGRESS_BY_STAGE: dict[str, float] = {
+    "pending": 0.0,
+    "extracting": 0.25,
+    "chunking": 0.5,
+    "embedding": 0.6,
+    "ready": 1.0,
+    "failed": 0.0,
+}
+
 ERROR_CODES = (
     "invalid_request",
     "unauthorized",
@@ -17,6 +30,8 @@ ERROR_CODES = (
     "conflict",
     "safety_block",
     "quota_exhausted",
+    "rate_limited",
+    "provider_credentials",
     "provider_unavailable",
     "provider_timeout",
     "malformed_output",
@@ -28,13 +43,20 @@ ERROR_CODES = (
 class IngestionError(Exception):
     """Normalized ingestion failure following the contract ServiceError codes."""
 
-    def __init__(self, code: str, message: str, retryable: bool = False) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        retryable: bool = False,
+        retry_after: float | None = None,
+    ) -> None:
         if code not in ERROR_CODES:
             raise ValueError(f"unknown ingestion error code: {code}")
         super().__init__(message)
         self.code = code
         self.message = message
         self.retryable = retryable
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True)

@@ -135,6 +135,17 @@ def test_ingestion_status_success(_override_client: FakeUserClient) -> None:
     assert body["progress"] >= 0 and body["progress"] <= 1
 
 
+def test_ingestion_status_echoes_stored_worker_progress(_override_client: FakeUserClient) -> None:
+    # The API must surface exactly what the worker wrote (single source of
+    # truth), not a router-side map that can drift from the worker.
+    material = _material(state="embedding")
+    material["ingestion_progress"] = 0.6
+    _override_client.seed(material, jobs=[_job()])
+    response = asyncio.run(_request("GET", "/v1/materials/mat-1/ingestion"))
+    assert response.status_code == 200
+    assert response.json()["progress"] == 0.6
+
+
 def test_ingestion_status_missing_material_is_404_with_service_error_shape(
     _override_client: FakeUserClient,
 ) -> None:

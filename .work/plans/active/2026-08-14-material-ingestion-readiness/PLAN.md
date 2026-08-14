@@ -60,7 +60,7 @@ doc and the live code disagree, fix the doc.
 
 | Area | Files |
 |---|---|
-| Migration | `apps/app/supabase/migrations/005_material_ingestion.sql` |
+| Migration | `apps/app/supabase/migrations/005_material_ingestion.sql` (+ fix-forward 006-012) |
 | Contracts | `services/intelligence/contracts/phase2/openapi.yaml`, `async-job.schema.json`, `content-chunk.schema.json`, `PIPELINES.md`, `TRACEABILITY.md`, fixtures, `tests/test_contracts.py` |
 | Service ingestion core | `services/intelligence/app/ingestion/{models,extractors,cleaning,chunking,embeddings,queue,repository,worker}.py` |
 | Service API | `services/intelligence/app/routers/{materials,jobs}.py`, `app/main.py`, `app/serialization.py` or equivalents |
@@ -102,22 +102,29 @@ Status markers: `☐ Not started` / `🟡 In progress` / `🛑 Blocked` / `✅ C
 ### Phase 3 — Embeddings and queue workers
 
 - [x] Gemini `gemini-embedding-001` adapter: batches of 100, L2-normalized,
-  NULL-scan resume; bounded retry (250/1000 ms, max 2), quota terminal until
-  reset, timeout -> `provider_timeout`; provider abstraction for tests.
-- [x] Queue mechanics: poll/ack/redelivery/visibility timeout/backpressure;
-  idempotent stages; publish `ready` atomically only after all chunks embedded;
-  stale-chunk invalidation on replace/retry.
+  NULL-scan resume; full-jitter bounded retry honoring `Retry-After` (max 2),
+  per-minute quota retryable (`rate_limited`) and daily quota terminal
+  (`quota_exhausted`), 401/403 terminal `provider_credentials`; timeout ->
+  `provider_timeout`; zero-vector chunks flagged and skipped; provider
+  abstraction for tests. Batches split by token budget; vectors persisted
+  through one bulk RPC per batch.
+- [x] Queue mechanics: poll/ack/redelivery/visibility timeout/backpressure
+  (`max_in_flight` bounds per-cycle work via `ingestion_poll(p_qty)`);
+  idempotent stages; publish `ready` atomically only after all non-flagged
+  chunks embedded; stale-chunk invalidation on replace/retry.
 - [x] Verification: `test_embeddings.py`, `test_queue.py`, `test_ingestion_worker.py`
   green (no network/Gemini/service credentials).
 
 ### Phase 4 — FastAPI material boundary
 
 - [x] Authenticated owner-scoped endpoints: create material + enqueue ingestion,
-  ingestion status, retry ingestion, partial extracted preview, job status;
-  `X-Request-ID` + `Idempotency-Key` on mutations; `correlationId`; normalized
-  errors (rule 22 style); non-blocking API.
+  ingestion status, partial extracted preview, job status;
+  `X-Request-ID` on mutations; `correlationId`; normalized errors
+  (rule 22 style); non-blocking API. Retry is handled DB-atomic by the
+  `retry_material_ingestion` RPC (migrations 009/010) called from the React
+  client, not by an API endpoint.
 - [x] Verification: `test_materials_api.py`, `test_jobs_api.py` green incl.
-  cross-user isolation, missing-upload rejection, idempotency, request identity.
+  cross-user isolation, missing-upload rejection, request identity.
 
 ### Phase 5 — Worker runtime and Docker
 

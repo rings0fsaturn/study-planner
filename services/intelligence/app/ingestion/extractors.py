@@ -8,6 +8,7 @@ deterministic doubles without network or provider credentials.
 from __future__ import annotations
 
 import html as html_lib
+import logging
 import re
 from collections.abc import Callable
 from typing import Protocol
@@ -16,6 +17,8 @@ import httpx
 
 from .cleaning import clean_text
 from .models import ExtractedContent, IngestionError, Material, TextSegment
+
+logger = logging.getLogger("ingestion.extractors")
 
 _YOUTUBE_ID = re.compile(
     r"(?:youtube\.com/(?:watch\?v=|shorts/|embed/)|youtu\.be/)([A-Za-z0-9_-]{11})"
@@ -43,7 +46,7 @@ def youtube_video_id(url: str) -> str | None:
     return match.group(1) if match else None
 
 
-def extract_article_text(html: str) -> str:
+def extract_article_text(html: str, context: str = "") -> str:
     """Best-effort article extraction: trafilatura first, deterministic fallback."""
     try:
         from trafilatura import extract as trafilatura_extract
@@ -52,7 +55,11 @@ def extract_article_text(html: str) -> str:
         if extracted and extracted.strip():
             return clean_text(extracted)
     except Exception:
-        pass
+        logger.warning(
+            "trafilatura extraction failed for source %r; falling back to html strip",
+            context,
+            exc_info=True,
+        )
     return _strip_html(html)
 
 
@@ -161,7 +168,7 @@ def extract_material(
         if not source:
             raise IngestionError("validation_failed", "url source is empty")
         html = fetcher.fetch(source)
-        text = extract_article_text(html)
+        text = extract_article_text(html, context=material.source)
         if not text.strip():
             raise IngestionError("validation_failed", "no readable text at this url")
         return ExtractedContent(text)

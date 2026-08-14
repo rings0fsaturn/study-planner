@@ -48,10 +48,24 @@ def test_poll_exact_request_shape_and_auth_headers() -> None:
     queue.poll("material_extract", visibility_seconds=45)
 
     assert captured["url"].endswith("/rest/v1/rpc/ingestion_poll")
-    assert captured["body"] == {"p_queue": "material_extract", "p_vt": 45}
+    assert captured["body"] == {"p_queue": "material_extract", "p_vt": 45, "p_qty": 1}
     headers = captured["headers"]
     assert headers["apikey"] == "service-key"
     assert headers["authorization"] == "Bearer service-key"
+
+
+def test_poll_passes_bounded_quantity_through() -> None:
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(200, json=[], request=request)
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    queue = SupabaseWorkQueue("https://example.supabase.co", "service-key", client=client)
+    queue.poll("material_extract", visibility_seconds=45, quantity=3)
+
+    assert captured["body"] == {"p_queue": "material_extract", "p_vt": 45, "p_qty": 3}
 
 
 def test_poll_maps_read_ct_and_skips_malformed_rows() -> None:

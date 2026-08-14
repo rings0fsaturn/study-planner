@@ -209,3 +209,55 @@
     client-writable (mutation-boundary ticket owns that); worker has no HTTP
     healthcheck (poll-loop logs + restart policy verified instead); file
     replacement disabled in the UI until a real upload path ships.
+- **2026-08-14** **Post-review fix sweep (review findings of
+  `2cf38fd...HEAD`, issue #37).** All five phases landed on the branch; every
+  change is unit-tested red-first where behavior changed.
+  - **Backpressure (acceptance criterion closure):** `WorkerConfig.max_in_flight`
+    (env `INGESTION_MAX_IN_FLIGHT`, default 1) bounds per-cycle work; the
+    `ingestion_poll` RPC now takes `p_qty` (migration 006 rewritten — never
+    applied anywhere, so edited in place) and the in-memory queue double honors
+    `quantity`. Tests: poll shape + passthrough, per-cycle cap, raised cap.
+  - **Gemini taxonomy (embeddings.py):** 429 with `Retry-After` or a
+    rate-limit message -> retryable `rate_limited` (honors `Retry-After`,
+    capped at 60 s); 401/403 -> terminal operator-facing
+    `provider_credentials`; 5xx retryable; other 4xx non-retryable. Retries
+    now use full-jitter exponential backoff (injectable `random_fn`);
+    `_parse_embedding` accepts only the batch shape; `l2_normalize` unchanged.
+    Retry budget documented in the module docstring. New public error codes
+    `rate_limited` + `provider_credentials` added to `ERROR_CODES`,
+    `openapi.yaml` ServiceError enum, and `provider-error.schema.json`.
+  - **Batching + bulk writes:** worker splits embed batches by estimated
+    tokens (`max_batch_tokens`, env `INGESTION_MAX_BATCH_TOKENS`, default
+    4000) reusing the chunking token counter; chunk vectors persist through
+    one bulk RPC (`011_bulk_chunk_embedding.sql` +
+    `ingestion_update_chunk_embeddings`, material-guarded) instead of ~100
+    PATCHes.
+  - **Shared HTTP client:** `worker_main.py` threads one `httpx.Client` into
+    repo/queue/storage/embedder/fetcher (keep-alive); storage client now
+    accepts an injected client. Note: with a shared client, storage timeouts
+    use the shared 30 s default instead of a per-call client.
+  - **Consistency/dedup:** progress now has one source of truth —
+    `PROGRESS_BY_STAGE` in `ingestion/models.py`; the worker writes it and the
+    API echoes the stored row value (embedding progress 0.6, matching the
+    worker; the router's stale 0.7 map is gone). `_async_job` deleted in
+    favor of `IngestionJob.to_async_job` via new `routers/serialization.py`
+    (also hosts `service_error`; `jobs.py` no longer imports router privates).
+    Repository REST calls collapsed into one `_request` helper per module;
+    storage client too. `repository.py` docstring fixed (owner scoping lives
+    in the worker guard + RPC/RLS, not every query). trafilatura failures now
+    log with the source instead of silent `except Exception: pass`.
+  - **Zero-vector skip-and-flag (F-12):** `GeminiEmbedder.embed` returns
+    `None` for a provider zero vector; the worker flags the chunk
+    (`012_zero_vector_skip_and_write_guard.sql`: `content_chunks.skipped`,
+    NULL-scan index + publish RPC exclude flagged chunks, RPC refuses a
+    zero-embedded publish) so the rest of the material keeps moving; a fully
+    flagged material fails `validation_failed`.
+  - **Publish/job guards (F-13):** `_handle_publish` skips a redelivered
+    publish for an already-ready material; `set_job_running` PATCHes with
+    `status=not.in.(succeeded,failed,cancelled)` so a terminal job can never
+    be re-opened at the store.
+  - **Suites after the sweep:** service **204 passed** + the same 5
+    pre-existing `test_v1_integration.py` golden-fixture failures (baseline,
+    untouched); contracts **6/6**. App suite, typecheck, lint, and builds
+    verified in the same session (see below if the sweep changed the API
+    surface: the two new error codes are additive enum values only).

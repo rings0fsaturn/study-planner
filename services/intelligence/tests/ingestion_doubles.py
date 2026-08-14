@@ -12,7 +12,7 @@ import math
 
 from app.ingestion.embeddings import EMBEDDING_DIMENSIONS
 from app.ingestion.models import ContentChunk, IngestionError, IngestionJob, Material, QueueMessage
-from app.ingestion.queue import DEFAULT_VISIBILITY_SECONDS, WorkQueue
+from app.ingestion.queue import DEFAULT_POLL_QUANTITY, DEFAULT_VISIBILITY_SECONDS, WorkQueue
 
 
 class FakeQueue(WorkQueue):
@@ -28,10 +28,15 @@ class FakeQueue(WorkQueue):
         self.next_msg_id += 1
 
     def poll(
-        self, queue: str, visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS
+        self,
+        queue: str,
+        visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS,
+        quantity: int = DEFAULT_POLL_QUANTITY,
     ) -> list[QueueMessage]:
         messages = []
         for item in self.queues.get(queue, []):
+            if len(messages) >= quantity:
+                break
             if item.get("visible", True):
                 item["read_ct"] += 1
                 item["visible"] = False
@@ -190,13 +195,16 @@ class FakeIngestionRepo:
                 "text": chunk.text,
                 "start_seconds": chunk.start_seconds,
                 "embedding": None,
+                "skipped": False,
             }
 
     def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]:
         rows = [
             row
             for row in self.chunks.values()
-            if row["material_id"] == material_id and row["embedding"] is None
+            if row["material_id"] == material_id
+            and row["embedding"] is None
+            and not row["skipped"]
         ]
         rows.sort(key=lambda row: row["ordinal"])
         return [
@@ -214,7 +222,16 @@ class FakeIngestionRepo:
         return sum(
             1
             for row in self.chunks.values()
-            if row["material_id"] == material_id and row["embedding"] is None
+            if row["material_id"] == material_id
+            and row["embedding"] is None
+            and not row["skipped"]
+        )
+
+    def embedded_chunk_count(self, material_id: str) -> int:
+        return sum(
+            1
+            for row in self.chunks.values()
+            if row["material_id"] == material_id and row["embedding"] is not None
         )
 
     def all_chunk_count(self, material_id: str) -> int:
@@ -224,6 +241,18 @@ class FakeIngestionRepo:
 
     def update_chunk_embedding(self, chunk_id: str, embedding: list[float] | None) -> None:
         self.chunks[chunk_id]["embedding"] = embedding
+
+    def update_chunk_embeddings(
+        self, material_id: str, rows: list[tuple[str, list[float]]]
+    ) -> None:
+        for chunk_id, embedding in rows:
+            if chunk_id not in self.chunks or self.chunks[chunk_id]["material_id"] != material_id:
+                continue
+            self.chunks[chunk_id]["embedding"] = embedding
+
+    def flag_chunk(self, material_id: str, chunk_id: str) -> None:
+        if chunk_id in self.chunks and self.chunks[chunk_id]["material_id"] == material_id:
+            self.chunks[chunk_id]["skipped"] = True
 
     def delete_material_chunks(self, material_id: str) -> None:
         stale = [
@@ -273,8 +302,29 @@ class FailingEmbedder:
         self.calls = 0
         self.delegate = DeterministicEmbedder()
 
-    def embed(self, texts: list[str]) -> list[list[float]]:
+    def embed(self, texts: list[str]) -> list[list[float] | None]:
         self.calls += 1
         if self.calls <= self.fail_batches:
             raise self.error
         return self.delegate.embed(texts)
+
+
+class ZeroVectorEmbedder:
+    """Returns a provider zero vector for every N-th text (simulating garbage).
+
+    Mirrors the production adapter contract: a zero vector surfaces as None so
+    the worker flags the chunk instead of persisting it.
+    """
+
+    def __init__(self, every: int) -> None:
+        self.every = every
+        self.calls = 0
+        self.delegate = DeterministicEmbedder()
+
+    def embed(self, texts: list[str]) -> list[list[float] | None]:
+        self.calls += 1
+        vectors = self.delegate.embed(texts)
+        return [
+            None if index % self.every == 0 else vector
+            for index, vector in enumerate(vectors)
+        ]

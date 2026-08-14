@@ -13,6 +13,8 @@ import os
 import sys
 import time
 
+import httpx
+
 from app.ingestion.chunking import TiktokenCounter
 from app.ingestion.embeddings import GeminiEmbedder
 from app.ingestion.extractors import HttpxFetcher, PypdfTextReader, YoutubeTranscriptClient
@@ -42,15 +44,20 @@ def main() -> None:
             "but the embedding stage will fail materials with provider_unavailable"
         )
 
-    repo = SupabaseIngestionRepo(supabase_url, service_role_key)
-    queue = SupabaseWorkQueue(supabase_url, service_role_key)
-    storage = SupabaseStorageClient(supabase_url, service_role_key)
-    embedder = GeminiEmbedder(api_key=gemini_api_key)
+    # One keep-alive connection pool shared by every Supabase adapter and the
+    # Gemini embedder; per-request timeouts still follow each adapter's own
+    # contract where one is configured.
+    shared_client = httpx.Client(timeout=30.0)
+
+    repo = SupabaseIngestionRepo(supabase_url, service_role_key, client=shared_client)
+    queue = SupabaseWorkQueue(supabase_url, service_role_key, client=shared_client)
+    storage = SupabaseStorageClient(supabase_url, service_role_key, client=shared_client)
+    embedder = GeminiEmbedder(api_key=gemini_api_key, client=shared_client)
     worker = IngestionWorker(
         repo=repo,
         queue=queue,
         storage=storage,
-        fetcher=HttpxFetcher(),
+        fetcher=HttpxFetcher(client=shared_client),
         pdf_reader=PypdfTextReader(),
         transcripts=YoutubeTranscriptClient(),
         embedder=embedder,
@@ -60,6 +67,8 @@ def main() -> None:
             visibility_seconds=int(os.getenv("INGESTION_VISIBILITY_SECONDS", "30")),
             poll_interval_seconds=float(os.getenv("INGESTION_POLL_INTERVAL_SECONDS", "1")),
             max_deliveries=int(os.getenv("INGESTION_MAX_DELIVERIES", "3")),
+            max_in_flight=int(os.getenv("INGESTION_MAX_IN_FLIGHT", "1")),
+            max_batch_tokens=int(os.getenv("INGESTION_MAX_BATCH_TOKENS", "4000")),
         ),
     )
 

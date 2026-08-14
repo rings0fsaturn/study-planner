@@ -1,7 +1,8 @@
 """Server-owned persistence access for the ingestion worker.
 
-All access runs through Supabase REST with the service role; every query is
-explicitly owner-scoped by `user_id`. Tests inject in-memory doubles.
+All access runs through Supabase REST with the service role; the worker is
+the only caller. Owner scoping is enforced by the worker's guard checks and
+by the RPC/RLS layer, not by every individual read query.
 """
 
 from __future__ import annotations
@@ -55,8 +56,13 @@ class IngestionRepo(Protocol):
     ) -> None: ...
     def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]: ...
     def unembedded_chunk_count(self, material_id: str) -> int: ...
+    def embedded_chunk_count(self, material_id: str) -> int: ...
     def all_chunk_count(self, material_id: str) -> int: ...
     def update_chunk_embedding(self, chunk_id: str, embedding: list[float]) -> None: ...
+    def update_chunk_embeddings(
+        self, material_id: str, rows: list[tuple[str, list[float]]]
+    ) -> None: ...
+    def flag_chunk(self, material_id: str, chunk_id: str) -> None: ...
     def delete_material_chunks(self, material_id: str) -> None: ...
 
 
@@ -118,78 +124,48 @@ class SupabaseIngestionRepo:
             "Prefer": "return=minimal",
         }
 
-    def _get(self, url: str, headers: dict[str, str]) -> list[dict]:
-        client = self._client or httpx.Client(timeout=10.0)
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        payload: dict | list[dict] | None = None,
+        timeout: float = 10.0,
+    ) -> httpx.Response:
+        client = self._client or httpx.Client(timeout=timeout)
         try:
-            response = client.get(url, headers=headers)
+            if payload is None:
+                response = client.request(method, url, headers=self._headers())
+            else:
+                response = client.request(method, url, json=payload, headers=self._headers())
         except httpx.TimeoutException as exc:
             raise IngestionError(
-                "provider_timeout", "storage read timed out", retryable=True
+                "provider_timeout", f"storage {method.lower()} timed out", retryable=True
             ) from exc
         except httpx.HTTPError as exc:
             raise IngestionError(
-                "provider_unavailable", "storage read failed", retryable=True
+                "provider_unavailable", f"storage {method.lower()} failed", retryable=True
             ) from exc
         finally:
             if self._client is None:
                 client.close()
         if response.status_code >= 400:
-            raise IngestionError("provider_unavailable", "storage read rejected", retryable=True)
-        return response.json()
+            raise IngestionError(
+                "provider_unavailable", f"storage {method.lower()} rejected", retryable=True
+            )
+        return response
 
-    def _post(self, url: str, payload: dict) -> None:
-        client = self._client or httpx.Client(timeout=10.0)
-        try:
-            response = client.post(url, json=payload, headers=self._headers())
-        except httpx.TimeoutException as exc:
-            raise IngestionError(
-                "provider_timeout", "storage write timed out", retryable=True
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise IngestionError(
-                "provider_unavailable", "storage write failed", retryable=True
-            ) from exc
-        finally:
-            if self._client is None:
-                client.close()
-        if response.status_code >= 400:
-            raise IngestionError("provider_unavailable", "storage write rejected", retryable=True)
+    def _get(self, url: str, headers: dict[str, str]) -> list[dict]:
+        return self._request("GET", url).json()
+
+    def _post(self, url: str, payload: dict | list[dict]) -> None:
+        self._request("POST", url, payload=payload)
 
     def _patch(self, url: str, payload: dict) -> None:
-        client = self._client or httpx.Client(timeout=10.0)
-        try:
-            response = client.patch(url, json=payload, headers=self._headers())
-        except httpx.TimeoutException as exc:
-            raise IngestionError(
-                "provider_timeout", "storage update timed out", retryable=True
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise IngestionError(
-                "provider_unavailable", "storage update failed", retryable=True
-            ) from exc
-        finally:
-            if self._client is None:
-                client.close()
-        if response.status_code >= 400:
-            raise IngestionError("provider_unavailable", "storage update rejected", retryable=True)
+        self._request("PATCH", url, payload=payload)
 
     def _delete(self, url: str) -> None:
-        client = self._client or httpx.Client(timeout=10.0)
-        try:
-            response = client.delete(url, headers=self._headers())
-        except httpx.TimeoutException as exc:
-            raise IngestionError(
-                "provider_timeout", "storage delete timed out", retryable=True
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise IngestionError(
-                "provider_unavailable", "storage delete failed", retryable=True
-            ) from exc
-        finally:
-            if self._client is None:
-                client.close()
-        if response.status_code >= 400:
-            raise IngestionError("provider_unavailable", "storage delete rejected", retryable=True)
+        self._request("DELETE", url)
 
     def get_material(self, material_id: str) -> Material:
         rows = self._get(
@@ -238,8 +214,12 @@ class SupabaseIngestionRepo:
         return _job_from_row(rows[0])
 
     def set_job_running(self, job_id: str) -> None:
+        # Conditional write: a stale stage message must never re-open a
+        # terminal job (the worker's guard already skips terminal jobs; this
+        # makes the re-open impossible at the store too).
         self._patch(
-            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}",
+            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}"
+            f"&status=not.in.(succeeded,failed,cancelled)",
             {"status": "running", "error_code": None, "error_message": None},
         )
 
@@ -276,31 +256,16 @@ class SupabaseIngestionRepo:
         # Transactional publish: migration 007's ingestion_publish_ready flips
         # the material to ready and the job to succeeded in one database
         # transaction, so a crash cannot leave the two states split.
-        client = self._client or httpx.Client(timeout=10.0)
-        try:
-            response = client.post(
-                f"{self._base}/rest/v1/rpc/ingestion_publish_ready",
-                json={
-                    "p_material_id": material_id,
-                    "p_job_id": job_id,
-                    "p_chunk_count": chunk_count,
-                    "p_grounding_version": grounding_version,
-                },
-                headers=self._headers(),
-            )
-        except httpx.TimeoutException as exc:
-            raise IngestionError(
-                "provider_timeout", "ready publish timed out", retryable=True
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise IngestionError(
-                "provider_unavailable", "ready publish failed", retryable=True
-            ) from exc
-        finally:
-            if self._client is None:
-                client.close()
-        if response.status_code >= 400:
-            raise IngestionError("provider_unavailable", "ready publish rejected", retryable=True)
+        self._request(
+            "POST",
+            f"{self._base}/rest/v1/rpc/ingestion_publish_ready",
+            payload={
+                "p_material_id": material_id,
+                "p_job_id": job_id,
+                "p_chunk_count": chunk_count,
+                "p_grounding_version": grounding_version,
+            },
+        )
 
     def replace_chunks(
         self, material_id: str, chunks: list[ContentChunk], owner_id: str
@@ -326,7 +291,8 @@ class SupabaseIngestionRepo:
     def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]:
         rows = self._get(
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
-            f"&embedding=is.null&order=ordinal.asc&limit={limit}&select=id,ordinal,text,start_seconds",
+            f"&embedding=is.null&skipped=is.false&order=ordinal.asc&limit={limit}"
+            f"&select=id,ordinal,text,start_seconds",
             self._headers(),
         )
         return [
@@ -343,7 +309,15 @@ class SupabaseIngestionRepo:
     def unembedded_chunk_count(self, material_id: str) -> int:
         rows = self._get(
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
-            f"&embedding=is.null&select=id",
+            f"&embedding=is.null&skipped=is.false&select=id",
+            self._headers(),
+        )
+        return len(rows)
+
+    def embedded_chunk_count(self, material_id: str) -> int:
+        rows = self._get(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
+            f"&embedding=not.is.null&select=id",
             self._headers(),
         )
         return len(rows)
@@ -355,10 +329,37 @@ class SupabaseIngestionRepo:
         )
         return len(rows)
 
+    def flag_chunk(self, material_id: str, chunk_id: str) -> None:
+        # Both filters guard the write: only this material's chunk may be
+        # flagged, so a stale payload cannot touch another material.
+        self._patch(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?id=eq.{chunk_id}&material_id=eq.{material_id}",
+            {"skipped": True},
+        )
+
     def update_chunk_embedding(self, chunk_id: str, embedding: list[float]) -> None:
         self._patch(
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?id=eq.{chunk_id}",
             {"embedding": _embedding_to_halfvec(embedding)},
+        )
+
+    def update_chunk_embeddings(
+        self, material_id: str, rows: list[tuple[str, list[float]]]
+    ) -> None:
+        if not rows:
+            return
+        # PostgREST cannot bulk-patch different values per row, so the worker
+        # writes an embedding batch through the server-side RPC (migration
+        # 011), which guards every row on the material id.
+        self._post(
+            f"{self._base}/rest/v1/rpc/ingestion_update_chunk_embeddings",
+            {
+                "p_material_id": material_id,
+                "p_chunks": [
+                    {"chunkId": chunk_id, "embedding": _embedding_to_halfvec(embedding)}
+                    for chunk_id, embedding in rows
+                ],
+            },
         )
 
     def delete_material_chunks(self, material_id: str) -> None:
@@ -367,12 +368,16 @@ class SupabaseIngestionRepo:
 
 class SupabaseStorageClient:
     def __init__(
-        self, supabase_url: str, service_role_key: str, bucket: str = "material-raw"
+        self,
+        supabase_url: str,
+        service_role_key: str,
+        bucket: str = "material-raw",
+        client: httpx.Client | None = None,
     ) -> None:
         self._base = supabase_url.rstrip("/")
         self._key = service_role_key
         self._bucket = bucket
-        self._client: httpx.Client | None = None
+        self._client = client
 
     def _headers(self) -> dict[str, str]:
         return {
@@ -380,24 +385,34 @@ class SupabaseStorageClient:
             "Authorization": f"Bearer {self._key}",
         }
 
-    def download(self, path: str) -> bytes:
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        headers: dict[str, str] | None = None,
+        content: bytes | None = None,
+    ) -> httpx.Response:
         client = self._client or httpx.Client(timeout=30.0)
         try:
-            response = client.get(
-                f"{self._base}/storage/v1/object/{self._bucket}/{path}",
-                headers=self._headers(),
+            response = client.request(
+                method, url, headers=headers or self._headers(), content=content
             )
         except httpx.TimeoutException as exc:
             raise IngestionError(
-                "provider_timeout", "object download timed out", retryable=True
+                "provider_timeout", f"object {method.lower()} timed out", retryable=True
             ) from exc
         except httpx.HTTPError as exc:
             raise IngestionError(
-                "provider_unavailable", "object download failed", retryable=True
+                "provider_unavailable", f"object {method.lower()} failed", retryable=True
             ) from exc
         finally:
             if self._client is None:
                 client.close()
+        return response
+
+    def download(self, path: str) -> bytes:
+        response = self._request("GET", f"{self._base}/storage/v1/object/{self._bucket}/{path}")
         if response.status_code == 404:
             raise IngestionError("validation_failed", "uploaded object is missing")
         if response.status_code >= 400:
@@ -405,7 +420,6 @@ class SupabaseStorageClient:
         return response.content
 
     def upload(self, path: str, data: bytes, content_type: str) -> None:
-        client = self._client or httpx.Client(timeout=30.0)
         # The fulltext path is deterministic per material, so a redelivered
         # extract stage re-uploads the same object. Upsert keeps the stage
         # idempotent (the browser upload already sends upsert=true).
@@ -414,23 +428,12 @@ class SupabaseStorageClient:
             "Content-Type": content_type,
             "x-upsert": "true",
         }
-        try:
-            response = client.post(
-                f"{self._base}/storage/v1/object/{self._bucket}/{path}",
-                content=data,
-                headers=headers,
-            )
-        except httpx.TimeoutException as exc:
-            raise IngestionError(
-                "provider_timeout", "object upload timed out", retryable=True
-            ) from exc
-        except httpx.HTTPError as exc:
-            raise IngestionError(
-                "provider_unavailable", "object upload failed", retryable=True
-            ) from exc
-        finally:
-            if self._client is None:
-                client.close()
+        response = self._request(
+            "POST",
+            f"{self._base}/storage/v1/object/{self._bucket}/{path}",
+            headers=headers,
+            content=data,
+        )
         if response.status_code >= 400:
             raise IngestionError("provider_unavailable", "object upload rejected", retryable=True)
 

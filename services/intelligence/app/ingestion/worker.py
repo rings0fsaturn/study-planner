@@ -23,7 +23,7 @@ from .extractors import (
     TranscriptClient,
     extract_material,
 )
-from .models import IngestionError, Material
+from .models import PROGRESS_BY_STAGE, ContentChunk, IngestionError, Material
 from .queue import (
     DEFAULT_VISIBILITY_SECONDS,
     EMBED_QUEUE,
@@ -44,6 +44,8 @@ class WorkerConfig:
     visibility_seconds: int = DEFAULT_VISIBILITY_SECONDS
     poll_interval_seconds: float = 1.0
     max_deliveries: int = 3
+    max_in_flight: int = 1
+    max_batch_tokens: int = 4000
 
 
 class _FileSourceReader:
@@ -117,7 +119,9 @@ class IngestionWorker:
     # ------------------------------------------------------------------
 
     def _drain(self, queue_name: str, handler) -> int:
-        messages = self.queue.poll(queue_name, self.config.visibility_seconds)
+        messages = self.queue.poll(
+            queue_name, self.config.visibility_seconds, self.config.max_in_flight
+        )
         for message in messages:
             try:
                 handler(message)
@@ -197,7 +201,7 @@ class IngestionWorker:
         payload = message.payload
         material, job_id, correlation_id = self._guard(payload, {"pending", "extracting"})
         self.repo.set_job_running(job_id)
-        self.repo.set_material_state(material.id, "extracting", 0.25)
+        self.repo.set_material_state(material.id, "extracting", PROGRESS_BY_STAGE["extracting"])
 
         if material.kind == "file":
             read_source = _FileSourceReader(self.storage)
@@ -227,7 +231,7 @@ class IngestionWorker:
         self.repo.set_material_state(
             material.id,
             "chunking",
-            0.5,
+            PROGRESS_BY_STAGE["chunking"],
             chunk_count=len(chunks),
             extracted_text_path=fulltext_path,
         )
@@ -250,19 +254,27 @@ class IngestionWorker:
         payload = message.payload
         material, job_id, correlation_id = self._guard(payload, {"chunking", "embedding"})
         self.repo.set_job_running(job_id)
-        self.repo.set_material_state(material.id, "embedding", 0.6)
+        self.repo.set_material_state(material.id, "embedding", PROGRESS_BY_STAGE["embedding"])
 
         while True:
             batch = self.repo.list_unembedded_chunks(material.id, self.config.batch_size)
             if not batch:
                 break
-            vectors = self.embedder.embed([chunk.text for chunk in batch])
+            vectors = self._embed_batch(batch)
             if len(vectors) != len(batch):
                 raise IngestionError(
                     "internal_error", "embedder returned the wrong number of vectors"
                 )
+            embedded: list[tuple[str, list[float]]] = []
             for chunk, vector in zip(batch, vectors):
-                self.repo.update_chunk_embedding(chunk.chunk_id, vector)
+                if vector is None:
+                    # A provider zero vector is garbage for one chunk: flag it
+                    # so the NULL-scan stops returning it, and let the rest of
+                    # the material keep moving.
+                    self.repo.flag_chunk(material.id, chunk.chunk_id)
+                else:
+                    embedded.append((chunk.chunk_id, vector))
+            self.repo.update_chunk_embeddings(material.id, embedded)
 
         if self.repo.unembedded_chunk_count(material.id) == 0:
             self.queue.send(
@@ -276,6 +288,36 @@ class IngestionWorker:
                 },
             )
 
+    def _embed_batch(self, chunks: list[ContentChunk]) -> list[list[float]]:
+        """Embed one batch, splitting it by estimated token budget.
+
+        The provider batch limit is a count of 100 requests, but a pathological
+        oversized chunk (an indivisible token kept whole by the chunker) can
+        make a single request larger than the provider payload limit. Splitting
+        by tokens bounds every request size; chunk order and identity are
+        preserved.
+        """
+        vectors: list[list[float]] = []
+        for sub_batch in self._split_batch_by_tokens(chunks):
+            vectors.extend(self.embedder.embed([chunk.text for chunk in sub_batch]))
+        return vectors
+
+    def _split_batch_by_tokens(self, chunks: list[ContentChunk]) -> list[list[ContentChunk]]:
+        batches: list[list[ContentChunk]] = []
+        current: list[ContentChunk] = []
+        current_tokens = 0
+        for chunk in chunks:
+            tokens = self.token_counter(chunk.text)
+            if current and current_tokens + tokens > self.config.max_batch_tokens:
+                batches.append(current)
+                current = []
+                current_tokens = 0
+            current.append(chunk)
+            current_tokens += tokens
+        if current:
+            batches.append(current)
+        return batches
+
     # ------------------------------------------------------------------
     # Stage 3: atomic ready publish
     # ------------------------------------------------------------------
@@ -283,6 +325,10 @@ class IngestionWorker:
     def _handle_publish(self, message) -> None:
         payload = message.payload
         material, job_id, _ = self._guard(payload, {"embedding", "ready"})
+        if material.ingestion_state == "ready":
+            # Belt-and-braces: a redelivered publish message for an
+            # already-ready material is a duplicate, not a re-publish.
+            raise _SkipMessage()
         self.repo.set_job_running(job_id)
 
         missing = self.repo.unembedded_chunk_count(material.id)
@@ -303,6 +349,14 @@ class IngestionWorker:
         total = self.repo.all_chunk_count(material.id)
         if total == 0:
             raise IngestionError("validation_failed", "no content chunks were produced")
+
+        if self.repo.embedded_chunk_count(material.id) == 0:
+            # Every chunk was flagged (provider zero vectors): nothing is
+            # embeddable, so the attempt fails validation instead of
+            # publishing an empty grounding set.
+            raise IngestionError(
+                "validation_failed", "no embeddable chunks were produced"
+            )
 
         # Publish must be atomic in the store: the material flips to ready and
         # the job succeeds as one operation (DB-level transaction in the

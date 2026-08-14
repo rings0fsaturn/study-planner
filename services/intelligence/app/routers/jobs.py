@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, Request
 
 from app.dependencies import get_user_client
 from app.ingestion.models import IngestionError
-from app.routers.materials import _async_job, _service_error
+from app.routers.serialization import async_job_from_row, service_error
 from app.userrest import UserScopedClient
 
 router = APIRouter()
@@ -21,6 +21,6 @@ def get_job(
     client: Annotated[UserScopedClient, Depends(get_user_client)],
 ) -> dict:
     try:
-        return _async_job(client.get_job(jobId))
+        return async_job_from_row(client.get_job(jobId))
     except IngestionError as exc:
-        return _service_error(request, exc)
+        return service_error(request, exc)

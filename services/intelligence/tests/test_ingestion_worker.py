@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import uuid
 
-from app.ingestion.models import IngestionError, IngestionJob, Material
+from app.ingestion.models import PROGRESS_BY_STAGE, IngestionError, IngestionJob, Material
 from app.ingestion.queue import EMBED_QUEUE, EXTRACT_QUEUE, PUBLISH_QUEUE
 from app.ingestion.worker import IngestionWorker, WorkerConfig
 from tests.ingestion_doubles import (
@@ -11,6 +11,7 @@ from tests.ingestion_doubles import (
     FakeIngestionRepo,
     FakeQueue,
     InMemoryStorage,
+    ZeroVectorEmbedder,
 )
 from tests.test_extractors import FakeFetcher, FakePdfReader, FakeTranscripts
 
@@ -40,6 +41,8 @@ def make_worker(
     embedder=None,
     batch_size: int = 2,
     max_deliveries: int = 3,
+    max_in_flight: int = 1,
+    max_batch_tokens: int = 4000,
 ) -> tuple[IngestionWorker, FakeIngestionRepo, FakeQueue, InMemoryStorage]:
     repo = repo or FakeIngestionRepo()
     queue = queue or FakeQueue()
@@ -53,7 +56,12 @@ def make_worker(
         transcripts=transcripts or FakeTranscripts(),
         embedder=embedder or DeterministicEmbedder(),
         token_counter=lambda text: len(text.split()),
-        config=WorkerConfig(batch_size=batch_size, max_deliveries=max_deliveries),
+        config=WorkerConfig(
+            batch_size=batch_size,
+            max_deliveries=max_deliveries,
+            max_in_flight=max_in_flight,
+            max_batch_tokens=max_batch_tokens,
+        ),
     )
     return worker, repo, queue, storage
 
@@ -122,6 +130,59 @@ def test_text_material_reaches_ready_atomically() -> None:
     assert storage.objects["user-1/mat-1/fulltext.txt"]
     assert not queue.queues.get(EXTRACT_QUEUE)
     assert not queue.queues.get(PUBLISH_QUEUE)
+
+
+def test_max_in_flight_bounds_messages_processed_per_cycle() -> None:
+    worker, repo, queue, _ = make_worker(max_in_flight=1)
+    job_ids = []
+    for index in range(3):
+        material = make_material(source=f"material {index} content")
+        material = Material(**{**vars(material), "id": f"mat-{index}"})
+        job_ids.append(seed_and_enqueue(repo, queue, material))
+
+    # One poll cycle may take at most max_in_flight messages: the other two
+    # extract messages stay visible for later cycles (backpressure).
+    worker.run_once(EXTRACT_QUEUE)
+    remaining = queue.queues.get(EXTRACT_QUEUE) or []
+    assert len(remaining) == 2
+    assert repo.materials["mat-0"]["ingestion_state"] == "chunking"
+    assert repo.materials["mat-1"]["ingestion_state"] == "pending"
+    assert repo.materials["mat-2"]["ingestion_state"] == "pending"
+
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "chunking"
+    assert len(queue.queues.get(EXTRACT_QUEUE) or []) == 1
+
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-2"]["ingestion_state"] == "chunking"
+    assert not queue.queues.get(EXTRACT_QUEUE)
+
+
+def test_max_in_flight_can_be_raised() -> None:
+    worker, repo, queue, _ = make_worker(max_in_flight=5)
+    for index in range(3):
+        material = make_material(source=f"material {index} content")
+        material = Material(**{**vars(material), "id": f"mat-{index}"})
+        seed_and_enqueue(repo, queue, material)
+
+    worker.run_once(EXTRACT_QUEUE)
+    assert not queue.queues.get(EXTRACT_QUEUE)
+    assert all(
+        repo.materials[f"mat-{index}"]["ingestion_state"] == "chunking"
+        for index in range(3)
+    )
+
+
+def test_worker_progress_writes_match_shared_stage_map() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material(source="one two three four five six seven eight nine ten")
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_progress"] == PROGRESS_BY_STAGE["chunking"]
+    worker.run_once(EMBED_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_progress"] == PROGRESS_BY_STAGE["embedding"]
+    worker.run_once(PUBLISH_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_progress"] == PROGRESS_BY_STAGE["ready"]
 
 
 def test_transient_extraction_failure_redelivers_then_fails_after_bounded_deliveries() -> None:
@@ -404,6 +465,115 @@ def test_stale_extract_message_for_advanced_material_is_skipped() -> None:
 
     run_pipeline(worker, queue)
     assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+
+
+class CountingEmbedder:
+    """Records each embedder call so sub-batch boundaries are observable."""
+
+    def __init__(self) -> None:
+        self.call_texts: list[list[str]] = []
+        self.delegate = DeterministicEmbedder()
+
+    def embed(self, texts: list[str]) -> list[list[float]]:
+        self.call_texts.append(list(texts))
+        return self.delegate.embed(texts)
+
+
+def test_embedding_splits_batches_by_token_budget() -> None:
+    embedder = CountingEmbedder()
+    worker, repo, queue, _ = make_worker(
+        embedder=embedder,
+        batch_size=100,
+        max_batch_tokens=450,  # token_counter counts words
+    )
+    # ~900 words chunk into two ~400-token chunks; two chunks together exceed
+    # the 450-token provider budget, so the worker must split them into
+    # separate provider calls instead of one oversized request.
+    material = make_material(source="word " * 900)
+    job_id = seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    worker.run_once(EMBED_QUEUE)
+
+    assert len(repo.chunks) >= 2
+    total_texts = sum(len(texts) for texts in embedder.call_texts)
+    assert total_texts == len(repo.chunks)
+    assert len(embedder.call_texts) >= 2
+    assert all(
+        sum(len(text.split()) for text in texts) <= 450
+        for texts in embedder.call_texts
+    )
+
+    worker.run_once(PUBLISH_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.jobs[job_id]["status"] == "succeeded"
+    assert all(chunk["embedding"] is not None for chunk in repo.chunks.values())
+
+
+def test_zero_vector_chunk_is_flagged_and_material_readies() -> None:
+    # Two chunks; the embedder returns a zero vector for every second one.
+    embedder = ZeroVectorEmbedder(every=2)
+    worker, repo, queue, _ = make_worker(embedder=embedder, batch_size=100)
+    material = make_material(source="word " * 900)
+    job_id = seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    worker.run_once(EMBED_QUEUE)
+
+    chunks = sorted(repo.chunks.values(), key=lambda row: row["ordinal"])
+    assert len(chunks) >= 2
+    assert chunks[0]["embedding"] is None and chunks[0]["skipped"] is True
+    assert chunks[1]["embedding"] is not None and chunks[1]["skipped"] is False
+    # The flagged chunk must not resurface in the NULL-scan.
+    assert repo.unembedded_chunk_count("mat-1") == 0
+
+    worker.run_once(PUBLISH_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.jobs[job_id]["status"] == "succeeded"
+    assert repo.embedded_chunk_count("mat-1") >= 1
+
+
+def test_all_zero_vector_chunks_fail_validation() -> None:
+    embedder = ZeroVectorEmbedder(every=1)
+    worker, repo, queue, _ = make_worker(embedder=embedder, batch_size=100)
+    material = make_material(source="one two three four five six seven eight nine ten")
+    job_id = seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    worker.run_once(EMBED_QUEUE)
+    worker.run_once(PUBLISH_QUEUE)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "failed"
+    assert repo.jobs[job_id]["error_code"] == "validation_failed"
+    assert repo.jobs[job_id]["retryable"] is False
+    assert repo.embedded_chunk_count("mat-1") == 0
+    assert not queue.queues.get(PUBLISH_QUEUE)
+
+
+def test_redelivered_publish_for_ready_material_is_skipped() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material(source="one two three four five six seven eight nine ten")
+    job_id = seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    publish_calls_before = len(repo.publish_ready_calls)
+
+    # Simulate the fragile window the guard exists for: a stale publish
+    # message arrives while the job row is non-terminal and the material is
+    # already ready. The worker must skip it without re-publishing.
+    repo.jobs[job_id]["status"] = "running"
+    queue.send(
+        PUBLISH_QUEUE,
+        {
+            "jobId": job_id,
+            "materialId": "mat-1",
+            "ownerId": "user-1",
+            "attempt": 1,
+            "correlationId": "c1",
+        },
+    )
+    worker.run_once(PUBLISH_QUEUE)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert len(repo.publish_ready_calls) == publish_calls_before
+    assert not queue.queues.get(PUBLISH_QUEUE)
 
 
 class WrongCountEmbedder:
