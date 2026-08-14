@@ -264,3 +264,48 @@
     untouched); contracts **6/6**. App suite, typecheck, lint, and builds
     verified in the same session (see below if the sweep changed the API
     surface: the two new error codes are additive enum values only).
+
+---
+
+## 2026-08-14 — Live E2E re-run against the sweep code + telemetry baseline (joint session)
+
+The full live E2E (`e2e/material-ingestion-live.spec.ts`, real stack, shared dev
+account) was re-run against the post-sweep code as part of the ingestion
+performance baseline plan. Result: **3 passed, 2 failed, 2 skipped** (8.0 min).
+Evidence and metrics live in
+[`.work/plans/active/2026-08-14-ingestion-performance-baseline/`](../../2026-08-14-ingestion-performance-baseline/).
+
+### What passed
+- Plain text → ready with preview; URL article → ready; mobile 390x844 round
+  trip. Telemetry records verified in `generation_telemetry` for all three
+  (extract/chunk/upload/embed/publish stages with sane latencies).
+
+### Failure 1 — PDF scenario: `quota_exhausted` (NOT a code regression)
+- The 572-page book extracted + chunked fine: **extract 7.4 s (13 ms/page),
+  chunk 2.4 s → 788 chunks / 245,404 tokens**. Embedding ran 8 provider calls
+  (30,690 tokens, mean 1.18 s/call, p50 1.28 s, 96 % of the 4000-token batch
+  budget) and then hit a terminal 429 `RESOURCE_EXHAUSTED`.
+- **Corrected root cause (dashboard limits confirmed later):** the free tier
+  allows RPM 100 · **TPM 30 k** · RPD 1000. The worker blasted ~3.8 k-token
+  batches back-to-back (~27 k tokens in ~10 s); the 8th call crossed the
+  per-minute token budget → 429 (recovery took seconds, confirming a
+  per-minute, not daily, wall). The pipeline bug is fixed in the performance
+  baseline plan (C8: `TokenRateLimiter` pace, `INGESTION_MAX_TOKENS_PER_MINUTE`
+  default 25 k); with pacing the full book (~270 k tokens after overlap 30)
+  fits RPD 1000 and embeds in ~9-10 min.
+- The classifier handled it correctly: 429 without a rate-limit hint →
+  terminal `quota_exhausted`, material failed cleanly with a recorded error.
+
+### Failure 2 — Retry scenario: attempt-level assertion hit an intermittent 401
+- The retry RPC worked (job attempt 2 created, second failure recorded), but
+  the spec's `ingestionAttempt` helper call got a 401 (its earlier call was
+  200). The intelligence service has **no `SUPABASE_JWT_SECRET` configured**, so
+  ES256 tokens verify through a network JWKS fetch (`security.py:48-59`); a
+  flaky fetch (corporate egress) plus a dev-server reload during the run
+  produced the transient 401. Infra flake, not a sweep regression; the same
+  assertion passed in the previous session.
+
+### Follow-ups opened for the baseline plan (not fixed here)
+- Quota-aware PDF fixture or paid tier for the full-book E2E.
+- Retry after `quota_exhausted` currently re-extracts and **discards the
+  already-embedded vectors** (D-05 replaces chunks); resume should keep them.
