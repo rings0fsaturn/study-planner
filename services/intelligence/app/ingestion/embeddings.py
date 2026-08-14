@@ -3,27 +3,24 @@
 The production adapter calls Gemini `gemini-embedding-001` and L2-normalizes
 every vector before it reaches storage (approved #8 decision). Tests inject
 deterministic doubles; the retry matrix follows the contract's failure table.
-
-Retry budget: the embedder retries a batch up to `_MAX_RETRIES` times with
-full-jitter exponential backoff (honoring the server `Retry-After` when the
-provider sends one), and the worker's pgmq stage allows up to `max_deliveries`
-redeliveries per message. A provider outage can therefore touch the same
-chunks up to (_MAX_RETRIES + 1) * max_deliveries times. `rate_limited` and
-`provider_unavailable` are retryable; `quota_exhausted`, `provider_credentials`,
-and client-side failures are terminal.
 """
 
 from __future__ import annotations
 
+import logging
 import math
 import random
 import time
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Protocol
 
 import httpx
 
 from .models import IngestionError
+from .telemetry import outcome_for_error_code
+
+logger = logging.getLogger("ingestion.embeddings")
 
 EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSIONS = 768
@@ -36,6 +33,21 @@ _MAX_RETRY_SLEEP_SECONDS = 60.0
 
 class Embedder(Protocol):
     def embed(self, texts: list[str]) -> list[list[float] | None]: ...
+
+
+@dataclass(frozen=True)
+class EmbeddingStats:
+    """Outcome of one batchEmbedContents call, reported to the observer."""
+
+    texts_count: int
+    tokens: int
+    latency_ms: float
+    attempts: int
+    outcome: str
+
+
+class EmbeddingObserver(Protocol):
+    def on_completed(self, stats: EmbeddingStats) -> None: ...
 
 
 def l2_normalize(vector: list[float]) -> list[float]:
@@ -87,7 +99,19 @@ def _is_rate_limit_error(response: httpx.Response) -> bool:
 
 
 class GeminiEmbedder:
-    """Batch embedder backed by the Gemini REST API."""
+    """Batch embedder backed by the Gemini REST API.
+
+    Retry budget: a batch is retried up to `_MAX_RETRIES` times with
+    full-jitter exponential backoff (honoring the server `Retry-After` when
+    the provider sends one), and the worker's pgmq stage allows up to
+    `max_deliveries` redeliveries per message. A provider outage can therefore
+    touch the same chunks up to (_MAX_RETRIES + 1) * max_deliveries times.
+    `rate_limited` and `provider_unavailable` are retryable;
+    `quota_exhausted`, `provider_credentials`, and client-side failures are
+    terminal. Every call reports `EmbeddingStats` (latency, attempts, tokens,
+    outcome) to the optional observer; telemetry is best-effort and never
+    fails the embed.
+    """
 
     def __init__(
         self,
@@ -98,6 +122,8 @@ class GeminiEmbedder:
         timeout_seconds: float = EMBEDDING_TIMEOUT_SECONDS,
         sleep_fn: Callable[[float], None] = time.sleep,
         random_fn: Callable[[float, float], float] = random.uniform,
+        token_counter: Callable[[str], int] | None = None,
+        observer: EmbeddingObserver | None = None,
     ) -> None:
         self._api_key = api_key
         self._model = model
@@ -105,6 +131,8 @@ class GeminiEmbedder:
         self._client = client
         self._sleep = sleep_fn
         self._random = random_fn
+        self._token_counter = token_counter
+        self.observer = observer
 
     def _post(self, url: str, payload: dict) -> dict:
         client = self._client or httpx.Client(timeout=self._timeout)
@@ -178,38 +206,69 @@ class GeminiEmbedder:
                 for text in texts
             ]
         }
-        last_error: IngestionError | None = None
-        for attempt in range(_MAX_RETRIES + 1):
-            try:
-                payload = self._post(url, request)
-                break
-            except IngestionError as exc:
-                if not exc.retryable or attempt >= _MAX_RETRIES:
-                    raise
-                last_error = exc
-                self._sleep(self._retry_delay(exc, attempt))
-        else:
-            raise last_error  # pragma: no cover - guarded by raise in the loop
-
+        started = time.perf_counter()
+        attempts = 0
+        outcome = "ok"
         try:
-            embeddings = payload["embeddings"]
-        except (KeyError, TypeError) as exc:
-            raise IngestionError(
-                "malformed_output", "embedding response missing embeddings"
-            ) from exc
-        if not isinstance(embeddings, list) or len(embeddings) != len(texts):
-            raise IngestionError("malformed_output", "embedding count mismatch")
-        vectors: list[list[float] | None] = []
-        for item in embeddings:
-            vector = _parse_embedding(item)
+            last_error: IngestionError | None = None
+            for attempt in range(_MAX_RETRIES + 1):
+                attempts += 1
+                try:
+                    payload = self._post(url, request)
+                    break
+                except IngestionError as exc:
+                    if not exc.retryable or attempt >= _MAX_RETRIES:
+                        raise
+                    last_error = exc
+                    self._sleep(self._retry_delay(exc, attempt))
+            else:
+                raise last_error  # pragma: no cover - guarded by raise in the loop
+
             try:
-                vectors.append(l2_normalize(vector))
-            except IngestionError as exc:
-                # A zero vector is provider garbage for one chunk, not a
-                # pipeline failure: the worker flags the chunk and keeps the
-                # rest of the material moving. Any other normalization error
-                # still fails the material.
-                if exc.code != "internal_error":
-                    raise
-                vectors.append(None)
-        return vectors
+                embeddings = payload["embeddings"]
+            except (KeyError, TypeError) as exc:
+                raise IngestionError(
+                    "malformed_output", "embedding response missing embeddings"
+                ) from exc
+            if not isinstance(embeddings, list) or len(embeddings) != len(texts):
+                raise IngestionError("malformed_output", "embedding count mismatch")
+            vectors: list[list[float] | None] = []
+            for item in embeddings:
+                vector = _parse_embedding(item)
+                try:
+                    vectors.append(l2_normalize(vector))
+                except IngestionError as exc:
+                    # A zero vector is provider garbage for one chunk, not a
+                    # pipeline failure: the worker flags the chunk and keeps the
+                    # rest of the material moving. Any other normalization error
+                    # still fails the material.
+                    if exc.code != "internal_error":
+                        raise
+                    vectors.append(None)
+            return vectors
+        except IngestionError as exc:
+            outcome = outcome_for_error_code(exc.code)
+            raise
+        finally:
+            self._notify(texts, started, attempts, outcome)
+
+    def _notify(
+        self, texts: list[str], started: float, attempts: int, outcome: str
+    ) -> None:
+        """Report one completed provider call to the observer (best-effort)."""
+        if self.observer is None:
+            return
+        tokens = 0
+        if self._token_counter is not None:
+            tokens = sum(self._token_counter(text) for text in texts)
+        stats = EmbeddingStats(
+            texts_count=len(texts),
+            tokens=tokens,
+            latency_ms=(time.perf_counter() - started) * 1000.0,
+            attempts=attempts,
+            outcome=outcome,
+        )
+        try:
+            self.observer.on_completed(stats)
+        except Exception:
+            logger.warning("embedding observer failed", exc_info=True)

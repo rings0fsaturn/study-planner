@@ -1,8 +1,11 @@
 """Deterministic structure-first recursive chunking.
 
-Target ~400 tokens per chunk with ~60-token overlap (approved #8 decision).
-Overlapping tail text is carried without timestamps so `start_seconds` stays
-anchored to the chunk's first timestamped segment.
+Target ~400 tokens per chunk with ~30-token overlap. The overlap was reduced
+from 60 tokens on 2026-08-14 (performance-baseline C3): the 60-token tail
+re-embedded ~19% of a 572-page book (measured), and 30 tokens keeps chunk
+boundary continuity at ~10% waste on quota-billed embeddings. Overlapping tail
+text is carried without timestamps so `start_seconds` stays anchored to the
+chunk's first timestamped segment.
 """
 
 from __future__ import annotations
@@ -12,7 +15,7 @@ from collections.abc import Callable, Sequence
 from .models import ContentChunk, ExtractedContent, TextSegment
 
 DEFAULT_TARGET_TOKENS = 400
-DEFAULT_OVERLAP_TOKENS = 60
+DEFAULT_OVERLAP_TOKENS = 30
 
 TokenCounter = Callable[[str], int]
 

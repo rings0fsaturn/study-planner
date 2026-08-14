@@ -363,3 +363,114 @@ def test_gemini_embedder_credentials_are_terminal_and_operator_facing() -> None:
         assert exc_info.value.code == "provider_credentials"
         assert not exc_info.value.retryable
         assert calls == 1
+
+
+class RecordingObserver:
+    def __init__(self) -> None:
+        self.stats: list = []
+
+    def on_completed(self, stats) -> None:
+        self.stats.append(stats)
+
+
+def test_gemini_embedder_observer_reports_success_stats() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_embedding_response(_make_vectors(2)))
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    observer = RecordingObserver()
+    embedder = GeminiEmbedder(
+        api_key="test-key",
+        client=client,
+        token_counter=lambda text: len(text.split()),
+        observer=observer,
+    )
+    result = embedder.embed(["alpha beta", "gamma"])
+    assert len(result) == 2
+
+    assert len(observer.stats) == 1
+    stats = observer.stats[0]
+    assert stats.texts_count == 2
+    assert stats.tokens == 3
+    assert stats.latency_ms >= 0.0
+    assert stats.attempts == 1
+    assert stats.outcome == "ok"
+
+
+def test_gemini_embedder_observer_counts_retry_attempts() -> None:
+    calls = 0
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        if calls < 3:
+            return httpx.Response(503, json={})
+        return httpx.Response(200, json=_embedding_response(_make_vectors(1)))
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    observer = RecordingObserver()
+    embedder = GeminiEmbedder(
+        api_key="test-key",
+        client=client,
+        sleep_fn=lambda delay: None,
+        random_fn=lambda low, high: high,
+        observer=observer,
+    )
+    result = embedder.embed(["text"])
+    assert len(result) == 1
+    assert observer.stats[0].attempts == 3
+    assert observer.stats[0].outcome == "ok"
+
+
+def test_gemini_embedder_observer_reports_failure_outcome() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(503, json={})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    observer = RecordingObserver()
+    embedder = GeminiEmbedder(
+        api_key="test-key",
+        client=client,
+        sleep_fn=lambda delay: None,
+        random_fn=lambda low, high: high,
+        observer=observer,
+    )
+    with pytest.raises(IngestionError) as exc_info:
+        embedder.embed(["text"])
+    assert exc_info.value.code == "provider_unavailable"
+
+    assert len(observer.stats) == 1
+    assert observer.stats[0].attempts == 3
+    assert observer.stats[0].outcome == "provider_error"
+
+
+def test_gemini_embedder_observer_timeout_maps_to_timeout_outcome() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.TimeoutException("slow")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    observer = RecordingObserver()
+    embedder = GeminiEmbedder(
+        api_key="test-key",
+        client=client,
+        sleep_fn=lambda delay: None,
+        random_fn=lambda low, high: high,
+        observer=observer,
+    )
+    with pytest.raises(IngestionError):
+        embedder.embed(["text"])
+    assert observer.stats[0].outcome == "timeout"
+
+
+def test_gemini_embedder_observer_exception_does_not_break_embed() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=_embedding_response(_make_vectors(1)))
+
+    class BrokenObserver:
+        def on_completed(self, stats) -> None:
+            raise RuntimeError("observer exploded")
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    embedder = GeminiEmbedder(api_key="test-key", client=client, observer=BrokenObserver())
+    result = embedder.embed(["text"])
+    assert len(result) == 1

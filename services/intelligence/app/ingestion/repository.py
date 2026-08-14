@@ -55,6 +55,7 @@ class IngestionRepo(Protocol):
         self, material_id: str, chunks: list[ContentChunk], owner_id: str
     ) -> None: ...
     def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]: ...
+    def list_chunks(self, material_id: str, limit: int = 10000) -> list[ContentChunk]: ...
     def unembedded_chunk_count(self, material_id: str) -> int: ...
     def embedded_chunk_count(self, material_id: str) -> int: ...
     def all_chunk_count(self, material_id: str) -> int: ...
@@ -293,6 +294,23 @@ class SupabaseIngestionRepo:
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
             f"&embedding=is.null&skipped=is.false&order=ordinal.asc&limit={limit}"
             f"&select=id,ordinal,text,start_seconds",
+            self._headers(),
+        )
+        return [
+            ContentChunk(
+                chunk_id=row["id"],
+                material_id=material_id,
+                text=row.get("text") or "",
+                ordinal=int(row.get("ordinal") or 0),
+                start_seconds=row.get("start_seconds"),
+            )
+            for row in rows
+        ]
+
+    def list_chunks(self, material_id: str, limit: int = 10000) -> list[ContentChunk]:
+        rows = self._get(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
+            f"&order=ordinal.asc&limit={limit}&select=id,ordinal,text,start_seconds",
             self._headers(),
         )
         return [

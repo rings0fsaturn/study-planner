@@ -218,6 +218,22 @@ class FakeIngestionRepo:
             for row in rows[:limit]
         ]
 
+    def list_chunks(self, material_id: str, limit: int = 10000) -> list[ContentChunk]:
+        rows = sorted(
+            (row for row in self.chunks.values() if row["material_id"] == material_id),
+            key=lambda row: row["ordinal"],
+        )
+        return [
+            ContentChunk(
+                chunk_id=row["id"],
+                material_id=material_id,
+                text=row["text"],
+                ordinal=row["ordinal"],
+                start_seconds=row["start_seconds"],
+            )
+            for row in rows[:limit]
+        ]
+
     def unembedded_chunk_count(self, material_id: str) -> int:
         return sum(
             1

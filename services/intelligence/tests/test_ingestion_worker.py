@@ -43,6 +43,7 @@ def make_worker(
     max_deliveries: int = 3,
     max_in_flight: int = 1,
     max_batch_tokens: int = 4000,
+    max_tokens_per_minute: int = 25000,
 ) -> tuple[IngestionWorker, FakeIngestionRepo, FakeQueue, InMemoryStorage]:
     repo = repo or FakeIngestionRepo()
     queue = queue or FakeQueue()
@@ -61,6 +62,7 @@ def make_worker(
             max_deliveries=max_deliveries,
             max_in_flight=max_in_flight,
             max_batch_tokens=max_batch_tokens,
+            max_tokens_per_minute=max_tokens_per_minute,
         ),
     )
     return worker, repo, queue, storage
@@ -665,3 +667,319 @@ def test_embed_message_carries_exact_attempt_and_correlation() -> None:
     assert payload["ownerId"] == "user-1"
     assert payload["attempt"] == 1
     assert payload["correlationId"] == repo.jobs[job_id]["correlation_id"]
+
+
+class FakeTelemetrySink:
+    """Captures telemetry records for assertions."""
+
+    def __init__(self) -> None:
+        self.records: list = []
+
+    def emit(self, records: list) -> None:
+        self.records.extend(records)
+
+
+def make_worker_with_telemetry(
+    *,
+    embedder=None,
+    telemetry: FakeTelemetrySink | None = None,
+    batch_size: int = 2,
+    **kwargs,
+):
+    worker, repo, queue, storage = make_worker(
+        embedder=embedder, batch_size=batch_size, **kwargs
+    )
+    telemetry = telemetry or FakeTelemetrySink()
+    worker.telemetry = telemetry
+    return worker, repo, queue, storage, telemetry
+
+
+def test_pipeline_emits_stage_and_embedding_telemetry() -> None:
+    worker, repo, queue, _, telemetry = make_worker_with_telemetry()
+    material = make_material(source="one two three four five six seven eight nine ten")
+    job_id = seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    correlation = repo.jobs[job_id]["correlation_id"]
+    stages = {record.stage for record in telemetry.records}
+    assert {
+        "extract",
+        "chunk",
+        "upload",
+        "embed",
+        "publish",
+    } <= stages
+    for record in telemetry.records:
+        assert record.trace_id == correlation
+        assert record.owner_id == "user-1"
+        assert record.material_id == "mat-1"
+        assert record.outcome == "ok"
+    assert all(record.latency_ms >= 0 for record in telemetry.records)
+    # Models identify the stage engines.
+    by_stage = {record.stage: record.model for record in telemetry.records}
+    assert by_stage["extract"] == "local"
+    assert by_stage["chunk"] == "tiktoken-cl100k"
+    assert by_stage["upload"] == "supabase-storage"
+    assert by_stage["publish"] == "supabase-rpc"
+
+
+def test_embed_batch_telemetry_reports_tokens_per_provider_call() -> None:
+    import json as json_lib
+
+    import httpx
+
+    from app.ingestion.embeddings import EMBEDDING_DIMENSIONS, GeminiEmbedder
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json_lib.loads(request.content)
+        count = len(body["requests"])
+        vectors = [
+            [1.0 + i * 0.001 + d * 0.0001 for d in range(EMBEDDING_DIMENSIONS)]
+            for i in range(count)
+        ]
+        return httpx.Response(200, json={"embeddings": [{"values": v} for v in vectors]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    embedder = GeminiEmbedder(
+        api_key="test-key",
+        client=client,
+        token_counter=lambda text: len(text.split()),
+    )
+    worker, repo, queue, _, telemetry = make_worker_with_telemetry(
+        embedder=embedder, batch_size=2
+    )
+    material = make_material(source="word " * 900)
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    batch_records = [r for r in telemetry.records if r.stage == "embed-batch"]
+    assert len(batch_records) >= 2
+    for record in batch_records:
+        assert record.task == "embedding"
+        assert record.model == "gemini-embedding-001"
+        assert record.outcome == "ok"
+        assert record.input_tokens > 0
+        assert record.texts_count > 0
+    # The stage aggregate carries the same total token count. The total is
+    # >= the source word count because carried overlap tails are re-embedded.
+    aggregate = [r for r in telemetry.records if r.stage == "embed"][0]
+    assert aggregate.input_tokens == sum(r.input_tokens for r in batch_records)
+    assert sum(r.input_tokens for r in batch_records) >= 900
+
+
+def test_terminal_failure_emits_failure_telemetry() -> None:
+    worker, repo, queue, _, telemetry = make_worker_with_telemetry()
+    material = make_material(kind="manual", source="")
+    job_id = seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "failed"
+    failure = [r for r in telemetry.records if r.outcome != "ok"]
+    assert len(failure) == 1
+    assert failure[0].stage == "extract"
+    assert failure[0].outcome == "partial"  # validation_failed has no provider mapping
+    assert failure[0].trace_id == repo.jobs[job_id]["correlation_id"]
+
+
+def test_transient_failure_outcome_maps_to_provider_error() -> None:
+    from app.ingestion.models import IngestionError as IngErr
+
+    embedder = FailingEmbedder(1, IngErr("provider_unavailable", "gemini down", retryable=True))
+    worker, repo, queue, _, telemetry = make_worker_with_telemetry(
+        embedder=embedder, batch_size=2, max_deliveries=3
+    )
+    material = make_material(source="one two three four five six seven eight nine ten")
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    worker.run_once(EMBED_QUEUE)  # first embed call fails transiently -> redelivered
+
+    assert ("material_embed", 2) in queue.redelivered
+    failure = [r for r in telemetry.records if r.outcome != "ok"]
+    assert len(failure) == 1
+    assert failure[0].stage == "embed"
+    assert failure[0].outcome == "provider_error"
+
+
+def test_telemetry_sink_failure_never_fails_the_stage() -> None:
+    class ExplodingSink(FakeTelemetrySink):
+        def emit(self, records: list) -> None:
+            raise RuntimeError("telemetry db down")
+
+    worker, repo, queue, storage = make_worker()
+    worker.telemetry = ExplodingSink()
+    material = make_material()
+    job_id = seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.jobs[job_id]["status"] == "succeeded"
+
+
+class SucceedThenFailEmbedder:
+    """Embeds the first call, then fails with the given error (quota mid-run)."""
+
+    def __init__(self, error: IngestionError) -> None:
+        self.error = error
+        self.calls = 0
+        self.delegate = DeterministicEmbedder()
+
+    def embed(self, texts: list[str]) -> list[list[float] | None]:
+        self.calls += 1
+        if self.calls > 1:
+            raise self.error
+        return self.delegate.embed(texts)
+
+
+def test_retry_preserves_embeddings_when_extraction_is_identical() -> None:
+    """C2 resume: a retry after an embed-stage failure keeps the vectors that
+    already succeeded and only re-embeds the missing chunks."""
+    worker, repo, queue, _ = make_worker(batch_size=2)
+    # ~900 words -> 3 chunks, so the embed stage makes multiple provider calls.
+    material = make_material(source="word " * 900)
+    seed_and_enqueue(repo, queue, material)
+
+    # Attempt 1: extract succeeds, embed fails mid-way (e.g. quota) after the
+    # first batch was embedded.
+    from app.ingestion.models import IngestionError as IngErr
+
+    worker.embedder = SucceedThenFailEmbedder(IngErr("quota_exhausted", "quota", retryable=False))
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "chunking"
+    worker.run_once(EMBED_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "failed"
+    embedded_ids = {cid for cid, row in repo.chunks.items() if row["embedding"] is not None}
+    assert embedded_ids
+
+    # Retry (attempt 2): same source -> same text. The extract stage must NOT
+    # replace the chunk rows, so the already-embedded vectors survive and the
+    # embed NULL-scan only pays for the missing ones.
+    from dataclasses import replace
+
+    material = replace(
+        repo.get_material("mat-1"),
+        ingestion_state="pending",
+    )
+    job2 = seed_and_enqueue(repo, queue, material, attempt=2)
+    worker.embedder = DeterministicEmbedder()
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "chunking"
+    assert {cid for cid, row in repo.chunks.items() if row["embedding"] is not None} == embedded_ids
+    assert len(repo.chunks) == repo.materials["mat-1"]["chunk_count"]
+
+    run_pipeline(worker, queue)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.jobs[job2]["status"] == "succeeded"
+    assert all(row["embedding"] is not None for row in repo.chunks.values())
+
+
+def test_retry_replaces_chunks_when_content_changed() -> None:
+    """C2: a changed source is not identical, so chunks are replaced and the
+    stale embeddings are dropped (the old vectors would be wrong)."""
+    worker, repo, queue, _ = make_worker(batch_size=2)
+    material = make_material(source="original content " * 20)
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    old_ids = set(repo.chunks)
+
+    from dataclasses import replace
+
+    material = replace(
+        repo.get_material("mat-1"),
+        ingestion_state="pending",
+        source="completely different content " * 20,
+    )
+    job2 = seed_and_enqueue(repo, queue, material, attempt=2)
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "chunking"
+    assert set(repo.chunks).isdisjoint(old_ids)
+
+    run_pipeline(worker, queue)
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.jobs[job2]["status"] == "succeeded"
+
+
+def test_first_extraction_still_creates_chunks() -> None:
+    """C2: a fresh material has no existing chunks; the extract stage inserts
+    them as before (resume path must not accidentally skip the insert)."""
+    worker, repo, queue, _ = make_worker(batch_size=2)
+    material = make_material(source="word " * 20)
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    assert repo.materials["mat-1"]["ingestion_state"] == "chunking"
+    assert repo.chunks
+    assert repo.materials["mat-1"]["chunk_count"] == len(repo.chunks)
+
+
+class FakeClock:
+    """A monotonic fake clock; sleeping advances it so limiter loops terminate."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def __call__(self) -> float:
+        return self.now
+
+
+class AdvancingSleep:
+    def __init__(self, clock: FakeClock) -> None:
+        self.clock = clock
+        self.sleeps: list[float] = []
+
+    def __call__(self, seconds: float) -> None:
+        self.sleeps.append(seconds)
+        self.clock.now += seconds
+
+
+def test_token_rate_limiter_waits_for_window_space() -> None:
+    from app.ingestion.worker import TokenRateLimiter
+
+    clock = FakeClock()
+    sleeper = AdvancingSleep(clock)
+    limiter = TokenRateLimiter(max_tokens_per_minute=30000, now_fn=clock, sleep_fn=sleeper)
+
+    limiter.wait_for(12000)  # ok
+    limiter.wait_for(12000)  # ok: 24000 <= 30000
+    limiter.wait_for(12000)  # would exceed 36000: must sleep until the window slides
+    assert sleeper.sleeps, "the third batch must wait for the sliding window"
+    assert sleeper.sleeps[-1] > 55.0, "the wait must span to the window boundary"
+
+    limiter.wait_for(5000)  # the sleep advanced the clock: 12000 + 5000 fits again
+    assert len(sleeper.sleeps) == 1, "no new sleep after the window slid"
+
+
+def test_token_rate_limiter_allows_over_budget_single_batch() -> None:
+    from app.ingestion.worker import TokenRateLimiter
+
+    clock = FakeClock()
+    sleeper = AdvancingSleep(clock)
+    limiter = TokenRateLimiter(max_tokens_per_minute=1000, now_fn=clock, sleep_fn=sleeper)
+    limiter.wait_for(5000)  # indivisible oversized batch: sent anyway, no wait
+    assert sleeper.sleeps == []
+
+
+def test_embed_stage_paces_calls_to_the_per_minute_budget() -> None:
+    """The rate limiter must spread embedding calls so a big material never
+    bursts past the provider's TPM quota (the PDF E2E failure mode)."""
+    from app.ingestion.worker import TokenRateLimiter
+
+    clock = FakeClock()
+    sleeper = AdvancingSleep(clock)
+    worker, repo, queue, _ = make_worker(
+        batch_size=100,
+        max_batch_tokens=2000,  # ~2 chunks of ~450 words per provider call
+        max_tokens_per_minute=2500,  # ~1 provider call per minute
+    )
+    worker._rate_limiter = TokenRateLimiter(
+        max_tokens_per_minute=2500, now_fn=clock, sleep_fn=sleeper
+    )
+    material = make_material(source="word " * 9000)
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+    worker.run_once(EMBED_QUEUE)
+    worker.run_once(PUBLISH_QUEUE)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert sleeper.sleeps, "the limiter must have paced the burst"

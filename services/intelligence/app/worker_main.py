@@ -20,6 +20,7 @@ from app.ingestion.embeddings import GeminiEmbedder
 from app.ingestion.extractors import HttpxFetcher, PypdfTextReader, YoutubeTranscriptClient
 from app.ingestion.queue import SupabaseWorkQueue
 from app.ingestion.repository import SupabaseIngestionRepo, SupabaseStorageClient
+from app.ingestion.telemetry import SupabaseTelemetrySink
 from app.ingestion.worker import IngestionWorker, WorkerConfig
 
 logger = logging.getLogger("ingestion.worker")
@@ -52,7 +53,11 @@ def main() -> None:
     repo = SupabaseIngestionRepo(supabase_url, service_role_key, client=shared_client)
     queue = SupabaseWorkQueue(supabase_url, service_role_key, client=shared_client)
     storage = SupabaseStorageClient(supabase_url, service_role_key, client=shared_client)
-    embedder = GeminiEmbedder(api_key=gemini_api_key, client=shared_client)
+    embedder = GeminiEmbedder(
+        api_key=gemini_api_key,
+        client=shared_client,
+        token_counter=TiktokenCounter(),
+    )
     worker = IngestionWorker(
         repo=repo,
         queue=queue,
@@ -62,6 +67,7 @@ def main() -> None:
         transcripts=YoutubeTranscriptClient(),
         embedder=embedder,
         token_counter=TiktokenCounter(),
+        telemetry=SupabaseTelemetrySink(supabase_url, service_role_key, client=shared_client),
         config=WorkerConfig(
             batch_size=int(os.getenv("INGESTION_BATCH_SIZE", "100")),
             visibility_seconds=int(os.getenv("INGESTION_VISIBILITY_SECONDS", "30")),
@@ -69,6 +75,7 @@ def main() -> None:
             max_deliveries=int(os.getenv("INGESTION_MAX_DELIVERIES", "3")),
             max_in_flight=int(os.getenv("INGESTION_MAX_IN_FLIGHT", "1")),
             max_batch_tokens=int(os.getenv("INGESTION_MAX_BATCH_TOKENS", "4000")),
+            max_tokens_per_minute=int(os.getenv("INGESTION_MAX_TOKENS_PER_MINUTE", "25000")),
         ),
     )
 

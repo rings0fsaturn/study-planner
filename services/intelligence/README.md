@@ -219,7 +219,12 @@ Required env for the worker:
   materials with a clear `provider_unavailable` error.
 
 Optional tuning: `INGESTION_BATCH_SIZE` (100), `INGESTION_VISIBILITY_SECONDS`
-(30), `INGESTION_POLL_INTERVAL_SECONDS` (1), `INGESTION_MAX_DELIVERIES` (3).
+(30), `INGESTION_POLL_INTERVAL_SECONDS` (1), `INGESTION_MAX_DELIVERIES` (3),
+`INGESTION_MAX_IN_FLIGHT` (1), `INGESTION_MAX_BATCH_TOKENS` (4000),
+`INGESTION_MAX_TOKENS_PER_MINUTE` (25000 — paces embedding calls under the
+provider's per-minute token quota; the free tier's TPM budget is ~30 k, so a
+worker that blasts batches back-to-back fails materials with
+`quota_exhausted`).
 
 Run locally:
 
@@ -240,4 +245,27 @@ caller's own access token, so the API additionally needs
 
 ```bash
 uv run --package intelligence pytest services/intelligence/tests -q
+```
+
+### Telemetry
+
+The worker emits one `generation_telemetry` row per pipeline stage and per
+Gemini `batchEmbedContents` call (approved phase-2 `GenerationTelemetry`
+contract shape plus `material_id`/`attempt`/`stage` context; migration `014`).
+Telemetry is server-owned (RLS on, no policies) and best-effort: a sink
+failure never fails a pipeline stage. Per-batch stats (latency, tokens,
+attempts, outcome) come from `GeminiEmbedder`'s observer; `traceId` is the
+ingestion job's `correlation_id`.
+
+Summarize a material's run:
+
+```bash
+set -a; source .env; set +a
+uv run --package intelligence python scripts/ingestion_report.py <material_id>
+```
+
+Embedding retrieval-quality probe (recall@k / MRR against `match_content_chunks`):
+
+```bash
+uv run --package intelligence python scripts/retrieval_probe.py <material_id>
 ```

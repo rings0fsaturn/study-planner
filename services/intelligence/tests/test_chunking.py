@@ -81,7 +81,7 @@ def test_timestamped_segments_keep_their_own_anchors() -> None:
 
 def test_defaults_match_approved_constants() -> None:
     assert DEFAULT_TARGET_TOKENS == 400
-    assert DEFAULT_OVERLAP_TOKENS == 60
+    assert DEFAULT_OVERLAP_TOKENS == 30
 
 
 def test_document_segments_uses_transcript_segments_when_present() -> None:
