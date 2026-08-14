@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { test, expect, type Page } from '@playwright/test';
 
 /**
@@ -10,8 +13,13 @@ import { test, expect, type Page } from '@playwright/test';
  * failure surfaces the retry action and a retry creates a new attempt, and a
  * second account cannot read the first account's material.
  *
+ * The PDF scenario uploads the real fixture `e2e/pdf/sample-textbook-572page.pdf`
+ * (a 572-page textbook, ~23 MB), so extraction, chunking, and embedding are
+ * exercised on realistic content instead of a minimal synthetic PDF. It needs
+ * a longer timeout because the whole book must reach `ready`.
+ *
  * Requires (operator steps, all documented on issue #37):
- * - Migrations 005..010 pushed to the dev Supabase project.
+ * - Migrations 005..013 pushed to the dev Supabase project.
  * - The ingestion worker running with the service-role key + Gemini key.
  * - E2E_LIVE_EMAIL / E2E_LIVE_PASSWORD for the main account, and
  *   E2E_LIVE_EMAIL_2 / E2E_LIVE_PASSWORD_2 for the cross-user scenario
@@ -33,30 +41,12 @@ const PASSWORD_2 = process.env.E2E_LIVE_PASSWORD_2 ?? '';
 const PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY ?? '';
 const INCLUDE_YOUTUBE = process.env.E2E_INCLUDE_YOUTUBE === '1';
 
-/** Minimal valid single-page PDF with a readable text line. */
-function minimalPdf(text: string): Buffer {
-  const objects = [
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
-    `<< /Length ${43 + text.length} >>\nstream\nBT /F1 24 Tf 72 720 Td (${text}) Tj ET\nendstream`,
-    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
-  ];
-  const chunks: string[] = ['%PDF-1.4\n'];
-  const offsets: number[] = [];
-  for (let i = 0; i < objects.length; i += 1) {
-    offsets.push(Buffer.byteLength(chunks.join('')));
-    chunks.push(`${i + 1} 0 obj\n${objects[i]}\nendobj\n`);
-  }
-  const body = chunks.join('');
-  const xrefStart = Buffer.byteLength(body);
-  let xref = `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
-  for (const offset of offsets) {
-    xref += `${String(offset).padStart(10, '0')} 00000 n \n`;
-  }
-  xref += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
-  return Buffer.from(body + xref, 'latin1');
-}
+/** Real 572-page textbook fixture used by the PDF scenario (~23 MB). */
+const REAL_PDF_PATH = join(
+  dirname(fileURLToPath(import.meta.url)),
+  'pdf',
+  'sample-textbook-572page.pdf',
+);
 
 /** Collects page errors and browser console errors; asserts both empty at the end. */
 function watchErrors(page: Page): () => string[] {
@@ -107,11 +97,11 @@ async function fillTitle(page: Page, title: string): Promise<void> {
  * instead. The library page updates live over Realtime with a bounded polling
  * fallback, so no reload is needed.
  */
-async function expectCardReady(page: Page, title: string): Promise<void> {
+async function expectCardReady(page: Page, title: string, timeout = 90_000): Promise<void> {
   const card = page.locator('.material-card', { hasText: title });
   await expect(card).toBeVisible();
   await expect(card.getByRole('button', { name: 'Practice this' })).toBeVisible({
-    timeout: 90000,
+    timeout,
   });
 }
 
@@ -271,7 +261,12 @@ test('ingestion: retryable failure shows retry and retry starts a new attempt', 
 test('ingestion: PDF upload reaches ready', async ({ page }) => {
   const errors = watchErrors(page);
   const materialTitle = `E2E ingestion pdf ${Date.now()}`;
-  const pdf = minimalPdf('Hello ingestion world');
+  // The real 572-page textbook fixture: a full extraction/chunking/embedding
+  // run over realistic content. Upload is ~23 MB and the whole book must
+  // reach ready, so this scenario needs far more than the 180 s suite budget.
+  const pdf = readFileSync(REAL_PDF_PATH);
+
+  test.setTimeout(600_000);
 
   try {
     await signIn(page);
@@ -280,7 +275,7 @@ test('ingestion: PDF upload reaches ready', async ({ page }) => {
     await pickSource(page, /PDF document/i);
     await page.getByLabel('Title').fill(materialTitle);
     await page.getByLabel('PDF file').setInputFiles({
-      name: 'ingestion-fixture.pdf',
+      name: 'sample-textbook-572page.pdf',
       mimeType: 'application/pdf',
       buffer: pdf,
     });
@@ -288,7 +283,7 @@ test('ingestion: PDF upload reaches ready', async ({ page }) => {
 
     await expect(page.getByRole('heading', { name: materialTitle })).toBeVisible({ timeout: 15000 });
     await page.getByRole('button', { name: '← Back to library' }).click();
-    await expectCardReady(page, materialTitle);
+    await expectCardReady(page, materialTitle, 420_000);
     await openDetailAndCheckReady(page, materialTitle);
   } finally {
     await deleteMaterialIfPresent(page, materialTitle);

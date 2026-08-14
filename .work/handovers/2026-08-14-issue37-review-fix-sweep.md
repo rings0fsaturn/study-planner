@@ -93,6 +93,12 @@ Spec: `e2e/material-ingestion-live.spec.ts` — text/URL/PDF to ready with
 preview, retryable failure + retry, YouTube (env-gated), cross-user denial
 (env-gated), 390x844 mobile round trip. Read rule 16 before running.
 
+The PDF scenario uploads the **real fixture `e2e/pdf/sample-textbook-572page.pdf`**
+(572 pages, ~23 MB — committed, not gitignored), so extraction, chunking, and
+embedding run on realistic content; the whole book must reach `ready`, so that
+test sets its own 600 s timeout with a 420 s card-ready wait. Expect the PDF
+run to take several minutes and to consume a chunk of Gemini quota per run.
+
 ```bash
 # Credentials for the shared dev account: .work/specs/test-login-cred.txt
 # (format: `email: \`...\`` / `password: \`...\`` — never copy the values

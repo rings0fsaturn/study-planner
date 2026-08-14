@@ -37,7 +37,8 @@ await createSourceGrid(page).getByRole('button', { name: /PDF document/i }).clic
 Live runs mutate the shared dev account.
 Failed runs leave materials behind, and leftover cards break strict-mode locators on the next run.
 Delete created materials at the end of every scenario, and clean leftovers with a service-role delete before re-running.
-The PDF fixture can be built programmatically in the spec (exact xref offsets) instead of shipping a binary asset.
+The PDF scenario uploads the real fixture `e2e/pdf/sample-textbook-572page.pdf` (572 pages, ~23 MB) so extraction, chunking, and embedding run on realistic content.
+Give that scenario its own `test.setTimeout(...)` (600 s) and a card-ready wait of several minutes, because the whole book must reach `ready`.
 
 ## Stale app code
 
