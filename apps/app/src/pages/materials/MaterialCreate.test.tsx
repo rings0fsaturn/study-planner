@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MaterialCreate } from './MaterialCreate'
@@ -104,5 +104,116 @@ describe('MaterialCreate', () => {
 
     expect(await screen.findByText('Could not add material')).toBeInTheDocument()
     expect(screen.getByText('conflict on client id')).toBeInTheDocument()
+  })
+
+  it('uploads a file, completes the upload, and navigates to detail', async () => {
+    const client = new FakeMaterialClient([])
+    renderCreate(client)
+    const pdf = new File(['%PDF-1.4'], 'paper.pdf', { type: 'application/pdf' })
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('PDF file'), { target: { files: [pdf] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByTestId('detail-page')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(client.uploadCalls).toHaveLength(1)
+    })
+    expect(client.uploadCalls[0].file.name).toBe('paper.pdf')
+    expect(client.materials[0]).toMatchObject({
+      kind: 'file',
+      source: 'paper.pdf',
+      uploadCompleteAt: expect.any(String),
+    })
+  })
+
+  it('marks the material failed when the upload fails and still navigates', async () => {
+    const client = new FakeMaterialClient([])
+    client.uploadError = new Error('network down')
+    renderCreate(client)
+    const pdf = new File(['%PDF-1.4'], 'paper.pdf', { type: 'application/pdf' })
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('PDF file'), { target: { files: [pdf] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByTestId('detail-page')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(client.materials[0].ingestionState).toBe('failed')
+    })
+    expect(client.materials[0].ingestionError).toContain('Upload failed')
+    expect(client.markFailedCalls).toHaveLength(1)
+  })
+
+  it('does not complete the upload when the upload failed', async () => {
+    const client = new FakeMaterialClient([])
+    client.uploadError = new Error('network down')
+    client.completeError = new Error('must not be called')
+    renderCreate(client)
+    const pdf = new File(['%PDF-1.4'], 'paper.pdf', { type: 'application/pdf' })
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('PDF file'), { target: { files: [pdf] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByTestId('detail-page')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(client.materials[0].ingestionState).toBe('failed')
+    })
+    expect(client.completeCalls).toEqual([])
+  })
+
+  it('marks the material failed when the completion RPC fails', async () => {
+    const client = new FakeMaterialClient([])
+    client.completeError = new Error('rpc denied')
+    renderCreate(client)
+    const pdf = new File(['%PDF-1.4'], 'paper.pdf', { type: 'application/pdf' })
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('PDF file'), { target: { files: [pdf] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByTestId('detail-page')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(client.materials[0].ingestionState).toBe('failed')
+    })
+    expect(client.completeCalls).toEqual([client.materials[0].id])
+    expect(client.markFailedCalls).toHaveLength(1)
+    expect(client.materials[0].ingestionError).toContain('Upload failed')
+  })
+
+  it('requires a PDF file for the file source', async () => {
+    const client = new FakeMaterialClient([])
+    renderCreate(client)
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'No file yet' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByText('Choose a PDF file to upload.')).toBeInTheDocument()
+    expect(client.materials).toHaveLength(0)
+  })
+
+  it('disables the submit button while the upload is in flight', async () => {
+    const client = new FakeMaterialClient([])
+    let resolveUpload: (() => void) | null = null
+    vi.spyOn(client, 'uploadMaterialFile').mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveUpload = resolve
+        }),
+    )
+    renderCreate(client)
+    const pdf = new File(['%PDF-1.4'], 'paper.pdf', { type: 'application/pdf' })
+
+    fireEvent.click(await screen.findByRole('button', { name: /PDF document/i }))
+    fireEvent.change(screen.getByLabelText('PDF file'), { target: { files: [pdf] } })
+    fireEvent.click(screen.getByRole('button', { name: 'Add and process' }))
+
+    expect(await screen.findByRole('button', { name: 'Add and process' })).toBeDisabled()
+
+    await waitFor(() => {
+      resolveUpload?.()
+    })
   })
 })

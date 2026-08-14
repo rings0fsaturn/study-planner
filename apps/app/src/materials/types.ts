@@ -56,6 +56,10 @@ export interface MaterialRecord {
   contentVersion: string
   replacedAt: string | null
   estimatedMinutes: number | null
+  uploadCompleteAt: string | null
+  chunkCount: number
+  groundingVersion: string | null
+  extractedTextPath: string | null
   createdAt: string
   updatedAt: string
 }
@@ -73,6 +77,16 @@ export interface MaterialReplaceInput {
   kind: MaterialSourceKind
   source: string
   estimatedMinutes?: number | null
+}
+
+/** Partial extracted content surfaced by the service while processing. */
+export interface MaterialContentPreview {
+  materialId: string
+  state: IngestionState
+  previewText: string
+  chunkCount: number
+  ready: boolean
+  updatedAt: string
 }
 
 export type MaterialServiceErrorCode =

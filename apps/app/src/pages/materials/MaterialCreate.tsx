@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import '../../materials/materials.css'
@@ -9,7 +9,7 @@ import {
 } from '../../materials/types'
 
 const CREATE_SOURCES: Array<{ kind: MaterialSourceKind; description: string }> = [
-  { kind: 'file', description: 'Register a PDF document. Upload arrives with the next slice.' },
+  { kind: 'file', description: 'Upload a PDF to your private library and process it server-side.' },
   { kind: 'url', description: 'Paste a web article or documentation link.' },
   { kind: 'manual', description: 'Type or paste raw text directly.' },
   { kind: 'youtube', description: 'Use a public YouTube transcript.' },
@@ -23,11 +23,13 @@ export function MaterialCreate() {
   const [kind, setKind] = useState<MaterialSourceKind | null>(null)
   const [title, setTitle] = useState('')
   const [source, setSource] = useState('')
+  const [file, setFile] = useState<File | null>(null)
   const [estimatedMinutes, setEstimatedMinutes] = useState('60')
   const [titleError, setTitleError] = useState<string | null>(null)
   const [sourceError, setSourceError] = useState<string | null>(null)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function validate(): boolean {
     let valid = true
@@ -37,7 +39,11 @@ export function MaterialCreate() {
       setTitleError('Give this material a title.')
       valid = false
     }
-    if (kind && kind !== 'manual' && source.trim() === '') {
+    if (kind === 'file' && !file) {
+      setSourceError('Choose a PDF file to upload.')
+      valid = false
+    }
+    if (kind && kind !== 'file' && kind !== 'manual' && source.trim() === '') {
       setSourceError('A source is required for this material type.')
       valid = false
     }
@@ -53,15 +59,38 @@ export function MaterialCreate() {
         clientId: crypto.randomUUID(),
         title: title.trim(),
         kind,
-        source: source.trim(),
+        source: kind === 'file' && file ? file.name : source.trim(),
         estimatedMinutes: estimatedMinutes === '' ? null : Number(estimatedMinutes),
       })
+      if (kind === 'file' && file) {
+        try {
+          await client.uploadMaterialFile(created.id, file)
+          await client.completeUpload(created.id)
+        } catch {
+          await client.markUploadFailed(
+            created.id,
+            'Upload failed. Check the connection and retry from the material page.',
+          )
+          navigate(`/materials/${created.id}`, {
+            replace: Boolean(params.get('from')),
+          })
+          return
+        }
+      }
       navigate(`/materials/${created.id}`, {
         replace: Boolean(params.get('from')),
       })
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'Could not create material')
       setBusy(false)
+    }
+  }
+
+  function pickFile(event: React.ChangeEvent<HTMLInputElement>) {
+    const next = event.target.files?.[0] ?? null
+    setFile(next)
+    if (next && title.trim() === '') {
+      setTitle(next.name.replace(/\.[^.]+$/, ''))
     }
   }
 
@@ -107,7 +136,24 @@ export function MaterialCreate() {
             />
             {titleError && <div className="field-helper error">{titleError}</div>}
           </div>
-          {kind !== 'manual' && (
+          {kind === 'file' && (
+            <div className="field-group" style={{ maxWidth: '100%' }}>
+              <label className="field-label" htmlFor="material-file">
+                PDF file
+              </label>
+              <input
+                id="material-file"
+                ref={fileInputRef}
+                className={`field${sourceError ? ' has-error' : ''}`}
+                type="file"
+                accept="application/pdf"
+                onChange={pickFile}
+              />
+              {sourceError && <div className="field-helper error">{sourceError}</div>}
+              {file && <div className="field-helper">Uploading {file.name} to your private library.</div>}
+            </div>
+          )}
+          {kind !== 'file' && kind !== 'manual' && (
             <div className="field-group" style={{ maxWidth: '100%' }}>
               <label className="field-label" htmlFor="material-source">
                 {SOURCE_FIELDS[kind].label}

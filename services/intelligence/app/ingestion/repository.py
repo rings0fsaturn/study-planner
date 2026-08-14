@@ -1,0 +1,455 @@
+"""Server-owned persistence access for the ingestion worker.
+
+All access runs through Supabase REST with the service role; every query is
+explicitly owner-scoped by `user_id`. Tests inject in-memory doubles.
+"""
+
+from __future__ import annotations
+
+from typing import Protocol
+
+import httpx
+
+from .embeddings import EMBEDDING_DIMENSIONS
+from .models import ContentChunk, IngestionError, IngestionJob, Material
+
+MATERIALS_TABLE = "materials"
+CHUNKS_TABLE = "content_chunks"
+JOBS_TABLE = "ingestion_jobs"
+
+
+class IngestionRepo(Protocol):
+    def get_material(self, material_id: str) -> Material: ...
+    def set_material_state(
+        self,
+        material_id: str,
+        state: str,
+        progress: float,
+        error_code: str | None = None,
+        error_message: str | None = None,
+        retryable: bool = False,
+        chunk_count: int | None = None,
+        grounding_version: str | None = None,
+        extracted_text_path: str | None = None,
+    ) -> None: ...
+    def get_job(self, job_id: str) -> IngestionJob: ...
+    def set_job_running(self, job_id: str) -> None: ...
+    def set_job_succeeded(self, job_id: str, result_id: str) -> None: ...
+    def set_job_failed(
+        self,
+        job_id: str,
+        code: str,
+        message: str,
+        retryable: bool = False,
+    ) -> None: ...
+    def publish_ready(
+        self,
+        material_id: str,
+        job_id: str,
+        chunk_count: int,
+        grounding_version: str,
+        result_id: str,
+    ) -> None: ...
+    def replace_chunks(
+        self, material_id: str, chunks: list[ContentChunk], owner_id: str
+    ) -> None: ...
+    def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]: ...
+    def unembedded_chunk_count(self, material_id: str) -> int: ...
+    def all_chunk_count(self, material_id: str) -> int: ...
+    def update_chunk_embedding(self, chunk_id: str, embedding: list[float]) -> None: ...
+    def delete_material_chunks(self, material_id: str) -> None: ...
+
+
+class StorageClient(Protocol):
+    def download(self, path: str) -> bytes: ...
+    def upload(self, path: str, data: bytes, content_type: str) -> None: ...
+
+
+def _material_from_row(row: dict) -> Material:
+    return Material(
+        id=row["id"],
+        owner_id=row["user_id"],
+        title=row.get("title") or "",
+        kind=row.get("kind") or "manual",
+        source=row.get("source") or "",
+        ingestion_state=row.get("ingestion_state") or "pending",
+        ingestion_progress=float(row.get("ingestion_progress") or 0),
+        ingestion_error=row.get("ingestion_error"),
+        upload_complete_at=row.get("upload_complete_at"),
+        content_version=row.get("content_version") or "",
+        chunk_count=int(row.get("chunk_count") or 0),
+        grounding_version=row.get("grounding_version"),
+        extracted_text_path=row.get("extracted_text_path"),
+        created_at=row.get("created_at") or "",
+        updated_at=row.get("updated_at") or "",
+    )
+
+
+def _job_from_row(row: dict) -> IngestionJob:
+    return IngestionJob(
+        id=row["id"],
+        owner_id=row["user_id"],
+        material_id=row["material_id"],
+        status=row.get("status") or "queued",
+        attempt=int(row.get("attempt") or 1),
+        correlation_id=row.get("correlation_id") or "",
+        result_id=row.get("result_id"),
+        error_code=row.get("error_code"),
+        error_message=row.get("error_message"),
+        retryable=bool(row.get("retryable")),
+        created_at=row.get("created_at") or "",
+        completed_at=row.get("completed_at"),
+    )
+
+
+class SupabaseIngestionRepo:
+    def __init__(
+        self, supabase_url: str, service_role_key: str, client: httpx.Client | None = None
+    ) -> None:
+        self._base = supabase_url.rstrip("/")
+        self._key = service_role_key
+        self._client = client
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+        }
+
+    def _get(self, url: str, headers: dict[str, str]) -> list[dict]:
+        client = self._client or httpx.Client(timeout=10.0)
+        try:
+            response = client.get(url, headers=headers)
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "storage read timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "storage read failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "storage read rejected", retryable=True)
+        return response.json()
+
+    def _post(self, url: str, payload: dict) -> None:
+        client = self._client or httpx.Client(timeout=10.0)
+        try:
+            response = client.post(url, json=payload, headers=self._headers())
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "storage write timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "storage write failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "storage write rejected", retryable=True)
+
+    def _patch(self, url: str, payload: dict) -> None:
+        client = self._client or httpx.Client(timeout=10.0)
+        try:
+            response = client.patch(url, json=payload, headers=self._headers())
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "storage update timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "storage update failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "storage update rejected", retryable=True)
+
+    def _delete(self, url: str) -> None:
+        client = self._client or httpx.Client(timeout=10.0)
+        try:
+            response = client.delete(url, headers=self._headers())
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "storage delete timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "storage delete failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "storage delete rejected", retryable=True)
+
+    def get_material(self, material_id: str) -> Material:
+        rows = self._get(
+            f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}&select=*",
+            self._headers(),
+        )
+        if not rows:
+            raise IngestionError("not_found", "material not found")
+        return _material_from_row(rows[0])
+
+    def set_material_state(
+        self,
+        material_id: str,
+        state: str,
+        progress: float,
+        error_code: str | None = None,
+        error_message: str | None = None,
+        retryable: bool = False,
+        chunk_count: int | None = None,
+        grounding_version: str | None = None,
+        extracted_text_path: str | None = None,
+    ) -> None:
+        payload: dict[str, object] = {
+            "ingestion_state": state,
+            "ingestion_progress": progress,
+            "ingestion_error": error_message if error_code else None,
+        }
+        if chunk_count is not None:
+            payload["chunk_count"] = chunk_count
+        if grounding_version is not None:
+            payload["grounding_version"] = grounding_version
+        if extracted_text_path is not None:
+            payload["extracted_text_path"] = extracted_text_path
+        self._patch(
+            f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}",
+            payload,
+        )
+
+    def get_job(self, job_id: str) -> IngestionJob:
+        rows = self._get(
+            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}&select=*",
+            self._headers(),
+        )
+        if not rows:
+            raise IngestionError("not_found", "ingestion job not found")
+        return _job_from_row(rows[0])
+
+    def set_job_running(self, job_id: str) -> None:
+        self._patch(
+            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}",
+            {"status": "running", "error_code": None, "error_message": None},
+        )
+
+    def set_job_succeeded(self, job_id: str, result_id: str) -> None:
+        self._patch(
+            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}",
+            {
+                "status": "succeeded",
+                "result_id": result_id,
+                "completed_at": _now(),
+            },
+        )
+
+    def set_job_failed(self, job_id: str, code: str, message: str, retryable: bool = False) -> None:
+        self._patch(
+            f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}",
+            {
+                "status": "failed",
+                "error_code": code,
+                "error_message": message,
+                "retryable": retryable,
+                "completed_at": _now(),
+            },
+        )
+
+    def publish_ready(
+        self,
+        material_id: str,
+        job_id: str,
+        chunk_count: int,
+        grounding_version: str,
+        result_id: str,
+    ) -> None:
+        # Transactional publish: migration 007's ingestion_publish_ready flips
+        # the material to ready and the job to succeeded in one database
+        # transaction, so a crash cannot leave the two states split.
+        client = self._client or httpx.Client(timeout=10.0)
+        try:
+            response = client.post(
+                f"{self._base}/rest/v1/rpc/ingestion_publish_ready",
+                json={
+                    "p_material_id": material_id,
+                    "p_job_id": job_id,
+                    "p_chunk_count": chunk_count,
+                    "p_grounding_version": grounding_version,
+                },
+                headers=self._headers(),
+            )
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "ready publish timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "ready publish failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "ready publish rejected", retryable=True)
+
+    def replace_chunks(
+        self, material_id: str, chunks: list[ContentChunk], owner_id: str
+    ) -> None:
+        self.delete_material_chunks(material_id)
+        if not chunks:
+            return
+        rows = [
+            {
+                "id": chunk.chunk_id,
+                "user_id": owner_id,
+                "material_id": material_id,
+                "ordinal": chunk.ordinal,
+                "text": chunk.text,
+                "start_seconds": chunk.start_seconds,
+            }
+            for chunk in chunks
+        ]
+        # PostgREST bulk insert takes a bare JSON array ({"rows": [...]} is
+        # rejected by the deployed PostgREST as an unknown column).
+        self._post(f"{self._base}/rest/v1/{CHUNKS_TABLE}", rows)
+
+    def list_unembedded_chunks(self, material_id: str, limit: int) -> list[ContentChunk]:
+        rows = self._get(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
+            f"&embedding=is.null&order=ordinal.asc&limit={limit}&select=id,ordinal,text,start_seconds",
+            self._headers(),
+        )
+        return [
+            ContentChunk(
+                chunk_id=row["id"],
+                material_id=material_id,
+                text=row.get("text") or "",
+                ordinal=int(row.get("ordinal") or 0),
+                start_seconds=row.get("start_seconds"),
+            )
+            for row in rows
+        ]
+
+    def unembedded_chunk_count(self, material_id: str) -> int:
+        rows = self._get(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
+            f"&embedding=is.null&select=id",
+            self._headers(),
+        )
+        return len(rows)
+
+    def all_chunk_count(self, material_id: str) -> int:
+        rows = self._get(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}&select=id",
+            self._headers(),
+        )
+        return len(rows)
+
+    def update_chunk_embedding(self, chunk_id: str, embedding: list[float]) -> None:
+        self._patch(
+            f"{self._base}/rest/v1/{CHUNKS_TABLE}?id=eq.{chunk_id}",
+            {"embedding": _embedding_to_halfvec(embedding)},
+        )
+
+    def delete_material_chunks(self, material_id: str) -> None:
+        self._delete(f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}")
+
+
+class SupabaseStorageClient:
+    def __init__(
+        self, supabase_url: str, service_role_key: str, bucket: str = "material-raw"
+    ) -> None:
+        self._base = supabase_url.rstrip("/")
+        self._key = service_role_key
+        self._bucket = bucket
+        self._client: httpx.Client | None = None
+
+    def _headers(self) -> dict[str, str]:
+        return {
+            "apikey": self._key,
+            "Authorization": f"Bearer {self._key}",
+        }
+
+    def download(self, path: str) -> bytes:
+        client = self._client or httpx.Client(timeout=30.0)
+        try:
+            response = client.get(
+                f"{self._base}/storage/v1/object/{self._bucket}/{path}",
+                headers=self._headers(),
+            )
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "object download timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "object download failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code == 404:
+            raise IngestionError("validation_failed", "uploaded object is missing")
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "object download rejected", retryable=True)
+        return response.content
+
+    def upload(self, path: str, data: bytes, content_type: str) -> None:
+        client = self._client or httpx.Client(timeout=30.0)
+        # The fulltext path is deterministic per material, so a redelivered
+        # extract stage re-uploads the same object. Upsert keeps the stage
+        # idempotent (the browser upload already sends upsert=true).
+        headers = {
+            **self._headers(),
+            "Content-Type": content_type,
+            "x-upsert": "true",
+        }
+        try:
+            response = client.post(
+                f"{self._base}/storage/v1/object/{self._bucket}/{path}",
+                content=data,
+                headers=headers,
+            )
+        except httpx.TimeoutException as exc:
+            raise IngestionError(
+                "provider_timeout", "object upload timed out", retryable=True
+            ) from exc
+        except httpx.HTTPError as exc:
+            raise IngestionError(
+                "provider_unavailable", "object upload failed", retryable=True
+            ) from exc
+        finally:
+            if self._client is None:
+                client.close()
+        if response.status_code >= 400:
+            raise IngestionError("provider_unavailable", "object upload rejected", retryable=True)
+
+
+def _embedding_to_halfvec(embedding: list[float]) -> str:
+    if len(embedding) != EMBEDDING_DIMENSIONS:
+        raise IngestionError("internal_error", "embedding dimension mismatch")
+    if not all(_finite(value) for value in embedding):
+        raise IngestionError("internal_error", "embedding contains non-finite values")
+    return "[" + ",".join(f"{value:.8f}" for value in embedding) + "]"
+
+
+def _finite(value: float) -> bool:
+    import math
+
+    return math.isfinite(value)
+
+
+def _now() -> str:
+    from datetime import UTC, datetime
+
+    return datetime.now(UTC).isoformat()

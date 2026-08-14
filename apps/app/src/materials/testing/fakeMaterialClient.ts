@@ -51,6 +51,10 @@ export class FakeMaterialClient {
       contentVersion: `v-${now}`,
       replacedAt: null,
       estimatedMinutes: input.estimatedMinutes ?? null,
+      uploadCompleteAt: null,
+      chunkCount: 0,
+      groundingVersion: null,
+      extractedTextPath: null,
       createdAt: now,
       updatedAt: now,
     }
@@ -94,6 +98,30 @@ export class FakeMaterialClient {
       ingestionProgress: 0,
       ingestionError: null,
     })
+  }
+
+  uploadCalls: Array<{ id: string; file: File }> = []
+  uploadError: Error | null = null
+
+  async uploadMaterialFile(id: string, file: File): Promise<void> {
+    if (this.uploadError) throw this.uploadError
+    this.uploadCalls.push({ id, file })
+  }
+
+  completeError: Error | null = null
+  completeCalls: string[] = []
+
+  async completeUpload(id: string): Promise<void> {
+    this.completeCalls.push(id)
+    if (this.completeError) throw this.completeError
+    this.patch(id, { uploadCompleteAt: new Date().toISOString() })
+  }
+
+  markFailedCalls: Array<{ id: string; message: string }> = []
+
+  async markUploadFailed(id: string, message: string): Promise<void> {
+    this.markFailedCalls.push({ id, message })
+    this.patch(id, { ingestionState: 'failed', ingestionError: message })
   }
 
   async deleteMaterial(id: string): Promise<void> {

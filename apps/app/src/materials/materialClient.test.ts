@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { MaterialClient, type MaterialTableLike } from './materialClient'
+import {
+  MaterialClient,
+  type MaterialAuthLike,
+  type MaterialRpcLike,
+  type MaterialStorageLike,
+  type MaterialTableLike,
+} from './materialClient'
 import { MaterialServiceError } from './types'
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -16,6 +22,10 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     content_version: 'v1',
     replaced_at: null,
     estimated_minutes: 420,
+    upload_complete_at: null,
+    chunk_count: 0,
+    grounding_version: null,
+    extracted_text_path: null,
     created_at: '2026-07-15T10:00:00.000Z',
     updated_at: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -241,18 +251,39 @@ describe('MaterialClient', () => {
     expect(update.content_version).toBeTruthy()
   })
 
-  it('resets a failed material to pending on retry', async () => {
-    const fake = fakeDb()
-    const client = new MaterialClient(fake.db)
+  it('retries through the DB-atomic RPC', async () => {
+    const { db } = fakeDb()
+    const rpcCalls: Array<{ fn: string; args: object }> = []
+    const rpc = {
+      rpc: vi.fn(async (fn: string, args: object) => {
+        rpcCalls.push({ fn, args })
+        return { data: 'job-2', error: null }
+      }),
+    } as unknown as MaterialRpcLike
 
+    const client = new MaterialClient(db, undefined, rpc)
     await client.retryIngestion('mat-1')
 
-    const update = fake.calls[0].args[0] as Record<string, unknown>
-    expect(update).toMatchObject({
-      ingestion_state: 'pending',
-      ingestion_progress: 0,
-      ingestion_error: null,
+    expect(rpcCalls).toEqual([{ fn: 'retry_material_ingestion', args: { p_material_id: 'mat-1' } }])
+    expect(db.from).not.toHaveBeenCalled()
+  })
+
+  it('rejects retry when the RPC surface is not configured', async () => {
+    const { db } = fakeDb()
+    const client = new MaterialClient(db)
+    await expect(client.retryIngestion('mat-1')).rejects.toMatchObject({
+      code: 'unknown',
     })
+  })
+
+  it('normalizes a retry RPC failure', async () => {
+    const { db } = fakeDb()
+    const rpc = {
+      rpc: vi.fn(async () => ({ error: { message: 'server-owned columns', code: '42501' } })),
+    } as unknown as MaterialRpcLike
+
+    const client = new MaterialClient(db, undefined, rpc)
+    await expect(client.retryIngestion('mat-1')).rejects.toMatchObject({ code: 'unauthorized' })
   })
 
   it('deletes a material by id', async () => {
@@ -331,5 +362,149 @@ describe('MaterialClient', () => {
 
     sessionUser = 'user-a'
     expect(await clientA.listMaterials()).toHaveLength(1)
+  })
+
+  it('uploads a file to the owner-scoped private path and completes the upload', async () => {
+    const { db } = fakeDb()
+    const uploads: Array<{ bucket: string; path: string; file: File; options?: object }> = []
+    const rpcCalls: Array<{ fn: string; args: object }> = []
+    const storage = {
+      from: vi.fn((bucket: string) => {
+        uploads.push({ bucket, path: '', file: new File([], 'x') })
+        uploads.pop()
+        return {
+          upload: vi.fn(async (path: string, file: File, options?: object) => {
+            uploads.push({ bucket, path, file, options })
+            return { error: null }
+          }),
+        }
+      }),
+    } as unknown as MaterialStorageLike
+    const rpc = {
+      rpc: vi.fn(async (fn: string, args: object) => {
+        rpcCalls.push({ fn, args })
+        return { error: null }
+      }),
+    } as unknown as MaterialRpcLike
+    const auth = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { user: { id: 'user-a' } } },
+        })),
+      },
+    } as unknown as MaterialAuthLike
+
+    const client = new MaterialClient(db, storage, rpc, auth)
+    const file = new File(['pdf'], 'paper.pdf', { type: 'application/pdf' })
+    await client.uploadMaterialFile('mat-1', file)
+    await client.completeUpload('mat-1')
+
+    expect(uploads).toHaveLength(1)
+    expect(uploads[0].bucket).toBe('material-raw')
+    expect(uploads[0].path).toBe('user-a/mat-1/paper.pdf')
+    expect(uploads[0].options).toEqual({ upsert: true })
+    expect(rpcCalls).toEqual([{ fn: 'complete_material_upload', args: { p_material_id: 'mat-1' } }])
+  })
+
+  it('rejects the upload without an active session', async () => {
+    const { db } = fakeDb()
+    const client = new MaterialClient(db, {} as never, {} as never, {
+      auth: {
+        getSession: vi.fn(async () => ({ data: { session: null } })),
+      },
+    } as never)
+    await expect(
+      client.uploadMaterialFile('mat-1', new File(['x'], 'a.pdf')),
+    ).rejects.toMatchObject({ code: 'unauthorized' })
+  })
+
+  it('marks a failed upload so the detail page can offer retry', async () => {
+    const fake = fakeDb()
+    const client = new MaterialClient(fake.db)
+    await client.markUploadFailed('mat-1', 'upload exploded')
+    const [updateCall] = fake.calls.filter((call) => call.op === 'update')
+    expect(updateCall.args[0]).toMatchObject({
+      ingestion_state: 'failed',
+      ingestion_error: 'upload exploded',
+    })
+  })
+
+  it('rejects the upload when storage or auth is not configured', async () => {
+    const { db } = fakeDb()
+    const client = new MaterialClient(db)
+    await expect(
+      client.uploadMaterialFile('mat-1', new File(['x'], 'a.pdf')),
+    ).rejects.toMatchObject({ code: 'unknown' })
+  })
+
+  it('normalizes a storage upload rejection', async () => {
+    const { db } = fakeDb()
+    const storage = {
+      from: vi.fn(() => ({
+        upload: vi.fn(async () => ({ error: { message: 'quota exceeded', code: '23505' } })),
+      })),
+    } as unknown as MaterialStorageLike
+    const auth = {
+      auth: {
+        getSession: vi.fn(async () => ({
+          data: { session: { user: { id: 'user-a' } } },
+        })),
+      },
+    } as unknown as MaterialAuthLike
+
+    const client = new MaterialClient(db, storage, undefined, auth)
+    await expect(
+      client.uploadMaterialFile('mat-1', new File(['x'], 'a.pdf')),
+    ).rejects.toMatchObject({ code: 'conflict' })
+  })
+
+  it('normalizes a completion RPC rejection', async () => {
+    const { db } = fakeDb()
+    const rpc = {
+      rpc: vi.fn(async () => ({ error: { message: 'material not found', code: 'PGRST116' } })),
+    } as unknown as MaterialRpcLike
+
+    const client = new MaterialClient(db, undefined, rpc)
+    await expect(client.completeUpload('mat-1')).rejects.toMatchObject({ code: 'not_found' })
+  })
+
+  it('normalizes an auth getSession failure on upload', async () => {
+    const { db } = fakeDb()
+    const storage = {
+      from: vi.fn(() => ({
+        upload: vi.fn(async () => ({ error: null })),
+      })),
+    } as unknown as MaterialStorageLike
+    const auth = {
+      auth: {
+        getSession: vi.fn(async () => {
+          throw new TypeError('network down')
+        }),
+      },
+    } as unknown as MaterialAuthLike
+
+    const client = new MaterialClient(db, storage, undefined, auth)
+    await expect(
+      client.uploadMaterialFile('mat-1', new File(['x'], 'a.pdf')),
+    ).rejects.toMatchObject({ code: 'network', retryable: true })
+  })
+
+  it('normalizes a markUploadFailed database failure', async () => {
+    const fake = fakeDb()
+    const client = new MaterialClient({
+      from: vi.fn((table: string) => {
+        expect(table).toBe('materials')
+        return {
+          update: vi.fn(() => ({
+            eq: vi.fn(async () => ({ error: { message: 'row policy violated', code: '42501' } })),
+          })),
+        }
+      }),
+    } as unknown as MaterialTableLike)
+
+    await expect(client.markUploadFailed('mat-1', 'boom')).rejects.toMatchObject({
+      code: 'unauthorized',
+    })
+    expect(fake.calls).toEqual([])
   })
 })

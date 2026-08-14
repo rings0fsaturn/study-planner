@@ -1,7 +1,7 @@
 ---
 title: study-planner-web — STATUS (read-first index)
 status: active living document
-last_updated: 2026-08-13 (material library production slice #36)
+last_updated: 2026-08-14 (material ingestion + readiness #37)
 location_note: >
   This is .work/STATUS.md — the single read-first index, living at the root of .work/ (inside the
   repo, tracked on purpose so git clean can't delete it). Paths below are relative to .work/ (non-.work
@@ -113,6 +113,8 @@ update_protocol: >
 ## Queued
 
 - **[APP][RESEARCH][KT] Phase 2 implementation tickets.** ✅ Spec #32 was split into 17 dependency-ordered GitHub issues (#33–#49) on 2026-08-12. Three prototype issues (#33–#35) now gate the unresolved Material Library, Assessment Review, and Roadmap Feedback UI surfaces. **Next frontier:** #34, #35, then #37 (ingestion) and #38 (generation).
+
+- **[APP][RESEARCH][KT] Material Ingestion and Readiness (issue #37).** 🟡 Granular test-fix-review sweep complete 2026-08-14 (gates 0-11). Migrations 005-010 pushed and live-probed: atomic `ingestion_publish_ready` RPC, duplicate-enqueue guard, BEFORE UPDATE guard on server-owned columns (dev PATCH of chunk_count 403/42501), DB-atomic `retry_material_ingestion` (double-click returns the same in-flight job; live retry loop reached ready). Real bugs fixed: YouTube transcripts (v1 snippet objects — every YouTube material was failing), chunking infinite recursion on oversized tokens, trafilatura/PDF cleaning, embedding non-numeric/non-finite leaks, worker job/material/owner binding, silent vector-count mismatch, unrecorded failures being archived, stale extract re-extraction, FastAPI retry endpoint removed (was header-only idempotency) with app moved to the RPC. New unit suites: models/extractors/chunking/embeddings/queue/repository/worker/API + previewClient/ingestionSubscription/useMaterialLibrary/client-failure-matrix; PracticeThis readiness gate; file replacement disabled (no upload path); detail-page self-stopping poll. **Service 186 passed (+5 pre-existing golden-fixture baseline, untouched) · contracts 6/6 · app 668/668 · root typecheck/lint clean · builds green · live E2E 5 passed / 2 env-gated skips with attempt-level retry assertion and zero page/console errors.** Docker start remains an operator step (`docker` CLI absent from this WSL distro). → plan [`plans/active/2026-08-14-material-ingestion-readiness/PLAN.md`](plans/active/2026-08-14-material-ingestion-readiness/PLAN.md) · log [`VERIFICATION.md`](plans/active/2026-08-14-material-ingestion-readiness/VERIFICATION.md) · handover [`handovers/2026-08-14-material-ingestion-e2e-completion.md`](handovers/2026-08-14-material-ingestion-e2e-completion.md)
 
 - **[APP] Roadmap calendar follow-ups** — [`issue 018`](specs/issues/018-roadmap-calendar-mobile-swipe-vertical-guard.md) mobile swipe vertical-intent guard (low-sev); [`issue 010`](specs/issues/010-replan-flow-with-three-options.md) build `/replan` UI on the verified Python-routed seam (gated on OQ-03 service deploy).
 - **[APP] PWA install** (manifest + service worker) — issue 013.

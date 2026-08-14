@@ -1,6 +1,13 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { supabase } from '../lib/supabase'
-import { MaterialClient, type MaterialClientLike, type MaterialTableLike } from './materialClient'
+import {
+  MaterialClient,
+  type MaterialAuthLike,
+  type MaterialClientLike,
+  type MaterialRpcLike,
+  type MaterialStorageLike,
+  type MaterialTableLike,
+} from './materialClient'
 
 interface MaterialsContextValue {
   client: MaterialClientLike
@@ -9,7 +16,12 @@ interface MaterialsContextValue {
 const MaterialsContext = createContext<MaterialsContextValue | null>(null)
 
 function defaultClient(): MaterialClient {
-  return new MaterialClient(supabase as unknown as MaterialTableLike)
+  return new MaterialClient(
+    supabase as unknown as MaterialTableLike,
+    supabase.storage as unknown as MaterialStorageLike,
+    supabase as unknown as MaterialRpcLike,
+    supabase as unknown as MaterialAuthLike,
+  )
 }
 
 interface MaterialsProviderProps {

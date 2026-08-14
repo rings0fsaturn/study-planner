@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it, afterEach, vi } from 'vitest'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MaterialDetail } from './MaterialDetail'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
@@ -9,6 +9,14 @@ import type { MaterialRecord } from '../../materials/types'
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
 }))
+
+vi.mock('../../materials/previewClient', () => ({
+  fetchMaterialContentPreview: vi.fn(),
+}))
+
+import { fetchMaterialContentPreview } from '../../materials/previewClient'
+
+const mockedPreview = fetchMaterialContentPreview as ReturnType<typeof vi.fn>
 
 function material(overrides: Partial<MaterialRecord>): MaterialRecord {
   return {
@@ -24,6 +32,10 @@ function material(overrides: Partial<MaterialRecord>): MaterialRecord {
     contentVersion: 'v1',
     replacedAt: null,
     estimatedMinutes: 420,
+    uploadCompleteAt: null,
+    chunkCount: 0,
+    groundingVersion: null,
+    extractedTextPath: null,
     createdAt: '2026-07-15T10:00:00.000Z',
     updatedAt: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -45,6 +57,14 @@ function renderDetail(client: FakeMaterialClient, materialId = 'mat-1') {
 }
 
 describe('MaterialDetail', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+  beforeEach(() => {
+    mockedPreview.mockReset()
+  })
+
   it('renders a ready material with Practice this and attach actions', async () => {
     const client = new FakeMaterialClient([material({})])
 
@@ -170,6 +190,63 @@ describe('MaterialDetail', () => {
     })
   })
 
+  it('does not offer file replacement (no upload path exists yet)', async () => {
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client)
+
+    await screen.findByText('Operating Systems — Three Easy Pieces')
+    fireEvent.click(screen.getByRole('button', { name: 'Replace keep-ID' }))
+
+    expect(screen.getByRole('button', { name: 'Web article' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Plain text' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'PDF document' })).not.toBeInTheDocument()
+  })
+
+  it('polls the row while processing and stops once ready', async () => {
+    vi.useFakeTimers()
+    const client = new FakeMaterialClient([
+      material({ ingestionState: 'extracting', ingestionProgress: 0.25 }),
+    ])
+    const getSpy = vi.spyOn(client, 'getMaterial')
+    renderDetail(client)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0)
+    })
+    expect(screen.getByText('Operating Systems — Three Easy Pieces')).toBeInTheDocument()
+    const callsAfterMount = getSpy.mock.calls.length
+
+    client.materials[0] = {
+      ...client.materials[0],
+      ingestionState: 'chunking',
+      ingestionProgress: 0.5,
+      updatedAt: '2026-07-15T10:00:06.000Z',
+    }
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(5000)
+    })
+
+    expect(getSpy.mock.calls.length).toBeGreaterThan(callsAfterMount)
+    expect(screen.getAllByText(/chunking/i).length).toBeGreaterThan(0)
+
+    client.materials[0] = {
+      ...client.materials[0],
+      ingestionState: 'ready',
+      ingestionProgress: 1,
+      updatedAt: '2026-07-15T10:00:12.000Z',
+    }
+    const callsBeforeReady = getSpy.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000)
+    })
+
+    expect(screen.getByRole('link', { name: 'Practice this' })).toBeInTheDocument()
+    // Exactly one in-flight poll may observe the ready row before the
+    // interval stops itself; nothing after that.
+    expect(getSpy.mock.calls.length).toBe(callsBeforeReady + 1)
+  })
+
   it('deletes the material from the confirm dialog and returns to the library', async () => {
     const client = new FakeMaterialClient([material({})])
 
@@ -200,5 +277,54 @@ describe('MaterialDetail', () => {
     )
 
     expect(await screen.findByRole('dialog', { name: 'Delete material' })).toBeInTheDocument()
+  })
+
+  it('shows partial extracted content while processing', async () => {
+    const client = new FakeMaterialClient([
+      material({
+        ingestionState: 'chunking',
+        ingestionProgress: 0.5,
+        extractedTextPath: 'user-a/mat-1/fulltext.txt',
+      }),
+    ])
+    mockedPreview.mockResolvedValue({
+      materialId: 'mat-1',
+      state: 'chunking',
+      previewText: 'Chapter one of the book…',
+      chunkCount: 3,
+      ready: false,
+      updatedAt: '2026-07-15T10:00:00.000Z',
+    })
+
+    renderDetail(client)
+
+    expect(await screen.findByText('Extracted content (partial — still processing)')).toBeInTheDocument()
+    expect(screen.getByText('Chapter one of the book…')).toBeInTheDocument()
+    expect(mockedPreview).toHaveBeenCalledWith('mat-1')
+  })
+
+  it('tolerates a preview failure without hiding the material', async () => {
+    const client = new FakeMaterialClient([
+      material({
+        ingestionState: 'embedding',
+        ingestionProgress: 0.7,
+        extractedTextPath: 'user-a/mat-1/fulltext.txt',
+      }),
+    ])
+    mockedPreview.mockRejectedValue(new Error('service offline'))
+
+    renderDetail(client)
+
+    expect(await screen.findByText('Content preview unavailable')).toBeInTheDocument()
+    expect(screen.getByText('Operating Systems — Three Easy Pieces')).toBeInTheDocument()
+  })
+
+  it('does not fetch a preview before extraction begins', async () => {
+    const client = new FakeMaterialClient([material({ ingestionState: 'pending' })])
+
+    renderDetail(client)
+
+    await screen.findByText('Operating Systems — Three Easy Pieces')
+    expect(mockedPreview).not.toHaveBeenCalled()
   })
 })

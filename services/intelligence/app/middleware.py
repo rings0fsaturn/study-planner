@@ -6,6 +6,7 @@ import time
 import uuid
 
 from fastapi import Request, Response
+
 from py_progress import PRODUCTION_PRIOR_STRATEGY
 
 logger = logging.getLogger("app.middleware")

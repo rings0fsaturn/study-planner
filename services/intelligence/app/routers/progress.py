@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from py_progress import compute_progress
 
 from app.schemas.progress import ProgressRequest, dump_model, to_calibration_state
 from app.serialize import to_json_value
+from py_progress import compute_progress
 
 router = APIRouter()
 

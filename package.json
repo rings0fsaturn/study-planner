@@ -12,6 +12,7 @@
     "build:marketing": "pnpm --filter @study-tracker/marketing build",
     "build:app": "pnpm --filter @study-tracker/app build",
     "dev:intelligence": "node scripts/dev-intelligence.mjs",
+    "dev:ingestion-worker": "node scripts/dev-ingestion-worker.mjs",
     "dev:full": "./full-app start full",
     "test:e2e": "playwright test -c e2e/playwright.config.ts",
     "lint": "pnpm -r run lint",

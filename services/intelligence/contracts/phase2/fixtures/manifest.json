@@ -17,5 +17,6 @@
   {"file":"guide-done.json","schema":"../gemini/guide-hint-frame.schema.json"},
   {"file":"guide-error.json","schema":"../gemini/guide-hint-frame.schema.json"},
   {"file":"provider-timeout.json","schema":"../provider-error.schema.json"},
+  {"file":"async-job-ingestion.json","schema":"../async-job.schema.json"},
   {"file":"gated-reveal.json","schema":"../gemini/gated-reveal-response.schema.json"}
 ]

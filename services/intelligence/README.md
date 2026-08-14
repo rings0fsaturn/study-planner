@@ -202,6 +202,40 @@ curl -s -X POST http://127.0.0.1:8000/v1/roadmap/regenerate \
   -d @tests/fixtures/pillar-a/roadmap/regenerate-preserves-pins.input.json
 ```
 
+## Material ingestion worker (issue #37)
+
+The worker owns deterministic extraction, cleaning, chunking, embedding
+calls, and the pgmq stage queues (`material_extract` → `material_embed` →
+`material_publish`). It is a separate process from the API and talks to
+Supabase with the service role; the API never holds service credentials.
+
+Required env for the worker:
+
+- `SUPABASE_URL` — Supabase project URL.
+- `SUPABASE_SERVICE_ROLE_KEY` — service-role key (runtime env only, never
+  committed; the worker is the only process that needs it).
+- `GEMINI_API_KEY` — Gemini key for `gemini-embedding-001` embeddings.
+  Without it, extraction/chunking still run and the embed stage fails
+  materials with a clear `provider_unavailable` error.
+
+Optional tuning: `INGESTION_BATCH_SIZE` (100), `INGESTION_VISIBILITY_SECONDS`
+(30), `INGESTION_POLL_INTERVAL_SECONDS` (1), `INGESTION_MAX_DELIVERIES` (3).
+
+Run locally:
+
+```bash
+pnpm dev:ingestion-worker
+```
+
+Run in Docker: `./docker-app start` starts the `ingestion-worker` service
+alongside the API (see `docker/.env.example` for the env keys).
+
+### Material/job API env
+
+The `/v1/materials/*` and `/v1/jobs/*` endpoints resolve Supabase through the
+caller's own access token, so the API additionally needs
+`SUPABASE_PUBLISHABLE_KEY` (anon key) for those routes.
+
 ## Test
 
 ```bash

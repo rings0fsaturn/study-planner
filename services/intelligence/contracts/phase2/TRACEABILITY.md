@@ -32,6 +32,20 @@ last_updated: 2026-08-09
 | Guide SSE framing | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `gemini/guide-hint-frame.schema.json`, `openapi.yaml`, guide fixtures |
 | Async job status and public result | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `async-job.schema.json`, `openapi.yaml` `GET /v1/jobs/{jobId}` |
 
+- **2026-08-14** Extended the material/ingestion area for issue #37: retry endpoint,
+  partial-content preview endpoint, `uploadCompleteAt` on Material, `attempt` on
+  IngestionStatus/AsyncJob, trigger-driven enqueue, upload-then-ingest for files, and
+  atomic ready publish with stale-chunk invalidation. Rationale: issues #7 and #8
+  resolutions plus grill D-01..D-05 (2026-08-14).
+- **2026-08-14** Retry ownership moved from the FastAPI endpoint (header-only
+  Idempotency-Key, no dedup) to the DB-atomic `retry_material_ingestion` RPC (owner
+  check, row lock, in-flight idempotency); the retry endpoint was removed from
+  `openapi.yaml` and the service. Ready publish moved to the transactional
+  `ingestion_publish_ready` RPC; `enqueue_material_ingestion` gained an in-flight
+  duplicate guard; server-owned material columns are protected by a BEFORE UPDATE
+  guard trigger. Rationale: gate-6/7 live probes (2026-08-14) showed double-click
+  retry could stack attempts and ready publish was two non-atomic REST updates.
+
 ## Approval rule
 
 All contract areas are approved by this pack. Decision issues remain rationale sources; implementation must not add consumer-only fields or widen server-only content.
