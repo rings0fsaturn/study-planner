@@ -2,16 +2,16 @@
 date: 2026-08-08
 mode: mid-task
 slug: prototype-wf17-build-test-fix
-topic: Recover the prototype/wf17-inline-hint-guide branch to a runnable build/test/fix loop (Phase-2 #17 inline-hint prototype)
+topic: Recover the prototype/wf17-inline-hint-guide branch to a runnable build/test/fix loop (Phase-2 #12 inline-hint prototype)
 ---
 
 ## TL;DR
 
-The `prototype/wf17-inline-hint-guide` branch (Phase-2 wayfinder **#17**, the inline-hint
+The `prototype/wf17-inline-hint-guide` branch (Phase-2 wayfinder **#12**, the inline-hint
 live-guide prototype) is **mid-build and cannot be built, typechecked, or tested** on this
 host. Three independent fault layers are blocking the loop. Your job is to clear them in
 order (Phase 0 → 1 → 2) so the **repeated build/test/fix loop runs clean** — then either
-hand back to the #17 implementer or keep iterating the prototype (Phase 3).
+hand back to the #12 implementer or keep iterating the prototype (Phase 3).
 
 **Read these first:**
 - [`../.work/plans/active/2026-08-08-prototype-wf17-build-test-fix/PLAN.md`](../.work/plans/active/2026-08-08-prototype-wf17-build-test-fix/PLAN.md) — the durable contract + phases.
@@ -42,7 +42,7 @@ Fault 3 — the only place source changes are needed for the recovery:
 Fault 2 — config fix:
 - `pnpm-workspace.yaml` lines 4–6: the `allowBuilds:` block with placeholder string values. Replace with `onlyBuiltDependencies: [esbuild, sharp]` (pnpm 10) or delete it.
 
-The prototype you're unblocking (no edits needed to make the loop run, only to iterate #17):
+The prototype you're unblocking (no edits needed to make the loop run, only to iterate #12):
 - Mount route: `apps/app/src/App.tsx:156` — `<Route path="/practice-prototype" …>`.
 - Sources: `apps/app/src/prototype/practice-guide/` — `PracticeGuidePrototype.tsx`, `VariantA_GhostText.tsx`, `VariantB_MarginRail.tsx`, `VariantC_Popover.tsx`, `useHintEngine.ts`, `hint-ladders.ts`, `PrototypeSwitcher.tsx`, `TierBits.tsx`, `prototype.css`.
 - Browse at `http://localhost:5173/study/practice-prototype?variant=A` (or `B` / `C`).
@@ -82,7 +82,7 @@ Done when: all four exit 0. Commit the source fixes.
 ```
 Done when: it reports a real pass/fail count (not 62/62 `Cannot find package 'vitest'`). After Phase 0 this is expected to clear automatically; if `@testing-library/jest-dom` still complains about vitest peers, pin it (keep the `/// <reference types="vitest/globals" />` / `@testing-library/jest-dom` refs the HEAD commit `d0aa66d` added in `apps/app/src/test/setup.ts`). Commit only if config changed.
 
-**Phase 3 (optional, the actual #17 work) — iterate the prototype.** Use the loop above. This recovery task **ends** when Phases 0–2 are green; Phase 3 is the #17 implementer's normal work.
+**Phase 3 (optional, the actual #12 work) — iterate the prototype.** Use the loop above. This recovery task **ends** when Phases 0–2 are green; Phase 3 is the #12 implementer's normal work.
 
 ## Commands cheat sheet (pnpm-on-Windows)
 ```powershell
@@ -120,4 +120,4 @@ $pnpm = "C:\Users\user\AppData\Roaming\npm\pnpm.cmd"
 ## Status row
 `.work/STATUS.md` → new **Active** row `2026-08-08-prototype-wf17-build-test-fix` (tag `[APP][INFRA]`). Flip it to Done when Phases 0–2 are green and the loop runs; the handover then moves to `handovers/archive/`.
 
-> **Update 2026-08-08:** Phases 0–2 are now green (commits `7759422`, `8ac3805`). Phase 1 needed **no source change** — the 3 tsc errors were fallout from the corrupted dependency graph, not a code-vs-types mismatch (the installed `@dnd-kit/react@0.4.0` types accept both `children` and the `DragOverlay` render-prop). Phase 2 additionally fixed one genuine pre-existing test failure (`SyncProvider.test.tsx`, Node 25 webstorage shadowing jsdom `localStorage`) via a portable guard in `apps/app/src/test/setup.ts`. Full suite: 62 files / 563 tests green; `-r typecheck`, `-r lint`, app build, marketing build all exit 0. Ready for the #17 implementer to run Phase 3.
+> **Update 2026-08-08:** Phases 0–2 are now green (commits `7759422`, `8ac3805`). Phase 1 needed **no source change** — the 3 tsc errors were fallout from the corrupted dependency graph, not a code-vs-types mismatch (the installed `@dnd-kit/react@0.4.0` types accept both `children` and the `DragOverlay` render-prop). Phase 2 additionally fixed one genuine pre-existing test failure (`SyncProvider.test.tsx`, Node 25 webstorage shadowing jsdom `localStorage`) via a portable guard in `apps/app/src/test/setup.ts`. Full suite: 62 files / 563 tests green; `-r typecheck`, `-r lint`, app build, marketing build all exit 0. Ready for the #12 implementer to run Phase 3.

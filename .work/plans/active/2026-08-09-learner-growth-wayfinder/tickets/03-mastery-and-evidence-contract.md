@@ -10,7 +10,7 @@ What does "mastery" mean for achievements, and what evidence backs each one? Dec
 
 ## Context
 
-Phase 2 (map #4) resolved that mastery is a derived projection from graded attempts ("Grading → mastery signal mapping"; estimator bake-off tracked in its #23). This ticket defines the achievement-side contract and must remain compatible with it. It gates what the shareable-evidence model can promise.
+Phase 2 (map #4) resolved that mastery is a derived projection from graded attempts ("Grading → mastery signal mapping"; estimator bake-off tracked in its #18). This ticket defines the achievement-side contract and must remain compatible with it. It gates what the shareable-evidence model can promise.
 
 ---
 Part of the Learner Growth map #__MAP__ · type: grilling (decision)

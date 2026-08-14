@@ -1,10 +1,10 @@
-// PROTOTYPE — throwaway. Host route for the #17 inline-hint live guide prototype.
+// PROTOTYPE — throwaway. Host route for the #12 inline-hint live guide prototype.
 // Answers: "What does the inline-hint live guide look and feel like?" by rendering THREE
 // structurally-different surfaces for the SAME locked concept (tiered-Socratic hints, hybrid
 // on-demand triggers, inline-hint UX), switchable via ?variant=. Mounted at /practice-prototype
 // (mirrors the existing /chart-test dev-route precedent). Delete with the ticket.
 //
-// Locked decisions this obeys (map #9): tiered-Socratic (never hands the answer) ·
+// Locked decisions this obeys (map #4): tiered-Socratic (never hands the answer) ·
 // hybrid on-demand triggers (I'm stuck + idle timer + failed-test that OFFER) ·
 // inline-hint surface (ghost text is a hint/question, never finished code/prose).
 

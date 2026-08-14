@@ -3,7 +3,7 @@
 **Task id:** `2026-08-08-prototype-wf17-build-test-fix`
 **Type:** environment + build recovery (diagnosed; fix work remains)
 **Branch:** `prototype/wf17-inline-hint-guide` (HEAD `d0aa66d`, 2026-08-05)
-**Parent context:** Phase-2 wayfinder ticket **#17 Inline-hint live guide (prototype)** — Wave 1 → see [`../2026-07-31-phase2-wayfinder/PLAN.md`](../2026-07-31-phase2-wayfinder/PLAN.md) (destination = working throwaway prototypes of the inline-hint live guide).
+**Parent context:** Phase-2 wayfinder ticket **#12 Inline-hint live guide (prototype)** — Wave 1 → see [`../2026-07-31-phase2-wayfinder/PLAN.md`](../2026-07-31-phase2-wayfinder/PLAN.md) (destination = working throwaway prototypes of the inline-hint live guide).
 **Host (diagnosis env):** Windows / PowerShell 5.1, Node v25.6.1, pnpm 10.33.2 (npm shim), no Python/uv/corepack.
 **Sibling docs:** [`VERIFICATION.md`](VERIFICATION.md) (running log + acceptance criteria) · [`../../../handovers/2026-08-08-prototype-wf17-build-test-fix-handover.md`](../../../handovers/2026-08-08-prototype-wf17-build-test-fix-handover.md) (next-session baton).
 
@@ -11,7 +11,7 @@
 
 ## Destination
 
-Bring the `prototype/wf17-inline-hint-guide` branch to the state where the **repeated build/test/fix loop runs clean**, so the #17 inline-hint prototype can actually be developed and compared across its three variants (ghost-text / margin-rail / popover):
+Bring the `prototype/wf17-inline-hint-guide` branch to the state where the **repeated build/test/fix loop runs clean**, so the #12 inline-hint prototype can actually be developed and compared across its three variants (ghost-text / margin-rail / popover):
 
 - `pnpm --filter @study-tracker/app typecheck` exits 0.
 - `pnpm --filter @study-tracker/app test` runs the suite (no `Cannot find package 'vitest'` import error).
@@ -30,7 +30,7 @@ Three independent fault layers; fixing one does not fix the others.
 ## Scope and non-goals
 
 - **In scope:** make the loop runnable on this host — fix pnpm/node_modules, fix the 3 tsc errors, document the Windows `full-app` + missing Python/uv gaps with workarounds. The handover defines the exact iteration order.
-- **Non-goals (this task):** redesigning the dnd-kit swap feature, implementing the rest of #17's content, fixing the cross-branch divergence with `main` (main is ancient; do not rebase onto it), and installing Python/uv if the user only needs the React side.
+- **Non-goals (this task):** redesigning the dnd-kit swap feature, implementing the rest of #12's content, fixing the cross-branch divergence with `main` (main is ancient; do not rebase onto it), and installing Python/uv if the user only needs the React side.
 
 ## Phases (vertical slices; do the smallest relevant check first, then broaden)
 
@@ -61,7 +61,7 @@ Resolve by reconciling the code to the **installed** `@dnd-kit/react@0.4.0` type
 - **Verify:** `pnpm --filter @study-tracker/app test` runs to completion and reports a real pass/fail count (not 62/62 import failures).
 - **Log:** VERIFICATION.md Phase 2 section + commit if config changed.
 
-### Phase 3 (Wave-1 continuation, OPTIONAL for this recovery) — Iterate the #17 prototype
+### Phase 3 (Wave-1 continuation, OPTIONAL for this recovery) — Iterate the #12 prototype
 - Only after Phases 0–2 are green. The handover is the entry point for this; the recovery task ends when the loop runs clean.
 - Prototype routes: `/study/practice-prototype?variant=A|B|C` (mounted in `apps/app/src/App.tsx:156`).
 - Prototype sources: `apps/app/src/prototype/practice-guide/` (`PracticeGuidePrototype.tsx`, `VariantA_GhostText.tsx`, `VariantB_MarginRail.tsx`, `VariantC_Popover.tsx`, `useHintEngine.ts`, `hint-ladders.ts`, `PrototypeSwitcher.tsx`, `TierBits.tsx`).

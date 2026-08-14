@@ -10,7 +10,7 @@ Running log for the `prototype/wf17-inline-hint-guide` build/test/fix recovery. 
 | 0 — Recover dependency graph + pnpm | ✅ fixed 2026-08-08 (`7759422`) |
 | 1 — Fix 3 tsc errors (swap-DnD code) | ✅ fixed 2026-08-08 (fixed by Phase 0; no source change needed) |
 | 2 — Restore test suite (vitest resolution) | ✅ fixed 2026-08-08 (`8ac3805`) |
-| 3 — Iterate #17 prototype (optional, Wave-1) | ☐ unblocked — loop runs clean |
+| 3 — Iterate #12 prototype (optional, Wave-1) | ☐ unblocked — loop runs clean |
 
 ## Acceptance criteria (done = all green)
 
@@ -46,7 +46,7 @@ Running log for the `prototype/wf17-inline-hint-guide` build/test/fix recovery. 
 
 ## Log
 - **2026-08-08** Diagnostic session: inspected code, attempted `./full-app`, `pnpm install`, `-r typecheck`, `-r lint`, `--filter @study-tracker/app test`/`build`/`dev`, `--filter @study-tracker/marketing build`. Identified the three fault layers above; wrote PLAN.md + this log + the handover baton. No source or lockfile changes made in that session (investigation only). Working-tree strays + the `design/architecture.md` modification were left untouched.
-- **2026-08-08** Implementation session: Phase 0 (`7759422`), Phase 1 (no-op, cleared by Phase 0), Phase 2 (`8ac3805`). All acceptance criteria green. Loop now runs clean; hand back to #17 implementer or continue Phase 3. Working-tree strays + `design/architecture.md` modification left untouched.
+- **2026-08-08** Implementation session: Phase 0 (`7759422`), Phase 1 (no-op, cleared by Phase 0), Phase 2 (`8ac3805`). All acceptance criteria green. Loop now runs clean; hand back to #12 implementer or continue Phase 3. Working-tree strays + `design/architecture.md` modification left untouched.
 
 ## Diagnosis — 2026-08-08 (evidence from the live host)
 
@@ -96,7 +96,7 @@ Root cause: `src/test/setup.ts` (touched by the HEAD commit `d0aa66d`) imports `
 - `packages/progress` and `packages/roadmap-engine` typecheck clean.
 
 ### Branch / STATUS context
-- This branch **is** the Phase-2 wayfinder **#17 Inline-hint live guide (prototype)** in progress (see [`../2026-07-31-phase2-wayfinder/PLAN.md`](../2026-07-31-phase2-wayfinder/PLAN.md) "Wave 1"). HEAD `df0d2ab` = "prototype(wf17): inline-hint live guide — 3 clickable surfaces"; `d0aa66d` = the test-setup touch.
+- This branch **is** the Phase-2 wayfinder **#12 Inline-hint live guide (prototype)** in progress (see [`../2026-07-31-phase2-wayfinder/PLAN.md`](../2026-07-31-phase2-wayfinder/PLAN.md) "Wave 1"). HEAD `df0d2ab` = "prototype(wf17): inline-hint live guide — 3 clickable surfaces"; `d0aa66d` = the test-setup touch.
 - Prototype mount: `apps/app/src/App.tsx:156` → `<Route path="/practice-prototype" …>` (mirrors the existing `/chart-test` dev-route precedent). Try `?variant=A|B|C`.
 - Prototype sources: `apps/app/src/prototype/practice-guide/` (VariantA ghost-text / VariantB margin-rail / VariantC popover + `useHintEngine`, `hint-ladders`, `PrototypeSwitcher`, `TierBits`, `prototype.css`).
 - Branch diverged from `06fa63f` (Merge PR #8 feature/issue-005); **`main` is far behind** (tip `ba34193` "snapshot 1st-Review deliverables…") — do **not** rebase onto main as part of this recovery.

@@ -25,9 +25,9 @@ last_updated: 2026-08-09
 | Quality telemetry | [Generation-quality evaluation harness](https://github.com/rings0fsaturn/study-planner/issues/18) | `generation-telemetry.schema.json` |
 | Durable event envelope | [Persistence & local-first fit](https://github.com/rings0fsaturn/study-planner/issues/10) | `durable-events.schema.json` |
 | Provider/service identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `service-objects.schema.json` and `gemini/` |
-| KT model and parity boundary | [KT model & adaptive-difficulty loop](https://github.com/rings0fsaturn/study-planner/issues/19) | `openapi.yaml` MasteryProjection and shared validation fixtures; no generated TS/Python types are claimed |
+| KT model and parity boundary | [KT model & adaptive-difficulty loop](https://github.com/rings0fsaturn/study-planner/issues/15) | `openapi.yaml` MasteryProjection and shared validation fixtures; no generated TS/Python types are claimed |
 | Named transformation objects | [Grounded assessment-generation pipeline](https://github.com/rings0fsaturn/study-planner/issues/13) | `content-chunk.schema.json`, `generation-blueprint.schema.json`, `question-slot.schema.json` |
-| Coding execution and public grading | [Hybrid client/server code execution](https://github.com/rings0fsaturn/study-planner/issues/14) | `coding-answer.schema.json`, `execution-result.schema.json` |
+| Coding execution and public grading | [Hybrid client/server code execution](https://github.com/rings0fsaturn/study-planner/issues/9) | `coding-answer.schema.json`, `execution-result.schema.json` |
 | Provider errors and request identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `provider-error.schema.json`, `openapi.yaml`, `gemini/` |
 | Guide SSE framing | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `gemini/guide-hint-frame.schema.json`, `openapi.yaml`, guide fixtures |
 | Async job status and public result | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `async-job.schema.json`, `openapi.yaml` `GET /v1/jobs/{jobId}` |
