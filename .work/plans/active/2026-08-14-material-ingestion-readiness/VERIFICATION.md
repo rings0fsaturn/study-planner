@@ -214,9 +214,12 @@
   change is unit-tested red-first where behavior changed.
   - **Backpressure (acceptance criterion closure):** `WorkerConfig.max_in_flight`
     (env `INGESTION_MAX_IN_FLIGHT`, default 1) bounds per-cycle work; the
-    `ingestion_poll` RPC now takes `p_qty` (migration 006 rewritten — never
-    applied anywhere, so edited in place) and the in-memory queue double honors
+    `ingestion_poll` RPC takes `p_qty` and the in-memory queue double honors
     `quantity`. Tests: poll shape + passthrough, per-cycle cap, raised cap.
+    **Correction:** migration 006 was already applied on the remote (dry-run
+    shows only 011+ pending), so the quantity parameter ships as fix-forward
+    migration `013_ingestion_poll_quantity.sql`; 006 is restored to its
+    applied form.
   - **Gemini taxonomy (embeddings.py):** 429 with `Retry-After` or a
     rate-limit message -> retryable `rate_limited` (honors `Retry-After`,
     capped at 60 s); 401/403 -> terminal operator-facing
