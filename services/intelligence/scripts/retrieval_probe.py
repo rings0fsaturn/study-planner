@@ -98,17 +98,26 @@ def fetch_chunks(client: httpx.Client, base: str, key: str, material_id: str) ->
 
 
 def rank_with_rpc(
-    client: httpx.Client, base: str, key: str, material_id: str, vector: list[float]
+    client: httpx.Client,
+    base: str,
+    key: str,
+    material_id: str,
+    vector: list[float],
+    query_text: str | None = None,
 ) -> list[dict]:
     # PostgREST takes the vector as a halfvec literal string.
     literal = "[" + ",".join(f"{value:.8f}" for value in vector) + "]"
+    payload: dict[str, object] = {
+        "query_embedding": literal,
+        "match_material_id": material_id,
+        "top_k": 50,
+    }
+    if query_text:
+        # Hybrid retrieval: the 4-arg RPC overload fuses BM25 + dense with RRF.
+        payload["query_text"] = query_text
     response = client.post(
         f"{base}/rest/v1/rpc/match_content_chunks",
-        json={
-            "query_embedding": literal,
-            "match_material_id": material_id,
-            "top_k": 50,
-        },
+        json=payload,
         headers={
             "apikey": key,
             "Authorization": f"Bearer {key}",
@@ -120,7 +129,7 @@ def rank_with_rpc(
     return response.json()
 
 
-def probe(material_id: str, question_file: str) -> str:
+def probe(material_id: str, question_file: str, hybrid: bool = False) -> str:
     load_env_file(Path(__file__).parents[1] / ".env")
     supabase_url = require_env("SUPABASE_URL").rstrip("/")
     service_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
@@ -143,6 +152,7 @@ def probe(material_id: str, question_file: str) -> str:
     lines.append(f"# Retrieval probe — `{material_id}` ({len(questions)} questions)")
     lines.append("")
     lines.append(f"- Embedded chunks available: {len(chunks)}")
+    lines.append(f"- Retrieval mode: `{'hybrid (BM25 + dense RRF)' if hybrid else 'dense-only'}`")
     lines.append("")
     lines.append("| # | question | answer chunk | rank@match | recall@1 | recall@3 | recall@5 |")
     lines.append("|---|---|---|---|---|---|---|")
@@ -150,45 +160,59 @@ def probe(material_id: str, question_file: str) -> str:
     hits: list[dict[str, Any]] = []
     for index, item in enumerate(questions, start=1):
         vector = embed_query(gemini_key, item["question"])
-        results = rank_with_rpc(client, supabase_url, service_key, material_id, vector)
+        results = rank_with_rpc(
+            client,
+            supabase_url,
+            service_key,
+            material_id,
+            vector,
+            query_text=item["question"] if hybrid else None,
+        )
 
         def _collapse(text: str) -> str:
             return re.sub(r"\s+", " ", text).strip().lower()
 
-        answer_chunk = next(
-            (
-                chunk
-                for chunk in chunks
-                if _collapse(item["answerSnippet"]) in _collapse(chunk.get("text") or "")
-            ),
-            None,
-        )
-        if answer_chunk is None:
+        # Multi-gold scoring: every chunk containing the answer snippet (or an
+        # altSnippet for questions with multiple legitimately-answerable
+        # passages) is a valid answer chunk, so a question is a hit if any gold
+        # chunk ranks in the top-k. The reported rank is the best rank across
+        # all gold chunks.
+        snippets = [item["answerSnippet"], *item.get("altSnippets", [])]
+        gold_ids = {
+            chunk["id"]
+            for chunk in chunks
+            if any(
+                _collapse(snippet) in _collapse(chunk.get("text") or "")
+                for snippet in snippets
+            )
+        }
+        if not gold_ids:
             print(f"WARNING: answer snippet for Q{index} not found in any chunk — skipping")
             continue
-        rank = next(
+        gold_by_id = {chunk["id"]: chunk for chunk in chunks}
+        best_rank = min(
             (
                 position
                 for position, row in enumerate(results, start=1)
-                if row["chunk_id"] == answer_chunk["id"]
+                if row["chunk_id"] in gold_ids
             ),
-            None,
+            default=None,
         )
         hits.append(
             {
                 "index": index,
                 "label": item["label"],
-                "answer_ordinal": answer_chunk["ordinal"],
-                "rank": rank,
+                "answer_ordinal": gold_by_id[next(iter(gold_ids))]["ordinal"],
+                "rank": best_rank,
                 "top_similarity": results[0]["similarity"] if results else None,
             }
         )
-        rank_text = str(rank) if rank is not None else "miss"
+        rank_text = str(best_rank) if best_rank is not None else "miss"
         lines.append(
-            f"| {index} | {item['label']} | {answer_chunk['ordinal']} | "
-            f"{rank_text} | {int(rank is not None and rank <= 1)} | "
-            f"{int(rank is not None and rank <= 3)} | "
-            f"{int(rank is not None and rank <= 5)} |"
+            f"| {index} | {item['label']} | {gold_by_id[next(iter(gold_ids))]['ordinal']} | "
+            f"{rank_text} | {int(best_rank is not None and best_rank <= 1)} | "
+            f"{int(best_rank is not None and best_rank <= 3)} | "
+            f"{int(best_rank is not None and best_rank <= 5)} |"
         )
 
     lines.append("")
@@ -214,8 +238,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Embedding retrieval-quality probe")
     parser.add_argument("material_id", help="materials.id to probe")
     parser.add_argument("--questions", default="probe_questions.json", help="question set file")
+    parser.add_argument(
+        "--hybrid", action="store_true", help="use hybrid BM25 + dense RRF retrieval"
+    )
     args = parser.parse_args()
-    print(probe(args.material_id, args.questions))
+    print(probe(args.material_id, args.questions, hybrid=args.hybrid))
 
 
 if __name__ == "__main__":

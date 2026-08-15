@@ -42,12 +42,18 @@
   {
     "label": "balanced scorecard drawback",
     "question": "What is one potential drawback of using a balanced scorecard approach?",
-    "answerSnippet": "Potential conflict between measures"
+    "answerSnippet": "Potential conflict between measures",
+    "altSnippets": [
+      "the first six disadvantages discussed for the balanced scorecard are relevant here"
+    ]
   },
   {
     "label": "kaizen vs standard costing",
     "question": "How are employees treated differently under Kaizen costing compared with standard costing?",
-    "answerSnippet": "empowered and trusted to make positive changes"
+    "answerSnippet": "empowered and trusted to make positive changes",
+    "altSnippets": [
+      "standard costing is used to control costs whereas kaizen costing has the advantage of focusing on cost reductions"
+    ]
   },
   {
     "label": "jit production speed",
@@ -66,8 +72,8 @@
   },
   {
     "label": "transfer price profit movement",
-    "question": "Why does the choice of transfer price matter in a divisionalised organisation (see the illustration of interdependent divisions)?",
-    "answerSnippet": "effectively move profit from one division to another. illustration"
+    "question": "Why does the choice of transfer price matter in a divisionalised organisation?",
+    "answerSnippet": "Transfer prices – How transfer prices should be set as these effectively move profit from one division to another"
   },
   {
     "label": "divisional profitability measures",
@@ -78,5 +84,78 @@
     "label": "residual income appraisal",
     "question": "Which divisional performance measure subtracts imputed interest on capital employed from operating profit?",
     "answerSnippet": "less imputed interest (capital employed"
+  },
+  {
+    "label": "maximin decision rule",
+    "question": "Under uncertainty, which decision rule considers the worst case for each option and then picks the option with the best worst case?",
+    "answerSnippet": "The maximin rule looks at the worst possible outcome for each course of action and selects the alternative"
+  },
+  {
+    "label": "minimax regret strategy",
+    "question": "Under uncertainty, which approach minimises the largest loss of opportunity that could follow from choosing wrongly?",
+    "answerSnippet": "The minimax regret strategy is the one that minimises the maximum regret (opportunity cost)"
+  },
+  {
+    "label": "mis definition",
+    "question": "In management accounting, what is the role of the information system built to support planning and control?",
+    "answerSnippet": "a management accounting information system is an information system (is) capable of producing performance and control information that is consistent with the objectives of the management accountant"
+  },
+  {
+    "label": "network organisation",
+    "question": "What happens when an organisation adopts a network (or virtual) structure?",
+    "answerSnippet": "A network (or virtual) organisation occurs when an organisation outsources many of its functions to other organisations and simply exists as a network of contracts"
+  },
+  {
+    "label": "hopwood management styles",
+    "question": "Which author proposed that the way managers conduct performance appraisals falls into three distinct categories?",
+    "answerSnippet": "Hopwood identified three distinct management styles of performance appraisal"
+  },
+  {
+    "label": "vfm three es",
+    "question": "A value-for-money review measures an organisation's performance along which three dimensions?",
+    "answerSnippet": "three important aspects of performance to measure are economy, efficiency and effectiveness; the so-called ‘3 es’"
+  },
+  {
+    "label": "bcg matrix classification",
+    "question": "The Boston Consulting Group tool sorts a company's products into categories using which pair of factors?",
+    "answerSnippet": "The BCG matrix classifies an organisation’s divisions or products according to"
+  },
+  {
+    "label": "ansoff knowledge of environment",
+    "question": "In the Ansoff framework, how does a manager's understanding of the operating environment inform product and market choices?",
+    "answerSnippet": "managers can use their knowledge of the environment in which the organisation operates"
+  },
+  {
+    "label": "expert systems",
+    "question": "A system that stores specialist knowledge in a database and lets non-specialists query it is known as what type of system?",
+    "answerSnippet": "Expert systems consist of a database holding specialist knowledge, for example, on law and taxation, and allow non-experts to interrogate them"
+  },
+  {
+    "label": "good information criteria",
+    "question": "What tests can be applied to decide whether the content of a report is fit for its purpose?",
+    "answerSnippet": "is it relevant to the needs of the user, is it easy to use, is it understandable and is it adaptable to their needs"
+  },
+  {
+    "label": "normal distribution rule",
+    "question": "In a bell-shaped distribution, what fraction of the observations lie close to the centre value?",
+    "answerSnippet": "approximately 68% of data would fall within one standard deviation of the mean"
+  },
+  {
+    "label": "five ss aim",
+    "question": "Under lean thinking, what end state does the five-step workplace discipline pursue for an information system?",
+    "answerSnippet": "The 5 Ss concept is often associated with lean principles and has the aim of creating a workplace (but more specifically, here, a MIS) which is in order"
+  },
+  {
+    "label": "communication skill definition",
+    "question": "How does the APM syllabus define the professional skill of communication?",
+    "answerSnippet": "inform concisely, objectively and unambiguously, adopting a suitable style and format, using appropriate",
+    "altSnippets": [
+      "you have to express yourself clearly and convincingly through the appropriate medium while being sensitive to the needs of the intended audience"
+    ]
+  },
+  {
+    "label": "performance report qualitative info",
+    "question": "Why is evidence about things like customer satisfaction frequently omitted from performance reports?",
+    "answerSnippet": "This qualitative information is highly subjective and hard to pin down and is thus often ignored to the detriment of the quality of the performance report"
   }
 ]
