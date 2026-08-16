@@ -1,7 +1,7 @@
 ---
 title: study-planner-web — STATUS (read-first index)
 status: active living document
-last_updated: 2026-08-15 (retrieval quality program #37 follow-up)
+last_updated: 2026-08-16 (dockerized embedder + provider abstraction)
 location_note: >
   This is .work/STATUS.md — the single read-first index, living at the root of .work/ (inside the
   repo, tracked on purpose so git clean can't delete it). Paths below are relative to .work/ (non-.work
@@ -29,6 +29,8 @@ update_protocol: >
 > [`README.md`](README.md). Keep this short — push depth down and link it.
 
 ## Active
+
+- **[APP][RESEARCH] Dockerized Qwen embedder + provider-abstract ingestion (issue #37 follow-up).** ✅ Implemented + verified 2026-08-16. `services/embedder/` now reproduces the frozen retrieval baseline: 768-dim MRL truncation (`EMBEDDING_DIMENSIONS`), L2 normalization, model prompts (`is_query`), fp32 — **parity gate passed** (r@1 0.70 / r@3 0.83 / r@5 0.90 / MRR 0.790 on the 788-chunk corpus, fresh GPU embeddings) at **4,297 chunks/min on the RX 9070 XT vs 80 CPU** (54x). Ingestion is now provider-pluggable: `EMBEDDING_PROVIDER=gemini|sidecar` in `worker_main.py`, new `SidecarEmbedder` client (16 tests), telemetry decoupled from `isinstance(GeminiEmbedder)`, TPM limiter disabled in sidecar mode. Mixing guard: `materials.embedding_provider` column (migration `017`, **push pending** — no supabase CLI/DB creds on this host) written at embed start, terminal `validation_failed` on provider mismatch, `reembed_materials.py` operator script for wholesale re-embed. Service 248 passed (+5 pre-existing golden-fixture failures); ruff clean. → plan [`plans/active/2026-08-16-dockerize-embed/PLAN.md`](plans/active/2026-08-16-dockerize-embed/PLAN.md) · log [`VERIFICATION.md`](plans/active/2026-08-16-dockerize-embed/VERIFICATION.md)
 
 - **[APP][RESEARCH] Retrieval quality program — embedding bake-off follow-up (issue #37).** ✅ Implemented + verified 2026-08-15. 30-question multi-gold probe (16→30, Q15 fixed, altSnippets); hybrid BM25+dense retrieval (migrations `015`/`016`, tsvector+GIN, weighted RRF k=60 wL=0.7 pool 25) **+7 recall@3**; Qwen3-Reranker-0.6B sidecar (`services/reranker/`, compose port 8100) + typed client (6 tests) **+4 recall@1, +7 recall@3, MRR 0.858**; title-prefix and ONNX-int8 **rejected** (no gain / r@1 collapse to 0.10). Final: r@1 0.70→0.77, r@3 0.83→0.97, MRR 0.788→0.858 vs dense baseline. Service 229 passed (+5 pre-existing golden-fixture failures confirmed unrelated); repo typecheck/lint clean. → plan [`plans/active/2026-08-15-retrieval-quality-program/PLAN.md`](plans/active/2026-08-15-retrieval-quality-program/PLAN.md) · results [`research/doc/2026-08-15-retrieval-quality-program-results.md`](../research/doc/2026-08-15-retrieval-quality-program-results.md)
 

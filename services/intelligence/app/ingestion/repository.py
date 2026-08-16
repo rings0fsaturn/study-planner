@@ -32,6 +32,7 @@ class IngestionRepo(Protocol):
         chunk_count: int | None = None,
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
+        embedding_provider: str | None = None,
     ) -> None: ...
     def get_job(self, job_id: str) -> IngestionJob: ...
     def set_job_running(self, job_id: str) -> None: ...
@@ -87,6 +88,7 @@ def _material_from_row(row: dict) -> Material:
         chunk_count=int(row.get("chunk_count") or 0),
         grounding_version=row.get("grounding_version"),
         extracted_text_path=row.get("extracted_text_path"),
+        embedding_provider=row.get("embedding_provider"),
         created_at=row.get("created_at") or "",
         updated_at=row.get("updated_at") or "",
     )
@@ -188,6 +190,7 @@ class SupabaseIngestionRepo:
         chunk_count: int | None = None,
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
+        embedding_provider: str | None = None,
     ) -> None:
         payload: dict[str, object] = {
             "ingestion_state": state,
@@ -200,6 +203,8 @@ class SupabaseIngestionRepo:
             payload["grounding_version"] = grounding_version
         if extracted_text_path is not None:
             payload["extracted_text_path"] = extracted_text_path
+        if embedding_provider is not None:
+            payload["embedding_provider"] = embedding_provider
         self._patch(
             f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}",
             payload,

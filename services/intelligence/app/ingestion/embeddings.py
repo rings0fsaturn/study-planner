@@ -57,14 +57,7 @@ def l2_normalize(vector: list[float]) -> list[float]:
     return [value / norm for value in vector]
 
 
-def _parse_embedding(payload: dict) -> list[float]:
-    # batchEmbedContents returns {"embeddings": [{"values": [...]}]}; this
-    # adapter only ever calls the batch endpoint, so the single-embed shape is
-    # not accepted.
-    try:
-        values = payload["values"]
-    except (KeyError, TypeError) as exc:
-        raise IngestionError("malformed_output", "embedding response missing values") from exc
+def _parse_vector_values(values: object) -> list[float]:
     if not isinstance(values, list) or len(values) != EMBEDDING_DIMENSIONS:
         raise IngestionError("malformed_output", "embedding has wrong dimensions")
     try:
@@ -74,6 +67,17 @@ def _parse_embedding(payload: dict) -> list[float]:
     if not all(math.isfinite(value) for value in parsed):
         raise IngestionError("malformed_output", "embedding contains non-finite values")
     return parsed
+
+
+def _parse_embedding(payload: dict) -> list[float]:
+    # batchEmbedContents returns {"embeddings": [{"values": [...]}]}; this
+    # adapter only ever calls the batch endpoint, so the single-embed shape is
+    # not accepted.
+    try:
+        values = payload["values"]
+    except (KeyError, TypeError) as exc:
+        raise IngestionError("malformed_output", "embedding response missing values") from exc
+    return _parse_vector_values(values)
 
 
 def _parse_retry_after(response: httpx.Response) -> float | None:
@@ -112,6 +116,12 @@ class GeminiEmbedder:
     outcome) to the optional observer; telemetry is best-effort and never
     fails the embed.
     """
+
+    # Identifier written into materials.embedding_provider when a material is
+    # embedded by this adapter. The worker refuses to mix providers on a
+    # material, because vectors from different models do not share a space.
+    provider_name = "gemini"
+    telemetry_model = EMBEDDING_MODEL
 
     def __init__(
         self,

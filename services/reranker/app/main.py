@@ -46,14 +46,31 @@ class RerankResponse(BaseModel):
     latency_ms: float
 
 
+_device: str | None = None
+
+
+def _detect_device() -> str:
+    import torch
+
+    if torch.cuda.is_available():
+        return f"cuda:{torch.cuda.current_device()}"
+    return "cpu"
+
+
 @app.on_event("startup")
 def _load_model() -> None:
-    global _model, _batch_size
+    global _model, _batch_size, _device
     model_id = os.getenv("RERANKER_MODEL", DEFAULT_MODEL)
     _batch_size = int(os.getenv("RERANKER_BATCH_SIZE", str(DEFAULT_BATCH_SIZE)))
+    _device = _detect_device()
     started = time.perf_counter()
     _model = CrossEncoder(model_id, trust_remote_code=True)
-    logger.info("loaded %s in %.1fs", model_id, time.perf_counter() - started)
+    logger.info(
+        "loaded %s on %s in %.1fs",
+        model_id,
+        _device,
+        time.perf_counter() - started,
+    )
 
 
 @app.get("/health")
@@ -61,6 +78,7 @@ def health() -> dict:
     return {
         "status": "ok",
         "model": os.getenv("RERANKER_MODEL", DEFAULT_MODEL),
+        "device": _device,
         "loaded": _model is not None,
     }
 

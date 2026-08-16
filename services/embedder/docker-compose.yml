@@ -1,0 +1,44 @@
+services:
+  embedder:
+    build:
+      context: ../..
+      dockerfile: services/embedder/Dockerfile
+      args:
+        ROCM_IMAGE: ${ROCM_IMAGE:-rocm/pytorch:rocm7.14_ubuntu24.04_py3.12_pytorch_release_2.12.0}
+    environment:
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-Qwen/Qwen3-Embedding-0.6B}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      # HF_TOKEN is sourced from the repo's gitignored .env.git.local at launch
+      # time (exported by the operator or the launcher script); huggingface_hub
+      # picks it up automatically for model downloads and rate limits.
+      HF_TOKEN: ${HF_TOKEN:-}
+      # Mirror the working host venv: DLXG loader resolves librocdxg.so (unversioned
+      # symlink) from /opt/rocm/lib. Without it HSA falls back to KFD and dies.
+      LD_LIBRARY_PATH: /opt/rocm/lib
+    cap_add:
+      - SYS_PTRACE
+    security_opt:
+      - seccomp:unconfined
+    # NOTE: /dev/dri does not exist on this WSL2 host (verified at build time);
+    # DXG is the paravirtualized GPU device here. Hosts that expose /dev/dri
+    # (e.g. native Linux or other WSL setups) should add it back.
+    devices:
+      - /dev/dxg
+    group_add:
+      - video
+    ipc: host
+    shm_size: "8g"
+    volumes:
+      - /usr/lib/wsl:/usr/lib/wsl
+      - /usr/lib/wsl/lib/libdxcore.so:/usr/lib/libdxcore.so
+      - /opt/rocm/lib:/opt/rocm/lib:ro
+    ports:
+      - "${EMBEDDER_PORT:-8200}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else sys.exit(1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped

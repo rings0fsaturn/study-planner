@@ -337,6 +337,42 @@ def _onnx_embed(model_tokenizer: tuple, texts: list[str]) -> list[list[float]]:
     return vectors
 
 
+class SidecarEmbedder:
+    """HTTP client for the local Docker embedder sidecar (services/embedder/).
+
+    The container holds the Qwen3-Embedding model on the ROCm GPU with the
+    exact frozen-baseline configuration (768-dim MRL truncation, L2
+    normalization, model prompts); this class only turns texts into POSTs.
+    Used by the parity gate to prove the container reproduces the local
+    in-process numbers before the worker may be switched to it.
+    """
+
+    def __init__(self, base_url: str = "") -> None:
+        self.base_url = (
+            base_url or os.getenv("EMBEDDER_URL", "http://localhost:8200")
+        ).rstrip("/")
+
+    def load(self) -> float:
+        return 0.0  # the container owns the model; nothing loads in-process
+
+    def embed(self, texts: list[str], is_query: bool) -> list[list[float]]:
+        vectors: list[list[float]] = []
+        for start in range(0, len(texts), LOCAL_BATCH_SIZE):
+            batch = texts[start : start + LOCAL_BATCH_SIZE]
+            response = httpx.post(
+                f"{self.base_url}/embed",
+                json={"texts": batch, "is_query": is_query},
+                timeout=300.0,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            embeddings = payload.get("embeddings")
+            if not isinstance(embeddings, list) or len(embeddings) != len(batch):
+                raise SystemExit("sidecar embedding count mismatch")
+            vectors.extend(embeddings)
+        return vectors
+
+
 def rank_corpus(corpus: list[list[float]], query: list[float], top_k: int) -> list[int]:
     """Return corpus indices ranked by cosine similarity (vectors are normalized)."""
     import numpy as np
@@ -508,6 +544,7 @@ def run_model(
                 truncate_dim=EMBEDDING_DIMENSIONS,
                 onnx_path=onnx_path,
             ),
+            "sidecar": SidecarEmbedder(),
         }
         embedder = specs[model_name]
         result["load_s"] = embedder.load()
@@ -703,7 +740,7 @@ def main() -> None:
     parser.add_argument(
         "--models",
         default="gemini,nomic,gemma,qwen",
-        help="comma-separated: gemini,nomic,gemma,qwen",
+        help="comma-separated: gemini,nomic,gemma,qwen,sidecar",
     )
     parser.add_argument("--questions", default="probe_questions.json")
     parser.add_argument("--hybrid", action="store_true", help="fuse BM25 + dense with RRF")

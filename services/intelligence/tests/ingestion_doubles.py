@@ -83,6 +83,7 @@ class FakeIngestionRepo:
             "chunk_count": material.chunk_count,
             "grounding_version": material.grounding_version,
             "extracted_text_path": material.extracted_text_path,
+            "embedding_provider": material.embedding_provider,
             "created_at": material.created_at,
             "updated_at": material.updated_at,
         }
@@ -121,6 +122,7 @@ class FakeIngestionRepo:
         chunk_count: int | None = None,
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
+        embedding_provider: str | None = None,
     ) -> None:
         row = self.materials[material_id]
         row["ingestion_state"] = state
@@ -132,6 +134,8 @@ class FakeIngestionRepo:
             row["grounding_version"] = grounding_version
         if extracted_text_path is not None:
             row["extracted_text_path"] = extracted_text_path
+        if embedding_provider is not None:
+            row["embedding_provider"] = embedding_provider
 
     def get_job(self, job_id: str) -> IngestionJob:
         if job_id not in self.jobs:

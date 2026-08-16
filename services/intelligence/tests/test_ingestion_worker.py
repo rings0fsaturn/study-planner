@@ -983,3 +983,97 @@ def test_embed_stage_paces_calls_to_the_per_minute_budget() -> None:
 
     assert repo.materials["mat-1"]["ingestion_state"] == "ready"
     assert sleeper.sleeps, "the limiter must have paced the burst"
+
+
+class ProviderEmbedder(DeterministicEmbedder):
+    """Deterministic double carrying the provider identity like a real adapter."""
+
+    provider_name = "qwen-sidecar"
+    telemetry_model = "qwen3-embedding-0.6b"
+
+
+def test_embed_writes_embedding_provider_and_reports_sidecar_model() -> None:
+    import json as json_lib
+
+    import httpx
+
+    from app.ingestion.embeddings import EMBEDDING_DIMENSIONS
+    from app.ingestion.embeddings_sidecar import SidecarEmbedder
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        body = json_lib.loads(request.content)
+        count = len(body["texts"])
+        assert body["is_query"] is False
+        vectors = [
+            [1.0 + i * 0.001 + d * 0.0001 for d in range(EMBEDDING_DIMENSIONS)]
+            for i in range(count)
+        ]
+        return httpx.Response(200, json={"embeddings": vectors})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    embedder = SidecarEmbedder(
+        "http://embedder.test",
+        client=client,
+        token_counter=lambda text: len(text.split()),
+    )
+    worker, repo, queue, _, telemetry = make_worker_with_telemetry(
+        embedder=embedder, batch_size=2
+    )
+    material = make_material(source="one two three four five six seven eight nine ten")
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.materials["mat-1"]["embedding_provider"] == "qwen-sidecar"
+    batch_records = [r for r in telemetry.records if r.stage == "embed-batch"]
+    assert batch_records
+    assert all(record.model == "qwen3-embedding-0.6b" for record in batch_records)
+
+
+def test_embed_refuses_to_mix_providers_on_one_material() -> None:
+    worker, repo, queue, _ = make_worker(embedder=ProviderEmbedder())
+    material = Material(
+        **{
+            **vars(make_material()),
+            "ingestion_state": "embedding",
+            "embedding_provider": "gemini",
+        }
+    )
+    job_id = uuid.uuid4().hex
+    repo.seed_material(material)
+    repo.seed_job(
+        IngestionJob(
+            id=job_id,
+            owner_id=material.owner_id,
+            material_id=material.id,
+            status="queued",
+            attempt=1,
+            correlation_id=uuid.uuid4().hex,
+        )
+    )
+    queue.send(
+        EMBED_QUEUE,
+        {
+            "jobId": job_id,
+            "materialId": material.id,
+            "ownerId": material.owner_id,
+            "attempt": 1,
+            "correlationId": uuid.uuid4().hex,
+        },
+    )
+    worker.run_once(EMBED_QUEUE)
+
+    assert repo.jobs[job_id]["status"] == "failed"
+    assert repo.jobs[job_id]["error_code"] == "validation_failed"
+    assert repo.jobs[job_id]["retryable"] is False
+    assert not queue.queues.get(EMBED_QUEUE)
+
+
+def test_plain_double_without_provider_identity_still_embeds() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material()
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert repo.materials["mat-1"]["ingestion_state"] == "ready"
+    assert repo.materials["mat-1"].get("embedding_provider") is None

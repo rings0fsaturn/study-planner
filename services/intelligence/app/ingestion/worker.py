@@ -17,7 +17,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from .chunking import chunk_segments, document_segments
-from .embeddings import DEFAULT_BATCH_SIZE, EMBEDDING_MODEL, Embedder, GeminiEmbedder
+from .embeddings import DEFAULT_BATCH_SIZE, EMBEDDING_MODEL, Embedder
 from .extractors import (
     Fetcher,
     PdfTextReader,
@@ -424,20 +424,41 @@ class IngestionWorker:
     def _handle_embed(self, message) -> None:
         payload = message.payload
         material, job_id, correlation_id = self._guard(payload, {"chunking", "embedding"})
+        provider = getattr(self.embedder, "provider_name", None)
+        if (
+            provider
+            and material.embedding_provider
+            and material.embedding_provider != provider
+        ):
+            # Vectors from different models do not share an embedding space;
+            # a material must be re-embedded wholesale before a new provider
+            # may write into it (reembed_materials.py nulls chunk vectors and
+            # resets the column first).
+            raise IngestionError(
+                "validation_failed",
+                f"material was embedded with {material.embedding_provider}; "
+                f"re-embed with {provider} required before new embeddings can be written",
+            )
         self.repo.set_job_running(job_id)
         self.repo.set_material_state(material.id, "embedding", PROGRESS_BY_STAGE["embedding"])
-
-        # The production embedder reports per-call stats through its observer;
-        # the adapter turns them into telemetry records for this attempt.
-        observer = None
-        if isinstance(self.embedder, GeminiEmbedder):
-            observer = _TelemetryEmbeddingObserver(
-                self._emit_telemetry,
-                material_id=material.id,
-                owner_id=material.owner_id,
-                trace_id=correlation_id,
-                attempt=payload.get("attempt") or 1,
+        if provider:
+            self.repo.set_material_state(
+                material.id, "embedding", PROGRESS_BY_STAGE["embedding"],
+                embedding_provider=provider,
             )
+
+        # Every provider adapter reports per-call stats through its optional
+        # observer slot; the adapter turns them into telemetry records for
+        # this attempt. Test doubles without the slot skip attachment.
+        observer = _TelemetryEmbeddingObserver(
+            self._emit_telemetry,
+            material_id=material.id,
+            owner_id=material.owner_id,
+            trace_id=correlation_id,
+            attempt=payload.get("attempt") or 1,
+            model=getattr(self.embedder, "telemetry_model", EMBEDDING_MODEL),
+        )
+        if hasattr(self.embedder, "observer"):
             self.embedder.observer = observer
 
         started = time.perf_counter()
@@ -638,12 +659,14 @@ class _TelemetryEmbeddingObserver:
         owner_id: str,
         trace_id: str,
         attempt: int,
+        model: str = EMBEDDING_MODEL,
     ) -> None:
         self._emit = emit
         self._material_id = material_id
         self._owner_id = owner_id
         self._trace_id = trace_id
         self._attempt = attempt
+        self._model = model
         self.total_tokens = 0
         self.total_latency_ms = 0.0
         self.batches = 0
@@ -658,7 +681,7 @@ class _TelemetryEmbeddingObserver:
                     trace_id=self._trace_id,
                     owner_id=self._owner_id,
                     task="embedding",
-                    model=EMBEDDING_MODEL,
+                    model=self._model,
                     prompt_template_version=EMBEDDING_TEMPLATE_VERSION,
                     outcome=stats.outcome,
                     latency_ms=stats.latency_ms,

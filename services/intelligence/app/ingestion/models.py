@@ -76,6 +76,7 @@ class Material:
     chunk_count: int = 0
     grounding_version: str | None = None
     extracted_text_path: str | None = None
+    embedding_provider: str | None = None
     created_at: str = ""
     updated_at: str = ""
 
