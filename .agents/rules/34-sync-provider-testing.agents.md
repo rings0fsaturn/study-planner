@@ -8,7 +8,8 @@ description: Test provider-owned engines and browser lifecycle listeners without
 When a provider creates an engine internally, spy on the relevant class prototype before rendering.
 Restore prototype spies after each test.
 
-Dispatch `visibilitychange`, `pagehide`, and `beforeunload` manually in jsdom.
+Dispatch the lifecycle events `visibilitychange`, `pagehide`, and `beforeunload` manually in jsdom.
+`DurabilityHooks` registers all three, while `SyncProvider` acts on visibility changes and pagehide.
 Wrap manual dispatches that can trigger React state changes in `act()`.
 Dispatch the event before waiting for the assertion.
 

@@ -20,6 +20,13 @@ The Intelligence service and worker read `os.getenv` at process start, not per f
 Adding or fixing keys in `.env` files requires a restart of the process to take effect.
 Inspect a running process's actual environment with `/proc/<pid>/environ` and compare only value lengths; never print secret values.
 
+## Node on WSL
+
+Bare `node` is often missing from PATH on this host.
+The Windows pnpm shim then fails with `sh is not recognized` and `pnpm exec` cannot run its bins.
+Install a user-local Linux Node (for example a tarball under `$HOME/.local/node`, or fnm/nvm) and export `PATH="$HOME/.local/node/bin:$PATH"` before running pnpm-executed binaries such as Playwright.
+Prefer `corepack pnpm` (it downloads the pinned pnpm version as a Linux tool) or `node <path>/cli.js` directly when the Windows shim misbehaves.
+
 ## Background process safety
 
 `pkill -f` matches your own command line, so the pattern can kill the shell that is trying to kill the process.
