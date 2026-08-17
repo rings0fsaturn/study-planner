@@ -1426,7 +1426,7 @@ The material is deleted at the end of the command; if the run fails mid-way, evi
 
 ### Phase 5: Non-destructive mixing-guard probe (live)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 1ac9997
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~80 lines
 
@@ -1590,7 +1590,9 @@ The synthetic rows are deleted by the command; if it crashes before cleanup, del
 
 #### Notes (filled in during implementation)
 
-*(empty)*
+- Code + unit tests landed in `1ac9997`; the live guard-probe run is deferred to Phase 6 close-out per the plan's Step 2. Dev account owner UUID for the probe: `29288e28-d6ff-45c7-b750-ba43f7452409`.
+- Dropped the plan's `telemetry = client.get(...generation_telemetry...)` query in `cmd_guard_probe`: the result was never used (ruff F841), and the cleanup deletes telemetry rows anyway.
+- `test_cmd_guard_probe_rejects_wrong_error_code` uses a stateful MockTransport whose first job GET flips `queued` → `failed`, so the poll loop terminates immediately with the configured `error_code`.
 
 ---
 
