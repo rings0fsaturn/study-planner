@@ -951,7 +951,7 @@ Revert `embedding_bakeoff.py` diffs (`LOCAL_BATCH_SIZE`, `SidecarEmbedder`, `mai
 
 ### Phase 3: Small legacy material re-embed (live)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 4fbb89d
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~90 lines
 
@@ -1189,7 +1189,11 @@ If the live re-embed fails mid-way: the material may be left in `embedding`/`fai
 
 #### Notes (filled in during implementation)
 
-*(empty)*
+- Code + unit tests landed in `4fbb89d`; the live operator run is deferred to Phase 6 close-out per the plan's Step 2.
+- Live probe (read-only) confirmed 11 legacy `ready`/NULL materials on the dev account, all 1-chunk E2E fixtures from prior runs (`07d62b7e`, `dafe94d4`, `5d2e9602`, `1cba60c7`, `192238f8`, `51e8d7a5`, `3be06252`, `1033c301`, `66a1b8eb`, `4f3af3c3`, `70169652`); the ACCA frozen material is excluded via `CANDIDATE_EXCLUDED_IDS`. The runner will pick the smallest (`chunk_count.asc`) eligible one at Phase 6.
+- Owner UUID for the dev account: `29288e28-d6ff-45c7-b750-ba43f7452409` (resolved from materials.user_id; used by Phase 5 guard-probe).
+- `_pick_candidate` relies on the server's `order=chunk_count.asc`; the unit test fixture sorts its rows to simulate the server ordering.
+- Subprocess python paths in `cmd_reembed` use the repo-root venv (`parents[3] / ".venv"`); the plan's `parents[1] / ".venv"` resolves to the nonexistent `services/intelligence/.venv`.
 
 ---
 
