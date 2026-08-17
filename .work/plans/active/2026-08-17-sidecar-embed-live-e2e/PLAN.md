@@ -1199,7 +1199,7 @@ If the live re-embed fails mid-way: the material may be left in `embedding`/`fai
 
 ### Phase 4: 572-page PDF ingestion through the sidecar (live)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 6b7ab0f
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~110 lines
 
@@ -1418,7 +1418,9 @@ The material is deleted at the end of the command; if the run fails mid-way, evi
 
 #### Notes (filled in during implementation)
 
-*(empty)*
+- Code + unit tests landed in `6b7ab0f`; the live PDF run is deferred to Phase 6 close-out per the plan's Step 2.
+- Verified live contracts before writing the code: `material-raw` bucket, storage path `<ownerId>/<materialId>/<fileName>` (repository.py:397-456, materialClient.ts:330), `ingestion_send(p_queue, p_payload)` RPC (queue.py:77), `ingestion_jobs` columns (`kind='ingestion'`, `status='queued'`, `attempt`, `correlation_id`; unique `(material_id, attempt)`), `content_chunks` `skipped` (migration 012) and `embedding` columns, and the worker's `_FileSourceReader` reading `{owner}/{id}/{source}` (worker.py:108-115). The worker chains extract → chunk → embed → publish internally, so the runner only enqueues `material_extract`.
+- Owner resolution: `--owner-id` takes precedence; otherwise `E2E_LIVE_EMAIL` (env) is resolved via `auth/v1/admin/users`. Dev account UUID captured from materials.user_id: `29288e28-d6ff-45c7-b750-ba43f7452409`.
 
 ---
 
