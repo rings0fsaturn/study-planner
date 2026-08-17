@@ -65,10 +65,12 @@ def require_env(name: str) -> str:
 
 
 def service_headers(key: str) -> dict[str, str]:
+    # No Content-Type here: httpx sets it automatically for `json=` bodies, and a
+    # bodiless DELETE must NOT carry it (storage API: "Body cannot be empty when
+    # content-type is set").
     return {
         "apikey": key,
         "Authorization": f"Bearer {key}",
-        "Content-Type": "application/json",
     }
 
 
@@ -479,6 +481,7 @@ def _material_payload(
     return {
         "id": material_id,
         "user_id": owner_id,
+        "client_id": uuid.uuid4().hex,
         "title": title,
         "kind": "file",
         "source": pdf_name,
@@ -498,8 +501,6 @@ def cmd_pdf_run(args: argparse.Namespace) -> int:
         raise SystemExit(f"--pdf {args.pdf} not found")
     run = run_id()
     material_id = uuid.uuid4().hex
-    job_id = uuid.uuid4().hex
-    correlation_id = uuid.uuid4().hex
     with _service_client(key) as client:
         owner_id = args.owner_id or _find_owner(
             client, base, key, os.getenv("E2E_LIVE_EMAIL")
@@ -508,48 +509,30 @@ def cmd_pdf_run(args: argparse.Namespace) -> int:
         object_path = f"{owner_id}/{material_id}/{pdf.name}"
         upload = client.post(
             f"{base}/storage/v1/object/material-raw/{object_path}",
-            headers={**service_headers(key), "x-upsert": "true"},
+            headers={**service_headers(key), "x-upsert": "true", "Content-Type": "application/pdf"},
             content=pdf.read_bytes(),
         )
         if upload.status_code >= 400:
             raise SystemExit(f"storage upload failed: {upload.status_code} {upload.text[:300]}")
-        # 2) Material row.
+        # 2) Material row in `pending` with upload_complete_at set. The
+        #    `materials_enqueue_ingestion` trigger (migration 005) then creates
+        #    the job row and enqueues material_extract itself; a manual job
+        #    insert would duplicate the (material_id, attempt) unique row (409).
         client.post(
             f"{base}/rest/v1/materials",
             json=_material_payload(base, key, material_id, owner_id, args.title, pdf.name),
         ).raise_for_status()
-        # 3) Job row.
-        client.post(
+        # 3) Read back the trigger-created job for the manifest (correlation id).
+        jobs = client.get(
             f"{base}/rest/v1/ingestion_jobs",
-            json={
-                "id": job_id,
-                "user_id": owner_id,
-                "material_id": material_id,
-                "kind": "ingestion",
-                "status": "queued",
-                "attempt": 1,
-                "correlation_id": correlation_id,
-            },
-        ).raise_for_status()
-        # 4) Enqueue extract (worker consumes it in sidecar mode).
-        client.post(
-            f"{base}/rest/v1/rpc/ingestion_send",
-            json={
-                "p_queue": "material_extract",
-                "p_payload": {
-                    "jobId": job_id,
-                    "materialId": material_id,
-                    "ownerId": owner_id,
-                    "attempt": 1,
-                    "correlationId": correlation_id,
-                    "kind": "file",
-                    "title": args.title,
-                    "source": pdf.name,
-                },
-            },
-        ).raise_for_status()
-        print(f"enqueued extract: material={material_id} job={job_id}")
-        # 5) Poll to ready (the 572-page book needs several minutes; D-04).
+            params={"material_id": f"eq.{material_id}", "select": "id,correlation_id,attempt"},
+        ).json()
+        if not jobs:
+            raise SystemExit("trigger did not create an ingestion job for the material")
+        job_id = jobs[0]["id"]
+        correlation_id = jobs[0]["correlation_id"]
+        print(f"trigger enqueued extract: material={material_id} job={job_id}")
+        # 4) Poll to ready (the 572-page book needs several minutes; D-04).
         post = _poll_material(client, base, key, material_id, timeout_s=2400.0)
         chunks = client.get(
             f"{base}/rest/v1/content_chunks",
@@ -616,6 +599,10 @@ def cmd_pdf_run(args: argparse.Namespace) -> int:
         client.delete(f"{base}/rest/v1/materials?id=eq.{material_id}").raise_for_status()
         client.delete(f"{base}/rest/v1/content_chunks?material_id=eq.{material_id}").raise_for_status()
         client.delete(f"{base}/rest/v1/ingestion_jobs?material_id=eq.{material_id}").raise_for_status()
+        client.delete(
+            f"{base}/storage/v1/object/material-raw/{object_path}",
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+        ).raise_for_status()
         print(f"PDF RUN OK: {len(chunks)} chunks embedded; material deleted; evidence kept")
     return 0
 
@@ -634,6 +621,7 @@ def cmd_guard_probe(args: argparse.Namespace) -> int:
             json={
                 "id": material_id,
                 "user_id": args.owner_id,
+                "client_id": uuid.uuid4().hex,
                 "title": f"E2E mixing guard probe {run}",
                 "kind": "manual",
                 "source": "",

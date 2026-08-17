@@ -143,6 +143,7 @@ def test_material_payload_shape() -> None:
     )
     assert payload["id"] == "mat-1"
     assert payload["user_id"] == "owner-1"
+    assert payload["client_id"], "client_id is NOT NULL on materials (migration 004)"
     assert payload["kind"] == "file"
     assert payload["source"] == "sample.pdf"
     assert payload["ingestion_state"] == "pending"
@@ -251,6 +252,7 @@ def test_cmd_guard_probe_creates_synthetic_rows(monkeypatch) -> None:
     assert material_posts, "no synthetic gemini-marked material row posted"
     assert material_posts[0]["ingestion_state"] == "embedding"
     assert material_posts[0]["kind"] == "manual"
+    assert material_posts[0]["client_id"], "client_id is NOT NULL on materials (migration 004)"
 
     job_posts = [b for path, b in calls if path == "/rest/v1/ingestion_jobs"]
     assert job_posts, "no job row posted"
