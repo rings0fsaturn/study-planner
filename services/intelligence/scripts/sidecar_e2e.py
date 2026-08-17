@@ -279,8 +279,181 @@ def cmd_sweep(args: argparse.Namespace) -> int:
     return 0
 
 
+CANDIDATE_EXCLUDED_IDS = {"80c8b138-b544-4095-8dc0-1c390ac70da2"}  # frozen ACCA corpus (rule 54)
+
+
+def _service_client(key: str) -> httpx.Client:
+    return httpx.Client(timeout=30.0, headers=service_headers(key))
+
+
+def _pick_candidate(
+    client: httpx.Client, base: str, key: str, min_chunks: int, max_chunks: int
+) -> dict:
+    """A ready, provider-NULL material with an inactive job, excluded IDs removed."""
+    rows = client.get(
+        f"{base}/rest/v1/materials",
+        params={
+            "ingestion_state": "eq.ready",
+            "embedding_provider": "is.null",
+            "select": "id,title,kind,chunk_count,user_id,created_at",
+            "order": "chunk_count.asc",
+        },
+    ).json()
+    candidates = [
+        row
+        for row in rows
+        if row["id"] not in CANDIDATE_EXCLUDED_IDS
+        and min_chunks <= int(row.get("chunk_count") or 0) <= max_chunks
+    ]
+    if not candidates:
+        raise SystemExit(
+            f"no disposable ready/NULL material with {min_chunks}-{max_chunks} chunks; "
+            "create one (e.g. a small manual text) and re-run (D-04)"
+        )
+    chosen = candidates[0]
+    jobs = client.get(
+        f"{base}/rest/v1/ingestion_jobs",
+        params={"material_id": f"eq.{chosen['id']}", "status": "in.(queued,running)"},
+    ).json()
+    if jobs:
+        raise SystemExit(f"candidate {chosen['id']} has an active job; pick another")
+    return chosen
+
+
+def _poll_material(
+    client: httpx.Client,
+    base: str,
+    key: str,
+    material_id: str,
+    timeout_s: float = 900.0,
+) -> dict:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        row = client.get(
+            f"{base}/rest/v1/materials",
+            params={"id": f"eq.{material_id}", "select": "*", "limit": 1},
+        ).json()
+        if row:
+            state = row[0].get("ingestion_state")
+            if state == "ready":
+                return row[0]
+            if state == "failed":
+                raise SystemExit(
+                    f"material {material_id} FAILED: "
+                    f"{row[0].get('ingestion_error')} (no auto-retry, D-08)"
+                )
+        time.sleep(5)
+    raise SystemExit(f"material {material_id} did not reach ready in {timeout_s}s")
+
+
 def cmd_reembed(args: argparse.Namespace) -> int:
-    raise NotImplementedError("implemented in Phase 3")
+    load_env_file(Path(__file__).parents[1] / ".env")
+    base = require_env("SUPABASE_URL").rstrip("/")
+    key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    run = run_id()
+    with _service_client(key) as client:
+        candidate = _pick_candidate(client, base, key, min_chunks=1, max_chunks=100)
+        material_id = candidate["id"]
+        pre = client.get(
+            f"{base}/rest/v1/materials",
+            params={"id": f"eq.{material_id}", "select": "*", "limit": 1},
+        ).json()[0]
+        pre_chunks = client.get(
+            f"{base}/rest/v1/content_chunks",
+            params={"material_id": f"eq.{material_id}", "select": "id"},
+        ).json()
+        print(
+            f"candidate: {material_id} ({candidate.get('title')!r}, "
+            f"{candidate.get('chunk_count')} chunks)"
+        )
+    # Trigger the operator script (non-interactive).
+    import subprocess
+
+    trigger = subprocess.run(
+        [
+            str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+            "scripts/reembed_materials.py",
+            "--material",
+            material_id,
+            "--provider",
+            "qwen-sidecar",
+            "--yes",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    if trigger.returncode != 0:
+        raise SystemExit(
+            f"reembed trigger failed: {trigger.stderr[-2000:] or trigger.stdout[-2000:]}"
+        )
+    with _service_client(key) as client:
+        post = _poll_material(client, base, key, material_id)
+        post_chunks = client.get(
+            f"{base}/rest/v1/content_chunks",
+            params={"material_id": f"eq.{material_id}", "select": "id,embedding,skipped"},
+        ).json()
+        nulls = [c for c in post_chunks if c.get("embedding") is None]
+        skipped = [c for c in post_chunks if c.get("skipped")]
+        problems = []
+        if post.get("embedding_provider") != "qwen-sidecar":
+            problems.append(f"provider={post.get('embedding_provider')!r}")
+        if nulls:
+            problems.append(f"{len(nulls)} NULL vectors remain")
+        if len(post_chunks) != len(pre_chunks):
+            problems.append(
+                f"chunk count changed {len(pre_chunks)} -> {len(post_chunks)}"
+            )
+        if problems:
+            raise SystemExit(f"REEMBED VERIFICATION FAILED: {'; '.join(problems)}")
+        telemetry = client.get(
+            f"{base}/rest/v1/generation_telemetry",
+            params={"material_id": f"eq.{material_id}", "order": "id.asc", "select": "*"},
+        ).json()
+        import subprocess as sp
+
+        report_md = sp.run(
+            [
+                str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+                "scripts/ingestion_report.py",
+                material_id,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        report_text = (
+            report_md.stdout
+            if report_md.returncode == 0
+            else f"(report failed: {report_md.stderr[-500:]})"
+        )
+    manifest = {
+        "run_id": run,
+        "created_at": datetime.now(UTC).isoformat(),
+        "reembed": {
+            "material_id": material_id,
+            "title": candidate.get("title"),
+            "pre_state": {
+                "ingestion_state": pre.get("ingestion_state"),
+                "embedding_provider": pre.get("embedding_provider"),
+                "chunk_count": pre.get("chunk_count"),
+            },
+            "post_state": {
+                "ingestion_state": post.get("ingestion_state"),
+                "embedding_provider": post.get("embedding_provider"),
+                "chunk_count": post.get("chunk_count"),
+                "null_vectors": len(nulls),
+                "skipped_chunks": len(skipped),
+            },
+            "telemetry_records": len(telemetry),
+            "trigger_output": trigger.stdout[-2000:],
+            "note": "material left tagged qwen-sidecar per D-07",
+        },
+        "telemetry_report_md": report_text,
+    }
+    save_evidence(run, manifest)
+    print(f"REEMBED OK: {material_id} ready with provider qwen-sidecar")
+    return 0
 
 
 def cmd_pdf_run(args: argparse.Namespace) -> int:

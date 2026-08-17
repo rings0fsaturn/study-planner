@@ -88,3 +88,48 @@ def test_cmd_sweep_parses_configs_and_aggregates(monkeypatch) -> None:
     )
     assert module.cmd_sweep(ns) == 0
     assert ("recreate", 64) in calls and ("recreate", 128) in calls
+
+
+def _materials_for_candidate_pick() -> list[dict]:
+    rows = [
+        {"id": "80c8b138-b544-4095-8dc0-1c390ac70da2", "chunk_count": 788, "title": "ACCA"},
+        {"id": "row-a", "chunk_count": 300, "title": "too big"},
+        {"id": "row-b", "chunk_count": 0, "title": "zero chunks"},
+        {"id": "row-c", "chunk_count": 42, "title": "mid"},
+        {"id": "row-d", "chunk_count": 7, "title": "smallest"},
+    ]
+    return sorted(rows, key=lambda row: row["chunk_count"])  # server orders by chunk_count.asc
+
+
+def test_pick_candidate_filters_and_orders() -> None:
+    import scripts.sidecar_e2e as module
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/rest/v1/materials":
+            return httpx.Response(200, json=_materials_for_candidate_pick())
+        if request.url.path == "/rest/v1/ingestion_jobs":
+            return httpx.Response(200, json=[])
+        return httpx.Response(404, json={})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    chosen = module._pick_candidate(client, "http://localhost", "key", 1, 100)
+    assert chosen["id"] == "row-d"
+
+
+def test_pick_candidate_rejects_active_job() -> None:
+    import pytest
+
+    import scripts.sidecar_e2e as module
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/rest/v1/materials":
+            return httpx.Response(200, json=[{"id": "row-x", "chunk_count": 3, "title": "x"}])
+        if request.url.path == "/rest/v1/ingestion_jobs":
+            return httpx.Response(
+                200, json=[{"id": "job-1", "material_id": "row-x", "status": "queued"}]
+            )
+        return httpx.Response(404, json={})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(SystemExit):
+        module._pick_candidate(client, "http://localhost", "key", 1, 100)
