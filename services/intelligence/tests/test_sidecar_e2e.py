@@ -192,3 +192,75 @@ def test_find_owner_requires_email() -> None:
     client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
     with pytest.raises(SystemExit):
         module._find_owner(client, "http://localhost", "key", None)
+
+
+def _guard_probe_transport(job_error_code="validation_failed", job_retryable=False):
+    import scripts.sidecar_e2e as module
+
+    calls: list[tuple[str, dict]] = []
+    job_state = {"status": "queued"}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.method == "POST":
+            body = json.loads(request.content or b"{}")
+            calls.append((request.url.path, body))
+        if request.method == "GET" and request.url.path == "/rest/v1/ingestion_jobs":
+            if job_state["status"] == "queued":
+                job_state["status"] = "failed"
+            return httpx.Response(
+                200,
+                json=[
+                    {
+                        "id": "job-1",
+                        "status": job_state["status"],
+                        "error_code": job_error_code,
+                        "retryable": job_retryable,
+                    }
+                ],
+            )
+        if request.method == "GET" and request.url.path == "/rest/v1/materials":
+            return httpx.Response(200, json=[{"ingestion_state": "failed"}])
+        if request.method == "GET" and request.url.path == "/rest/v1/generation_telemetry":
+            return httpx.Response(200, json=[])
+        return httpx.Response(204, json={})
+
+    return handler, calls, module
+
+
+def _run_guard_probe(monkeypatch, handler, module) -> int:
+    import argparse
+
+    monkeypatch.setenv("SUPABASE_URL", "http://localhost")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+    monkeypatch.setattr(module, "save_evidence", lambda run, m: (None, None))
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(module, "_service_client", lambda key: client)
+    ns = argparse.Namespace(owner_id="owner-1")
+    return module.cmd_guard_probe(ns)
+
+
+def test_cmd_guard_probe_creates_synthetic_rows(monkeypatch) -> None:
+    handler, calls, module = _guard_probe_transport()
+    assert _run_guard_probe(monkeypatch, handler, module) == 0
+
+    material_posts = [
+        b
+        for path, b in calls
+        if path == "/rest/v1/materials" and b.get("embedding_provider") == "gemini"
+    ]
+    assert material_posts, "no synthetic gemini-marked material row posted"
+    assert material_posts[0]["ingestion_state"] == "embedding"
+    assert material_posts[0]["kind"] == "manual"
+
+    job_posts = [b for path, b in calls if path == "/rest/v1/ingestion_jobs"]
+    assert job_posts, "no job row posted"
+    assert job_posts[0]["status"] == "queued" and job_posts[0]["attempt"] == 1
+
+    send_posts = [b for path, b in calls if path == "/rest/v1/rpc/ingestion_send"]
+    assert send_posts and send_posts[0]["p_queue"] == "material_embed"
+
+
+def test_cmd_guard_probe_rejects_wrong_error_code(monkeypatch) -> None:
+    handler, _calls, module = _guard_probe_transport(job_error_code="provider_unavailable")
+    with pytest.raises(SystemExit):
+        _run_guard_probe(monkeypatch, handler, module)

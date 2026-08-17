@@ -621,7 +621,110 @@ def cmd_pdf_run(args: argparse.Namespace) -> int:
 
 
 def cmd_guard_probe(args: argparse.Namespace) -> int:
-    raise NotImplementedError("implemented in Phase 5")
+    load_env_file(Path(__file__).parents[1] / ".env")
+    base = require_env("SUPABASE_URL").rstrip("/")
+    key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    run = run_id()
+    material_id = uuid.uuid4().hex
+    job_id = uuid.uuid4().hex
+    correlation_id = uuid.uuid4().hex
+    with _service_client(key) as client:
+        client.post(
+            f"{base}/rest/v1/materials",
+            json={
+                "id": material_id,
+                "user_id": args.owner_id,
+                "title": f"E2E mixing guard probe {run}",
+                "kind": "manual",
+                "source": "",
+                "ingestion_state": "embedding",
+                "ingestion_progress": 0.6,
+                "content_version": uuid.uuid4().hex,
+                # Synthetic marker ONLY: no Gemini vectors or API calls (D-03).
+                "embedding_provider": "gemini",
+            },
+        ).raise_for_status()
+        client.post(
+            f"{base}/rest/v1/ingestion_jobs",
+            json={
+                "id": job_id,
+                "user_id": args.owner_id,
+                "material_id": material_id,
+                "kind": "ingestion",
+                "status": "queued",
+                "attempt": 1,
+                "correlation_id": correlation_id,
+            },
+        ).raise_for_status()
+        client.post(
+            f"{base}/rest/v1/rpc/ingestion_send",
+            json={
+                "p_queue": "material_embed",
+                "p_payload": {
+                    "jobId": job_id,
+                    "materialId": material_id,
+                    "ownerId": args.owner_id,
+                    "attempt": 1,
+                    "correlationId": correlation_id,
+                },
+            },
+        ).raise_for_status()
+        # Poll the job to terminal state.
+        deadline = time.monotonic() + 300.0
+        job = None
+        while time.monotonic() < deadline:
+            rows = client.get(
+                f"{base}/rest/v1/ingestion_jobs",
+                params={"id": f"eq.{job_id}", "select": "*", "limit": 1},
+            ).json()
+            if rows:
+                job = rows[0]
+                if job.get("status") in ("succeeded", "failed", "cancelled"):
+                    break
+            time.sleep(5)
+        if not job or job.get("status") != "failed":
+            raise SystemExit(
+                f"guard probe did not fail the job: {job} (no auto-retry, D-08)"
+            )
+        problems = []
+        if job.get("error_code") != "validation_failed":
+            problems.append(f"error_code={job.get('error_code')!r}")
+        if job.get("retryable"):
+            problems.append("job marked retryable (expected terminal)")
+        material_after = client.get(
+            f"{base}/rest/v1/materials",
+            params={"id": f"eq.{material_id}", "select": "ingestion_state", "limit": 1},
+        ).json()
+        if problems:
+            raise SystemExit(f"GUARD PROBE FAILED: {'; '.join(problems)}")
+        manifest = {
+            "run_id": run,
+            "created_at": datetime.now(UTC).isoformat(),
+            "guard_probe": {
+                "material_id": material_id,
+                "job_id": job_id,
+                "correlation_id": correlation_id,
+                "owner_id": args.owner_id,
+                "synthetic_provider": "gemini",
+                "worker_provider": "qwen-sidecar",
+                "job_status": job.get("status"),
+                "error_code": job.get("error_code"),
+                "retryable": job.get("retryable"),
+                "material_state_after": (
+                    material_after[0].get("ingestion_state") if material_after else None
+                ),
+                "note": "no Gemini called; no vectors written; synthetic rows deleted below",
+            },
+        }
+        save_evidence(run, manifest)
+        # Cleanup (D-06): job, telemetry, material.
+        client.delete(f"{base}/rest/v1/ingestion_jobs?id=eq.{job_id}").raise_for_status()
+        client.delete(
+            f"{base}/rest/v1/generation_telemetry?material_id=eq.{material_id}"
+        ).raise_for_status()
+        client.delete(f"{base}/rest/v1/materials?id=eq.{material_id}").raise_for_status()
+        print("GUARD PROBE OK: validation_failed, non-retryable; synthetic rows deleted")
+    return 0
 
 
 def main() -> None:
