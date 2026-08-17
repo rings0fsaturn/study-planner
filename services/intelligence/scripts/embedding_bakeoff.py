@@ -42,6 +42,7 @@ MAX_BATCH_TOKENS = 4000
 MAX_TOKENS_PER_MINUTE = 25000
 TOP_K = 50
 LOCAL_BATCH_SIZE = 32
+SIDECAR_HTTP_BATCH_DEFAULT = int(os.getenv("SIDECAR_HTTP_BATCH_SIZE", "32"))
 SAMPLE_SIZE = 64
 MAX_MODEL_SECONDS = 40 * 60
 RERANK_CANDIDATES = 50
@@ -347,18 +348,19 @@ class SidecarEmbedder:
     in-process numbers before the worker may be switched to it.
     """
 
-    def __init__(self, base_url: str = "") -> None:
+    def __init__(self, base_url: str = "", http_batch: int | None = None) -> None:
         self.base_url = (
             base_url or os.getenv("EMBEDDER_URL", "http://localhost:8200")
         ).rstrip("/")
+        self.http_batch = http_batch or SIDECAR_HTTP_BATCH_DEFAULT
 
     def load(self) -> float:
         return 0.0  # the container owns the model; nothing loads in-process
 
     def embed(self, texts: list[str], is_query: bool) -> list[list[float]]:
         vectors: list[list[float]] = []
-        for start in range(0, len(texts), LOCAL_BATCH_SIZE):
-            batch = texts[start : start + LOCAL_BATCH_SIZE]
+        for start in range(0, len(texts), self.http_batch):
+            batch = texts[start : start + self.http_batch]
             response = httpx.post(
                 f"{self.base_url}/embed",
                 json={"texts": batch, "is_query": is_query},
@@ -499,6 +501,7 @@ def run_model(
     title_prefix: str = "",
     onnx_path: str = "",
     vector_cache: Path | None = None,
+    sidecar_batch: int | None = None,
 ) -> dict[str, Any]:
     import numpy as np
 
@@ -544,7 +547,7 @@ def run_model(
                 truncate_dim=EMBEDDING_DIMENSIONS,
                 onnx_path=onnx_path,
             ),
-            "sidecar": SidecarEmbedder(),
+            "sidecar": SidecarEmbedder(http_batch=sidecar_batch),
         }
         embedder = specs[model_name]
         result["load_s"] = embedder.load()
@@ -761,12 +764,28 @@ def main() -> None:
         help="embed with an ONNX model directory instead of sentence-transformers",
     )
     parser.add_argument("--output", default="")
+    parser.add_argument(
+        "--sidecar-batch",
+        type=int,
+        default=None,
+        help="HTTP batch size for the sidecar embedder "
+        "(default: env SIDECAR_HTTP_BATCH_SIZE or 32)",
+    )
+    parser.add_argument(
+        "--json-out",
+        default="",
+        help="write the sidecar run result dict as JSON to this path (sweep support)",
+    )
     args = parser.parse_args()
 
     load_env_file(Path(__file__).parents[1] / ".env")
     supabase_url = require_env("SUPABASE_URL").rstrip("/")
     service_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
-    gemini_key = require_env("GEMINI_API_KEY")
+    models = [name.strip() for name in args.models.split(",") if name.strip()]
+    if "gemini" in models:
+        gemini_key = require_env("GEMINI_API_KEY")
+    else:
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
     os.environ["BAKEOFF_MATERIAL_ID"] = args.material
 
     questions = load_questions(args.questions)
@@ -794,6 +813,7 @@ def main() -> None:
                 title_prefix=args.title_prefix,
                 onnx_path=args.onnx_path,
                 vector_cache=Path(args.cache) if args.cache else None,
+                sidecar_batch=args.sidecar_batch,
             )
         )
         print(f"   done in {time.perf_counter() - started:.1f}s", flush=True)
@@ -804,6 +824,11 @@ def main() -> None:
         print(f"report written to {args.output}")
     else:
         print(report)
+
+    for result in results:
+        if result.get("model") == "sidecar" and args.json_out:
+            Path(args.json_out).write_text(json.dumps(result, indent=2), encoding="utf-8")
+            print(f"sidecar result written to {args.json_out}")
 
 
 if __name__ == "__main__":

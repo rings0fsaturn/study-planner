@@ -65,3 +65,26 @@ def test_save_evidence_writes_json_and_markdown(tmp_path) -> None:
         assert "## preflight" in md_path.read_text()
     finally:
         module.EVIDENCE_DIR = _REAL  # type: ignore[attr-defined]
+
+
+def test_cmd_sweep_parses_configs_and_aggregates(monkeypatch) -> None:
+    import argparse
+
+    import scripts.sidecar_e2e as module
+
+    monkeypatch.setenv("SUPABASE_URL", "http://localhost")
+    monkeypatch.setenv("SUPABASE_SERVICE_ROLE_KEY", "test-key")
+
+    calls = []
+    monkeypatch.setattr(module, "_recreate_embedder", lambda mb: calls.append(("recreate", mb)))
+    monkeypatch.setattr(module, "_embedder_health_loaded", lambda c: {"loaded": True})
+    monkeypatch.setattr(
+        module, "_run_bakeoff", lambda a, hb, out: {"chunks_per_min": 1000 + hb, "mrr": 0.7}
+    )
+    monkeypatch.setattr(module, "save_evidence", lambda run, m: (None, None))
+
+    ns = argparse.Namespace(
+        http_batch="16,32", model_batch="64,128", material="m", questions="q.json", warm_runs=1
+    )
+    assert module.cmd_sweep(ns) == 0
+    assert ("recreate", 64) in calls and ("recreate", 128) in calls

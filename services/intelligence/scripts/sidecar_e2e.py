@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import sys
+import time
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -160,8 +161,122 @@ def cmd_preflight(args: argparse.Namespace) -> int:
     return 0
 
 
+def _embedder_health_loaded(client: httpx.Client, timeout_s: float = 300.0) -> dict:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        try:
+            health = snapshot_health(client)
+            if health.get("loaded") is True:
+                return health
+        except SystemExit:
+            pass
+        time.sleep(5)
+    raise SystemExit("embedder /health never reported loaded=True")
+
+
+def _recreate_embedder(model_batch: int) -> None:
+    """Recreate the embedder container with EMBEDDING_BATCH_SIZE (rule 54)."""
+    import subprocess
+
+    env = os.environ.copy()
+    env["EMBEDDING_BATCH_SIZE"] = str(model_batch)
+    result = subprocess.run(
+        [
+            "docker",
+            "compose",
+            "-f",
+            "services/embedder/docker-compose.yml",
+            "up",
+            "-d",
+            "--force-recreate",
+            "embedder",
+        ],
+        cwd=Path(__file__).resolve().parents[3],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=600,
+    )
+    if result.returncode != 0:
+        raise SystemExit(f"docker compose recreate failed: {result.stderr[-2000:]}")
+
+
+def _run_bakeoff(args: argparse.Namespace, http_batch: int, json_out: Path) -> dict:
+    import subprocess
+
+    cmd = [
+        str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+        "scripts/embedding_bakeoff.py",
+        "--material",
+        args.material,
+        "--models",
+        "sidecar",
+        "--questions",
+        args.questions,
+        "--sidecar-batch",
+        str(http_batch),
+        "--json-out",
+        str(json_out),
+    ]
+    if json_out.parent:
+        json_out.parent.mkdir(parents=True, exist_ok=True)
+    result = subprocess.run(
+        cmd,
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True,
+        text=True,
+        timeout=1800,
+    )
+    if result.returncode != 0:
+        return {"error": result.stderr[-4000:] or result.stdout[-4000:]}
+    return json.loads(json_out.read_text(encoding="utf-8"))
+
+
 def cmd_sweep(args: argparse.Namespace) -> int:
-    raise NotImplementedError("implemented in Phase 2")
+    load_env_file(Path(__file__).parents[1] / ".env")
+    require_env("SUPABASE_URL")
+    require_env("SUPABASE_SERVICE_ROLE_KEY")
+    run = run_id()
+    http_batches = [int(v) for v in args.http_batch.split(",") if v.strip()]
+    model_batches = [int(v) for v in args.model_batch.split(",") if v.strip()]
+    results: dict[str, dict] = {}
+    with httpx.Client(timeout=30.0) as client:
+        for model_batch in model_batches:
+            print(f"== EMBEDDING_BATCH_SIZE={model_batch} ==")
+            _recreate_embedder(model_batch)
+            health = _embedder_health_loaded(client)
+            for http_batch in http_batches:
+                runs: list[dict] = []
+                # Cold run first (fresh container load / GPU warm-up), then warm repeats.
+                for warm_index in range(args.warm_runs + 1):
+                    label = "cold" if warm_index == 0 else f"warm-{warm_index}"
+                    out = EVIDENCE_DIR / run / f"sweep-e{model_batch}-h{http_batch}-{label}.json"
+                    result = _run_bakeoff(args, http_batch, out)
+                    runs.append({"label": label, "result": result})
+                    print(
+                        f"  http={http_batch} {label}: "
+                        f"{result.get('chunks_per_min', 'ERR')} chunks/min "
+                        f"MRR={result.get('mrr', 'ERR')}"
+                    )
+                results[f"e{model_batch}-h{http_batch}"] = {
+                    "model_batch": model_batch,
+                    "http_batch": http_batch,
+                    "health": health,
+                    "runs": runs,
+                }
+    manifest = {
+        "run_id": run,
+        "created_at": datetime.now(UTC).isoformat(),
+        "sweep": {
+            "material": args.material,
+            "questions": args.questions,
+            "warm_runs": args.warm_runs,
+            "note": "baseline-only performance (D-05); ACCA corpus read-only; no DB writes",
+            "configs": results,
+        },
+    }
+    save_evidence(run, manifest)
+    return 0
 
 
 def cmd_reembed(args: argparse.Namespace) -> int:
