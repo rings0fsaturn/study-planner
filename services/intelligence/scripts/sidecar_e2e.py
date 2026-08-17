@@ -26,6 +26,7 @@ import json
 import os
 import sys
 import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -456,8 +457,167 @@ def cmd_reembed(args: argparse.Namespace) -> int:
     return 0
 
 
+def _find_owner(client: httpx.Client, base: str, key: str, email: str | None) -> str:
+    """Service-role admin lookup of the dev account id (auth/v1/admin/users)."""
+    if not email:
+        raise SystemExit("--owner-id or E2E_LIVE_EMAIL is required for pdf-run")
+    response = client.get(
+        f"{base}/auth/v1/admin/users",
+        params={"per_page": 1000},
+        headers={"apikey": key, "Authorization": f"Bearer {key}"},
+    )
+    response.raise_for_status()
+    for user in response.json().get("users", []):
+        if user.get("email") == email:
+            return user["id"]
+    raise SystemExit(f"no auth.users row for email {email!r}")
+
+
+def _material_payload(
+    base: str, key: str, material_id: str, owner_id: str, title: str, pdf_name: str
+) -> dict:
+    return {
+        "id": material_id,
+        "user_id": owner_id,
+        "title": title,
+        "kind": "file",
+        "source": pdf_name,
+        "ingestion_state": "pending",
+        "ingestion_progress": 0,
+        "content_version": uuid.uuid4().hex,
+        "upload_complete_at": datetime.now(UTC).isoformat(),
+    }
+
+
 def cmd_pdf_run(args: argparse.Namespace) -> int:
-    raise NotImplementedError("implemented in Phase 4")
+    load_env_file(Path(__file__).parents[1] / ".env")
+    base = require_env("SUPABASE_URL").rstrip("/")
+    key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    pdf = Path(args.pdf)
+    if not pdf.is_file():
+        raise SystemExit(f"--pdf {args.pdf} not found")
+    run = run_id()
+    material_id = uuid.uuid4().hex
+    job_id = uuid.uuid4().hex
+    correlation_id = uuid.uuid4().hex
+    with _service_client(key) as client:
+        owner_id = args.owner_id or _find_owner(
+            client, base, key, os.getenv("E2E_LIVE_EMAIL")
+        )
+        # 1) Upload the raw PDF (deterministic path; x-upsert per rule 36).
+        object_path = f"{owner_id}/{material_id}/{pdf.name}"
+        upload = client.post(
+            f"{base}/storage/v1/object/material-raw/{object_path}",
+            headers={**service_headers(key), "x-upsert": "true"},
+            content=pdf.read_bytes(),
+        )
+        if upload.status_code >= 400:
+            raise SystemExit(f"storage upload failed: {upload.status_code} {upload.text[:300]}")
+        # 2) Material row.
+        client.post(
+            f"{base}/rest/v1/materials",
+            json=_material_payload(base, key, material_id, owner_id, args.title, pdf.name),
+        ).raise_for_status()
+        # 3) Job row.
+        client.post(
+            f"{base}/rest/v1/ingestion_jobs",
+            json={
+                "id": job_id,
+                "user_id": owner_id,
+                "material_id": material_id,
+                "kind": "ingestion",
+                "status": "queued",
+                "attempt": 1,
+                "correlation_id": correlation_id,
+            },
+        ).raise_for_status()
+        # 4) Enqueue extract (worker consumes it in sidecar mode).
+        client.post(
+            f"{base}/rest/v1/rpc/ingestion_send",
+            json={
+                "p_queue": "material_extract",
+                "p_payload": {
+                    "jobId": job_id,
+                    "materialId": material_id,
+                    "ownerId": owner_id,
+                    "attempt": 1,
+                    "correlationId": correlation_id,
+                    "kind": "file",
+                    "title": args.title,
+                    "source": pdf.name,
+                },
+            },
+        ).raise_for_status()
+        print(f"enqueued extract: material={material_id} job={job_id}")
+        # 5) Poll to ready (the 572-page book needs several minutes; D-04).
+        post = _poll_material(client, base, key, material_id, timeout_s=2400.0)
+        chunks = client.get(
+            f"{base}/rest/v1/content_chunks",
+            params={
+                "material_id": f"eq.{material_id}",
+                "order": "ordinal.asc",
+                "select": "id,embedding,skipped",
+            },
+        ).json()
+        nulls = [c for c in chunks if c.get("embedding") is None]
+        skipped = [c for c in chunks if c.get("skipped")]
+        problems = []
+        if post.get("embedding_provider") != "qwen-sidecar":
+            problems.append(f"provider={post.get('embedding_provider')!r}")
+        if nulls:
+            problems.append(f"{len(nulls)} NULL vectors remain")
+        if len(chunks) < 100:
+            problems.append(f"suspiciously few chunks: {len(chunks)}")
+        if problems:
+            raise SystemExit(f"PDF RUN VERIFICATION FAILED: {'; '.join(problems)}")
+        telemetry = client.get(
+            f"{base}/rest/v1/generation_telemetry",
+            params={"material_id": f"eq.{material_id}", "order": "id.asc", "select": "*"},
+        ).json()
+        import subprocess as sp
+
+        report_md = sp.run(
+            [
+                str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+                "scripts/ingestion_report.py",
+                material_id,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        report_text = (
+            report_md.stdout
+            if report_md.returncode == 0
+            else f"(report failed: {report_md.stderr[-500:]})"
+        )
+        # 6) Evidence BEFORE cleanup.
+        manifest = {
+            "run_id": run,
+            "created_at": datetime.now(UTC).isoformat(),
+            "pdf_run": {
+                "material_id": material_id,
+                "job_id": job_id,
+                "correlation_id": correlation_id,
+                "owner_id": owner_id,
+                "pdf": str(pdf),
+                "title": args.title,
+                "state": post.get("ingestion_state"),
+                "provider": post.get("embedding_provider"),
+                "chunk_count": post.get("chunk_count"),
+                "null_vectors": len(nulls),
+                "skipped_chunks": len(skipped),
+                "telemetry_records": len(telemetry),
+            },
+            "telemetry_report_md": report_text,
+        }
+        json_path, md_path = save_evidence(run, manifest)
+        # 7) Cleanup (D-07): the PDF material is a throwaway.
+        client.delete(f"{base}/rest/v1/materials?id=eq.{material_id}").raise_for_status()
+        client.delete(f"{base}/rest/v1/content_chunks?material_id=eq.{material_id}").raise_for_status()
+        client.delete(f"{base}/rest/v1/ingestion_jobs?material_id=eq.{material_id}").raise_for_status()
+        print(f"PDF RUN OK: {len(chunks)} chunks embedded; material deleted; evidence kept")
+    return 0
 
 
 def cmd_guard_probe(args: argparse.Namespace) -> int:

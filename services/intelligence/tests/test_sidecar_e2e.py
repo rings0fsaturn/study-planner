@@ -133,3 +133,62 @@ def test_pick_candidate_rejects_active_job() -> None:
     client = httpx.Client(transport=httpx.MockTransport(handler))
     with pytest.raises(SystemExit):
         module._pick_candidate(client, "http://localhost", "key", 1, 100)
+
+
+def test_material_payload_shape() -> None:
+    import scripts.sidecar_e2e as module
+
+    payload = module._material_payload(
+        "http://localhost", "key", "mat-1", "owner-1", "Title", "sample.pdf"
+    )
+    assert payload["id"] == "mat-1"
+    assert payload["user_id"] == "owner-1"
+    assert payload["kind"] == "file"
+    assert payload["source"] == "sample.pdf"
+    assert payload["ingestion_state"] == "pending"
+    assert payload["ingestion_progress"] == 0
+    assert "content_version" in payload and payload["content_version"]
+    assert "upload_complete_at" in payload
+
+
+def test_find_owner_matches_email() -> None:
+    import scripts.sidecar_e2e as module
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth/v1/admin/users":
+            return httpx.Response(
+                200,
+                json={
+                    "users": [
+                        {"id": "uuid-b", "email": "b@example.com"},
+                        {"id": "uuid-a", "email": "a@example.com"},
+                    ]
+                },
+            )
+        return httpx.Response(404, json={})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    assert module._find_owner(client, "http://localhost", "key", "a@example.com") == "uuid-a"
+
+
+def test_find_owner_missing_email_raises() -> None:
+    import pytest
+
+    import scripts.sidecar_e2e as module
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json={"users": [{"id": "uuid-a", "email": "a@example.com"}]})
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(SystemExit):
+        module._find_owner(client, "http://localhost", "key", "missing@example.com")
+
+
+def test_find_owner_requires_email() -> None:
+    import pytest
+
+    import scripts.sidecar_e2e as module
+
+    client = httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200, json={})))
+    with pytest.raises(SystemExit):
+        module._find_owner(client, "http://localhost", "key", None)
