@@ -2,8 +2,11 @@
 
 ## Entry point
 
-- **Branch:** `phase2/issue-37`. **Nothing committed this session** - the diff sits
-  in the worktree (including the prior uncommitted containerization work).
+- **Branch:** `phase2/issue-37`. The work described below is **committed**:
+  `f08c47c` (feat: dockerized Qwen3 GPU embedder + provider-abstraction
+  ingestion) and `7e15ef8` (docs: rules refresh for restored WSL tooling and
+  sidecars), preceded on the branch by the retrieval/telemetry baseline
+  `f467f76`, `344798e`, `441bcd5`, `57253f8`.
 - **Plan:** `.work/plans/active/2026-08-16-dockerize-embed/PLAN.md`
 - **Running log:** same folder, `VERIFICATION.md` (all phases verified; migration pushed; rule 36 fixed).
 - **Rules to read before touching anything:** `54-embedder-gpu-container.agents.md`
@@ -98,7 +101,20 @@ Cache: `services/intelligence/.dev/bakeoff/sidecar-vectors-*.npy`.
 
 ## Open item for the next session - live re-embed E2E
 
-Prove the mixing guard + NULL-scan resume against the live project:
+**✅ DONE 2026-08-17** — closed by plan
+[`.work/plans/active/2026-08-17-sidecar-embed-live-e2e/PLAN.md`](../plans/active/2026-08-17-sidecar-embed-live-e2e/PLAN.md).
+The full sequence was run live against the hosted dev project with a sidecar-mode
+worker (`EMBEDDING_PROVIDER=sidecar`): preflight → batch-size sweep (9 configs,
+operating point `EMBEDDING_BATCH_SIZE=128` + HTTP batch 16, 4,381 warm chunks/min)
+→ small legacy re-embed (`07d62b7e-…`, now `qwen-sidecar`, 0 NULL) → 572-page PDF
+ingestion (754 chunks, `ready`, `qwen-sidecar`, 0 NULL) → non-destructive mixing
+guard probe (`validation_failed`, non-retryable, synthetic rows deleted; no Gemini
+called). Evidence: `.work/plans/active/2026-08-17-sidecar-embed-live-e2e/evidence/`
+(`20260817-100010` sweep, `20260817-101448` reembed, `20260817-102814` pdf,
+`20260817-103034` guard probe). VERIFICATION:
+`.work/plans/active/2026-08-17-sidecar-embed-live-e2e/VERIFICATION.md`.
+
+Original instructions (superseded by the runner, kept for reference):
 
 1. Start an ingestion worker in sidecar mode against the live project:
    `cd services/intelligence && EMBEDDING_PROVIDER=sidecar EMBEDDER_URL=http://localhost:8200

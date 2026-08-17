@@ -1,0 +1,201 @@
+{
+  "model": "sidecar",
+  "note": "",
+  "load_s": 0.0,
+  "corpus_wall_s": 10.79231883600005,
+  "sample_s": 0.8143510350018914,
+  "embedded": true,
+  "peak_rss_mb": 127.5859375,
+  "questions": 30,
+  "answered": 30,
+  "skipped": [],
+  "recall1": 0.7,
+  "recall3": 0.8333333333333334,
+  "recall5": 0.9,
+  "mrr": 0.7894290733421169,
+  "mean_top_sim": 0.6719470411539078,
+  "hits": [
+    {
+      "index": 1,
+      "answer_ordinal": 115,
+      "rank": 1,
+      "top_similarity": 0.6993681788444519
+    },
+    {
+      "index": 2,
+      "answer_ordinal": 115,
+      "rank": 1,
+      "top_similarity": 0.6814915537834167
+    },
+    {
+      "index": 3,
+      "answer_ordinal": 202,
+      "rank": 1,
+      "top_similarity": 0.7618483304977417
+    },
+    {
+      "index": 4,
+      "answer_ordinal": 230,
+      "rank": 1,
+      "top_similarity": 0.7388346195220947
+    },
+    {
+      "index": 5,
+      "answer_ordinal": 526,
+      "rank": 2,
+      "top_similarity": 0.5947235822677612
+    },
+    {
+      "index": 6,
+      "answer_ordinal": 270,
+      "rank": 2,
+      "top_similarity": 0.720146656036377
+    },
+    {
+      "index": 7,
+      "answer_ordinal": 716,
+      "rank": 2,
+      "top_similarity": 0.6846048831939697
+    },
+    {
+      "index": 8,
+      "answer_ordinal": 153,
+      "rank": 1,
+      "top_similarity": 0.7551107406616211
+    },
+    {
+      "index": 9,
+      "answer_ordinal": 673,
+      "rank": 1,
+      "top_similarity": 0.757644534111023
+    },
+    {
+      "index": 10,
+      "answer_ordinal": 721,
+      "rank": 1,
+      "top_similarity": 0.7941001653671265
+    },
+    {
+      "index": 11,
+      "answer_ordinal": 732,
+      "rank": 1,
+      "top_similarity": 0.6155329942703247
+    },
+    {
+      "index": 12,
+      "answer_ordinal": 693,
+      "rank": 1,
+      "top_similarity": 0.6849995851516724
+    },
+    {
+      "index": 13,
+      "answer_ordinal": 331,
+      "rank": 1,
+      "top_similarity": 0.7088190913200378
+    },
+    {
+      "index": 14,
+      "answer_ordinal": 304,
+      "rank": 2,
+      "top_similarity": 0.7418997287750244
+    },
+    {
+      "index": 15,
+      "answer_ordinal": 526,
+      "rank": 44,
+      "top_similarity": 0.762881875038147
+    },
+    {
+      "index": 16,
+      "answer_ordinal": 573,
+      "rank": 1,
+      "top_similarity": 0.6610707640647888
+    },
+    {
+      "index": 17,
+      "answer_ordinal": 135,
+      "rank": 1,
+      "top_similarity": 0.6730231046676636
+    },
+    {
+      "index": 18,
+      "answer_ordinal": 139,
+      "rank": 5,
+      "top_similarity": 0.6528066992759705
+    },
+    {
+      "index": 19,
+      "answer_ordinal": 360,
+      "rank": 1,
+      "top_similarity": 0.7665830850601196
+    },
+    {
+      "index": 20,
+      "answer_ordinal": 307,
+      "rank": 1,
+      "top_similarity": 0.7878395318984985
+    },
+    {
+      "index": 21,
+      "answer_ordinal": 494,
+      "rank": 1,
+      "top_similarity": 0.6253286600112915
+    },
+    {
+      "index": 22,
+      "answer_ordinal": 641,
+      "rank": 1,
+      "top_similarity": 0.6745548248291016
+    },
+    {
+      "index": 23,
+      "answer_ordinal": 100,
+      "rank": 4,
+      "top_similarity": 0.5553233623504639
+    },
+    {
+      "index": 24,
+      "answer_ordinal": 116,
+      "rank": 1,
+      "top_similarity": 0.4540550410747528
+    },
+    {
+      "index": 25,
+      "answer_ordinal": 362,
+      "rank": 1,
+      "top_similarity": 0.5896883010864258
+    },
+    {
+      "index": 26,
+      "answer_ordinal": 460,
+      "rank": 6,
+      "top_similarity": 0.5873043537139893
+    },
+    {
+      "index": 27,
+      "answer_ordinal": 131,
+      "rank": 23,
+      "top_similarity": 0.39155250787734985
+    },
+    {
+      "index": 28,
+      "answer_ordinal": 366,
+      "rank": 1,
+      "top_similarity": 0.6333882808685303
+    },
+    {
+      "index": 29,
+      "answer_ordinal": 23,
+      "rank": 1,
+      "top_similarity": 0.7486807107925415
+    },
+    {
+      "index": 30,
+      "answer_ordinal": 461,
+      "rank": 1,
+      "top_similarity": 0.655205488204956
+    }
+  ],
+  "chunks": 788,
+  "chunks_per_min": 4380.893552022168
+}

@@ -1421,6 +1421,7 @@ The material is deleted at the end of the command; if the run fails mid-way, evi
 - Code + unit tests landed in `6b7ab0f`; the live PDF run is deferred to Phase 6 close-out per the plan's Step 2.
 - Verified live contracts before writing the code: `material-raw` bucket, storage path `<ownerId>/<materialId>/<fileName>` (repository.py:397-456, materialClient.ts:330), `ingestion_send(p_queue, p_payload)` RPC (queue.py:77), `ingestion_jobs` columns (`kind='ingestion'`, `status='queued'`, `attempt`, `correlation_id`; unique `(material_id, attempt)`), `content_chunks` `skipped` (migration 012) and `embedding` columns, and the worker's `_FileSourceReader` reading `{owner}/{id}/{source}` (worker.py:108-115). The worker chains extract → chunk → embed → publish internally, so the runner only enqueues `material_extract`.
 - Owner resolution: `--owner-id` takes precedence; otherwise `E2E_LIVE_EMAIL` (env) is resolved via `auth/v1/admin/users`. Dev account UUID captured from materials.user_id: `29288e28-d6ff-45c7-b750-ba43f7452409`.
+- **Live fixes during Phase 6 (see VERIFICATION.md §Deviations):** `_material_payload` gained `client_id` (NOT NULL in migration 004); `cmd_pdf_run` now relies on the migration-005 enqueue trigger instead of a manual job insert + `ingestion_send` (the manual insert 409'd on the unique `(material_id, attempt)` row); `service_headers` no longer sets a client-level `Content-Type` (bodiless storage DELETE was 400ing) and the cleanup now deletes the storage object.
 
 ---
 
@@ -1593,12 +1594,13 @@ The synthetic rows are deleted by the command; if it crashes before cleanup, del
 - Code + unit tests landed in `1ac9997`; the live guard-probe run is deferred to Phase 6 close-out per the plan's Step 2. Dev account owner UUID for the probe: `29288e28-d6ff-45c7-b750-ba43f7452409`.
 - Dropped the plan's `telemetry = client.get(...generation_telemetry...)` query in `cmd_guard_probe`: the result was never used (ruff F841), and the cleanup deletes telemetry rows anyway.
 - `test_cmd_guard_probe_rejects_wrong_error_code` uses a stateful MockTransport whose first job GET flips `queued` → `failed`, so the poll loop terminates immediately with the configured `error_code`.
+- **Live fix during Phase 6 (see VERIFICATION.md §Deviations):** the synthetic material insert also needed `client_id` (NOT NULL in migration 004); the guard probe keeps its manual embed enqueue (the enqueue trigger only fires for `material_extract` on `pending`, and this material is inserted in `embedding`).
 
 ---
 
 ### Phase 6: Close-out — full sweep evidence, suite, docs
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 38ed6c4 (docs+evidence committed separately)
 **Depends on:** Phases 2, 3, 4, 5
 **Estimated scope:** ~3 files, ~80 lines
 
@@ -1665,7 +1667,14 @@ Phase 6 only writes `.work/` docs and evidence; rollback = revert those doc chan
 
 #### Notes (filled in during implementation)
 
-*(empty)*
+- **Full operator sequence run live** (sidecar worker, hosted dev project, RX 9070 XT): preflight → sweep → reembed → pdf-run → guard-probe. Evidence committed under `evidence/`; see `VERIFICATION.md` for the acceptance-criteria results.
+- **Live bugs found and fixed (deviations, documented in VERIFICATION.md §Deviations):**
+  - materials insert 400: `client_id` is NOT NULL (migration 004) — added to `_material_payload` and the guard-probe payload.
+  - ingestion_jobs insert 409: migration-005 `materials_enqueue_ingestion` trigger auto-creates the job + enqueues `material_extract` for `pending` file materials — `cmd_pdf_run` now relies on the trigger and reads the job back. (The trigger's own run completed the whole 572-page book to `ready`; evidence `20260817-102240`.)
+  - storage DELETE 400: client-level `Content-Type: application/json` on a bodiless DELETE — removed from `service_headers` (httpx sets it for `json=`), explicit `application/pdf` on upload, storage object now deleted in cleanup.
+- **Sweep result:** all 9 configs zero-fail, MRR 0.7894–0.7895; recommended operating point `EMBEDDING_BATCH_SIZE=128` + HTTP batch 16 (`--sidecar-batch 16`) at 4,381 warm median chunks/min, recorded in `evidence/20260817-100010.json` (`sweep.recommended_operating_point`).
+- Embedder stopped at session start (user) and started per rule 54 before the live sequence; left running for the close-out, then stopped per rule 54 demand-start policy.
+- Phase 6 verification: `.venv/bin/python -m pytest services/intelligence/tests -q` → **264 passed, 5 pre-existing golden-fixture failures unchanged**; ruff clean on all touched files; `preflight` OK.
 
 ---
 
