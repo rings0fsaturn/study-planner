@@ -671,7 +671,7 @@ Delete `services/intelligence/scripts/sidecar_e2e.py`, `services/intelligence/te
 
 ### Phase 2: Batch-size sweep — bakeoff tuning surface + sweep subcommand
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — a2b74fe
 **Depends on:** Phase 1
 **Estimated scope:** ~2 files, ~120 lines
 
@@ -939,7 +939,13 @@ Revert `embedding_bakeoff.py` diffs (`LOCAL_BATCH_SIZE`, `SidecarEmbedder`, `mai
 
 #### Notes (filled in during implementation)
 
-*(empty)*
+- Plan's step 4 said `"sidecar": SidecarEmbedder(http_batch=args.sidecar_batch)` at "line 547", but that line is **inside `run_model`**, which has no `args`. Adapted: added a `sidecar_batch: int | None = None` keyword param to `run_model` (appended last so positional callers are unaffected) and pass `sidecar_batch=args.sidecar_batch` from `main()`. All existing callers use keyword args, so no behavior change.
+- `run_model` uses `LOCAL_BATCH_SIZE` at line ~293 for the local sentence-transformers models; only `SidecarEmbedder.embed` was switched to `self.http_batch`. Local model batching is untouched.
+- Sweep tests: the plan's `test_cmd_sweep_parses_configs_and_aggregates` needed `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` env (via `monkeypatch.setenv`) because `cmd_sweep` calls `require_env`.
+- Bakeoff tests call `run_model("sidecar", ...)` directly (instead of mocking `run_model` in `main()`), because mocking `run_model` short-circuits the spec construction where `SidecarEmbedder(http_batch=...)` is instantiated.
+- `_run_bakeoff` uses the repo-root venv (`parents[3] / ".venv"` — the plan's `parents[1] / ".venv"` resolves to the nonexistent `services/intelligence/.venv`) and runs with an explicit `cwd=services/intelligence` so `scripts/embedding_bakeoff.py` and `probe_questions.json` resolve from any caller directory.
+- `--sidecar-batch` / `--json-out` are present in `embedding_bakeoff.py` (verified by grep in the DONE block).
+- The full live sweep is intentionally deferred to Phase 6 (operator run).
 
 ---
 
