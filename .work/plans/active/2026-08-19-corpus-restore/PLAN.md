@@ -629,7 +629,7 @@ Delete `services/intelligence/scripts/corpus_restore.py` and `services/intellige
 
 ### Phase 2: Restore subcommand — re-ingest the frozen corpus at its stable ID
 
-**Status:** ☐ Not started
+**Status:** 🟡 In progress
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~250 lines
 
