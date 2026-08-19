@@ -903,7 +903,7 @@ If the restore crashes mid-way: material stays `embedding`/`failed` with NULL ve
 
 ### Phase 3: Live restore run + parity gate + close-out
 
-**Status:** ☐ Not started
+**Status:** 🟡 In progress
 **Depends on:** Phase 2
 **Estimated scope:** verification only, 0 new files
 
