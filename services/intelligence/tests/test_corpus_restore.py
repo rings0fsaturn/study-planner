@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import httpx
 
-from scripts.corpus_restore import run_id, snapshot_library
+from scripts.corpus_restore import (
+    _check_vectors,
+    _material_payload,
+    run_id,
+    snapshot_library,
+)
 
 
 def test_run_id_is_utc_timestamp() -> None:
@@ -54,3 +59,81 @@ def test_snapshot_library_counts_everything() -> None:
     assert snap["job_count"] == 1
     assert snap["telemetry_count"] == 1
     assert snap["storage_objects"] == [{"name": "owner/m1/pdf.pdf", "material_id": "m1"}]
+
+
+def test_material_payload_shape() -> None:
+    payload = _material_payload("owner", "m1", "T", "book.pdf")
+    assert payload["id"] == "m1"
+    assert payload["user_id"] == "owner"
+    assert payload["kind"] == "file"
+    assert payload["source"] == "book.pdf"
+    assert payload["ingestion_state"] == "pending"
+    assert payload["ingestion_progress"] == 0
+    assert payload["client_id"] and payload["content_version"]
+
+
+def _unit_vector(dims: int = 768) -> list[float]:
+    return [1.0 / (dims ** 0.5)] * dims
+
+
+def test_check_vectors_accepts_healthy_chunks() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {"id": f"c{i}", "embedding": _unit_vector(), "skipped": False}
+                for i in range(3)
+            ],
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    chunks = _check_vectors(client, "https://example.supabase.co", "m1", 3)
+    assert len(chunks) == 3
+    assert chunks[0]["embedding"]
+
+
+def test_check_vectors_rejects_null_vectors() -> None:
+
+    import pytest
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {"id": "c1", "embedding": None, "skipped": False},
+                {"id": "c2", "embedding": None, "skipped": False},
+            ],
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(SystemExit, match="NULL vectors"):
+        _check_vectors(client, "https://example.supabase.co", "m1", 2)
+
+
+def test_check_vectors_rejects_wrong_dims() -> None:
+
+    import pytest
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json=[
+                {"id": "c1", "embedding": _unit_vector(4), "skipped": False}
+                for _ in range(2)
+            ],
+        )
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(SystemExit, match="dims"):
+        _check_vectors(client, "https://example.supabase.co", "m1", 2)
+
+
+def test_check_vectors_rejects_wrong_chunk_count() -> None:
+    import pytest
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=[])
+
+    client = httpx.Client(transport=httpx.MockTransport(handler))
+    with pytest.raises(SystemExit, match="chunk count"):
+        _check_vectors(client, "https://example.supabase.co", "m1", 788)

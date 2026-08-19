@@ -31,10 +31,10 @@ Plan: [`PLAN.md`](PLAN.md) · Slug: `2026-08-19-corpus-restore` · Branch: `phas
 
 ### Phase 2 — Restore subcommand
 
-- Status: `☐ Not started`
+- Status: ✅ Complete
 - Files: `services/intelligence/scripts/corpus_restore.py` (extend)
-- Test run: —
-- Notes: —
+- Test run: `7 passed`; ruff clean; live idempotency-guard smoke passed (refuses to run over existing `failed/None` material, no mutation)
+- Notes: default `--pdf` resolved against repo root; guard verified. See PLAN.md notes.
 
 ### Phase 3 — Live restore + parity + close-out
 

@@ -629,7 +629,7 @@ Delete `services/intelligence/scripts/corpus_restore.py` and `services/intellige
 
 ### Phase 2: Restore subcommand — re-ingest the frozen corpus at its stable ID
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete — 427b3ca887f1a32b92f72565b196e31cb79257e1
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~250 lines
 
@@ -895,7 +895,9 @@ If the restore crashes mid-way: material stays `embedding`/`failed` with NULL ve
 
 #### Notes (filled in during implementation)
 
-- (filled in during implementation)
+- **Default `--pdf` path resolved against repo root.** The plan's usage says "run from `services/intelligence` with `--pdf e2e/pdf/...`", but that path only exists at the repo root. `cmd_restore` now resolves a non-existent relative `--pdf` against `Path(__file__).resolve().parents[3]` so the documented invocation works from any cwd. No behavior change for absolute paths.
+- **Idempotency guard verified live.** Running `restore` against the current `failed/None` `80c8b138-…` exits with "run `wipe` first (no overwrite, D-08)" — no upload, no mutation. The full live restore is Phase 3.
+- Tests added: `test_material_payload_shape`, `test_check_vectors_accepts_healthy_chunks`, `test_check_vectors_rejects_null_vectors`, `test_check_vectors_rejects_wrong_dims`, `test_check_vectors_rejects_wrong_chunk_count` (5 new on top of Phase 1's 2).
 
 ---
 

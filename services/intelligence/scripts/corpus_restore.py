@@ -22,6 +22,8 @@ import argparse
 import json
 import os
 import sys
+import time
+import uuid
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -267,8 +269,220 @@ def cmd_wipe(args: argparse.Namespace) -> int:
     return 0
 
 
+def _material_payload(
+    owner_id: str, material_id: str, title: str, pdf_name: str
+) -> dict:
+    return {
+        "id": material_id,
+        "user_id": owner_id,
+        "client_id": uuid.uuid4().hex,
+        "title": title,
+        "kind": "file",
+        "source": pdf_name,
+        "ingestion_state": "pending",
+        "ingestion_progress": 0,
+        "content_version": uuid.uuid4().hex,
+        "upload_complete_at": datetime.now(UTC).isoformat(),
+    }
+
+
+def _poll_material(
+    client: httpx.Client,
+    base: str,
+    key: str,
+    material_id: str,
+    timeout_s: float,
+) -> dict:
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        row = client.get(
+            f"{base}/rest/v1/materials",
+            params={"id": f"eq.{material_id}", "select": "*", "limit": 1},
+        ).json()
+        if row:
+            state = row[0].get("ingestion_state")
+            if state == "ready":
+                return row[0]
+            if state == "failed":
+                raise SystemExit(
+                    f"material {material_id} FAILED: "
+                    f"{row[0].get('ingestion_error')} (no auto-retry, D-08)"
+                )
+        time.sleep(5)
+    raise SystemExit(f"material {material_id} did not reach ready in {timeout_s}s")
+
+
+def _check_vectors(
+    client: httpx.Client, base: str, material_id: str, expected_chunks: int
+) -> list[dict]:
+    chunks = client.get(
+        f"{base}/rest/v1/content_chunks",
+        params={
+            "material_id": f"eq.{material_id}",
+            "order": "ordinal.asc",
+            "select": "id,embedding,skipped",
+        },
+    ).json()
+    nulls = [c for c in chunks if c.get("embedding") is None]
+    skipped = [c for c in chunks if c.get("skipped")]
+    if len(chunks) != expected_chunks:
+        raise SystemExit(
+            f"chunk count {len(chunks)} != expected {expected_chunks} "
+            "(no auto-retry, D-08)"
+        )
+    if nulls:
+        raise SystemExit(f"{len(nulls)} NULL vectors remain (no auto-retry, D-08)")
+    if skipped:
+        raise SystemExit(f"{len(skipped)} chunks skipped (no auto-retry, D-08)")
+    sample = chunks[:5]
+    problems = []
+    for chunk in sample:
+        vector = chunk.get("embedding") or []
+        if len(vector) != 768:
+            problems.append(f"dims={len(vector)} (expected 768)")
+            break
+        norm = sum(v * v for v in vector) ** 0.5
+        if not (0.99 <= norm <= 1.01):
+            problems.append(f"L2 norm {norm:.4f} out of [0.99,1.01]")
+            break
+    if problems:
+        raise SystemExit(f"VECTOR CHECK FAILED: {'; '.join(problems)}")
+    return chunks
+
+
 def cmd_restore(args: argparse.Namespace) -> int:
-    raise NotImplementedError("implemented in Phase 2")
+    load_env_file(Path(__file__).parents[1] / ".env")
+    base = require_env("SUPABASE_URL").rstrip("/")
+    key = require_env("SUPABASE_SERVICE_ROLE_KEY")
+    pdf = Path(args.pdf)
+    if not pdf.is_file():
+        root = Path(__file__).resolve().parents[3]
+        alt = root / args.pdf
+        if alt.is_file():
+            pdf = alt
+        else:
+            raise SystemExit(f"--pdf {args.pdf} not found")
+    run = run_id()
+    EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
+    with _service_client(key) as client:
+        # Idempotency guard (D-04): a ready/qwen-sidecar material is done.
+        existing = client.get(
+            f"{base}/rest/v1/materials",
+            params={"id": f"eq.{args.material_id}", "select": "*", "limit": 1},
+        ).json()
+        if existing:
+            row = existing[0]
+            if (
+                row.get("ingestion_state") == "ready"
+                and row.get("embedding_provider") == "qwen-sidecar"
+            ):
+                print(
+                    f"material {args.material_id} already restored "
+                    f"({row.get('chunk_count')} chunks); nothing to do"
+                )
+                return 0
+            raise SystemExit(
+                f"material {args.material_id} exists in state "
+                f"{row.get('ingestion_state')}/{row.get('embedding_provider')}; "
+                "run `wipe` first (no overwrite, D-08)"
+            )
+        owner_id = args.owner_id or _find_owner(
+            client, base, key, os.getenv("E2E_LIVE_EMAIL")
+        )
+        object_path = f"{owner_id}/{args.material_id}/{pdf.name}"
+        upload = client.post(
+            f"{base}/storage/v1/object/material-raw/{object_path}",
+            headers={
+                **service_headers(key),
+                "x-upsert": "true",
+                "Content-Type": "application/pdf",
+            },
+            content=pdf.read_bytes(),
+        )
+        if upload.status_code >= 400:
+            raise SystemExit(
+                f"storage upload failed: {upload.status_code} {upload.text[:300]}"
+            )
+        client.post(
+            f"{base}/rest/v1/materials",
+            json=_material_payload(owner_id, args.material_id, args.title, pdf.name),
+        ).raise_for_status()
+        jobs = client.get(
+            f"{base}/rest/v1/ingestion_jobs",
+            params={
+                "material_id": f"eq.{args.material_id}",
+                "select": "id,correlation_id,attempt",
+            },
+        ).json()
+        if not jobs:
+            raise SystemExit("trigger did not create an ingestion job for the material")
+        job_id = jobs[0]["id"]
+        correlation_id = jobs[0]["correlation_id"]
+        print(f"trigger enqueued extract: material={args.material_id} job={job_id}")
+        post = _poll_material(client, base, key, args.material_id, float(args.timeout))
+        if post.get("embedding_provider") != "qwen-sidecar":
+            raise SystemExit(
+                f"provider={post.get('embedding_provider')!r} (expected qwen-sidecar)"
+            )
+        expected = int(post.get("chunk_count") or 0) or 754
+        chunks = _check_vectors(client, base, args.material_id, expected)
+        telemetry = client.get(
+            f"{base}/rest/v1/generation_telemetry",
+            params={
+                "material_id": f"eq.{args.material_id}",
+                "order": "id.asc",
+                "select": "*",
+            },
+        ).json()
+        import subprocess as sp
+
+        report_md = sp.run(
+            [
+                str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+                "scripts/ingestion_report.py",
+                args.material_id,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        report_text = (
+            report_md.stdout
+            if report_md.returncode == 0
+            else f"(report failed: {report_md.stderr[-500:]})"
+        )
+        manifest = {
+            "run_id": run,
+            "created_at": datetime.now(UTC).isoformat(),
+            "restore": {
+                "material_id": args.material_id,
+                "job_id": job_id,
+                "correlation_id": correlation_id,
+                "owner_id": owner_id,
+                "pdf": str(pdf),
+                "title": args.title,
+                "state": post.get("ingestion_state"),
+                "provider": post.get("embedding_provider"),
+                "chunk_count": len(chunks),
+                "null_vectors": 0,
+                "skipped_chunks": 0,
+                "vector_sample": [
+                    {"dims": len(c.get("embedding") or []), "id": c["id"]}
+                    for c in chunks[:5]
+                ],
+                "telemetry_records": len(telemetry),
+            },
+            "telemetry_report_md": report_text,
+        }
+        json_path = EVIDENCE_DIR / f"{run}-restore.json"
+        json_path.write_text(
+            json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        print(
+            f"RESTORE OK: {args.material_id} ready with {len(chunks)} chunks, 0 NULL"
+        )
+        print(f"evidence: {json_path}")
+    return 0
 
 
 def main() -> None:
