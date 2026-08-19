@@ -4,7 +4,7 @@
 
 - **Branch:** `phase2/issue-37` (created from `project/phase-2`; commit the
   remaining work here).
-- **Plan:** `.work/plans/active/2026-08-14-material-ingestion-readiness/PLAN.md`
+- **Plan:** `.work/plans/archive/2026-08-14-material-ingestion-readiness/PLAN.md`
   (grilled decisions D-01..D-05, no-deferral rule).
 - **Running log:** same folder, `VERIFICATION.md` (acceptance criteria +
   per-phase evidence; read the Log section).
@@ -105,17 +105,19 @@ Tests use deterministic doubles (no network/Gemini/service credentials).
 - **Phase 8:** final `VERIFICATION.md` evidence, STATUS row flip (Active → Done
   only when verified), commit all work on `phase2/issue-37`.
 
-## Operator steps (UNCONFIRMED items)
+## Operator steps (resolved 2026-08-14; reconciliation 2026-08-17)
 
-- **Migration push:** supabase CLI is NOT installed on this host. `supabase db
-  push` (from `apps/app/`) must be run by the operator to apply `005`
-  (extensions vector+pgmq, bucket, tables, RPCs, trigger, Realtime). SQL was
-  self-reviewed only.
-- **Runtime env keys** (never commit): `SUPABASE_SERVICE_ROLE_KEY` (worker),
-  `GEMINI_API_KEY` (embeddings; without it extraction works but embed stage
-  fails materials with `provider_unavailable`), `SUPABASE_PUBLISHABLE_KEY`
-  (API material/jobs routes). Add to `services/intelligence/.env` for local
-  dev or the compose env file for Docker.
+- **Migration push:** ✅ Completed 2026-08-14 — migrations 005-013 were pushed
+  and live-probed (gates 0-11 sweep in the plan's VERIFICATION.md; `006` had
+  already been applied, so the poll-quantity parameter shipped as fix-forward
+  `013`). The earlier host limitation (supabase CLI not installed) was
+  resolved via the `npx --yes supabase@latest` flow documented in rule 36.
+- **Runtime env keys** (never commit): ✅ Present in the gitignored
+  `services/intelligence/.env` — `SUPABASE_SERVICE_ROLE_KEY` (worker),
+  `GEMINI_API_KEY` (embeddings), `SUPABASE_PUBLISHABLE_KEY` (API material/jobs
+  routes), later also `SUPABASE_ACCESS_TOKEN` (2026-08-16).
+- **Remaining operator step:** `./docker-app start` on a Docker-enabled host
+  (no `docker` CLI in this WSL distro).
 
 ## Key files map
 

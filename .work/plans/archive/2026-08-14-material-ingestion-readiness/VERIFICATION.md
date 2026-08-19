@@ -2,14 +2,25 @@
 
 ## Acceptance criteria (from issue #37)
 
-- [ ] The approved ingestion lifecycle and owner-scoped async jobs are observable
+- [x] The approved ingestion lifecycle and owner-scoped async jobs are observable
       to the learner.
-- [ ] Extraction, chunking, normalized embeddings, ready gating, retry, and
+- [x] Extraction, chunking, normalized embeddings, ready gating, retry, and
       terminal failure behavior work end to end.
-- [ ] Partial extracted content remains displayable while RAG generation stays
+- [x] Partial extracted content remains displayable while RAG generation stays
       blocked until ready.
-- [ ] Queue retry, idempotency, backpressure, and representative provider
+- [x] Queue retry, idempotency, backpressure, and representative provider
       failures are tested.
+
+> All four criteria are evidenced in the gates 0-11 sweep below plus the live
+> E2E run: observable lifecycle (Realtime + bounded polling, material/job API,
+> `PracticeThis` readiness gate), end-to-end pipeline (live text/URL/PDF runs
+> to `ready` through the atomic publish RPC), preview gating (preview endpoint
+> with truncation + ready gating, detail-page self-stopping poll), and
+> retry/idempotency/backpressure (poll quantity via fix-forward migration 013,
+> DB-atomic `retry_material_ingestion`, duplicate-enqueue guard, Gemini error
+> taxonomy, provider failure fixtures). Closed by the 2026-08-17 work-docs
+> reconciliation; stale operator notes below were corrected to match the
+> recorded evidence.
 
 ## Plan decisions (grilled 2026-08-14, user-agreed)
 
@@ -33,6 +44,9 @@
   trigger-driven enqueue with jobId in payload, `complete_material_upload` RPC,
   Realtime publication). **Migration NOT pushed:** supabase CLI is not installed
   on this host — `supabase db push` is an operator step (UNCONFIRMED).
+  _Resolved later the same day — see the gates 0-11 sweep entry below
+  ("migrations 003..010 all applied; dry-run up to date") and the operator
+  checkbox in PLAN.md._
 - **2026-08-14** Phase 2 complete: `app/ingestion/{models,cleaning,extractors,chunking}.py`
   with deterministic cleaning, text/URL(httpx+trafilatura+fallback)/PDF(pypdf)/
   YouTube(timestamps) extractors, structure-first chunking (400/60, ordinal,
@@ -110,6 +124,9 @@
   project returns `column materials.upload_complete_at does not exist` for
   `materials`; supabase CLI is not installed on this host. Live E2E and full
   Docker start remain operator-gated on `supabase db push` of 005.
+  _Resolved later the same day — see the gates 0-11 sweep entry below
+  ("migrations 003..010 all applied") and the live E2E run (5 passed / 2
+  skipped). Entry kept for chronological accuracy._
 - **2026-08-14** Operator env prepared (gitignored): `SUPABASE_PUBLISHABLE_KEY`
   + `SUPABASE_SERVICE_ROLE_KEY` added to `services/intelligence/.env`
   (`GEMINI_API_KEY` was already present; `get_user_client` reads env per
@@ -273,7 +290,7 @@ The full live E2E (`e2e/material-ingestion-live.spec.ts`, real stack, shared dev
 account) was re-run against the post-sweep code as part of the ingestion
 performance baseline plan. Result: **3 passed, 2 failed, 2 skipped** (8.0 min).
 Evidence and metrics live in
-[`.work/plans/active/2026-08-14-ingestion-performance-baseline/`](../../2026-08-14-ingestion-performance-baseline/).
+[`.work/plans/active/2026-08-14-ingestion-performance-baseline/`](../../active/2026-08-14-ingestion-performance-baseline/).
 
 ### What passed
 - Plain text → ready with preview; URL article → ready; mobile 390x844 round

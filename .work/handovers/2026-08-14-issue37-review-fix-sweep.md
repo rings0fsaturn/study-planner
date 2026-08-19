@@ -6,7 +6,7 @@
   - `518e060` feat(intelligence): harden ingestion backpressure and Gemini layer (#37)
   - `0a58fc2` fix(intelligence): ship poll quantity as fix-forward migration (#37)
   - Prior session work: `55afc04` (ingestion readiness sweep), `2cf38fd` (#36 library).
-- **Plan:** `.work/plans/active/2026-08-14-material-ingestion-readiness/PLAN.md`
+- **Plan:** `.work/plans/archive/2026-08-14-material-ingestion-readiness/PLAN.md`
   (decisions D-01..D-05, no-deferral rule).
 - **Running log:** same folder, `VERIFICATION.md` — the last entry (2026-08-14
   "Post-review fix sweep") documents every change below plus the 006 correction.

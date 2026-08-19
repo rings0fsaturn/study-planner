@@ -24,6 +24,18 @@ doc and the live code disagree, fix the doc.
   a separate ingestion worker service, real extraction + Gemini embedding adapters,
   Realtime progress, and injected deterministic doubles in tests.
 
+## Reconciliation note (2026-08-17)
+
+This plan's operator checkboxes are closed by later evidence: migrations 005-013
+were pushed and live-probed on 2026-08-14 (gates 0-11 sweep in VERIFICATION.md),
+the live E2E ran (5 passed / 2 env-gated skips), and the branch was committed
+(55afc04, 518e060, 0a58fc2, 24f99dd, 57253f8, 344798e, 441bcd5, f467f76,
+f08c47c, 7e15ef8). Follow-ups landed after this plan was written: ingestion
+telemetry + TPM throttle (`344798e`, plan `2026-08-14-ingestion-performance-
+baseline`) and the local Qwen3 GPU embedder + provider abstraction (`f08c47c`,
+plan `2026-08-16-dockerize-embed`). Task folder archived to `plans/archive/` as
+part of the 2026-08-17 work-docs reconciliation.
+
 ## Decisions log (grilled 2026-08-14, all user-agreed)
 
 - **D-01 — Worker topology:** Docker runs a separate `ingestion-worker` service;
@@ -67,7 +79,7 @@ doc and the live code disagree, fix the doc.
 | Worker runtime | `services/intelligence/app/worker_main.py`, `services/intelligence/Dockerfile`, `docker-compose.yml`, `scripts/dev-intelligence.mjs`, `docker/.env.example`, READMEs |
 | App | `apps/app/src/materials/{materialClient,types,MaterialsProvider,useMaterialLibrary,ingestionSubscription}.ts`, `pages/materials/{MaterialCreate,MaterialDetail}.tsx`, `StatusBadge.tsx`, `materials.css` |
 | Tests | `services/intelligence/tests/*`, `apps/app/src/materials/*.test.tsx`, `e2e/material-ingestion-live.spec.ts` (or similar) |
-| Records | `.work/plans/active/2026-08-14-material-ingestion-readiness/{PLAN,VERIFICATION}.md`, `.work/STATUS.md` |
+| Records | `.work/plans/archive/2026-08-14-material-ingestion-readiness/{PLAN,VERIFICATION}.md`, `.work/STATUS.md` |
 
 ## Phases
 
@@ -86,8 +98,11 @@ Status markers: `☐ Not started` / `🟡 In progress` / `🛑 Blocked` / `✅ C
   schemas, `PIPELINES.md`, `TRACEABILITY.md`, and fixtures in the same change.
 - [x] Verification: migration SQL review, contract validation tests pass
   (`uv run --package intelligence pytest services/intelligence/contracts/phase2/tests`).
-- [ ] **Operator:** `supabase db push` (CLI not installed on this host;
-  confirmed not applied — `column materials.upload_complete_at does not exist`).
+- [x] **Operator:** `supabase db push` completed on the dev project
+  (2026-08-14): migrations 005-013 applied and live-probed (see the gates 0-11
+  sweep in VERIFICATION.md). Correction: migration 006 was already applied on
+  the remote, so the poll-quantity parameter shipped as fix-forward migration
+  013 (`0a58fc2`).
 
 ### Phase 2 — Extraction and chunking
 
@@ -131,13 +146,15 @@ Status markers: `☐ Not started` / `🟡 In progress` / `🛑 Blocked` / `✅ C
 - [x] Separate `ingestion-worker` Docker service; worker health/readiness; env
   wiring (Supabase URL, service-role credential in runtime env only, Gemini key,
   queue/retry settings); local dev launcher updates; docs updated.
-- [x] Verification (partial): `./docker-app config` valid; local
-  `pnpm dev:ingestion-worker` boots, passes the env gate, polls
-  `ingestion_poll`, and backs off gracefully (404 — migration not pushed yet).
-- [ ] **Operator:** `./docker-app start` / `status` / `stop` with the worker +
-  API healthy requires migration 005 pushed and the compose env file holding
-  `SUPABASE_URL` / `SUPABASE_PUBLISHABLE_KEY` / `SUPABASE_SERVICE_ROLE_KEY` /
-  `GEMINI_API_KEY`.
+- [x] Verification (partial at write time): `./docker-app config` valid; local
+  `pnpm dev:ingestion-worker` boots, passes the env gate, and polls
+  `ingestion_poll` (404 before migrations were pushed; live-polling after —
+  see the operator checkbox below and the gates 0-11 sweep in VERIFICATION.md).
+- [x] **Operator (partial):** `./docker-app config` validated; the worker booted
+  against the live project and polled `ingestion_poll` once migrations were
+  pushed. `docker` CLI is absent from this WSL distro, so a full
+  `./docker-app start` on a Docker-enabled host remains a recorded operator
+  step (not a code defect).
 
 ### Phase 6 — React material flow
 
@@ -162,17 +179,27 @@ Status markers: `☐ Not started` / `🟡 In progress` / `🛑 Blocked` / `✅ C
 - [x] Full app suite + service suite + contract suite + repo/app typecheck +
   lint + app build + marketing build (app 623/623; service 120 passed + 5
   pre-existing golden-fixture failures; contracts 6/6; builds green).
-- [ ] **Operator:** run the E2E spec live once migration 005 is pushed and the
-  worker is running (env keys already placed in gitignored
-  `services/intelligence/.env`).
-- [ ] `/code-review` pass; fix findings.
+- [x] **Operator:** live E2E ran against the real stack (2026-08-14): 5 passed /
+  2 env-gated skips (YouTube + cross-user) with attempt-level retry assertion
+  and zero page/console errors. The joint telemetry-baseline re-run recorded
+  3 passed / 2 failed / 2 skipped; both failures were root-caused and fixed
+  (Gemini TPM quota burst -> C8 throttle in `344798e`; intermittent JWKS 401
+  flake, infra). The PDF scenario now uses the real 572-page fixture
+  (`57253f8`); its post-throttle full-book re-run is tracked in the
+  `2026-08-14-ingestion-performance-baseline` plan.
+- [x] `/code-review` pass — review findings applied in the post-review fix
+  sweep (`518e060`, `0a58fc2`): backpressure via poll quantity, Gemini error
+  taxonomy, token-budget batching + bulk writes, shared HTTP client,
+  zero-vector skip-and-flag, publish/job guards (see VERIFICATION.md).
 
 ### Phase 8 — Records and commit
 
 - [x] Update `VERIFICATION.md` with per-phase evidence, commits, deviations.
-- [ ] Update `.work/STATUS.md` row (Active -> Done only when verified complete;
-  stays Active — live E2E + Docker start gated on the migration push).
-- [ ] Commit all issue-owned changes on branch `phase2/issue-37`.
+- [x] Update `.work/STATUS.md` row — moved to Done in the 2026-08-17 work-docs
+  reconciliation (all gates 0-11 green; evidence in VERIFICATION.md).
+- [x] Commit all issue-owned changes on branch `phase2/issue-37` — landed as
+  `55afc04`, `518e060`, `0a58fc2`, `24f99dd`, `57253f8`, `344798e`, `441bcd5`,
+  `f467f76`, `f08c47c`, `7e15ef8`.
 
 ## Verification (top-level)
 

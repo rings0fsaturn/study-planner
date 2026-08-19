@@ -35,7 +35,18 @@
 - Live RPC probed on the dev project (migration 015/016 applied).
 - Bake-off smoke re-ran from cache and reproduced exact hybrid numbers after the lint refactor.
 
-## Follow-ups
+## Follow-ups (reconciled 2026-08-17)
 
-- Wire the rerank step into the future retrieval endpoint (client + sidecar exist, no caller yet).
-- Local Qwen embedder as production `EMBEDDING_BACKEND` (worker already supports the adapter seam).
+- Wire the rerank step into the future retrieval endpoint (client + sidecar
+  exist, no caller yet). Note: the root compose reranker runs CPU-only
+  (~41 s for top-50 candidates); GPU hosting or a smaller pool is needed
+  before hot-path use.
+- Local Qwen embedder as production backend — ✅ implemented 2026-08-16 as
+  `EMBEDDING_PROVIDER=sidecar` (`f08c47c`; plan `2026-08-16-dockerize-embed`).
+- Restore the dev corpus embeddings before another live probe — they were
+  wiped since 2026-08-15 (`embedding=not.is.null` returns ~11 rows), so
+  `retrieval_probe.py` needs a re-embed first.
+- A second corpus (web article or transcript) to confirm the levers generalize
+  (30 questions / 1 book so far); recommended before production rollout.
+- Q15 (acronym-list question) accepted as a documented limitation — bare list
+  chunks are intrinsically hard for RAG; no clear lever.

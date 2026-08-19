@@ -34,8 +34,10 @@ Per-phase evidence lives here as work completes.
 - [x] Full live E2E spec run: **3 passed, 2 failed, 2 skipped** (8.0 min).
 - [x] Telemetry report for the PDF material committed to this folder.
 - [x] Issue-37 readiness VERIFICATION.md appended with evidence.
-- [ ] Re-run of the PDF scenario when Gemini daily quota resets
-  (blocked ~24 h; the book needs ~293 k embedded tokens vs ~100 k/day).
+- [ ] Re-run of the PDF scenario under the C8 throttle (the wall is per-minute
+  TPM, not a daily cap; the book fits RPD 1000 in ~9-10 min when paced).
+  **Open as of 2026-08-17** and likely superseded by the local Qwen3 GPU
+  embedder path (`2026-08-16-dockerize-embed`) — confirm before closing.
 
 ### Baseline numbers (first real measurement of the pipeline)
 
@@ -73,8 +75,12 @@ Per-phase evidence lives here as work completes.
 
 - [x] `retrieval_probe.py` + `probe_questions.json` (16 questions, each with a
   verbatim, single-match answer snippet from the book) authored and lint-clean.
-- [ ] Run deferred to the Gemini quota reset (~24 h); ~1-2 k tokens total.
-  Command: `uv run --package intelligence python services/intelligence/scripts/retrieval_probe.py <material_id>`
+- [x] Run — superseded and completed by the 30-question multi-gold
+  retrieval-quality program (2026-08-15, `f467f76`): the probe was hardened to
+  30 questions with altSnippets, and hybrid + rerank configs were scored live
+  against the pushed migrations 015/016. See
+  `.work/plans/archive/2026-08-15-retrieval-quality-program/` and
+  `research/doc/2026-08-15-retrieval-quality-program-results.md`.
 
 
 ## Phase 5 — FINDINGS.md + C2/C3/C8 implementation
@@ -101,13 +107,14 @@ Per-phase evidence lives here as work completes.
   golden-fixture failures; contracts 6/6; ruff clean (only the pre-existing
   `test_v1_integration.py` E501 remains).
 
-## Next session (validate the throttle)
+## Status (2026-08-17 reconciliation)
 
-1. Restart the worker (it currently runs pre-C8 code) and full-app.
-2. Re-run the full live E2E: the PDF scenario should now complete — the book
-   (~270 k tokens with overlap 30) fits RPD 1000 and takes ~9-10 min of
-   embedding at the 25 k/min pace. Remaining known flake: the retry
-   scenario's intermittent 401 (JWKS fetch, C6).
-3. Run the retrieval probe: `uv run --package intelligence python
-   services/intelligence/scripts/retrieval_probe.py <material_id>`.
-4. Finalize FINDINGS.md and flip this plan's STATUS row.
+- C2 resume-on-retry, C3 overlap 60 -> 30, and C8 TPM throttle are implemented
+  and unit-tested (phases above); telemetry and the report script are live.
+- The full-book PDF E2E under the C8 throttle is the only remaining open
+  validation. It is likely superseded by the local Qwen3 GPU embedder path
+  (`2026-08-16-dockerize-embed`, ~10 s per book, zero quota) — the user should
+  confirm whether to close it without a Gemini re-run.
+- The 16-question retrieval probe was superseded by the completed 30-question
+  retrieval-quality program (2026-08-15). FINDINGS.md carries the same
+  reconciliation.

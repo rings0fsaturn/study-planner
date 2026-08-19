@@ -3,7 +3,7 @@
 ## Entry point
 
 - **Branch:** `phase2/issue-37` (from `project/phase-2`). Nothing is committed yet.
-- **Plan:** `.work/plans/active/2026-08-14-material-ingestion-readiness/PLAN.md`
+- **Plan:** `.work/plans/archive/2026-08-14-material-ingestion-readiness/PLAN.md`
   (grilled decisions D-01..D-05, no-deferral rule).
 - **Running log:** same folder, `VERIFICATION.md` (acceptance criteria + per-phase evidence).
 - **GitHub:** issue https://github.com/rings0fsaturn/study-planner/issues/37.
@@ -185,7 +185,7 @@ uv run ruff check services/intelligence/app services/intelligence/tests   # 1 pr
 | E2E | `e2e/material-ingestion-live.spec.ts` (model: `e2e/material-library-live.spec.ts`) |
 | Runtime | `scripts/run-detached-ingestion-worker.sh`, `scripts/dev-ingestion-worker.mjs`, `docker-compose.yml`, `docker/.env.example` |
 | Tests | `services/intelligence/tests/{test_repository,test_ingestion_worker,test_embeddings,test_extractors,test_chunking,test_queue,test_materials_api}.py`, `tests/ingestion_doubles.py` |
-| Records | `.work/plans/active/2026-08-14-material-ingestion-readiness/{PLAN,VERIFICATION}.md`, `.work/STATUS.md` |
+| Records | `.work/plans/archive/2026-08-14-material-ingestion-readiness/{PLAN,VERIFICATION}.md`, `.work/STATUS.md` |
 
 ## Pitfalls recap (details in the new rules)
 

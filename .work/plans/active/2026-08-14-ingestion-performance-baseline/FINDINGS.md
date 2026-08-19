@@ -6,6 +6,14 @@ AI Studio dashboard), not a daily cap; the fix (TPM throttle) is implemented
 and the full-book re-run is pending. Numbers below are real measurements from
 the live stack.
 
+> **Updated 2026-08-17 (work-docs reconciliation):** the two open decisions
+> below are now mostly superseded — the 16-question retrieval probe was
+> replaced by the completed 30-question retrieval-quality program (2026-08-15,
+> `f467f76`, live hybrid + rerank scoring), and the Qwen3 GPU sidecar
+> (2026-08-16, `f08c47c`) removes the Gemini quota from the embedding hot path
+> entirely. Only the full-book Gemini PDF validation run remains open, and it
+> is likely moot under the sidecar path (confirm before closing).
+
 ## Measured numbers (572-page ACCA APM textbook, `80c8b138-...`)
 
 | Metric | Value | Source |
@@ -75,6 +83,9 @@ the live stack.
 ## Open decisions
 
 - [ ] Validate the throttle live: re-run the full-book PDF E2E (uses ~270 k
-  tokens / ~70 requests of the RPD 1000 budget).
-- [ ] Run the retrieval probe (16 questions, ~1-2 k tokens) on the run's
-  material.
+  tokens / ~70 requests of the RPD 1000 budget). Open; likely superseded by
+  the local Qwen3 GPU embedder (2026-08-16) — confirm before closing.
+- [x] Run the retrieval probe (16 questions, ~1-2 k tokens) — superseded by
+  the 30-question multi-gold retrieval-quality program (2026-08-15,
+  `f467f76`); completed and documented in
+  `research/doc/2026-08-15-retrieval-quality-program-results.md`.

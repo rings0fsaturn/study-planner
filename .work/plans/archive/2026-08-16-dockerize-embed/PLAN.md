@@ -29,8 +29,8 @@ replace Gemini in production.
    `isinstance(GeminiEmbedder)`.
 5. Worker writes `materials.embedding_provider` and refuses provider mixing
    (terminal `validation_failed`).
-6. Migration `017_material_embedding_provider.sql` exists (push pending — no
-   supabase CLI/DB credentials on this host; see VERIFICATION.md).
+6. Migration `017_material_embedding_provider.sql` exists — ✅ pushed and
+   live-probed 2026-08-16 (legacy rows `NULL`; see VERIFICATION.md).
 7. `reembed_materials.py` operator script exists and is documented.
 8. Service suite: 248 passed + the 5 pre-existing golden-fixture failures
    (unchanged baseline); ruff clean on all touched files.
