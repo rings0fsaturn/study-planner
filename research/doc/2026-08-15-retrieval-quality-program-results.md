@@ -15,6 +15,20 @@
 | 2 | + Qwen3-Reranker-0.6B over top-50 | 0.77 | 0.97 | 0.97 | 0.858 | recall@1 +10 / MRR +0.05 | **PASS** |
 | 3 | + contextual title prefix on embed inputs | 0.77 | 0.97 | 0.97 | 0.858 | recall@3 +3 | **REJECTED** (no gain) |
 | 4 | ONNX int8 quantization | 0.10 | 0.10 | 0.10 | 0.131 | ≥2× speed AND recall −≤1 | **REJECTED** (r@1 collapse) |
+| 2026-08-19 | re-ingested 754 (overlap 30, sidecar) — dense | 0.60 | 0.77 | 0.87 | 0.706 | — | **new durable baseline** |
+| 2026-08-19 | re-ingested 754 (overlap 30, sidecar) — hybrid | 0.60 | 0.80 | 0.87 | 0.720 | — | **new durable baseline** |
+
+> **2026-08-19 corpus-split note (Decision A):** the frozen rows 0–4 were measured on the
+> 788-chunk split produced with the pre-C3 60-token overlap (`chunking.py` before `344798e`).
+> The 2026-08-19 corpus restore re-ingested the same PDF with the current 30-token overlap
+> (`services/intelligence/app/ingestion/chunking.py:3-6,18`) and produces **754 chunks** — the
+> ~4% delta is the reduced overlap, not corruption. The 754 corpus is now the durable baseline
+> for future live probes; the frozen 788 metrics are tied to the retired split and are not
+> reproducible without reverting the chunker. Restore evidence:
+> `.work/plans/active/2026-08-19-corpus-restore/evidence/20260819-091457-restore.json`
+> (`ready / qwen-sidecar / 754 / 754 embedded / 0 NULL / 768-dim / 67 telemetry records`).
+> Rerank parity (0.858) was not re-run on 754: it needs the in-process `sentence_transformers`
+> reranker (not in the test venv); the sidecar's own reranker stays a deferred follow-up.
 
 ## What shipped
 

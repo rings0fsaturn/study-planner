@@ -7,6 +7,7 @@ import httpx
 from scripts.corpus_restore import (
     _check_vectors,
     _material_payload,
+    _parse_vector,
     run_id,
     snapshot_library,
 )
@@ -76,12 +77,28 @@ def _unit_vector(dims: int = 768) -> list[float]:
     return [1.0 / (dims ** 0.5)] * dims
 
 
+def _serialized(vector: list[float]) -> str:
+    return "[" + ",".join(f"{v:.8f}" for v in vector) + "]"
+
+
+def test_parse_vector_handles_halfvec_string() -> None:
+    vec = _unit_vector(4)
+    parsed = _parse_vector(_serialized(vec))
+    assert len(parsed) == 4
+    assert abs(parsed[0] - vec[0]) < 1e-6
+
+
+def test_parse_vector_handles_none_and_list() -> None:
+    assert _parse_vector(None) is None
+    assert _parse_vector([1.0, 2.0]) == [1.0, 2.0]
+
+
 def test_check_vectors_accepts_healthy_chunks() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(
             200,
             json=[
-                {"id": f"c{i}", "embedding": _unit_vector(), "skipped": False}
+                {"id": f"c{i}", "embedding": _serialized(_unit_vector()), "skipped": False}
                 for i in range(3)
             ],
         )
@@ -118,8 +135,8 @@ def test_check_vectors_rejects_wrong_dims() -> None:
         return httpx.Response(
             200,
             json=[
-                {"id": "c1", "embedding": _unit_vector(4), "skipped": False}
-                for _ in range(2)
+                {"id": f"c{i}", "embedding": _serialized(_unit_vector(4)), "skipped": False}
+                for i in range(2)
             ],
         )
 

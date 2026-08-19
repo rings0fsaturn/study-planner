@@ -4,7 +4,7 @@ Operator tool. Preflights the GPU embedder, wipes one owner's library
 (materials, chunks, jobs, telemetry, storage objects), then re-ingests the
 canonical 572-page textbook through the sidecar worker at its stable
 material id. Writes timestamped JSON + Markdown evidence under
-`.work/plans/active/2026-08-19-corpus-restore/evidence/`.
+`.work/plans/archive/2026-08-19-corpus-restore/evidence/`.
 
 Gemini is never called (plan decision D-03). The runner only preflights,
 triggers, polls, snapshots, and verifies; the worker does the stage work.
@@ -40,7 +40,7 @@ EVIDENCE_DIR = (
     Path(__file__).resolve().parents[3]
     / ".work"
     / "plans"
-    / "active"
+    / "archive"
     / "2026-08-19-corpus-restore"
     / "evidence"
 )
@@ -312,6 +312,24 @@ def _poll_material(
     raise SystemExit(f"material {material_id} did not reach ready in {timeout_s}s")
 
 
+def _parse_vector(value) -> list[float] | None:
+    """Parse a halfvec value as returned by PostgREST.
+
+    The `halfvec(768)` column serializes to a string like
+    `[0.1234,-0.5678,...]` (optionally scientific). Returns None for NULL.
+    """
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return [float(v) for v in value]
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped or stripped == "[]":
+            return []
+        return [float(part) for part in stripped.strip("[]").split(",")]
+    raise SystemExit(f"unexpected embedding type: {type(value).__name__}")
+
+
 def _check_vectors(
     client: httpx.Client, base: str, material_id: str, expected_chunks: int
 ) -> list[dict]:
@@ -337,7 +355,10 @@ def _check_vectors(
     sample = chunks[:5]
     problems = []
     for chunk in sample:
-        vector = chunk.get("embedding") or []
+        vector = _parse_vector(chunk.get("embedding"))
+        if vector is None:
+            problems.append("NULL vector in sample")
+            break
         if len(vector) != 768:
             problems.append(f"dims={len(vector)} (expected 768)")
             break
@@ -348,6 +369,101 @@ def _check_vectors(
     if problems:
         raise SystemExit(f"VECTOR CHECK FAILED: {'; '.join(problems)}")
     return chunks
+
+
+def _verify_and_emit(
+    client: httpx.Client,
+    base: str,
+    key: str,
+    args: argparse.Namespace,
+    material_id: str,
+    run: str,
+) -> int:
+    """Verify the restored material and write the evidence manifest.
+
+    Shared by the fresh-restore path and the already-restored idempotency
+    path, so a partial failure can re-emit evidence without re-uploading.
+    """
+    post = client.get(
+        f"{base}/rest/v1/materials",
+        params={"id": f"eq.{material_id}", "select": "*", "limit": 1},
+    ).json()
+    if not post:
+        raise SystemExit(f"material {material_id} not found after restore")
+    post = post[0]
+    if post.get("embedding_provider") != "qwen-sidecar":
+        raise SystemExit(
+            f"provider={post.get('embedding_provider')!r} (expected qwen-sidecar)"
+        )
+    jobs = client.get(
+        f"{base}/rest/v1/ingestion_jobs",
+        params={
+            "material_id": f"eq.{material_id}",
+            "order": "created_at.asc",
+            "select": "id,correlation_id,attempt,status",
+        },
+    ).json()
+    job_id = jobs[-1]["id"] if jobs else None
+    correlation_id = jobs[-1].get("correlation_id") if jobs else None
+    expected = int(post.get("chunk_count") or 0) or 754
+    chunks = _check_vectors(client, base, material_id, expected)
+    telemetry = client.get(
+        f"{base}/rest/v1/generation_telemetry",
+        params={
+            "material_id": f"eq.{material_id}",
+            "order": "id.asc",
+            "select": "*",
+        },
+    ).json()
+    import subprocess as sp
+
+    report_md = sp.run(
+        [
+            str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
+            "scripts/ingestion_report.py",
+            material_id,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    report_text = (
+        report_md.stdout
+        if report_md.returncode == 0
+        else f"(report failed: {report_md.stderr[-500:]})"
+    )
+    manifest = {
+        "run_id": run,
+        "created_at": datetime.now(UTC).isoformat(),
+        "restore": {
+            "material_id": material_id,
+            "job_id": job_id,
+            "correlation_id": correlation_id,
+            "owner_id": args.owner_id,
+            "pdf": str(Path(args.pdf)),
+            "title": args.title,
+            "state": post.get("ingestion_state"),
+            "provider": post.get("embedding_provider"),
+            "chunk_count": len(chunks),
+            "null_vectors": len([c for c in chunks if c.get("embedding") is None]),
+            "skipped_chunks": len([c for c in chunks if c.get("skipped")]),
+            "vector_sample": [
+                {"dims": len(_parse_vector(c.get("embedding")) or []), "id": c["id"]}
+                for c in chunks[:5]
+            ],
+            "telemetry_records": len(telemetry),
+        },
+        "telemetry_report_md": report_text,
+    }
+    json_path = EVIDENCE_DIR / f"{run}-restore.json"
+    json_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
+    )
+    print(
+        f"RESTORE OK: {material_id} ready with {len(chunks)} chunks, 0 NULL"
+    )
+    print(f"evidence: {json_path}")
+    return 0
 
 
 def cmd_restore(args: argparse.Namespace) -> int:
@@ -365,7 +481,8 @@ def cmd_restore(args: argparse.Namespace) -> int:
     run = run_id()
     EVIDENCE_DIR.mkdir(parents=True, exist_ok=True)
     with _service_client(key) as client:
-        # Idempotency guard (D-04): a ready/qwen-sidecar material is done.
+        # Idempotency guard (D-04): a ready/qwen-sidecar material is done —
+        # verify again and emit evidence rather than re-uploading.
         existing = client.get(
             f"{base}/rest/v1/materials",
             params={"id": f"eq.{args.material_id}", "select": "*", "limit": 1},
@@ -378,9 +495,11 @@ def cmd_restore(args: argparse.Namespace) -> int:
             ):
                 print(
                     f"material {args.material_id} already restored "
-                    f"({row.get('chunk_count')} chunks); nothing to do"
+                    f"({row.get('chunk_count')} chunks); verifying and writing evidence"
                 )
-                return 0
+                return _verify_and_emit(
+                    client, base, key, args, args.material_id, run
+                )
             raise SystemExit(
                 f"material {args.material_id} exists in state "
                 f"{row.get('ingestion_state')}/{row.get('embedding_provider')}; "
@@ -417,71 +536,9 @@ def cmd_restore(args: argparse.Namespace) -> int:
         if not jobs:
             raise SystemExit("trigger did not create an ingestion job for the material")
         job_id = jobs[0]["id"]
-        correlation_id = jobs[0]["correlation_id"]
         print(f"trigger enqueued extract: material={args.material_id} job={job_id}")
-        post = _poll_material(client, base, key, args.material_id, float(args.timeout))
-        if post.get("embedding_provider") != "qwen-sidecar":
-            raise SystemExit(
-                f"provider={post.get('embedding_provider')!r} (expected qwen-sidecar)"
-            )
-        expected = int(post.get("chunk_count") or 0) or 754
-        chunks = _check_vectors(client, base, args.material_id, expected)
-        telemetry = client.get(
-            f"{base}/rest/v1/generation_telemetry",
-            params={
-                "material_id": f"eq.{args.material_id}",
-                "order": "id.asc",
-                "select": "*",
-            },
-        ).json()
-        import subprocess as sp
-
-        report_md = sp.run(
-            [
-                str(Path(__file__).resolve().parents[3] / ".venv" / "bin" / "python"),
-                "scripts/ingestion_report.py",
-                args.material_id,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
-        report_text = (
-            report_md.stdout
-            if report_md.returncode == 0
-            else f"(report failed: {report_md.stderr[-500:]})"
-        )
-        manifest = {
-            "run_id": run,
-            "created_at": datetime.now(UTC).isoformat(),
-            "restore": {
-                "material_id": args.material_id,
-                "job_id": job_id,
-                "correlation_id": correlation_id,
-                "owner_id": owner_id,
-                "pdf": str(pdf),
-                "title": args.title,
-                "state": post.get("ingestion_state"),
-                "provider": post.get("embedding_provider"),
-                "chunk_count": len(chunks),
-                "null_vectors": 0,
-                "skipped_chunks": 0,
-                "vector_sample": [
-                    {"dims": len(c.get("embedding") or []), "id": c["id"]}
-                    for c in chunks[:5]
-                ],
-                "telemetry_records": len(telemetry),
-            },
-            "telemetry_report_md": report_text,
-        }
-        json_path = EVIDENCE_DIR / f"{run}-restore.json"
-        json_path.write_text(
-            json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8"
-        )
-        print(
-            f"RESTORE OK: {args.material_id} ready with {len(chunks)} chunks, 0 NULL"
-        )
-        print(f"evidence: {json_path}")
+        _poll_material(client, base, key, args.material_id, float(args.timeout))
+        return _verify_and_emit(client, base, key, args, args.material_id, run)
     return 0
 
 

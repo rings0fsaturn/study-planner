@@ -45,6 +45,7 @@ GPU batch 32 gives only ~1.3× over batch 8 — at 0.6B the request latency is f
 
 - `nvidia-smi` is absent on this host: the device presents as `cuda:0` via ROCm (`torch.cuda.is_available()` True). HF models are cached under `/mnt/d/hf-cache` (`HF_HOME`), and `HF_TOKEN` comes from the gitignored `.env.git.local` (`whoami: soulinpain`).
 - The live RPC probe (`retrieval_probe.py`) could not be re-run: the dev DB's embeddings for this material were wiped since 2026-08-15 (`embedding=not.is.null` returns only 11 rows across all materials). Re-running it requires re-ingesting the material (Gemini embed, or the future Qwen worker path).
+- **RESOLVED 2026-08-19 (corpus restore):** the wipe was confirmed live (17 materials / 799 chunks = 11 embedded / 788 NULL) and the corpus was restored via `services/intelligence/scripts/corpus_restore.py` — owner-scoped wipe then full re-ingest of `80c8b138-…` through the sidecar worker. End state: `ready / qwen-sidecar / 754 chunks / 754 embedded / 0 NULL / 768-dim`. The 754 chunk count (vs the frozen 788) is the current 30-token overlap chunker (`chunking.py:3-6,18`), accepted as the new durable baseline (Decision A; see `2026-08-15-retrieval-quality-program-results.md`). Evidence: `.work/plans/active/2026-08-19-corpus-restore/evidence/20260819-091457-restore.json`. The live probe still needs a sidecar query embedder (it currently hard-requires `GEMINI_API_KEY`, `retrieval_probe.py:53-72`) — deferred follow-up.
 
 ## Reproduction
 

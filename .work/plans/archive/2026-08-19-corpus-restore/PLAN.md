@@ -903,7 +903,7 @@ If the restore crashes mid-way: material stays `embedding`/`failed` with NULL ve
 
 ### Phase 3: Live restore run + parity gate + close-out
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete — 3542f43d0b3807d19f3fb131c1cfab17086f16b1
 **Depends on:** Phase 2
 **Estimated scope:** verification only, 0 new files
 
@@ -958,7 +958,10 @@ Doc-only revert of the STATUS flip + archive move; the live corpus remains resto
 
 #### Notes (filled in during implementation)
 
-- (filled in during implementation)
+- **Live run (2026-08-19):** sidecar container started per rule 54 (`docker compose -f services/embedder/docker-compose.yml up -d`; `/health` dims 768, cuda, loaded, reranker loaded); worker launched detached with `EMBEDDING_PROVIDER=sidecar` (log confirmed "embedding provider: sidecar (http://localhost:8200)"); preflight OK; wipe cleared the owner (17 materials / 799 chunks / 18 jobs / 240 telemetry / 42 storage objects); restore reached `ready / qwen-sidecar / 754 / 754 embedded / 0 NULL / 768-dim / 67 telemetry` (evidence `20260819-091457-restore.json`).
+- **Decision A (user, 2026-08-19):** accept the 754-chunk corpus as the new durable baseline. The frozen 788 metrics were measured on the pre-C3 60-token overlap split; the current chunker is 30-token (`chunking.py:3-6,18`), so re-ingest produces 754. Dense 0.706 / hybrid 0.720 are the new numbers; rerank (0.858) deferred (needs in-process `sentence_transformers`, not in the test venv). No overlap revert.
+- **Live-found bugs fixed:** (1) storage listing is POST-with-body, not GET — `snapshot_library` now POSTs `{"prefix": "<owner>/"}` and lists each per-material folder; orphan storage folders (no material row) are deleted too, so the wipe is a true clean slate. (2) PostgREST returns `halfvec(768)` as a serialized string — `_check_vectors` measured string length (bogus `dims=9513`); `_parse_vector` (`corpus_restore.py:315-330`) parses the array before dims/norm checks. (3) `restore`'s idempotency path now re-verifies + writes evidence instead of just exiting, so a partial failure re-emits evidence without re-uploading.
+- **Probe gap found:** `retrieval_probe.py` hard-requires `GEMINI_API_KEY` and embeds queries with Gemini (`retrieval_probe.py:53-72,136`), so it cannot score a Qwen-sidecar corpus (cross-space garbage, MRR 0.356 vs in-process bakeoff 0.72). Deferred follow-up: add a sidecar query-embedder option.
 
 ---
 

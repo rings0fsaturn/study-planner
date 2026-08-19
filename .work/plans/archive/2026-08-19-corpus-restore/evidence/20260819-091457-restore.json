@@ -1,0 +1,41 @@
+{
+  "created_at": "2026-08-19T09:15:04.492515+00:00",
+  "restore": {
+    "chunk_count": 754,
+    "correlation_id": "9402b20d-0910-44c3-ae70-64a370c3bed0",
+    "job_id": "32b3cebb-14c2-40c6-a889-8e5a139931a1",
+    "material_id": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+    "null_vectors": 0,
+    "owner_id": "29288e28-d6ff-45c7-b750-ba43f7452409",
+    "pdf": "e2e/pdf/sample-textbook-572page.pdf",
+    "provider": "qwen-sidecar",
+    "skipped_chunks": 0,
+    "state": "ready",
+    "telemetry_records": 67,
+    "title": "ACCA APM Study Text",
+    "vector_sample": [
+      {
+        "dims": 768,
+        "id": "25241a757e3a4ce58fad6d46ade9eb55"
+      },
+      {
+        "dims": 768,
+        "id": "ac27c73c768c48e489961592a4dd70e4"
+      },
+      {
+        "dims": 768,
+        "id": "7e03e7aed08f481186cdde6fac80ae5d"
+      },
+      {
+        "dims": 768,
+        "id": "f3ae42367f104dba82cbe8c80348eec1"
+      },
+      {
+        "dims": 768,
+        "id": "bfa051437a4140ae938d62b695d7968c"
+      }
+    ]
+  },
+  "run_id": "20260819-091457",
+  "telemetry_report_md": "# Ingestion telemetry report \u2014 `80c8b138-b544-4095-8dc0-1c390ac70da2`\n\n- **Title:** ACCA APM Study Text\n- **Kind:** file \u00b7 **State:** ready\n- **Chunk count:** 754 \u00b7 **Grounding version:** 98501b47b2074afbaa7c69e2ff594871\n- **Telemetry records:** 67\n\n## Attempts (ingestion_jobs)\n\n| attempt | status | error | created_at | completed_at |\n|---|---|---|---|---|\n| 1 | succeeded | \u2014 | 2026-08-19T09:09:43 | 2026-08-19T09:10:35.838393+00:00 |\n\n## Stage breakdown\n\n| stage | count | engine | total | p50 | p95 |\n|---|---|---|---|---|---|\n| chunk | 1 | tiktoken-cl100k | 2.38s | 2.38s | 2.38s |\n| embed | 1 | local | 31.89s | 31.89s | 31.89s |\n| embed-batch | 62 | qwen3-embedding-0.6b | 11.71s | 152ms | 201ms |\n| extract | 1 | pypdf | 9.31s | 9.31s | 9.31s |\n| publish | 1 | supabase-rpc | 188ms | 188ms | 188ms |\n| upload | 1 | supabase-storage | 1.26s | 1.26s | 1.26s |\n\n## Embedding provider calls (embed-batch)\n\n- **Calls:** 62 \u00b7 **Total tokens:** 227,760\n- **Mean tokens/call:** 3674 \u00b7 **Mean texts/call:** 12\n- **Latency \u2014 mean:** 189ms \u00b7 **p50:** 152ms \u00b7 **p95:** 201ms \u00b7 **max:** 2.41s\n- **Retried calls:** 0 (0.0%)\n- **Outcomes:** ok=62\n- **Embedding throughput:** 19,455 tokens/s (provider wall time)\n\n**Sum of stage latencies (worker-side pipeline time):** 56.73s\n\n## Chunks\n\n- **Total chunks:** 754 \u00b7 **Skipped (provider zero vector):** 0\n- **Tokens \u2014 total:** 227,760 \u00b7 **mean/chunk:** 302 \u00b7 **p50:** 334 \u00b7 **p90:** 400 \u00b7 **max:** 400\n- **Overlap waste (est. 30 tokens \u00d7 753 boundaries):** 22,590 tokens (9.9% of embedded text)\n\n"
+}
