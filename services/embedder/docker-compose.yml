@@ -9,6 +9,8 @@ services:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-Qwen/Qwen3-Embedding-0.6B}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
       EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      RERANKER_MODEL: ${RERANKER_MODEL:-Qwen/Qwen3-Reranker-0.6B}
+      RERANKER_BATCH_SIZE: ${RERANKER_BATCH_SIZE:-8}
       # HF_TOKEN is sourced from the repo's gitignored .env.git.local at launch
       # time (exported by the operator or the launcher script); huggingface_hub
       # picks it up automatically for model downloads and rate limits.
@@ -16,6 +18,11 @@ services:
       # Mirror the working host venv: DLXG loader resolves librocdxg.so (unversioned
       # symlink) from /opt/rocm/lib. Without it HSA falls back to KFD and dies.
       LD_LIBRARY_PATH: /opt/rocm/lib
+      # Bound the OpenMP intra-op pool so tokenization cannot grab all cores.
+      # Note: these do NOT stop the WSL2 idle spin below; that is a ROCr/DXG
+      # runtime limitation, not an OpenMP one.
+      OMP_WAIT_POLICY: PASSIVE
+      OMP_NUM_THREADS: 4
     cap_add:
       - SYS_PTRACE
     security_opt:
@@ -35,10 +42,23 @@ services:
       - /opt/rocm/lib:/opt/rocm/lib:ro
     ports:
       - "${EMBEDDER_PORT:-8200}:8000"
+    # Upstream ROCm bug (ROCm/librocdxg#60): on WSL2 DXG there are no GPU
+    # interrupts, so ROCr's AsyncEventsLoop falls into a no-sleep polling loop
+    # and burns two full CPU cores (~200%) for the whole lifetime of the GPU
+    # context, even when completely idle. Fix PR ROCm/rocm-systems#7898 is not
+    # merged into any release yet. Containment only: cap total container CPU so
+    # the idle spin cannot consume the host; embedding stays GPU-bound and the
+    # two spinning threads plus real tokenization work fit under 4 cores.
+    deploy:
+      resources:
+        limits:
+          cpus: "4"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0) if urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=5).status==200 else sys.exit(1)"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      # First start downloads both model weight sets (~1.2 GB each) into the
+      # image layer, so give the healthcheck room before it starts probing.
+      start_period: 120s
     restart: unless-stopped

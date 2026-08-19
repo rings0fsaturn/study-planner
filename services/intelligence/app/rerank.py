@@ -1,8 +1,8 @@
-"""Typed client for the reranker sidecar (retrieval quality program Phase 2).
+"""Typed client for the reranker endpoint of the GPU inference sidecar.
 
-The sidecar (`services/reranker/`) serves a single `POST /rerank` endpoint
-that scores (query, passage) pairs with a cross-encoder and returns the
-passage indices reordered by descending relevance.
+The sidecar (`services/embedder/`) serves `POST /rerank` on the same container
+as `/embed` (port 8200): score (query, passage) pairs with a cross-encoder and
+return the passage indices reordered by descending relevance.
 
 Error normalization follows rule 22: retries exhaust into stable typed errors,
 and raw httpx failures never reach callers. Abort-shaped failures are timeouts;
@@ -20,7 +20,7 @@ import httpx
 
 from .ingestion.models import IngestionError
 
-DEFAULT_URL = os.getenv("RERANKER_URL", "http://reranker:8100")
+DEFAULT_URL = os.getenv("RERANKER_URL", "http://localhost:8200")
 DEFAULT_TIMEOUT_SECONDS = 30.0
 _MAX_RETRIES = 2
 _BASE_RETRY_DELAY_MS = 250.0
