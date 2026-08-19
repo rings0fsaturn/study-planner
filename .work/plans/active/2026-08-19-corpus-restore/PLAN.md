@@ -238,7 +238,7 @@ grep -n "2026-08-19-corpus-restore" .work/STATUS.md   # Active row present
 
 ### Phase 1: Wipe primitive + preflight
 
-**Status:** 🟡 In progress
+**Status:** ✅ Complete — 4fba301a8a3837876b3f2c7fbc1f04bb0d58c59c
 **Depends on:** Phase 0
 **Estimated scope:** ~2 files, ~300 lines
 
@@ -621,7 +621,9 @@ Delete `services/intelligence/scripts/corpus_restore.py` and `services/intellige
 
 #### Notes (filled in during implementation)
 
-- (filled in during implementation)
+- **Storage listing is a POST, not a GET.** The plan sketch used `GET /storage/v1/object/list/material-raw` with query params; the hosted Storage API rejects that (400/empty). `snapshot_library` was fixed to `POST` a JSON body `{"prefix": "<owner>/", "limit": 200}` and re-list each per-material folder (`<owner>/<materialId>`) to collect actual files. Without this fix the wipe would silently report `0 storage objects` and leave every uploaded PDF + fulltext.txt behind.
+- **Orphan storage folders exist.** 27 folders under `<owner>/` have no matching `materials` row (leftovers from E2E runs that deleted the row but not the object). `_delete_owner_rows` now deletes every recorded object regardless of material-row membership, so the wipe is a true clean slate. Live dry-run snapshot: 17 materials / 799 chunks / 18 jobs / 240 telemetry / 42 storage objects (incl. orphans).
+- `cmd_wipe` calls `snapshot_library(client, base, key, owner_id)` and `_delete_owner_rows(client, base, snapshot)` — signatures adjusted from the plan sketch.
 
 ---
 

@@ -24,10 +24,10 @@ Plan: [`PLAN.md`](PLAN.md) · Slug: `2026-08-19-corpus-restore` · Branch: `phas
 
 ### Phase 1 — Wipe primitive + preflight
 
-- Status: `☐ Not started`
+- Status: ✅ Complete
 - Files: `services/intelligence/scripts/corpus_restore.py`, `services/intelligence/tests/test_corpus_restore.py`
-- Test run: —
-- Notes: —
+- Test run: `2 passed`; ruff clean; live dry-run snapshot `20260819-085506-pre-wipe.json` (17 materials / 799 chunks / 18 jobs / 240 telemetry / 42 storage objects incl. 27 orphan folders)
+- Notes: storage listing is POST-with-body (not GET); orphan storage folders (no material row) now deleted too — clean slate. See PLAN.md notes.
 
 ### Phase 2 — Restore subcommand
 
