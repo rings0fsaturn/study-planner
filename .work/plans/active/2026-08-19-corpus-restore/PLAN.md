@@ -193,7 +193,7 @@ No migration, no other `services/intelligence` code changes.
 
 ### Phase 0: Plan doc + status row
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — b213c28
 **Depends on:** none — can start immediately
 **Estimated scope:** ~2 files, 0 code
 
@@ -238,7 +238,7 @@ grep -n "2026-08-19-corpus-restore" .work/STATUS.md   # Active row present
 
 ### Phase 1: Wipe primitive + preflight
 
-**Status:** ☐ Not started
+**Status:** 🟡 In progress
 **Depends on:** Phase 0
 **Estimated scope:** ~2 files, ~300 lines
 
