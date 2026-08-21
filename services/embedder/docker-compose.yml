@@ -8,7 +8,7 @@ services:
     environment:
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-Qwen/Qwen3-Embedding-0.6B}
       EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
-      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-64}
+      EMBEDDING_BATCH_SIZE: ${EMBEDDING_BATCH_SIZE:-128} # sweep winner 128 + HTTP 16 = 4,381 warm chunks/min (2026-08-17)
       RERANKER_MODEL: ${RERANKER_MODEL:-Qwen/Qwen3-Reranker-0.6B}
       RERANKER_BATCH_SIZE: ${RERANKER_BATCH_SIZE:-8}
       # HF_TOKEN is sourced from the repo's gitignored .env.git.local at launch

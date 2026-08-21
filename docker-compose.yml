@@ -31,6 +31,14 @@ services:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      EMBEDDER_URL: ${EMBEDDER_URL:-http://host.docker.internal:8200}
+      RERANKER_URL: ${RERANKER_URL:-http://host.docker.internal:8200}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      RETRIEVAL_ENABLED: ${RETRIEVAL_ENABLED:-true}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "${INTELLIGENCE_PORT:-8000}:8000"
     healthcheck:
@@ -50,11 +58,27 @@ services:
     environment:
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY:-}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      EMBEDDER_URL: ${EMBEDDER_URL:-http://host.docker.internal:8200}
+      RERANKER_URL: ${RERANKER_URL:-http://host.docker.internal:8200}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
       INGESTION_BATCH_SIZE: ${INGESTION_BATCH_SIZE:-100}
       INGESTION_VISIBILITY_SECONDS: ${INGESTION_VISIBILITY_SECONDS:-30}
       INGESTION_POLL_INTERVAL_SECONDS: ${INGESTION_POLL_INTERVAL_SECONDS:-1}
       INGESTION_MAX_DELIVERIES: ${INGESTION_MAX_DELIVERIES:-3}
+      INGESTION_MAX_IN_FLIGHT: ${INGESTION_MAX_IN_FLIGHT:-1}
+      INGESTION_MAX_BATCH_TOKENS: ${INGESTION_MAX_BATCH_TOKENS:-4000}
+      INGESTION_MAX_TOKENS_PER_MINUTE: ${INGESTION_MAX_TOKENS_PER_MINUTE:-25000}
+      INGESTION_LOG_LEVEL: ${INGESTION_LOG_LEVEL:-INFO}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
-      - intelligence
+      intelligence:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os,sys; sys.exit(0 if os.getenv('SUPABASE_URL') else 1)\" || exit 1"]
+      interval: 30s
+      timeout: 4s
+      retries: 3
+      start_period: 15s
     restart: unless-stopped
