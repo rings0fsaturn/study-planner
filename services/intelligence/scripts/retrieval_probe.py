@@ -3,15 +3,19 @@
 Usage:
     SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... GEMINI_API_KEY=... \
         uv run --package intelligence python scripts/retrieval_probe.py <material_id> \
-        [--questions questions.json] [--top-k 10]
+        [--questions questions.json] [--top-k 10] [--provider {sidecar,gemini}] [--hybrid]
 
 Loads `services/intelligence/.env` if present. The default question set is
 `scripts/probe_questions.json` (label → question with an expected answer
-snippet). Each question is embedded with `taskType=retrieval_query`, then
-`match_content_chunks` ranks the material's chunks; recall@1/3/5 and MRR are
-computed against the chunk whose text contains the expected snippet.
+snippet). Each question is embedded with ``taskType=retrieval_query`` (Gemini)
+or ``is_query=True`` (sidecar), then ``match_content_chunks`` ranks the
+material's chunks; recall@1/3/5 and MRR are computed against the chunk whose
+text contains the expected snippet.
 
-Consumes only ~1-2 k embedding tokens (15-20 single-text calls).
+The default provider is ``sidecar`` (same space as the durable
+``754/qwen-sidecar`` corpus). Use ``--provider gemini`` only for parity
+checks. Sidecar mode reads ``EMBEDDER_URL`` (default
+``http://localhost:8200``) and does NOT require ``GEMINI_API_KEY``.
 """
 
 from __future__ import annotations
@@ -72,6 +76,32 @@ def embed_query(key: str, text: str) -> list[float]:
     return [float(value) for value in response.json()["embeddings"][0]["values"]]
 
 
+def embed_query_sidecar(text: str) -> list[float]:
+    """Embed a single query with the local sidecar (is_query=True, rule 54)."""
+    import os as _os
+
+    base = _os.getenv("EMBEDDER_URL", "http://localhost:8200").rstrip("/")
+    # Use httpx directly so this script stays runnable without the app package
+    # being imported as a side-effect during module import (friendly for tests).
+    response = httpx.post(
+        f"{base}/embed",
+        json={"texts": [text], "is_query": True},
+        timeout=30.0,
+    )
+    if response.status_code != 200:
+        raise SystemExit(f"sidecar embedding failed: {response.status_code} {response.text[:300]}")
+    try:
+        vectors = response.json()["embeddings"]
+    except Exception as exc:
+        raise SystemExit(f"sidecar response is not json: {exc}") from exc
+    if not isinstance(vectors, list) or not vectors:
+        raise SystemExit("sidecar returned no embeddings")
+    first = vectors[0]
+    if first is None:
+        raise SystemExit("sidecar returned no vector for the query")
+    return [float(v) for v in first]
+
+
 def fetch_chunks(client: httpx.Client, base: str, key: str, material_id: str) -> list[dict]:
     chunks: list[dict] = []
     offset = 0
@@ -111,10 +141,8 @@ def rank_with_rpc(
         "query_embedding": literal,
         "match_material_id": material_id,
         "top_k": 50,
+        "query_text": query_text,
     }
-    if query_text:
-        # Hybrid retrieval: the 4-arg RPC overload fuses BM25 + dense with RRF.
-        payload["query_text"] = query_text
     response = client.post(
         f"{base}/rest/v1/rpc/match_content_chunks",
         json=payload,
@@ -124,16 +152,31 @@ def rank_with_rpc(
             "Content-Type": "application/json",
         },
     )
-    if response.status_code >= 400:
+    if response.status_code >= 300:
         raise SystemExit(f"match RPC failed: {response.status_code} {response.text[:200]}")
-    return response.json()
+    data = response.json()
+    if isinstance(data, dict) and data.get("code"):
+        raise SystemExit(f"match RPC failed: {data.get('message','unknown')[:200]}")
+    return data  # type: ignore[return-value]
 
 
-def probe(material_id: str, question_file: str, hybrid: bool = False) -> str:
+def probe(
+    material_id: str,
+    question_file: str,
+    hybrid: bool = False,
+    provider: str | None = None,
+) -> str:
     load_env_file(Path(__file__).parents[1] / ".env")
     supabase_url = require_env("SUPABASE_URL").rstrip("/")
     service_key = require_env("SUPABASE_SERVICE_ROLE_KEY")
-    gemini_key = require_env("GEMINI_API_KEY")
+    resolved_provider = (provider or os.getenv("EMBEDDING_PROVIDER", "sidecar")).strip().lower()
+    if resolved_provider == "qwen-sidecar":
+        resolved_provider = "sidecar"
+    if resolved_provider not in ("sidecar", "gemini"):
+        raise SystemExit(f"unknown provider: {resolved_provider} (expected sidecar or gemini)")
+    gemini_key: str | None = None
+    if resolved_provider == "gemini":
+        gemini_key = require_env("GEMINI_API_KEY")
 
     questions_path = Path(question_file)
     if not questions_path.is_file():
@@ -157,9 +200,15 @@ def probe(material_id: str, question_file: str, hybrid: bool = False) -> str:
     lines.append("| # | question | answer chunk | rank@match | recall@1 | recall@3 | recall@5 |")
     lines.append("|---|---|---|---|---|---|---|")
 
+    lines.append(f"- Provider: `{resolved_provider}`")
+
     hits: list[dict[str, Any]] = []
     for index, item in enumerate(questions, start=1):
-        vector = embed_query(gemini_key, item["question"])
+        if resolved_provider == "sidecar":
+            vector = embed_query_sidecar(item["question"])
+        else:
+            assert gemini_key is not None
+            vector = embed_query(gemini_key, item["question"])
         results = rank_with_rpc(
             client,
             supabase_url,
@@ -241,8 +290,14 @@ def main() -> None:
     parser.add_argument(
         "--hybrid", action="store_true", help="use hybrid BM25 + dense RRF retrieval"
     )
+    parser.add_argument(
+        "--provider",
+        default=None,
+        choices=["sidecar", "gemini"],
+        help="embedding provider for the query side (default: EMBEDDING_PROVIDER env or sidecar)",
+    )
     args = parser.parse_args()
-    print(probe(args.material_id, args.questions, hybrid=args.hybrid))
+    print(probe(args.material_id, args.questions, hybrid=args.hybrid, provider=args.provider))
 
 
 if __name__ == "__main__":
