@@ -13,15 +13,14 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
 import sys
 import time
 
 import httpx
 
 from app.ingestion.chunking import TiktokenCounter
-from app.ingestion.embeddings import GeminiEmbedder
 from app.ingestion.embeddings_sidecar import DEFAULT_URL as DEFAULT_EMBEDDER_URL
-from app.ingestion.embeddings_sidecar import SidecarEmbedder
 from app.ingestion.extractors import HttpxFetcher, PypdfTextReader, YoutubeTranscriptClient
 from app.ingestion.queue import SupabaseWorkQueue
 from app.ingestion.repository import SupabaseIngestionRepo, SupabaseStorageClient
@@ -39,21 +38,21 @@ def _env(name: str) -> str:
 
 
 def _build_embedder(shared_client: httpx.Client):
-    """Construct the provider adapter selected by EMBEDDING_PROVIDER."""
+    """Construct the provider adapter selected by EMBEDDING_PROVIDER (D-B)."""
     provider = os.getenv("EMBEDDING_PROVIDER", "gemini").strip().lower()
-    if provider == "sidecar":
+    if provider in ("sidecar", "qwen-sidecar"):
+        from app.query_embedder import get_embedder
+
         embedder_url = os.getenv("EMBEDDER_URL", DEFAULT_EMBEDDER_URL)
         logger.info("embedding provider: sidecar (%s)", embedder_url)
         return (
-            SidecarEmbedder(
-                base_url=embedder_url,
-                client=shared_client,
-                token_counter=TiktokenCounter(),
-            ),
+            get_embedder(client=shared_client, token_counter=TiktokenCounter()),
             # Local GPU has no token quota; a disabled limiter never sleeps.
             0,
         )
     if provider == "gemini":
+        from app.query_embedder import get_embedder
+
         gemini_api_key = os.getenv("GEMINI_API_KEY", "").strip()
         if not gemini_api_key:
             logger.warning(
@@ -61,11 +60,7 @@ def _build_embedder(shared_client: httpx.Client):
                 "but the embedding stage will fail materials with provider_unavailable"
             )
         return (
-            GeminiEmbedder(
-                api_key=gemini_api_key,
-                client=shared_client,
-                token_counter=TiktokenCounter(),
-            ),
+            get_embedder(client=shared_client, token_counter=TiktokenCounter()),
             int(os.getenv("INGESTION_MAX_TOKENS_PER_MINUTE", "25000")),
         )
     raise SystemExit(f"unknown EMBEDDING_PROVIDER: {provider}")
@@ -107,13 +102,27 @@ def main() -> None:
     )
 
     logger.info("ingestion worker starting against %s", supabase_url)
-    while True:
+    stop = False
+
+    def _handle_sigterm(signum, _frame):  # noqa: ARG001
+        nonlocal stop
+        stop = True
+        logger.info("received signal %s, draining current iteration", signum)
+
+    signal.signal(signal.SIGTERM, _handle_sigterm)
+    signal.signal(signal.SIGINT, _handle_sigterm)
+
+    while not stop:
         try:
             worker.run_once()
         except Exception:
             logger.exception("worker iteration failed; backing off")
             time.sleep(5)
+        if stop:
+            break
         time.sleep(worker.config.poll_interval_seconds)
+    shared_client.close()
+    logger.info("ingestion worker stopped")
 
 
 if __name__ == "__main__":

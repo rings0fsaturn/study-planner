@@ -31,6 +31,13 @@ if (!process.env.GEMINI_API_KEY) {
   );
 }
 
+const provider = (process.env.EMBEDDING_PROVIDER || 'gemini').toLowerCase();
+const embedderUrl = process.env.EMBEDDER_URL || 'http://localhost:8200';
+console.log(`embedding provider: ${provider}${provider === 'sidecar' ? ` (${embedderUrl})` : ''}`);
+if (provider === 'sidecar') {
+  console.log(`sidecar health: GET ${embedderUrl}/health (expect dimensions 768, cuda true, loaded)`);
+}
+
 const child = spawn(
   'uv',
   ['run', '--package', 'intelligence', 'python', '-m', 'app.worker_main'],
