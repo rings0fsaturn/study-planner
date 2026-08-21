@@ -1,13 +1,50 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach, vi, type Mock } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { MaterialLibrary } from './MaterialLibrary'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
-vi.mock('../../lib/supabase', () => ({
-  supabase: { auth: { getSession: vi.fn() } },
+
+interface FakeChannel {
+  on: Mock<[event: string, options: unknown, callback: (payload: unknown) => void], FakeChannel>
+  subscribe: Mock<[callback?: (status: string) => void], FakeChannel>
+}
+
+const { channelHandlers, channelStatusCbs, liveChannel } = vi.hoisted(() => ({
+  channelHandlers: [] as Array<(payload: {
+    eventType: string
+    new: Record<string, unknown>
+    old?: Record<string, unknown>
+  }) => void>,
+  channelStatusCbs: [] as Array<(status: string) => void>,
+  liveChannel: {} as {
+    on: FakeChannel['on']
+    subscribe: FakeChannel['subscribe']
+  },
 }))
+
+vi.mock('../../lib/supabase', () => {
+  const channel: FakeChannel = {
+    on: vi.fn((_event: string, _options: unknown, callback: (payload: unknown) => void) => {
+      channelHandlers.push(callback as never)
+      return channel
+    }),
+    subscribe: vi.fn((callback?: (status: string) => void) => {
+      if (callback) channelStatusCbs.push(callback)
+      return channel
+    }),
+  }
+  liveChannel.on = channel.on
+  liveChannel.subscribe = channel.subscribe
+  return {
+    supabase: {
+      auth: { getSession: vi.fn() },
+      channel: vi.fn(() => channel),
+      removeChannel: vi.fn(),
+    },
+  }
+})
 
 
 function material(overrides: Partial<MaterialRecord>): MaterialRecord {
@@ -24,6 +61,10 @@ function material(overrides: Partial<MaterialRecord>): MaterialRecord {
     contentVersion: 'v1',
     replacedAt: null,
     estimatedMinutes: 420,
+    uploadCompleteAt: null,
+    chunkCount: 0,
+    groundingVersion: null,
+    extractedTextPath: null,
     createdAt: '2026-07-15T10:00:00.000Z',
     updatedAt: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -140,6 +181,77 @@ describe('MaterialLibrary', () => {
 
     expect(await screen.findByText('Could not load materials')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument()
+  })
+
+  it('applies realtime row updates to the visible status', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP', ingestionState: 'pending' }),
+    ])
+
+    renderLibrary(client)
+    await screen.findByText('OSTEP')
+    expect(screen.getByText('Pending')).toBeInTheDocument()
+
+    const handler = channelHandlers[channelHandlers.length - 1]
+    handler({
+      eventType: 'UPDATE',
+      new: {
+        id: 'mat-1',
+        user_id: 'user-a',
+        title: 'OSTEP',
+        kind: 'file',
+        source: 'ostep.pdf',
+        ingestion_state: 'ready',
+        ingestion_progress: 1,
+        ingestion_error: null,
+        archived: false,
+        content_version: 'v1',
+        replaced_at: null,
+        estimated_minutes: 420,
+        upload_complete_at: null,
+        chunk_count: 4,
+        grounding_version: 'v1',
+        extracted_text_path: 'user-a/mat-1/fulltext.txt',
+        created_at: '2026-07-15T10:00:00.000Z',
+        updated_at: '2026-07-15T10:01:00.000Z',
+      },
+    })
+
+    expect(await screen.findByText('Ready')).toBeInTheDocument()
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Practice this' })).toBeInTheDocument()
+  })
+
+  it('removes deleted rows delivered over realtime', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+
+    renderLibrary(client)
+    await screen.findByText('OSTEP')
+
+    channelHandlers[channelHandlers.length - 1]({
+      eventType: 'DELETE',
+      new: {},
+      old: { id: 'mat-1' },
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText('OSTEP')).not.toBeInTheDocument()
+    })
+  })
+
+  it('connects the live subscription status for the polling fallback switch', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+    renderLibrary(client)
+    await screen.findByText('OSTEP')
+
+    const statusCb = channelStatusCbs[channelStatusCbs.length - 1]
+    expect(statusCb).toBeTypeOf('function')
+    statusCb('SUBSCRIBED')
+    expect(liveChannel.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      expect.objectContaining({ table: 'materials' }),
+      expect.any(Function),
+    )
   })
 
   it('opens the picker and shows a selection notice on continue', async () => {

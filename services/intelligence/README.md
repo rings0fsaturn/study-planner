@@ -202,8 +202,70 @@ curl -s -X POST http://127.0.0.1:8000/v1/roadmap/regenerate \
   -d @tests/fixtures/pillar-a/roadmap/regenerate-preserves-pins.input.json
 ```
 
+## Material ingestion worker (issue #37)
+
+The worker owns deterministic extraction, cleaning, chunking, embedding
+calls, and the pgmq stage queues (`material_extract` → `material_embed` →
+`material_publish`). It is a separate process from the API and talks to
+Supabase with the service role; the API never holds service credentials.
+
+Required env for the worker:
+
+- `SUPABASE_URL` — Supabase project URL.
+- `SUPABASE_SERVICE_ROLE_KEY` — service-role key (runtime env only, never
+  committed; the worker is the only process that needs it).
+- `GEMINI_API_KEY` — Gemini key for `gemini-embedding-001` embeddings.
+  Without it, extraction/chunking still run and the embed stage fails
+  materials with a clear `provider_unavailable` error.
+
+Optional tuning: `INGESTION_BATCH_SIZE` (100), `INGESTION_VISIBILITY_SECONDS`
+(30), `INGESTION_POLL_INTERVAL_SECONDS` (1), `INGESTION_MAX_DELIVERIES` (3),
+`INGESTION_MAX_IN_FLIGHT` (1), `INGESTION_MAX_BATCH_TOKENS` (4000),
+`INGESTION_MAX_TOKENS_PER_MINUTE` (25000 — paces embedding calls under the
+provider's per-minute token quota; the free tier's TPM budget is ~30 k, so a
+worker that blasts batches back-to-back fails materials with
+`quota_exhausted`).
+
+Run locally:
+
+```bash
+pnpm dev:ingestion-worker
+```
+
+Run in Docker: `./docker-app start` starts the `ingestion-worker` service
+alongside the API (see `docker/.env.example` for the env keys).
+
+### Material/job API env
+
+The `/v1/materials/*` and `/v1/jobs/*` endpoints resolve Supabase through the
+caller's own access token, so the API additionally needs
+`SUPABASE_PUBLISHABLE_KEY` (anon key) for those routes.
+
 ## Test
 
 ```bash
 uv run --package intelligence pytest services/intelligence/tests -q
+```
+
+### Telemetry
+
+The worker emits one `generation_telemetry` row per pipeline stage and per
+Gemini `batchEmbedContents` call (approved phase-2 `GenerationTelemetry`
+contract shape plus `material_id`/`attempt`/`stage` context; migration `014`).
+Telemetry is server-owned (RLS on, no policies) and best-effort: a sink
+failure never fails a pipeline stage. Per-batch stats (latency, tokens,
+attempts, outcome) come from `GeminiEmbedder`'s observer; `traceId` is the
+ingestion job's `correlation_id`.
+
+Summarize a material's run:
+
+```bash
+set -a; source .env; set +a
+uv run --package intelligence python scripts/ingestion_report.py <material_id>
+```
+
+Embedding retrieval-quality probe (recall@k / MRR against `match_content_chunks`):
+
+```bash
+uv run --package intelligence python scripts/retrieval_probe.py <material_id>
 ```

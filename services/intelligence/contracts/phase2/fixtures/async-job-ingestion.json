@@ -1,0 +1,10 @@
+{
+  "jobId": "job-ing-01",
+  "kind": "ingestion",
+  "status": "queued",
+  "ownerId": "user-01",
+  "correlationId": "corr-ing-01",
+  "attempt": 2,
+  "resultId": "material-01",
+  "createdAt": "2026-08-14T09:00:00Z"
+}

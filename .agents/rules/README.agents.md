@@ -21,6 +21,7 @@ Read each selected rule file completely.
 | [`13-form-layout.agents.md`](13-form-layout.agents.md) | Building or reviewing forms and field-group spacing. |
 | [`14-design-token-package-exports.agents.md`](14-design-token-package-exports.agents.md) | Changing shared CSS exports or imports from the design-token package. |
 | [`15-browser-use-cli.agents.md`](15-browser-use-cli.agents.md) | Using the browser-use CLI and its dedicated WSL automation Chromium, including the browser start and stop lifecycle. |
+| [`16-live-e2e-authoring.agents.md`](16-live-e2e-authoring.agents.md) | Writing live E2E specs against the real stack: skip scoping, ready-state assertions, locator scope, and shared-account cleanup. |
 
 ## Auth, Storage, and Sync
 
@@ -35,6 +36,7 @@ Read each selected rule file completely.
 | [`33-sync-boundaries.agents.md`](33-sync-boundaries.agents.md) | Changing local-to-cloud sync, snapshots, retry, or restore behavior. |
 | [`34-sync-provider-testing.agents.md`](34-sync-provider-testing.agents.md) | Testing providers that own engines and browser lifecycle listeners. |
 | [`35-supabase-migrations-and-rls.agents.md`](35-supabase-migrations-and-rls.agents.md) | Changing Supabase tables, storage, policies, or sync contracts. |
+| [`36-supabase-live-stack.agents.md`](36-supabase-live-stack.agents.md) | Pushing migrations or probing the hosted Supabase project: CLI credentials, PostgREST bulk syntax, storage paths, pgmq signatures, and embedding dimensions. |
 
 ## Product Engines and Flows
 
@@ -50,6 +52,8 @@ Read each selected rule file completely.
 | [`50-pnpm-build-registry.agents.md`](50-pnpm-build-registry.agents.md) | Running a build when Corepack cannot reach the public npm registry. |
 | [`51-docker-runtime.agents.md`](51-docker-runtime.agents.md) | Running the containerized full stack with the `docker-app` launcher or Docker Compose. |
 | [`52-github-cli-and-token.agents.md`](52-github-cli-and-token.agents.md) | Running any `gh` command, using the gitignored token, or diagnosing transient `api.github.com` TLS/EOF failures. |
+| [`53-wsl-dev-runtime.agents.md`](53-wsl-dev-runtime.agents.md) | Handling stale Vite code on `/mnt/d`, env-file loading into dev processes, and background process or `pkill` safety. |
+| [`54-gpu-inference-sidecar.agents.md`](54-gpu-inference-sidecar.agents.md) | Running, building, configuring, or troubleshooting the standalone ROCm GPU inference sidecar on WSL2, which serves both Qwen3 embeddings and Qwen3 reranking from one container, including its demand-start/stop lifecycle because it burns about two CPU cores whenever it runs. |
 
 ## Reports and Papers
 

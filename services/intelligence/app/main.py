@@ -3,11 +3,11 @@ import os
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from py_progress import PRODUCTION_PRIOR_STRATEGY, production_calibrator
 
 from app.middleware import request_context_middleware, request_id_from_request
-from app.routers import calibration, progress, roadmap
+from app.routers import calibration, jobs, materials, progress, retrieval, roadmap
 from app.security import rate_limit_user, require_user
+from py_progress import PRODUCTION_PRIOR_STRATEGY, production_calibrator
 
 DEFAULT_CORS_ORIGINS = ["http://localhost:5173"]
 
@@ -70,3 +70,6 @@ _V1_DEPENDENCIES = [Depends(require_user), Depends(rate_limit_user)]
 app.include_router(calibration.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(progress.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(roadmap.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(materials.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(jobs.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(retrieval.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)

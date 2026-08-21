@@ -1,0 +1,19 @@
+{
+  "created_at": "2026-08-17T10:25:23.420120+00:00",
+  "pdf_run": {
+    "chunk_count": 754,
+    "correlation_id": "df9f418d-8193-4ee4-aba0-97c2dc3cf2a2",
+    "job_id": "cef18bd0-2dad-4148-a650-714eb8969fa9",
+    "material_id": "6a2d7be6c1ad41189728c1d5c341754e",
+    "null_vectors": 0,
+    "owner_id": "29288e28-d6ff-45c7-b750-ba43f7452409",
+    "pdf": "../../e2e/pdf/sample-textbook-572page.pdf",
+    "provider": "qwen-sidecar",
+    "skipped_chunks": 0,
+    "state": "ready",
+    "telemetry_records": 67,
+    "title": "Sidecar E2E 572p 1786962268"
+  },
+  "run_id": "20260817-102428",
+  "telemetry_report_md": "# Ingestion telemetry report \u2014 `6a2d7be6c1ad41189728c1d5c341754e`\n\n- **Title:** Sidecar E2E 572p 1786962268\n- **Kind:** file \u00b7 **State:** ready\n- **Chunk count:** 754 \u00b7 **Grounding version:** 69f82ab8a7d140b789c9b75885c0c074\n- **Telemetry records:** 67\n\n## Attempts (ingestion_jobs)\n\n| attempt | status | error | created_at | completed_at |\n|---|---|---|---|---|\n| 1 | succeeded | \u2014 | 2026-08-17T10:24:31 | 2026-08-17T10:25:17.634131+00:00 |\n\n## Stage breakdown\n\n| stage | count | engine | total | p50 | p95 |\n|---|---|---|---|---|---|\n| chunk | 1 | tiktoken-cl100k | 2.33s | 2.33s | 2.33s |\n| embed | 1 | local | 28.35s | 28.35s | 28.35s |\n| embed-batch | 62 | qwen3-embedding-0.6b | 9.53s | 155ms | 188ms |\n| extract | 1 | pypdf | 5.94s | 5.94s | 5.94s |\n| publish | 1 | supabase-rpc | 182ms | 182ms | 182ms |\n| upload | 1 | supabase-storage | 965ms | 965ms | 965ms |\n\n## Embedding provider calls (embed-batch)\n\n- **Calls:** 62 \u00b7 **Total tokens:** 227,760\n- **Mean tokens/call:** 3674 \u00b7 **Mean texts/call:** 12\n- **Latency \u2014 mean:** 154ms \u00b7 **p50:** 155ms \u00b7 **p95:** 188ms \u00b7 **max:** 227ms\n- **Retried calls:** 0 (0.0%)\n- **Outcomes:** ok=62\n- **Embedding throughput:** 23,907 tokens/s (provider wall time)\n\n**Sum of stage latencies (worker-side pipeline time):** 47.30s\n\n## Chunks\n\n- **Total chunks:** 754 \u00b7 **Skipped (provider zero vector):** 0\n- **Tokens \u2014 total:** 227,760 \u00b7 **mean/chunk:** 302 \u00b7 **p50:** 334 \u00b7 **p90:** 400 \u00b7 **max:** 400\n- **Overlap waste (est. 30 tokens \u00d7 753 boundaries):** 22,590 tokens (9.9% of embedded text)\n\n"
+}

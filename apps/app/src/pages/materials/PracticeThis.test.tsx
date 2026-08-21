@@ -24,6 +24,10 @@ function material(overrides: Partial<MaterialRecord>): MaterialRecord {
     contentVersion: 'v1',
     replacedAt: null,
     estimatedMinutes: 420,
+    uploadCompleteAt: null,
+    chunkCount: 0,
+    groundingVersion: null,
+    extractedTextPath: null,
     createdAt: '2026-07-15T10:00:00.000Z',
     updatedAt: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -97,5 +101,29 @@ describe('PracticeThis', () => {
     await waitFor(() => {
       expect(screen.getByText(/\+\d more material/i)).toBeInTheDocument()
     })
+  })
+
+  it.each(['pending', 'extracting', 'chunking', 'embedding'] as const)(
+    'blocks a direct practice route while the material is %s',
+    async (state) => {
+      const client = new FakeMaterialClient([material({ ingestionState: state })])
+
+      renderPractice(client)
+
+      expect(await screen.findByText('Material is not ready yet')).toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Start practice run' })).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Add another material' })).not.toBeInTheDocument()
+    },
+  )
+
+  it('blocks a direct practice route for a failed material', async () => {
+    const client = new FakeMaterialClient([
+      material({ ingestionState: 'failed', ingestionError: 'provider_timeout' }),
+    ])
+
+    renderPractice(client)
+
+    expect(await screen.findByText('Material is not ready yet')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Start practice run' })).not.toBeInTheDocument()
   })
 })

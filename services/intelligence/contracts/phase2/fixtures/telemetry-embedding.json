@@ -1,0 +1,1 @@
+{"traceId":"trace-embed-1","ownerId":"user-1","task":"embedding","model":"gemini-embedding-001","promptTemplateVersion":"embedding-v1","outcome":"ok","latencyMs":212.7,"inputTokens":4120,"outputTokens":0,"repairAttempted":true}

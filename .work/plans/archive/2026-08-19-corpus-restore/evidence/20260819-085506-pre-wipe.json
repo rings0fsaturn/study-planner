@@ -1,0 +1,300 @@
+{
+  "chunk_count": 799,
+  "created_at": "2026-08-19T08:55:16.579668+00:00",
+  "job_count": 18,
+  "material_count": 17,
+  "materials": [
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "gate7b-1786692699",
+      "ingestion_state": "failed",
+      "title": "gate7 nojob"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "dafe94d4-a148-45c1-9c59-237635e9f7dd",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786695314222"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "5d2e9602-3765-4603-837d-7171cdfbab78",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion pdf 1786695324714"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "bf1c1eb6-6d11-469a-ab4d-5f0d9504c08c",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786695310062"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "1cba60c7-2a07-4182-a3c9-5fcf737a95c7",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786695333243"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "gate7b-1786692634",
+      "ingestion_state": "failed",
+      "title": "gate7 nojob"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "192238f8-7256-43ea-9c0e-b49bfb022f0b",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786713899296"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "51e8d7a5-6400-4786-a1f6-409f260ee67c",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786695203486"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "3be06252-05c5-47bd-96e6-19138c94e494",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786713898913"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "1033c301-11b3-4973-9ff6-555d68101479",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786695203486"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "66a1b8eb-c1d1-4a6f-b20b-7b0e066be8b9",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786713899288"
+    },
+    {
+      "chunk_count": 788,
+      "embedding_provider": null,
+      "id": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion pdf 1786713902107"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "17538362-4742-40aa-8092-46504c15016f",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786695206478"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "4fb529c5-6f73-483a-a622-5264392bfb49",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786713898913"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": "qwen-sidecar",
+      "id": "07d62b7e-181d-43e8-853e-5d5f4a9f71e8",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786695310058"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "4f3af3c3-40f3-44ff-a799-3433c076aae8",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion pdf 1786695220217"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "70169652-1371-48d2-aacf-a0e616e31cd5",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786695230731"
+    }
+  ],
+  "owner_id": "29288e28-d6ff-45c7-b750-ba43f7452409",
+  "run_id": "20260819-085506",
+  "storage_objects": [
+    {
+      "material_id": "01fb657d-1c68-4fca-a4f8-a3c708d47463",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/01fb657d-1c68-4fca-a4f8-a3c708d47463/fulltext.txt"
+    },
+    {
+      "material_id": "07d62b7e-181d-43e8-853e-5d5f4a9f71e8",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/07d62b7e-181d-43e8-853e-5d5f4a9f71e8/fulltext.txt"
+    },
+    {
+      "material_id": "0ddf088f-2a94-4952-a564-2b56777ccabc",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/0ddf088f-2a94-4952-a564-2b56777ccabc/fulltext.txt"
+    },
+    {
+      "material_id": "1033c301-11b3-4973-9ff6-555d68101479",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/1033c301-11b3-4973-9ff6-555d68101479/fulltext.txt"
+    },
+    {
+      "material_id": "1160d6af-90eb-4f21-b0ff-6c67c2dec384",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/1160d6af-90eb-4f21-b0ff-6c67c2dec384/fulltext.txt"
+    },
+    {
+      "material_id": "12de00f6-fa65-41ac-889b-571adbcd33eb",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/12de00f6-fa65-41ac-889b-571adbcd33eb/fulltext.txt"
+    },
+    {
+      "material_id": "1793535f-d7b6-4188-b9fe-dbfd66561a48",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/1793535f-d7b6-4188-b9fe-dbfd66561a48/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "192238f8-7256-43ea-9c0e-b49bfb022f0b",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/192238f8-7256-43ea-9c0e-b49bfb022f0b/fulltext.txt"
+    },
+    {
+      "material_id": "1a34147fee5e4368bff449fed6d2a257",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/1a34147fee5e4368bff449fed6d2a257/fulltext.txt"
+    },
+    {
+      "material_id": "1cba60c7-2a07-4182-a3c9-5fcf737a95c7",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/1cba60c7-2a07-4182-a3c9-5fcf737a95c7/fulltext.txt"
+    },
+    {
+      "material_id": "2132cecf-e218-498e-980d-9877e0c5aab2",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/2132cecf-e218-498e-980d-9877e0c5aab2/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "3be06252-05c5-47bd-96e6-19138c94e494",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/3be06252-05c5-47bd-96e6-19138c94e494/fulltext.txt"
+    },
+    {
+      "material_id": "4349e3a5-104a-4f26-a287-a44b4f306542",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/4349e3a5-104a-4f26-a287-a44b4f306542/fulltext.txt"
+    },
+    {
+      "material_id": "4f3af3c3-40f3-44ff-a799-3433c076aae8",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/4f3af3c3-40f3-44ff-a799-3433c076aae8/fulltext.txt"
+    },
+    {
+      "material_id": "4f3af3c3-40f3-44ff-a799-3433c076aae8",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/4f3af3c3-40f3-44ff-a799-3433c076aae8/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "51e8d7a5-6400-4786-a1f6-409f260ee67c",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/51e8d7a5-6400-4786-a1f6-409f260ee67c/fulltext.txt"
+    },
+    {
+      "material_id": "54269888-9d62-49b4-8414-66024e0b1a86",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/54269888-9d62-49b4-8414-66024e0b1a86/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "5d2e9602-3765-4603-837d-7171cdfbab78",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/5d2e9602-3765-4603-837d-7171cdfbab78/fulltext.txt"
+    },
+    {
+      "material_id": "5d2e9602-3765-4603-837d-7171cdfbab78",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/5d2e9602-3765-4603-837d-7171cdfbab78/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "66a1b8eb-c1d1-4a6f-b20b-7b0e066be8b9",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/66a1b8eb-c1d1-4a6f-b20b-7b0e066be8b9/fulltext.txt"
+    },
+    {
+      "material_id": "69b890cf-5940-4d22-938f-18f2a5a1b718",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/69b890cf-5940-4d22-938f-18f2a5a1b718/fulltext.txt"
+    },
+    {
+      "material_id": "6ddac1ab-17b9-4673-ba8f-475f7570e794",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/6ddac1ab-17b9-4673-ba8f-475f7570e794/fulltext.txt"
+    },
+    {
+      "material_id": "70169652-1371-48d2-aacf-a0e616e31cd5",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/70169652-1371-48d2-aacf-a0e616e31cd5/fulltext.txt"
+    },
+    {
+      "material_id": "71c4d495-6df6-4541-8e7f-991ad0aa958d",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/71c4d495-6df6-4541-8e7f-991ad0aa958d/fulltext.txt"
+    },
+    {
+      "material_id": "7b315ea3-8eee-458f-a7f4-c9a87c162041",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/7b315ea3-8eee-458f-a7f4-c9a87c162041/fulltext.txt"
+    },
+    {
+      "material_id": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/80c8b138-b544-4095-8dc0-1c390ac70da2/fulltext.txt"
+    },
+    {
+      "material_id": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/80c8b138-b544-4095-8dc0-1c390ac70da2/sample-textbook-572page.pdf"
+    },
+    {
+      "material_id": "9c01e6e7-a48f-4dfb-83b2-6d92736a4b81",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/9c01e6e7-a48f-4dfb-83b2-6d92736a4b81/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "9efc8cc8-9400-437e-8c7d-a6f68544f232",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/9efc8cc8-9400-437e-8c7d-a6f68544f232/fulltext.txt"
+    },
+    {
+      "material_id": "a161ce10-39d5-4185-9190-f58a2ee7326a",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/a161ce10-39d5-4185-9190-f58a2ee7326a/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "a646dc72-f539-4eac-9b89-1782e464f6e6",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/a646dc72-f539-4eac-9b89-1782e464f6e6/ingestion-fixture.pdf"
+    },
+    {
+      "material_id": "a653ff23-784d-4e45-81df-a7fba4a5365f",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/a653ff23-784d-4e45-81df-a7fba4a5365f/fulltext.txt"
+    },
+    {
+      "material_id": "b2959bc8-8386-428f-ba77-099165db055e",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/b2959bc8-8386-428f-ba77-099165db055e/fulltext.txt"
+    },
+    {
+      "material_id": "bd550f65-2f5d-427d-9f30-feccc4ca2a34",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/bd550f65-2f5d-427d-9f30-feccc4ca2a34/fulltext.txt"
+    },
+    {
+      "material_id": "c9d7a42c-e01d-458c-b69b-0afc11a36499",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/c9d7a42c-e01d-458c-b69b-0afc11a36499/fulltext.txt"
+    },
+    {
+      "material_id": "dafe94d4-a148-45c1-9c59-237635e9f7dd",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/dafe94d4-a148-45c1-9c59-237635e9f7dd/fulltext.txt"
+    },
+    {
+      "material_id": "f7836e01-3388-4736-9ba2-f8482892c2d7",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/f7836e01-3388-4736-9ba2-f8482892c2d7/fulltext.txt"
+    },
+    {
+      "material_id": "fe9e8510-0a6f-4fad-94c4-2621e6296ecd",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/fe9e8510-0a6f-4fad-94c4-2621e6296ecd/fulltext.txt"
+    },
+    {
+      "material_id": "gate10-1786695038",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/gate10-1786695038/fulltext.txt"
+    },
+    {
+      "material_id": "gate6-m1-1786692207",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/gate6-m1-1786692207/fulltext.txt"
+    },
+    {
+      "material_id": "gate7-1786692699",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/gate7-1786692699/fulltext.txt"
+    },
+    {
+      "material_id": "probe-upload-1",
+      "name": "29288e28-d6ff-45c7-b750-ba43f7452409/probe-upload-1/ingestion-fixture.pdf"
+    }
+  ],
+  "telemetry_count": 240
+}

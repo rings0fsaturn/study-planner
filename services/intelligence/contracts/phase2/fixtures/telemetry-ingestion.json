@@ -1,0 +1,1 @@
+{"traceId":"trace-ingestion-1","ownerId":"user-1","task":"ingestion","model":"pypdf","promptTemplateVersion":"ingestion-v1","outcome":"ok","latencyMs":12050.4,"inputTokens":0,"outputTokens":0,"repairAttempted":false}

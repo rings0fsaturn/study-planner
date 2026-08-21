@@ -4,7 +4,7 @@ import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
 import '../../materials/materials.css'
-import { SOURCE_LABELS, type MaterialRecord } from '../../materials/types'
+import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
 
 const FOCUS_OPTIONS = ['Written', 'Coding', 'Mixed'] as const
 const DIFFICULTY_OPTIONS = ['Adaptive', '1', '2', '3', '4', '5'] as const
@@ -73,6 +73,34 @@ export function PracticeThis() {
           <div className="banner-body">
             <div className="banner-title">Could not load material</div>
             <div className="banner-desc">The material may have been deleted.</div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (!isReady(material)) {
+    // Practice is grounded in extracted content: a direct route to a
+    // processing or failed material must not offer a run.
+    return (
+      <div className="materials-page">
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={() => navigate(`/materials/${material.id}`)}
+        >
+          ← Back to material
+        </button>
+        <h1 style={{ margin: '0.5rem 0 0.25rem', font: '2rem var(--font-display)', lineHeight: 1.1 }}>
+          Practice this
+        </h1>
+        <div className="banner attention" style={{ marginTop: '1rem', maxWidth: '640px' }}>
+          <div className="banner-body">
+            <div className="banner-title">Material is not ready yet</div>
+            <div className="banner-desc">
+              Practice runs are grounded in the extracted content. Wait for ingestion to finish or
+              retry the material first.
+            </div>
           </div>
         </div>
       </div>

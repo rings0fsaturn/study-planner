@@ -26,4 +26,5 @@ Each fixture is mapped to its canonical JSON Schema in `manifest.json` and is va
 | `execution-sandbox-timeout.json` | execution result | timeout/sandbox failure |
 | `guide-start.json`, `guide-delta.json`, `guide-citation.json`, `guide-done.json`, `guide-error.json` | guide HintFrame | every enforceable SSE frame kind |
 | `provider-timeout.json` | provider error | normalized retryable provider failure |
+| `async-job-ingestion.json` | async job | ingestion job with attempt identity |
 | `gated-reveal.json` | gated reveal | acknowledgement with no hidden content |

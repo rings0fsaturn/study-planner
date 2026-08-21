@@ -27,6 +27,7 @@ test-results/
 
 # Python / uv
 .venv/
+.venv-bakeoff/
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -35,6 +36,7 @@ __pycache__/
 # Supabase CLI local state
 apps/app/supabase/.temp/
 apps/app/supabase/.branches/
+supabase/.temp/
 
 # code-memory: agent-only index, do not commit
 .codex/memory/

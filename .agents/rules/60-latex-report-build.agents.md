@@ -9,10 +9,19 @@ Identify the active report and read its local decisions, chapter structure, and 
 Do not assume every review report has the same monolithic or modular layout.
 
 TinyTeX is installed outside the default shell path.
+When TinyTeX is absent, install it user-local without sudo:
+
+```bash
+curl -sL https://yihui.org/tinytex/install-bin-unix.sh | sh
+```
+
+Resolve the TinyTeX bin directory per host with a glob before building:
+macOS installs to `$HOME/Library/TinyTeX/bin/universal-darwin`, Linux installs to `$HOME/.TinyTeX/bin/x86_64-linux`, and `tlmgr` symlinks `latexmk` and friends into `$HOME/.local/bin`.
 Build from the report directory with TinyTeX prepended:
 
 ```bash
-env PATH="$HOME/Library/TinyTeX/bin/universal-darwin:$PATH" \
+TEXBIN="$(ls -d "$HOME"/.TinyTeX/bin/* 2>/dev/null || ls -d "$HOME"/Library/TinyTeX/bin/* 2>/dev/null)"
+env PATH="$TEXBIN:$PATH" \
   latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
 ```
 

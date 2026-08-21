@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 
 PROJECT_NAME=""
 ENV_FILE=""
+WITH_EMBEDDER=""
 
 usage() {
   cat <<'EOF'
@@ -17,6 +18,9 @@ Options:
   --env-file PATH      Use PATH as the compose env file.
                        Default: apps/app/.env.local if present, else .env.
   --project-name NAME  Pass --project-name NAME to docker compose.
+  --with-embedder      Also start the standalone GPU embedder sidecar
+                       (services/embedder/docker-compose.yml, rule 54).
+                       Alias: --with-gpu. Requires HF_TOKEN in .env.git.local.
   -h, --help           Show this help.
 
 Commands:
@@ -31,6 +35,7 @@ Commands:
 
 Examples:
   ./docker-app start
+  ./docker-app --with-embedder start
   ./docker-app --env-file docker/.env.example start
   ./docker-app logs
   ./docker-app logs intelligence
@@ -75,6 +80,33 @@ compose() {
   fi
 }
 
+export_hf_token_if_present() {
+  if [[ -f .env.git.local ]]; then
+    local token
+    token="$(grep '^HF_TOKEN=' .env.git.local 2>/dev/null | cut -d= -f2- | tr -d '\r' | tr -d '\n' || true)"
+    if [[ -n "$token" ]]; then
+      export HF_TOKEN="$token"
+    fi
+  fi
+}
+
+wait_for_embedder_health() {
+  local timeout=90
+  local elapsed=0
+  echo "docker-app: waiting for embedder /health (timeout ${timeout}s)..." >&2
+  while (( elapsed < timeout )); do
+    if curl -sf http://127.0.0.1:8200/health 2>/dev/null | grep -q '"status"[[:space:]]*:[[:space:]]*"ok"' && \
+       curl -sf http://127.0.0.1:8200/health 2>/dev/null | grep -q '"loaded"[[:space:]]*:[[:space:]]*true'; then
+      echo "docker-app: embedder healthy" >&2
+      return 0
+    fi
+    sleep 2
+    elapsed=$((elapsed + 2))
+  done
+  echo "docker-app: warning: embedder did not become healthy within ${timeout}s (check 'docker compose -f services/embedder/docker-compose.yml ps' and logs)" >&2
+  return 0
+}
+
 main() {
   local command=""
   local compose_args=()
@@ -83,6 +115,11 @@ main() {
       -h | --help)
         usage
         exit 0
+        ;;
+      --with-embedder | --with-gpu)
+        WITH_EMBEDDER="1"
+        shift
+        continue
         ;;
       --env-file)
         [[ $# -ge 2 ]] || fail "--env-file requires a path argument"
@@ -132,13 +169,36 @@ main() {
   require_compose
 
   case "$command" in
-    start) compose up --build -d "${compose_args[@]}" ;;
-    stop) compose down "${compose_args[@]}" ;;
-    restart)
-      compose down
+    start)
+      if [[ -n "$WITH_EMBEDDER" ]]; then
+        export_hf_token_if_present
+        docker compose -f services/embedder/docker-compose.yml up -d
+        wait_for_embedder_health
+      fi
       compose up --build -d "${compose_args[@]}"
       ;;
-    status) compose ps "${compose_args[@]}" ;;
+    stop)
+      compose down "${compose_args[@]}"
+      if [[ -n "$WITH_EMBEDDER" ]]; then
+        docker compose -f services/embedder/docker-compose.yml stop 2>/dev/null || true
+      fi
+      ;;
+    restart)
+      compose down
+      if [[ -n "$WITH_EMBEDDER" ]]; then
+        export_hf_token_if_present
+        docker compose -f services/embedder/docker-compose.yml up -d
+        wait_for_embedder_health
+      fi
+      compose up --build -d "${compose_args[@]}"
+      ;;
+    status)
+      compose ps "${compose_args[@]}"
+      if [[ -n "$WITH_EMBEDDER" ]]; then
+        echo "--- embedder (services/embedder) ---" >&2
+        docker compose -f services/embedder/docker-compose.yml ps 2>/dev/null || true
+      fi
+      ;;
     logs)
       if [[ ${#compose_args[@]} -eq 0 ]]; then
         compose logs -f

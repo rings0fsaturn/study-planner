@@ -29,6 +29,32 @@ Answer keys, rubrics, reference solutions, and hidden tests remain server-only a
 | Embed | chunk batch -> 768-dimensional vectors | Gemini adapter | server vector index | timeout/unavailable retries with bounded backoff; quota is terminal until quota resets |
 | Publish | all valid chunks/vectors -> `ready` | service | update material and job atomically | partial batches remain `embedding`; no `ready` state until all chunks pass |
 
+### Material creation, upload, and trigger-driven enqueue
+
+Material creation is a client `INSERT` of the server-owned row (RLS owner-scoped), followed
+by a Postgres trigger that enqueues the ingestion job. A `file` material stays `pending`
+until its private-Storage upload is complete: the client uploads to
+`material-raw/<ownerId>/<materialId>/...` and then calls the upload-completion RPC, which is
+the only thing that allows the enqueue to fire. The worker rejects missing or incomplete
+objects without creating chunks. Text, URL, and YouTube materials enqueue on insert.
+
+### Ingestion status, preview, and retry
+
+Progress is observable through Realtime material-row updates (with bounded polling fallback
+on the client) and through `GET /v1/materials/{materialId}/ingestion` plus
+`GET /v1/jobs/{jobId}`. Partial extracted content remains displayable through
+`GET /v1/materials/{materialId}/content` while RAG generation stays blocked until `ready`.
+
+A retry reuses the material identity but creates a new ingestion attempt and a new
+`correlationId`. Retry is owned by the database: the client calls
+`retry_material_ingestion` (an owner-checked, DB-atomic RPC that locks the
+material row), so a double-clicked retry returns the same in-flight job instead
+of stacking a second attempt. Prior chunks are invalidated only after the new
+extraction succeeds; `ready` is published atomically through
+`ingestion_publish_ready` only when every valid chunk of the current attempt
+has a normalized vector. Stale chunks from a replaced or retried attempt can
+never become `ready`.
+
 ## Assessment generation transformation
 
 `GenerationRequest` -> `GenerationBlueprint` -> `QuestionSlot[]` -> RAG `Citation[]` -> Gemini JSON request -> normalized provider response -> structural/citation validation -> one repair request at most -> redacted `Assessment`.

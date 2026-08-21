@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter
-from py_roadmap_engine import generate_roadmap, regenerate_roadmap
 
 from app.schemas.roadmap import RoadmapGenerateRequest, RoadmapRegenerateRequest, dump_model
 from app.serialize import to_json_value
+from py_roadmap_engine import generate_roadmap, regenerate_roadmap
 
 router = APIRouter()
 

@@ -7,11 +7,11 @@ description: Use the browser-use CLI and its dedicated WSL automation Chromium, 
 
 Browser automation with the `browser-use` command runs against a dedicated headless Chromium inside this WSL host.
 Read `~/.config/opencode/skills/browser-use/SKILL.md` for the full CLI interface and helper names before relying on them.
+The repo symlink `.opencode/skills/browser-use` points at that user skill directory, so recreating the skill also fixes a stale symlink target.
 
 ## Install and Upgrade
 
-`browser-use` is installed as a uv tool with Python 3.12.
-The same command upgrades it to the latest stable release:
+If `command -v browser-use` fails, install it first:
 
 ```bash
 uv tool install --python 3.12 --upgrade --force browser-use
@@ -19,16 +19,31 @@ browser-use skill install --target opencode
 browser-use --update -y
 ```
 
+The same command upgrades it to the latest stable release.
 The install also provides the `browser`, `browseruse`, and `bu` aliases.
-The skill is registered at `~/.config/opencode/skills/browser-use/SKILL.md`.
 Run `browser-use --reload` after a CLI upgrade so the daemon restarts with the new code.
+
+## Chromium prerequisite
+
+This WSL host has no apt `chromium` package (Ubuntu 26.04 offers only a sudo-gated snap).
+Install the Playwright-cached Chrome for Testing binary instead.
+Use the repository Playwright version with the Linux Node from rule 53, because the Windows pnpm shim fails with `sh is not recognized` and the installed Playwright rejects the Ubuntu 26.04 host label:
+
+```bash
+export PATH="$HOME/.local/node/bin:$PATH"
+export PLAYWRIGHT_HOST_PLATFORM_OVERRIDE=ubuntu24.04-x64
+node node_modules/.pnpm/playwright@1.59.1/node_modules/playwright/cli.js install chromium
+```
+
+Resolve the actual CLI entry with `ls node_modules/.pnpm/playwright@*/node_modules/playwright/cli.js` because the version path changes on upgrades.
 
 ## Start the Automation Chromium
 
-This WSL host has no apt `chromium` package (Ubuntu 24.04 offers only a sudo-gated snap).
-Use the Playwright-cached Chrome for Testing binary instead:
+This host's Chromium needs NSS and ALSA libraries that are not installed system-wide.
+They are extracted without sudo under `$HOME/.local/chrome-deps/usr/lib/x86_64-linux-gnu/` (built with `apt-get download libnspr4 libnss3 libasound2t64` then `dpkg-deb -x` into that directory), so export `LD_LIBRARY_PATH` before launching:
 
 ```bash
+export LD_LIBRARY_PATH="$HOME/.local/chrome-deps/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 CHROME="$(ls -d "$HOME"/.cache/ms-playwright/chromium-*/chrome-linux*/chrome | head -1)"
 mkdir -p "$HOME/.config/browser-harness/chrome-profile"
 nohup "$CHROME" --headless=new --remote-debugging-port=9222 \

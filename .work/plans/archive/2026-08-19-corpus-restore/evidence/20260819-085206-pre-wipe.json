@@ -1,0 +1,131 @@
+{
+  "chunk_count": 799,
+  "created_at": "2026-08-19T08:52:14.199225+00:00",
+  "job_count": 18,
+  "material_count": 17,
+  "materials": [
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "gate7b-1786692699",
+      "ingestion_state": "failed",
+      "title": "gate7 nojob"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "dafe94d4-a148-45c1-9c59-237635e9f7dd",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786695314222"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "5d2e9602-3765-4603-837d-7171cdfbab78",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion pdf 1786695324714"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "bf1c1eb6-6d11-469a-ab4d-5f0d9504c08c",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786695310062"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "1cba60c7-2a07-4182-a3c9-5fcf737a95c7",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786695333243"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "gate7b-1786692634",
+      "ingestion_state": "failed",
+      "title": "gate7 nojob"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "192238f8-7256-43ea-9c0e-b49bfb022f0b",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786713899296"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "51e8d7a5-6400-4786-a1f6-409f260ee67c",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786695203486"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "3be06252-05c5-47bd-96e6-19138c94e494",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786713898913"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "1033c301-11b3-4973-9ff6-555d68101479",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion url 1786695203486"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "66a1b8eb-c1d1-4a6f-b20b-7b0e066be8b9",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786713899288"
+    },
+    {
+      "chunk_count": 788,
+      "embedding_provider": null,
+      "id": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion pdf 1786713902107"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "17538362-4742-40aa-8092-46504c15016f",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786695206478"
+    },
+    {
+      "chunk_count": 0,
+      "embedding_provider": null,
+      "id": "4fb529c5-6f73-483a-a622-5264392bfb49",
+      "ingestion_state": "failed",
+      "title": "E2E ingestion retry 1786713898913"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": "qwen-sidecar",
+      "id": "07d62b7e-181d-43e8-853e-5d5f4a9f71e8",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion text 1786695310058"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "4f3af3c3-40f3-44ff-a799-3433c076aae8",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion pdf 1786695220217"
+    },
+    {
+      "chunk_count": 1,
+      "embedding_provider": null,
+      "id": "70169652-1371-48d2-aacf-a0e616e31cd5",
+      "ingestion_state": "ready",
+      "title": "E2E ingestion mobile 1786695230731"
+    }
+  ],
+  "owner_id": "29288e28-d6ff-45c7-b750-ba43f7452409",
+  "run_id": "20260819-085206",
+  "storage_objects": [],
+  "telemetry_count": 240
+}

@@ -18,7 +18,9 @@ Export the token into the shell before calling `gh`.
 export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2- | tr -d '\r')
 ```
 
-The `gh` binary is at `/usr/bin/gh`.
+Install `gh` with `sudo apt-get install -y gh` on this Ubuntu host.
+When sudo is unavailable, download the official Linux release into `~/.local/bin/gh` instead.
+Resolve `gh` with `command -v gh` instead of hard-coding a path, because the install location differs by host.
 Never print, echo, log, cat, or commit the token, and never paste its value into a message, a commit, or an issue body.
 Reading the file to extract only the `TOKEN=` line is fine; dumping the whole file to stdout is not, because it exposes the secret.
 
@@ -29,7 +31,7 @@ This is transient egress flakiness on the corporate network path, not a broken c
 Do not "fix" it by adding an HTTP/HTTPS proxy, disabling TLS verification, swapping certificates, or editing git/npm/gh config.
 
 The diagnosis tell is that the failures are intermittent and host-split: `curl` can return `200` from `api.github.com` in under a second while `github.com` aborts in the same probe.
-No proxy is configured on this machine (`scutil --proxy` shows proxies disabled; there are no `http_proxy`/`https_proxy` variables).
+No proxy is configured on this machine (`env` shows no `http_proxy`, `https_proxy`, or `all_proxy` variables).
 The `NODE_EXTRA_CA_CERTS=...` entry points at a transparent TLS-interception CA bundle that is present and correct; it is not the cause.
 
 ## The fix: bounded retry
@@ -39,7 +41,7 @@ Wrap every `gh` call in a short retry loop and it succeeds within a few attempts
 ```bash
 export GH_TOKEN=$(grep '^TOKEN=' .env.git.local | cut -d= -f2- | tr -d '\r')
 for i in 1 2 3 4 5; do
-  /usr/bin/gh issue view 9 --repo rings0fsaturn/study-planner && break || sleep 3
+  gh issue view 9 --repo rings0fsaturn/study-planner && break || sleep 3
 done
 ```
 
