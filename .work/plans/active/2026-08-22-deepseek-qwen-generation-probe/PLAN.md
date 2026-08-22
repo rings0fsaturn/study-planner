@@ -141,7 +141,7 @@ External (not files): claim/close GitHub #56; map #4 decision line; pointer comm
 
 ### Phase 1: Claim ticket and stand up the runtime
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete — 89dde1d (plan docs commit; runtime verified in-session)
 **Depends on:** none — can start immediately
 **Estimated scope:** 0 files, ops only
 

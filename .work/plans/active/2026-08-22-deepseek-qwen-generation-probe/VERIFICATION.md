@@ -7,11 +7,11 @@
 
 ## Phase 1: Claim ticket and stand up the runtime
 
-- [ ] #56 shows assignee `rings0fsaturn`
-- [ ] GPU sidecar `/health`: `cuda_available: true`, `loaded: true`, `device_name: AMD Radeon RX 9070 XT`
-- [ ] OpenRouter credit balance > $0.50 (value recorded below, key never printed)
+- [x] #56 shows assignee `rings0fsaturn`
+- [x] GPU sidecar `/health`: `cuda_available: true`, `loaded: true`, `device_name: AMD Radeon RX 9070 XT`, `reranker_loaded: true`
+- [x] OpenRouter credit balance > $0.50 (value recorded below, key never printed)
 
-**Credit balance at start:** _to fill_
+**Credit balance at start:** $2.5000 (usage $0.0000, limit $2.50) — 2026-08-22
 
 ## Phase 2: Dependency + probe skeleton
 
