@@ -15,21 +15,23 @@
 
 ## Phase 2: Dependency + probe skeleton
 
-- [ ] `openai` added to `services/intelligence/pyproject.toml`, `uv.lock` regenerated
-- [ ] `generation_probe.py` imports cleanly without side effects
+- [x] `openai` added to `services/intelligence/pyproject.toml`, `uv.lock` regenerated (openai 3.3.1)
+- [x] `generation_probe.py` imports cleanly without side effects
 
 ## Phase 3: Provider client, error taxonomy, metrics, tests
 
-- [ ] Unit tests pass (count: _to fill_)
-- [ ] `ruff check` clean on both new files
-- [ ] No em/en dashes in `generation_probe.py`
+- [x] Unit tests pass: 9 passed (6.86s)
+- [x] `ruff check` clean on both new files; `ruff format --check` clean
+- [x] No em/en dashes in `generation_probe.py`
 
 ## Phase 4: Live smoke run
 
-- [ ] 4 smoke calls classified correctly (2 layers × 2 items, tier `off`)
-- [ ] reasoning tokens == 0 for off tier
-- [ ] parsed_ok for ok rows; citations ⊆ provided ids
-- [ ] Projected full-run cost: _to fill_ (abort gate: > $1.00)
+- [x] 4 smoke calls classified `ok` (2 layers × 2 items, tier `off`)
+- [x] reasoning tokens == 0 for off tier
+- [x] parsed_ok for all ok rows; citations ⊆ provided ids (verified per record)
+- [x] Projected full-run cost: **$0.046** (abort gate: $1.00) — smoke avg 1036 prompt / 181 completion tokens
+- [x] raw.jsonl cleared after smoke; contexts.json kept (60 contexts: 30 S + 30 R)
+- Fixes landed during smoke: key split (2-part), continuation guard, SDK v3 raw `.text` parse
 
 ## Phase 5: Full-ladder run
 
