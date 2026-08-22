@@ -36,6 +36,7 @@ services:
       EMBEDDER_URL: ${EMBEDDER_URL:-http://host.docker.internal:8200}
       RERANKER_URL: ${RERANKER_URL:-http://host.docker.internal:8200}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       RETRIEVAL_ENABLED: ${RETRIEVAL_ENABLED:-true}
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -62,6 +63,7 @@ services:
       EMBEDDER_URL: ${EMBEDDER_URL:-http://host.docker.internal:8200}
       RERANKER_URL: ${RERANKER_URL:-http://host.docker.internal:8200}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       INGESTION_BATCH_SIZE: ${INGESTION_BATCH_SIZE:-100}
       INGESTION_VISIBILITY_SECONDS: ${INGESTION_VISIBILITY_SECONDS:-30}
       INGESTION_POLL_INTERVAL_SECONDS: ${INGESTION_POLL_INTERVAL_SECONDS:-1}

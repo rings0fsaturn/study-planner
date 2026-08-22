@@ -57,6 +57,21 @@ Active implementation plans and their verification logs live under [`.work/plans
 The Marginalia visual reference is [`design/marginalia.html`](design/marginalia.html).
 Application test credentials are stored in `.work/specs/test-login-cred.txt` and must not be copied into source, tests, logs, or responses.
 
+## Environment Files
+
+These are the repository's environment files. `.env.example` files are tracked templates; copy them to the matching secret-bearing file (listed as gitignored) and fill in values. Never print values, commit these files, or copy secrets into source, tests, or logs.
+
+| Path | Git status | Purpose |
+|---|---|---|
+| `.env.git.local` (root) | gitignored | Operator tokens for tooling: GitHub CLI PAT (`TOKEN`) and Hugging Face token (`HF_TOKEN`). |
+| `apps/app/.env.local` | gitignored | Live local-dev values for the React app: Supabase URL and keys. |
+| `services/intelligence/.env` | gitignored | Live secrets for the Intelligence Service and ingestion worker: Supabase access token, Gemini and OpenRouter API keys. |
+| `apps/app/.env.example` | tracked | Copy-to-`.env.local` template for the React app. |
+| `services/intelligence/.env.example` | tracked | Copy-to-`.env` template for the Intelligence Service. |
+| `docker/.env.example` | tracked | Copy-to-root-`.env` template for the Docker Compose stack. |
+| `.env` (root) | gitignored | Runtime env for the Docker Compose stack, created from `docker/.env.example`. Not currently present. |
+| `research/external/open-notebook/.env.example` | untracked | Config template for a vendored research tool; unrelated to the product. |
+
 ## Common Commands
 
 ```bash

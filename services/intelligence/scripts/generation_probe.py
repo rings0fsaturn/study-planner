@@ -345,9 +345,9 @@ def build_messages(steer: str | None, context: list[dict], band: int) -> list[di
 
 def _call_once(client: OpenAI, kwargs: dict) -> dict:
     """One SDK call; returns body dict or raises. Uses with_raw_response to keep
-    OpenRouter's top-level `provider` echo."""
+    OpenRouter's top-level `provider` echo (SDK v3 exposes the raw body as text)."""
     raw = client.chat.completions.with_raw_response.create(**kwargs)
-    return raw.json()
+    return json.loads(raw.text)
 
 
 def call_and_classify(client: OpenAI, tier: str, messages: list[dict]) -> dict:
@@ -402,7 +402,7 @@ def embed_mcq_vectors(mcq: dict) -> dict | None:
 
 
 def run_unit(client: OpenAI, key: str, unit: dict, tier: str) -> dict:
-    layer, index = key.split(":", 1)
+    layer, index = key.split(":", 2)[:2]
     idx = int(index)
     band = 3 if layer == "S" else (idx - 1) % 5 + 1
     messages = build_messages(unit.get("steer"), unit["context"], band)
@@ -506,13 +506,17 @@ def run(args: argparse.Namespace) -> None:
             except Exception as exc:
                 print(f"  {key}: FAILED {sanitize(str(exc))}")
 
-    if args.continuation and ("R" in args.layers or "C" in args.layers):
+    if not args.no_continuation and ("R" in args.layers or "C" in args.layers):
+        raw_path = OUT_DIR / "raw.jsonl"
+        if not raw_path.is_file():
+            print("  K: skipped (no raw records yet)")
+            return
         for tier in ["low", "medium", "high", "xhigh", "max"]:
             kkey = f"K:{tier}:1"
             if kkey in done:
                 continue
             base = None
-            for line in (OUT_DIR / "raw.jsonl").read_text(encoding="utf-8").splitlines():
+            for line in raw_path.read_text(encoding="utf-8").splitlines():
                 rec = json.loads(line)
                 if (
                     rec.get("kind") == "generation"

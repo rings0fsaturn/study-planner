@@ -1,7 +1,7 @@
 ---
 title: study-planner-web — STATUS (read-first index)
 status: active living document
-last_updated: 2026-08-21 (productionize-worker + sidecar query-embedder — live Docker verified, archived)
+last_updated: 2026-08-22 (DeepSeek/OpenRouter provider mechanics research #55)
 location_note: >
   This is .work/STATUS.md — the single read-first index, living at the root of .work/ (inside the
   repo, tracked on purpose so git clean can't delete it). Paths below are relative to .work/ (non-.work
@@ -126,6 +126,8 @@ update_protocol: >
 - **[DISSERTATION] Phase II** closed-loop demo — research Phase 7 built, revealed here.
 
 ## Done
+
+- **[RESEARCH] DeepSeek via OpenRouter provider mechanics (wayfinder #55).** ✅ Resolved 2026-08-22 from official OpenRouter/OpenAI sources and live catalog metadata. Exact slug, SDK base URL, structured JSON modes, reasoning continuation, finish/refusal/error handling, context, pricing, latency, and rate-limit assumptions are recorded; the research agent did not run authenticated inference, while the operator separately verified the key and account. → [`2026-08-22-deepseek-openrouter-provider-mechanics.md`](../research/doc/2026-08-22-deepseek-openrouter-provider-mechanics.md)
 
 - **[APP][INFRA][RESEARCH] Productionize worker/embedder runtime + wire sidecar query-embedder.** ✅ Implemented + live-verified 2026-08-21. `docker-compose.yml` `ingestion-worker` + `intelligence` now carry `EMBEDDING_PROVIDER=qwen-sidecar` (alias `sidecar`), `EMBEDDER_URL/RERANKER_URL=http://host.docker.internal:8200`, all `INGESTION_*` tuning, `extra_hosts`, `healthcheck`, `depends_on: healthy`; `docker-app --with-embedder` exports `HF_TOKEN` and gates on `/health`; `services/embedder` default `EMBEDDING_BATCH_SIZE=128`; `app/query_embedder.py` factory (`is_query=True`) powers `retrieval_probe.py --provider sidecar --hybrid` → **MRR 0.703 Recall@1 0.60/0.73/0.87 on 754/qwen-sidecar** (was 0.356 cross-space, gemini control still 0.356) + gated `POST /v1/retrieval/search` (owner check, `hybrid` via `query_text`, `topK 1..50`, `RerankerClient` optional). Live fixes: `intelligence` env (`SERVICE_ROLE`, embedder vars, `extra_hosts`), `qwen-sidecar` alias in `query_embedder.py/worker_main.py/probe`, `PGRST203` overload (`query_text:null` + `>=300` + dict `code` guard) and `test_retrieval.py` expectation. Service 286 passed (+5 pre-existing golden-fixture `afternoon != evening`), ruff clean, `db push --dry-run` `up to date`. → plan [`plans/archive/2026-08-20-productionize-worker-and-query-embedder/PLAN.md`](plans/archive/2026-08-20-productionize-worker-and-query-embedder/PLAN.md) · log [`VERIFICATION.md`](plans/archive/2026-08-20-productionize-worker-and-query-embedder/VERIFICATION.md) · handover [`handovers/2026-08-20-productionize-worker-live-docker-test-handover.md`](handovers/2026-08-20-productionize-worker-live-docker-test-handover.md) · live log [`handovers/archive/2026-08-20-productionize-worker-live-verification.md`](handovers/archive/2026-08-20-productionize-worker-live-verification.md)
 
