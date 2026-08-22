@@ -35,15 +35,18 @@
 
 ## Phase 5: Full-ladder run
 
-- [ ] Raw record count >= 390 (or tier rejections documented)
-- [ ] Outcome taxonomy tally recorded
-- [ ] Sidecar stopped immediately after run
+- [x] Raw record count: 395 (360 S/R ladder + 30 json arm + 5 continuation)
+- [x] Outcome tally: 383 ok / 6 provider_error / 3 malformed_json / 3 truncated
+- [x] No tier rejections: all six effort tiers accepted (OQ-01 resolved)
+- [x] Sidecar stopped immediately after run (and after C arm)
 
 ## Phase 6: Report + closure
 
-- [ ] `summary.json` + `report.md` produced
-- [ ] Human reviewed the report (HITL gate)
-- [ ] Resolution comment on #56; ticket closed
-- [ ] Map #4 decision line appended
-- [ ] Pointer comment on #53
-- [ ] `.work/STATUS.md` row + `last_updated` bumped
+- [x] `summary.json` + `report.md` produced (13 groups)
+- [x] Human reviewed the report (HITL gate) and agreed: **reasoning off** for objective generation
+- [x] Resolution comment on #56; ticket closed
+- [x] Map #4 decision line appended
+- [x] Pointer comment on #53 with report link + open items
+- [x] `.work/STATUS.md` row + `last_updated` bumped (both #55 and #56 rows)
+- [x] New rule 80 (script dry run before full runs) added per user instruction
+- [x] 10 probe unit tests green; ruff clean; no em/en dashes in new rule file
