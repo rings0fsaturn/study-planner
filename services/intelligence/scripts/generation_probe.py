@@ -549,6 +549,34 @@ def _collapse(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip().lower()
 
 
+def normalize_mcq(mcq: dict) -> dict:
+    """Tolerate provider shape drift (measured: options-as-objects, question/
+    answer/chunkIds from json mode, implied correctIndex via isCorrect)."""
+    stem = mcq.get("stem") or mcq.get("question") or ""
+    raw_options = mcq.get("options") or []
+    options = [
+        o if isinstance(o, str) else (o.get("text") if isinstance(o, dict) else "")
+        for o in raw_options
+    ]
+    cites = mcq.get("citations") or []
+    if not cites and mcq.get("chunkIds"):
+        cites = [{"chunkId": c} if isinstance(c, str) else c for c in mcq["chunkIds"]]
+    correct_index = mcq.get("correctIndex")
+    if correct_index is None:
+        for i, o in enumerate(raw_options):
+            if isinstance(o, dict) and o.get("isCorrect") is True:
+                correct_index = i
+                break
+    return {
+        "stem": stem,
+        "options": options,
+        "correctIndex": correct_index,
+        "difficulty": mcq.get("difficulty"),
+        "skillTags": mcq.get("skillTags") or [],
+        "citations": cites,
+    }
+
+
 def metric_row(rows: list[dict], contexts: dict[str, dict]) -> dict:
     ok = [r for r in rows if r.get("outcome") == "ok" and r.get("parsed_ok") and r.get("mcq")]
     outcomes: dict[str, int] = {}
@@ -556,23 +584,31 @@ def metric_row(rows: list[dict], contexts: dict[str, dict]) -> dict:
         outcomes[r.get("outcome", "?")] = outcomes.get(r.get("outcome", "?"), 0) + 1
 
     schema_valid = len(ok) / len(rows) if rows else 0.0
+    has_local = any("local_failures" in r for r in rows)
+    if has_local:
+        contract_ok = [
+            r for r in rows if r.get("parsed_ok") and not (r.get("local_failures") or [])
+        ]
+        schema_valid = len(contract_ok) / len(rows) if rows else 0.0
 
     citation_valid = 0
     gold_support = 0
     gold_total = 0
     copy_through = 0
     for r in ok:
+        nmcq = normalize_mcq(r["mcq"])
         ctx = contexts.get(f"{r['layer']}:{r['index']}", {})
         ids = {c["chunkId"] for c in ctx.get("context", [])}
-        cites = r["mcq"].get("citations") or []
+        cites = [
+            c if isinstance(c, dict) else {"chunkId": c} for c in (nmcq["citations"] or [])
+        ]
+        cited_ids = {c.get("chunkId") for c in cites}
         if cites and all(c.get("chunkId") in ids for c in cites):
             citation_valid += 1
         cited_text = " ".join(
-            c["text"]
-            for c in ctx.get("context", [])
-            if c["chunkId"] in {x.get("chunkId") for x in cites}
+            c["text"] for c in ctx.get("context", []) if c["chunkId"] in cited_ids
         )
-        text = _collapse(r["mcq"].get("stem", "") + " " + " ".join(r["mcq"].get("options", [])))
+        text = _collapse(nmcq["stem"] + " " + " ".join(nmcq["options"]))
         chunk_shingles = shingles(_collapse(cited_text)) if cited_text else set()
         if chunk_shingles and (shingles(text) & chunk_shingles):
             copy_through += 1
@@ -582,15 +618,17 @@ def metric_row(rows: list[dict], contexts: dict[str, dict]) -> dict:
             if snippets and any(s in _collapse(cited_text) for s in snippets if s):
                 gold_support += 1
 
-    positions = [
-        r["mcq"].get("correctIndex") for r in ok if isinstance(r["mcq"].get("correctIndex"), int)
-    ]
+    positions = []
+    for r in ok:
+        ci = normalize_mcq(r["mcq"]).get("correctIndex")
+        if isinstance(ci, int):
+            positions.append(ci)
     distractor_cos: list[float] = []
     for r in ok:
         emb = r.get("embeddings")
         if not emb or len(emb.get("options") or []) != 4:
             continue
-        ci = r["mcq"].get("correctIndex")
+        ci = normalize_mcq(r["mcq"]).get("correctIndex")
         dists = [o for i, o in enumerate(emb["options"]) if i != ci]
         if len(dists) == 3:
             distractor_cos.append(
@@ -693,6 +731,11 @@ def write_report(summary: dict[str, dict]) -> None:
         "",
         f"- Model: `{summary['meta']['model']}` · Material: `{summary['meta']['material']}`",
         f"- Generated: {summary['meta']['generated_at']} · Seed: {summary['meta']['seed']}",
+        "",
+        "> Note: in `json_object` mode (arm C) DeepSeek returns its own shape "
+        "(`question`/`options`/`answer`/`chunkIds`) instead of the requested "
+        "contract (`stem`/`correctIndex`/`difficulty`/`skillTags`/`citations`), "
+        "so contract-level metrics for `R:json` are empty by construction.",
         "",
         "## Validity per tier",
         "",

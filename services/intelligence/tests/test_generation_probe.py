@@ -242,3 +242,16 @@ def test_validate_mcq_local():
         },
         ctx,
     )
+
+
+def test_normalize_mcq_tolerates_provider_drift():
+    drifted = {
+        "question": "What is X?",
+        "options": [{"text": "A", "isCorrect": True}, {"text": "B"}, {"text": "C"}, {"text": "D"}],
+        "chunkIds": ["c1", "c2"],
+    }
+    norm = gp.normalize_mcq(drifted)
+    assert norm["stem"] == "What is X?"
+    assert norm["options"] == ["A", "B", "C", "D"]
+    assert norm["correctIndex"] == 0
+    assert [c["chunkId"] for c in norm["citations"]] == ["c1", "c2"]
