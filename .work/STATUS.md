@@ -1,7 +1,7 @@
 ---
 title: study-planner-web — STATUS (read-first index)
 status: active living document
-last_updated: 2026-08-22 (DeepSeek x Qwen generation-quality probe #56 — off-tier decision, rule 80)
+last_updated: 2026-08-22 (generation runtime settings #53 — reasoning off, per-task budgets, unsupported_request code)
 location_note: >
   This is .work/STATUS.md — the single read-first index, living at the root of .work/ (inside the
   repo, tracked on purpose so git clean can't delete it). Paths below are relative to .work/ (non-.work
@@ -126,6 +126,8 @@ update_protocol: >
 - **[DISSERTATION] Phase II** closed-loop demo — research Phase 7 built, revealed here.
 
 ## Done
+
+- **[RESEARCH] Generation runtime settings for the model-neutral interface (wayfinder #53).** ✅ Resolved + closed 2026-08-22. Objective generation runs DeepSeek V4 Flash 0731 via OpenRouter with reasoning **off**; `written_grading`/`guide_hint`/`guide_reveal` default off until a #56-style probe re-test proves value on their prompt shapes (obligation rides with slices #41/#46, cross-referenced on those tickets). 30 s timeout kept as per-task config (`GENERATION_TIMEOUT_MS`), `maxOutputTokens` 4096, temperature pinned 0.3 with no `top_p`, local schema re-validation mandatory despite strict mode (endpoint drift measured), SDK `max_retries=0` + one app-level retry with Retry-After honored, new non-retryable `unsupported_request` error code, optional `reasoningTokens` telemetry field, provider-neutral `GENERATION_*` env knobs around the retained `OPENROUTER_API_KEY`. Contract changes flow to #54. → resolution [on #53](https://github.com/rings0fsaturn/study-planner/issues/53) · map line on [#4](https://github.com/rings0fsaturn/study-planner/issues/4)
 
 - **[RESEARCH] DeepSeek via OpenRouter provider mechanics (wayfinder #55).** ✅ Resolved 2026-08-22 from official OpenRouter/OpenAI sources and live catalog metadata. Exact slug, SDK base URL, structured JSON modes, reasoning continuation, finish/refusal/error handling, context, pricing, latency, and rate-limit assumptions are recorded; the research agent did not run authenticated inference, while the operator separately verified the key and account. → [`2026-08-22-deepseek-openrouter-provider-mechanics.md`](../research/doc/2026-08-22-deepseek-openrouter-provider-mechanics.md)
 
