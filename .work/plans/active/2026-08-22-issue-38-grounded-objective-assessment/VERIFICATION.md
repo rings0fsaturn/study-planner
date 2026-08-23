@@ -8,10 +8,10 @@
 
 ## Acceptance criteria
 
-- [ ] **AC-1 — Ready/owner gating:** generation is enabled only for ready, owner-scoped materials (API 409/404 + UI entry gate).
-- [ ] **AC-2 — Validated + grounded question:** the generated objective Question validates against its format schema and includes verified citations or explicit warnings.
-- [ ] **AC-3 — Hidden content isolation:** answer keys never reach the browser, local cache, event log, or telemetry.
-- [ ] **AC-4 — Failure matrix tested:** timeout, quota, safety block, malformed output, repair, partial, and resume behavior are tested.
+- [x] **AC-1 — Ready/owner gating:** generation is enabled only for ready, owner-scoped materials (API 409/404 + UI entry gate). API tests + live E2E on the corpus material.
+- [x] **AC-2 — Validated + grounded question:** the generated objective Question validates against its format schema and includes verified citations or explicit warnings. Validation module + live E2E (question with citations rendered; a hallucinated citation was rejected live by the gate).
+- [x] **AC-3 — Hidden content isolation:** answer keys never reach the browser, local cache, event log, or telemetry. Column-grant live probe (authenticated gets 403 on `answer_block`), redacted GET + secret-key walk, `AssessmentCreated` carries ids only, telemetry has no answer fields.
+- [x] **AC-4 — Failure matrix tested:** timeout, quota, safety block, malformed output, repair, partial, and resume behavior are tested (adapter matrix, worker scenarios, UI retry/resume, live E2E).
 
 ## Phase log
 
@@ -93,6 +93,7 @@
 
 | Check | Result |
 |---|---|
-| Contract pytest, full service pytest, ruff, full app vitest, typecheck, lint, build — all green | ☐ |
-| `assessment-generation-live.spec.ts` passes with zero page/console errors; material cleaned up | ☐ |
-| STATUS.md row updated; per-phase commits made; resolution comment on #38 | ☐ |
+| Contract pytest, full service pytest, ruff, full app vitest, typecheck, lint, build — all green | ✅ 2026-08-23 — contracts 12/12; service 391 passed / 7 failed = the documented pre-existing golden fixtures only; ruff check green (5 baseline E501s fixed in `005e9fd`; `ruff format --check` debt is pre-existing, 29 unformatted at baseline vs 27 now, none from this slice); app vitest 699/699; typecheck + lint clean; `pnpm build` produces both dists |
+| `assessment-generation-live.spec.ts` passes with zero page/console errors; material cleaned up | ✅ both scenarios passed (desktop 13 s, mobile 5 s) on the frozen corpus material (never deleted). Live bugs found and fixed: (1) `match_content_chunks` 3-arg call was PGRST203-ambiguous against the live 4-arg hybrid overload → pass `query_text` (`18669b2`); (2) worker stored jsonb columns as JSON strings → real arrays/objects (`de53049`); (3) detail-page poll kept firing after terminal status → interval cleared (Phase 6). The strict citation gate rejected a hallucinated chunk id live; the E2E retry loop exercises the Retry UX for the known ~10-17% citation-gate variance. Screenshots in `evidence/` |
+| STATUS.md row updated; per-phase commits made; resolution comment on #38 | ✅ per-phase commits `2494ede`..`de53049`; STATUS.md updated; resolution comment posted |
+| Live deviations recorded | ℹ️ The plan's `temperature const 0.3` vs `GENERATION_TEMPERATURE` env tension resolved as a runtime knob outside the contract envelope; D-08 `length`→`malformed_output` vs #54 README `length`→`partial` resolved per D-06 (partial reserved); migrations 019-022 (retry_after_seconds, RPC row shape + attempt pick, column-grant revoke) were additive follow-ups required by live behavior |
