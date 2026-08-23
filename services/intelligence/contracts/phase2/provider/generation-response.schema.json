@@ -24,10 +24,7 @@
   "allOf": [
     { "if": { "properties": { "outcome": { "const": "ok" } } }, "then": { "required": ["content"], "not": { "required": ["error"] } } },
     { "if": { "properties": { "outcome": { "const": "partial" } } }, "then": { "required": ["content"], "not": { "required": ["error"] } } },
-    { "if": { "properties": { "outcome": { "const": "malformed_output" } } }, "then": { "required": ["error"] } },
-    { "if": { "properties": { "outcome": { "const": "quota_failure" } } }, "then": { "required": ["error"] } },
-    { "if": { "properties": { "outcome": { "const": "timeout" } } }, "then": { "required": ["error"] } },
-    { "if": { "properties": { "outcome": { "const": "provider_error" } } }, "then": { "required": ["error"] } },
-    { "if": { "properties": { "outcome": { "const": "safety_block" } } }, "then": { "required": ["error"] } }
+    { "if": { "properties": { "outcome": { "enum": ["malformed_output", "quota_failure", "timeout", "provider_error", "safety_block"] } } }, "then": { "required": ["error"] } },
+    { "if": { "properties": { "outcome": { "enum": ["quota_failure", "timeout"] } } }, "then": { "not": { "anyOf": [{ "required": ["content"] }, { "required": ["refusal"] }, { "required": ["finishReason"] }] } } }
   ]
 }

@@ -213,14 +213,17 @@ def test_generation_response_schema_pins_flattened_shape() -> None:
 def test_generation_response_schema_rejects_invalid_envelope_states() -> None:
     schemas = {load_json(path)["$id"]: load_json(path) for path in ROOT.rglob("*.schema.json")}
     schema = load_json(ROOT / "provider/generation-response.schema.json")
-    resolver = jsonschema.RefResolver.from_schema(schema, store=schemas)
     base = {
         "provider": "openrouter",
         "model": "deepseek/deepseek-v4-flash-0731",
         "traceId": "trace-reject",
         "usage": {"promptTokens": 1, "outputTokens": 1, "totalTokens": 2},
     }
-    validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+
+    def new_validator():
+        resolver = jsonschema.RefResolver.from_schema(schema, store=schemas)
+        return jsonschema.Draft202012Validator(schema, resolver=resolver)
+
     for instance in [
         {**base, "outcome": "ok"},
         {**base, "outcome": "partial"},
@@ -231,7 +234,7 @@ def test_generation_response_schema_rejects_invalid_envelope_states() -> None:
         {**base, "outcome": "safety_block"},
     ]:
         with pytest.raises(jsonschema.ValidationError):
-            validator.validate(instance)
+            new_validator().validate(instance)
     with pytest.raises(jsonschema.ValidationError):
         error = {
             "code": "safety_block",
@@ -240,7 +243,24 @@ def test_generation_response_schema_rejects_invalid_envelope_states() -> None:
             "correlationId": "corr",
             "message": "m",
         }
-        validator.validate({**base, "outcome": "ok", "content": "x", "error": error})
+        new_validator().validate({**base, "outcome": "ok", "content": "x", "error": error})
+    quota_error = {
+        "code": "quota_exhausted",
+        "retryable": False,
+        "requestId": "req",
+        "correlationId": "corr",
+        "message": "m",
+        "retryAfterSeconds": 60,
+    }
+    with pytest.raises(jsonschema.ValidationError):
+        new_validator().validate(
+            {**base, "outcome": "quota_failure", "content": "x", "error": quota_error}
+        )
+    with pytest.raises(jsonschema.ValidationError):
+        timeout_error = {**quota_error, "code": "provider_timeout"}
+        new_validator().validate(
+            {**base, "outcome": "timeout", "finishReason": "stop", "error": timeout_error}
+        )
 
 
 def test_provider_error_enum_includes_unsupported_request() -> None:

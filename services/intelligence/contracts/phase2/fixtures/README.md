@@ -9,13 +9,16 @@ last_updated: 2026-08-09
 ## Fixture inventory
 
 Each fixture is mapped to its canonical JSON Schema in `manifest.json` and is validated by `tests/test_contracts.py`.
-The `generation-success`, `generation-malformed`, and `generation-partial` fixtures mirror captured
-DeepSeek probe records (`research/doc/deepseek-generation-probe/raw.jsonl`): real `finish_reason`,
-`native_finish_reason`, usage with reasoning tokens, and routed provider identifiers.
+The `generation-success` and `generation-malformed` fixtures mirror captured DeepSeek probe records
+(`research/doc/deepseek-generation-probe/raw.jsonl`): real `finish_reason`, `native_finish_reason`,
+usage with reasoning tokens, and routed provider identifiers.
+The `generation-partial` fixture exercises the truncated-output (`length`) branch, a phenomenon the
+probe captured but with exact record details synthesized.
 The `generation-safety-block`, `generation-quota-failure`, and `generation-timeout` fixtures
 exercise envelope branches no probe run captured (refusal, 429, deadline) and are synthesized from
-the #54 finish-reason mapping; the timeout and quota fixtures carry no `usage` because a
-transport-level failure yields no provider usage.
+the #54 finish-reason mapping.
+The timeout fixture carries no `usage` because an app-level deadline abort yields no provider usage;
+a 429 quota response may still carry provider-reported usage.
 
 | Fixture | Contract | Purpose |
 |---|---|---|
