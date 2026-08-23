@@ -13,6 +13,19 @@
 - [x] **AC-3 — Hidden content isolation:** answer keys never reach the browser, local cache, event log, or telemetry. Column-grant live probe (authenticated gets 403 on `answer_block`), redacted GET + secret-key walk, `AssessmentCreated` carries ids only, telemetry has no answer fields.
 - [x] **AC-4 — Failure matrix tested:** timeout, quota, safety block, malformed output, repair, partial, and resume behavior are tested (adapter matrix, worker scenarios, UI retry/resume, live E2E).
 
+## Post-review hardening round (thermo-nuclear review of the whole slice)
+
+| Finding | Resolution | Commit |
+|---|---|---|
+| H: detail-page poll scheduled intervals exponentially | clear-before-set in the hook; linear-poll regression test (5 polls per 12 s of generating) | `1149649` |
+| M: retryable job failures left the UI on an eternal spinner | worker writes the failure as a warning on the still-generating assessment; page shows an interrupted banner + Retry in the generating state | `1149649` |
+| M: non-atomic accept could strand/duplicate | `complete_assessment_generation` RPC (migrations 023/024): question + assessment + job in one transaction with a generating-only re-entry guard; worker drops redelivered messages for terminal assessments; uuid cast fixed live (42804) | `1149649` |
+| M: citation-drop mislabeled | documented alias: warnings carry the specific cause (`citation_missing`), job/telemetry use the public `malformed_output` bucket | `1149649` |
+| L: adapter failure-path explosion | one `_failure` helper | `1149649` |
+| L: 409 conflated conflict/validation_failed | body-code parsing in `HttpAssessmentFetch` (validation vs conflict) | `1149649` |
+| L: REST plumbing + test-double duplication (userrest/repository, api fakes) | follow-up cleanup, not blocking | — |
+| Live re-verification | ✅ E2E desktop 14 s + mobile 5 s green after the fixes; atomic accept proven live (job succeeded + question row through the RPC) | `1149649` |
+
 ## Phase log
 
 ### Phase 0 — Prerequisite (#57 contract neutralization)
