@@ -71,6 +71,7 @@ Read each selected rule file completely.
 | Rule | Read when |
 |---|---|
 | [`80-script-dry-run-before-full-runs.agents.md`](80-script-dry-run-before-full-runs.agents.md) | Running any long-running Python operator script (probes, bake-offs, re-embeds, restores, reports) or before spending API or GPU budget on a full run. |
+| [`81-code2prompt-prompting.agents.md`](81-code2prompt-prompting.agents.md) | Running code2prompt, assembling LLM prompts from repository slices, or sharing codebase context externally. |
 
 ## Maintenance Conventions
 
