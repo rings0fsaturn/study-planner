@@ -397,6 +397,9 @@ export function MaterialDetail() {
                 <Link className="btn btn-accent" to={`/materials/${material.id}/practice`}>
                   Practice this
                 </Link>
+                <Link className="btn btn-secondary" to={`/materials/${material.id}/assessments/new`}>
+                  Generate assessment
+                </Link>
                 <button
                   type="button"
                   className="btn btn-secondary"

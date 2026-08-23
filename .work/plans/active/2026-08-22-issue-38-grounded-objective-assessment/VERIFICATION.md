@@ -83,9 +83,11 @@
 
 | Check | Result |
 |---|---|
-| Config + detail page component tests green (polling, retry, refresh-restore, ready gate) | ☐ |
-| Full app suite green (`--pool=forks`) | ☐ |
-| Browser flow verified desktop + 390×844, zero console errors | ☐ |
+| Config + detail page component tests green (polling, retry, refresh-restore, ready gate) | ✅ 2026-08-23 — `AssessmentConfig.test.tsx` (6): not-ready banner, difficulty default 3, contract payload + AssessmentCreated append + navigation, typed skill tags, quota banner with retryAfterSeconds, retryable banner + Retry, double-submit disabled. `AssessmentDetail.test.tsx` (6): generating state, ready render with citations/warnings, no answer content referenced, failed + retry with fresh clientId/correlationId, polling stops on terminal (test caught and fixed a real bug: the interval kept firing after ready), refresh-restore from the route param |
+| Full app suite green (`--pool=forks`) | ✅ 699 passed (baseline 668 + 31 new) |
+| Entry gate | ✅ `MaterialDetail.test.tsx` asserts the "Generate assessment" link only when ready |
+| Typecheck / lint / build | ✅ `pnpm typecheck` + `pnpm lint` clean; `pnpm build` produces `apps/app/dist` and `apps/marketing/dist` |
+| Browser flow desktop + 390×844 | ⏳ deferred to Phase 7 (runtime + E2E run starts the managed stack anyway) |
 
 ### Phase 7 — Verification sweep + live E2E
 

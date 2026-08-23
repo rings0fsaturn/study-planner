@@ -37,10 +37,13 @@ import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
+import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { MaterialLibrary } from './pages/materials/MaterialLibrary';
 import { MaterialCreate } from './pages/materials/MaterialCreate';
 import { MaterialDetail } from './pages/materials/MaterialDetail';
 import { PracticeThis } from './pages/materials/PracticeThis';
+import { AssessmentConfig } from './pages/assessments/AssessmentConfig';
+import { AssessmentDetail } from './pages/assessments/AssessmentDetail';
 import { DevSeeder } from './dev/DevSeeder';
 
 const metadataFetcher: MetadataFetcher = import.meta.env.DEV
@@ -184,6 +187,8 @@ function AppRoutes() {
         <Route path="/materials/new" element={<MaterialCreate />} />
         <Route path="/materials/:materialId" element={<MaterialDetail />} />
         <Route path="/materials/:materialId/practice" element={<PracticeThis />} />
+        <Route path="/materials/:materialId/assessments/new" element={<AssessmentConfig />} />
+        <Route path="/assessments/:assessmentId" element={<AssessmentDetail />} />
         <Route path="/replan" element={<Replan />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
@@ -220,14 +225,16 @@ function App() {
       <AuthProvider>
         <EventStoreRouter>
           <MaterialsProvider>
-            {import.meta.env.DEV && <DevSeeder />}
-            <SyncRouter>
-              <div className="app">
-                <ErrorBoundary>
-                  <AppRoutes />
-                </ErrorBoundary>
-              </div>
-            </SyncRouter>
+            <AssessmentProvider>
+              {import.meta.env.DEV && <DevSeeder />}
+              <SyncRouter>
+                <div className="app">
+                  <ErrorBoundary>
+                    <AppRoutes />
+                  </ErrorBoundary>
+                </div>
+              </SyncRouter>
+            </AssessmentProvider>
           </MaterialsProvider>
         </EventStoreRouter>
       </AuthProvider>
