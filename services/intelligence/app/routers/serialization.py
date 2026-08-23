@@ -12,7 +12,7 @@ _STATUS_BY_CODE = {
     "not_found": 404,
     "conflict": 409,
     "invalid_request": 400,
-    "validation_failed": 400,
+    "validation_failed": 409,
 }
 
 

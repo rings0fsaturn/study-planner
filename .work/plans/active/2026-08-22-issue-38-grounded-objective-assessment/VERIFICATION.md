@@ -65,8 +65,10 @@
 
 | Check | Result |
 |---|---|
-| `test_assessments_api.py` green (202 shape, gates, 409/400/404, redacted GET, secret-field walk) | ☐ |
-| Generation-job GET via `/v1/jobs/{jobId}` works | ☐ |
+| `test_assessments_api.py` green (202 shape, gates, 409/400/404, redacted GET, secret-field walk) | ✅ 2026-08-23 — 13 tests: 202 AsyncJob (`kind: generation`, `resultId`, queued), non-ready → 409 `validation_failed`, missing material → 404, wrong format/count/multi-material → 400, duplicate clientId → 409, 401 without token, redacted GET with secret-key walk (no `answer`/`answerBlock`/`correctIndex` anywhere), 404 for foreign rows, generation job via `/v1/jobs/{jobId}`, `retryAfterSeconds` in the job error |
+| Generation-job GET via `/v1/jobs/{jobId}` works | ✅ (covered above; `async_job_from_row` passes `kind` through and surfaces `retry_after_seconds`) |
+| Live probe (rule 36) | ✅ real-token probe on the dev project: assessment RLS insert, `enqueue_assessment_generation` RPC (row shape), job owner read-back, service-role question insert, **answer_block forbidden for authenticated (403)**, public columns readable, answer_block readable by service role, cleanup. AC-3's column isolation proven live |
+| Deviation recorded | ℹ️ (1) FastAPI cannot type a handler `dict \| JSONResponse`; the endpoint returns `JSONResponse`. (2) `validation_failed` now maps to HTTP 409 in `serialization._STATUS_BY_CODE` per the plan's not-ready gate (no other HTTP path raises it). (3) The enqueue RPC's attempt is `max(attempt)+1` per (kind, material) — migrations `020` (row-shape return) and `021` (attempt pick) — otherwise the Phase-6 retry hits the `(kind, material_id, attempt)` unique constraint. (4) Migration `022` fixes a real AC-3 hole: Supabase default ACLs grant authenticated table-level SELECT, which outranks the column grant; `REVOKE ALL ... FROM anon, authenticated` + the public-column grant makes answer_block unreadable (verified live: 403) |
 
 ### Phase 5 — App data layer
 

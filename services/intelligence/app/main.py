@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.middleware import request_context_middleware, request_id_from_request
-from app.routers import calibration, jobs, materials, progress, retrieval, roadmap
+from app.routers import assessments, calibration, jobs, materials, progress, retrieval, roadmap
 from app.security import rate_limit_user, require_user
 from py_progress import PRODUCTION_PRIOR_STRATEGY, production_calibrator
 
@@ -72,4 +72,5 @@ app.include_router(progress.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(roadmap.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(materials.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(jobs.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(assessments.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(retrieval.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
