@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://study-tracker.local/contracts/phase2/gemini/gated-reveal-response.schema.json",
+  "$id": "https://study-tracker.local/contracts/phase2/provider/gated-reveal-response.schema.json",
   "title": "GatedRevealAcknowledgement",
   "type": "object",
   "additionalProperties": false,

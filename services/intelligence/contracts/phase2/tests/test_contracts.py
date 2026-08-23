@@ -98,8 +98,8 @@ def test_every_json_schema_and_fixture_validates() -> None:
 
 def test_public_contracts_reject_hidden_fields() -> None:
     public_schema_paths = [
-        ROOT / "gemini/gated-reveal-response.schema.json",
-        ROOT / "gemini/guide-hint-frame.schema.json",
+        ROOT / "provider/gated-reveal-response.schema.json",
+        ROOT / "provider/guide-hint-frame.schema.json",
         ROOT / "execution-result.schema.json",
         ROOT / "durable-events.schema.json",
     ]
@@ -124,7 +124,73 @@ def test_public_error_matrix_is_explicit() -> None:
 
 
 def test_guide_frame_conditionals_reject_mixed_payloads() -> None:
-    schema = load_json(ROOT / "gemini/guide-hint-frame.schema.json")
+    schema = load_json(ROOT / "provider/guide-hint-frame.schema.json")
     invalid = {"frame": "done", "sequence": 1, "correlationId": "corr", "text": "not allowed"}
     with pytest.raises(jsonschema.ValidationError):
         jsonschema.Draft202012Validator(schema).validate(invalid)
+
+
+GENERATION_FIXTURES = [
+    "generation-success.json",
+    "generation-malformed.json",
+    "generation-partial.json",
+    "generation-safety-block.json",
+    "generation-quota-failure.json",
+    "generation-timeout.json",
+]
+
+
+def test_generation_fixtures_use_flattened_openrouter_envelope() -> None:
+    for name in GENERATION_FIXTURES:
+        fixture = load_json(ROOT / "fixtures" / name)
+        assert fixture["provider"] == "openrouter"
+        assert "candidates" not in fixture
+    for name in ["generation-success.json", "generation-malformed.json", "generation-partial.json", "generation-safety-block.json"]:
+        fixture = load_json(ROOT / "fixtures" / name)
+        assert "content" in fixture or "refusal" in fixture
+    success = load_json(ROOT / "fixtures/generation-success.json")
+    assert success["content"]
+    assert success["structuredOutput"]
+    assert success["finishReason"] == "stop"
+    assert success["usage"]["reasoningTokens"] == 0
+    assert success["routedProvider"]
+    assert "finishReason" not in load_json(ROOT / "fixtures/generation-timeout.json")
+
+
+def test_generation_response_schema_covers_refusal_branch() -> None:
+    schema = load_json(ROOT / "provider/generation-response.schema.json")
+    finish = schema["properties"]["finishReason"]["enum"]
+    assert finish == ["stop", "length", "content_filter", "refusal", "error"]
+    safety = load_json(ROOT / "fixtures/generation-safety-block.json")
+    assert safety["finishReason"] == "refusal"
+    assert safety["outcome"] == "safety_block"
+    assert safety["refusal"]
+
+
+def test_provider_error_enum_includes_unsupported_request() -> None:
+    schema = load_json(ROOT / "provider-error.schema.json")
+    codes = schema["properties"]["code"]["enum"]
+    assert "unsupported_request" in codes
+    assert schema["properties"]["code"]["enum"] == [
+        "safety_block",
+        "quota_exhausted",
+        "rate_limited",
+        "provider_credentials",
+        "provider_unavailable",
+        "provider_timeout",
+        "unsupported_request",
+        "malformed_output",
+    ]
+
+
+def test_generation_request_uses_neutral_envelope() -> None:
+    schema = load_json(ROOT / "provider/generation-request.schema.json")
+    assert schema["properties"]["provider"]["const"] == "openrouter"
+    assert "messages" in schema["properties"]
+    assert schema["properties"]["messages"]["items"]["properties"]["role"]["enum"] == ["system", "user", "assistant"]
+    assert "systemInstruction" not in schema["properties"]
+    assert "generationConfig" not in schema["properties"]
+    assert schema["properties"]["reasoningEffort"]["default"] == "off"
+    assert schema["properties"]["timeoutMs"]["default"] == 30000
+    assert schema["properties"]["temperature"]["const"] == 0.3
+    assert schema["properties"]["maxOutputTokens"]["default"] == 4096

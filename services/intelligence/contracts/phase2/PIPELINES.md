@@ -26,7 +26,7 @@ Answer keys, rubrics, reference solutions, and hidden tests remain server-only a
 | Accept | `MaterialCreate` -> `Material` + `AsyncJob(ingestion)` | service | server material row and job | invalid request is `400`; duplicate idempotency is `409` or original job |
 | Extract | source -> normalized full text | service extractor | server object storage; no browser copy | retryable fetch/provider failure sets `failed`, `retryable=true` |
 | Chunk | full text -> `ContentChunk[]` | service | server chunk rows | malformed/empty content is terminal `validation_failed` |
-| Embed | chunk batch -> 768-dimensional vectors | Gemini adapter | server vector index | timeout/unavailable retries with bounded backoff; quota is terminal until quota resets |
+| Embed | chunk batch -> 768-dimensional vectors | embedding provider | server vector index | timeout/unavailable retries with bounded backoff; quota is terminal until quota resets |
 | Publish | all valid chunks/vectors -> `ready` | service | update material and job atomically | partial batches remain `embedding`; no `ready` state until all chunks pass |
 
 ### Material creation, upload, and trigger-driven enqueue
@@ -57,7 +57,7 @@ never become `ready`.
 
 ## Assessment generation transformation
 
-`GenerationRequest` -> `GenerationBlueprint` -> `QuestionSlot[]` -> RAG `Citation[]` -> Gemini JSON request -> normalized provider response -> structural/citation validation -> one repair request at most -> redacted `Assessment`.
+`GenerationRequest` -> `GenerationBlueprint` -> `QuestionSlot[]` -> RAG `Citation[]` -> OpenRouter JSON request -> normalized provider response -> structural/citation validation -> one repair request at most -> redacted `Assessment`.
 
 The blueprint owner selects the authored difficulty band from the request and the rebuildable mastery projection. `authoredDifficulty` is never overwritten by observed difficulty. A candidate is accepted only when its format, required fields, skill tags, and citations validate against the blueprint.
 
@@ -77,7 +77,7 @@ Mastery and recommendations are rebuildable projections, identified by `modelVer
 
 ## Guide stream and gated reveal transformation
 
-`GuideRequest` + owned question + learner work + active line + tier -> RAG context -> Gemini stream -> normalized `HintFrame` SSE frames.
+`GuideRequest` + owned question + learner work + active line + tier -> RAG context -> provider stream -> normalized `HintFrame` SSE frames.
 
 Frames are ordered by `sequence` and share `correlationId`: `start`, zero or more `delta`/`citation`, then exactly one `done` or `error`. A disconnect is retryable only before `done`; the client must not append duplicate sequence numbers. Guide hints contain no answer key.
 
@@ -88,9 +88,12 @@ Frames are ordered by `sequence` and share `correlationId`: `start`, zero or mor
 | Failure | Normalized code | Retryable | Policy |
 |---|---|---:|---|
 | HTTP 429/provider quota | `quota_exhausted` | no until `retryAfterSeconds` | return quota envelope; do not busy-loop |
-| safety finish/block | `safety_block` | no | redact candidate and record telemetry |
-| connect/5xx | `provider_unavailable` | yes | max 2 retries, exponential 250/1000 ms |
-| request deadline | `provider_timeout` | yes | generation 30 s, embeddings 10 s, grading 30 s, guide idle 15 s |
+| HTTP 429/rate limit | `rate_limited` | yes, exactly once | honor `Retry-After`, capped 60 s (decision #53) |
+| safety finish/refusal | `safety_block` | no | redact candidate and record telemetry |
+| capability/tier 400 | `unsupported_request` | no | non-retryable (decision #53) |
+| credentials 401/402/403 | `provider_credentials` | no | non-retryable |
+| connect/5xx | `provider_unavailable` | yes, exactly once | SDK `max_retries=0`; one application-level retry (decision #53) |
+| request deadline | `provider_timeout` | yes, exactly once | generation 30 s, embeddings 10 s, grading 30 s, guide idle 15 s |
 | invalid JSON/schema | `malformed_output` | one repair only | then partial/failure with warning |
 | service validation | `validation_failed` | no | preserve accepted prior state |
 

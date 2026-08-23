@@ -8,7 +8,7 @@ related:
   - ./openapi.yaml
   - ./PIPELINES.md
   - ./TRACEABILITY.md
-  - ./gemini/README.md
+  - ./provider/README.md
 ---
 
 ## Contract pack entry point
@@ -32,13 +32,13 @@ The pack is indexed from the [Phase 2 Wayfinder map](https://github.com/rings0fs
 - [provider-error.schema.json](./provider-error.schema.json) - normalized provider failure contract.
 - [async-job.schema.json](./async-job.schema.json) - owner-scoped job/status/result contract used by `GET /v1/jobs/{jobId}`.
 - [generation-telemetry.schema.json](./generation-telemetry.schema.json) - canonical redacted telemetry.
-- [gemini/README.md](./gemini/README.md) - Gemini provider boundary and normalized response rules.
-- [gemini/generation-request.schema.json](./gemini/generation-request.schema.json) - exact generation, grading, guide, and reveal request.
-- [gemini/generation-response.schema.json](./gemini/generation-response.schema.json) - normalized provider response envelope.
-- [gemini/embedding-request.schema.json](./gemini/embedding-request.schema.json) - exact batch embedding request.
-- [gemini/written-grading-response.schema.json](./gemini/written-grading-response.schema.json) - normalized written grading.
-- [gemini/guide-hint-frame.schema.json](./gemini/guide-hint-frame.schema.json) - normalized stream frame.
-- [gemini/gated-reveal-response.schema.json](./gemini/gated-reveal-response.schema.json) - gated reveal result.
+- [provider/README.md](./provider/README.md) - OpenRouter provider boundary and normalized response rules.
+- [provider/generation-request.schema.json](./provider/generation-request.schema.json) - exact generation, grading, guide, and reveal request.
+- [provider/generation-response.schema.json](./provider/generation-response.schema.json) - normalized provider response envelope.
+- [provider/embedding-request.schema.json](./provider/embedding-request.schema.json) - exact batch embedding request (Gemini-shaped embeddings fallback).
+- [provider/written-grading-response.schema.json](./provider/written-grading-response.schema.json) - normalized written grading.
+- [provider/guide-hint-frame.schema.json](./provider/guide-hint-frame.schema.json) - normalized stream frame.
+- [provider/gated-reveal-response.schema.json](./provider/gated-reveal-response.schema.json) - gated reveal result.
 
 ## Contract status rule
 
@@ -49,7 +49,7 @@ When a field changes, update the schema, transformation document, traceability r
 ## Boundary guarantees
 
 - This pack does not choose unresolved UI presentation in the material, review, or roadmap-feedback tickets.
-- This pack does not persist raw Gemini payloads as product events.
+- This pack does not persist raw provider payloads as product events.
 - This pack does not expose hidden answers, rubrics, reference solutions, or hidden tests to clients.
 - A gated reveal returns only an acknowledgement and safe explanation; it never returns hidden content.
 - `X-Request-ID` is required on every HTTP request; `correlationId` joins related work and `Idempotency-Key` is required for mutations. `clientAttemptId` remains the local retry identity for attempts.

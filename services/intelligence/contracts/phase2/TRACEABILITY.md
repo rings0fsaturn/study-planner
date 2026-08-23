@@ -18,18 +18,18 @@ last_updated: 2026-08-09
 | Assessment and Question atom | [Assessment types, formats & scoring](https://github.com/rings0fsaturn/study-planner/issues/6) | `openapi.yaml` QuestionBase and Assessment |
 | Attempts and server grading | [Persistence & local-first fit](https://github.com/rings0fsaturn/study-planner/issues/10) and [Practice session model](https://github.com/rings0fsaturn/study-planner/issues/16) | `openapi.yaml` QuestionGraded and `PIPELINES.md` |
 | Material and ingestion lifecycle | [Content ingestion & storage design](https://github.com/rings0fsaturn/study-planner/issues/7) | `PIPELINES.md` |
-| Gemini and streaming ownership | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `gemini/README.md` |
+| Gemini and streaming ownership | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `provider/README.md` |
 | Generation and hidden content | [Grounded assessment-generation pipeline](https://github.com/rings0fsaturn/study-planner/issues/13) | `PIPELINES.md`, `Citation`, `Warning` |
 | Mastery interface and BKT | [Grading to mastery signal mapping](https://github.com/rings0fsaturn/study-planner/issues/14) and [KT model & adaptive-difficulty loop](https://github.com/rings0fsaturn/study-planner/issues/15) | `openapi.yaml` MasteryProjection and AdaptiveRecommendation |
 | Async and service ownership | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `PIPELINES.md` |
 | Quality telemetry | [Generation-quality evaluation harness](https://github.com/rings0fsaturn/study-planner/issues/18) | `generation-telemetry.schema.json` |
 | Durable event envelope | [Persistence & local-first fit](https://github.com/rings0fsaturn/study-planner/issues/10) | `durable-events.schema.json` |
-| Provider/service identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `service-objects.schema.json` and `gemini/` |
+| Provider/service identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `service-objects.schema.json` and `provider/` |
 | KT model and parity boundary | [KT model & adaptive-difficulty loop](https://github.com/rings0fsaturn/study-planner/issues/15) | `openapi.yaml` MasteryProjection and shared validation fixtures; no generated TS/Python types are claimed |
 | Named transformation objects | [Grounded assessment-generation pipeline](https://github.com/rings0fsaturn/study-planner/issues/13) | `content-chunk.schema.json`, `generation-blueprint.schema.json`, `question-slot.schema.json` |
 | Coding execution and public grading | [Hybrid client/server code execution](https://github.com/rings0fsaturn/study-planner/issues/9) | `coding-answer.schema.json`, `execution-result.schema.json` |
-| Provider errors and request identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `provider-error.schema.json`, `openapi.yaml`, `gemini/` |
-| Guide SSE framing | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `gemini/guide-hint-frame.schema.json`, `openapi.yaml`, guide fixtures |
+| Provider errors and request identity | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `provider-error.schema.json`, `openapi.yaml`, `provider/` |
+| Guide SSE framing | [AI backend home & streaming](https://github.com/rings0fsaturn/study-planner/issues/9) | `provider/guide-hint-frame.schema.json`, `openapi.yaml`, guide fixtures |
 | Async job status and public result | [Data + service architecture refactor](https://github.com/rings0fsaturn/study-planner/issues/17) | `async-job.schema.json`, `openapi.yaml` `GET /v1/jobs/{jobId}` |
 
 - **2026-08-14** Extended the material/ingestion area for issue #37: retry endpoint,
@@ -45,6 +45,15 @@ last_updated: 2026-08-09
   duplicate guard; server-owned material columns are protected by a BEFORE UPDATE
   guard trigger. Rationale: gate-6/7 live probes (2026-08-14) showed double-click
   retry could stack attempts and ready publish was two non-atomic REST updates.
+
+- **2026-08-23** Neutralized the provider pack in place for DeepSeek via OpenRouter (slice
+  #57, resolution #54): `gemini/` renamed to `provider/`; request envelope moved to OpenAI-style
+  `messages[]` with plain JSON Schema `responseSchema`, `temperature` + `maxOutputTokens` sampling,
+  `reasoningEffort` knob, and per-task `timeoutMs`; response envelope flattened to `content` /
+  `refusal` with lowercase `finishReason`, optional `reasoningTokens` and `routedProvider`;
+  `unsupported_request` added to the provider-error enum; fixtures regenerated from sanitized
+  DeepSeek probe shapes. `embedding-request.schema.json` stays Gemini-shaped (embeddings fallback
+  only). Rationale: issues #52-#56 resolutions (2026-08-22).
 
 ## Approval rule
 

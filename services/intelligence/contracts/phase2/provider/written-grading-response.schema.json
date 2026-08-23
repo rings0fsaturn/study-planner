@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://study-tracker.local/contracts/phase2/gemini/written-grading-response.schema.json",
+  "$id": "https://study-tracker.local/contracts/phase2/provider/written-grading-response.schema.json",
   "title": "NormalizedWrittenGrading",
   "type": "object",
   "additionalProperties": false,

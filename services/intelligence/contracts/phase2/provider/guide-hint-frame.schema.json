@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://study-tracker.local/contracts/phase2/gemini/guide-hint-frame.schema.json",
+  "$id": "https://study-tracker.local/contracts/phase2/provider/guide-hint-frame.schema.json",
   "title": "NormalizedGuideHintFrame",
   "type": "object",
   "additionalProperties": false,

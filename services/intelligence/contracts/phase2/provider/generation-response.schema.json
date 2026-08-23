@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/provider/generation-response.schema.json",
+  "title": "NormalizedGenerationResponse",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["provider", "model", "traceId", "usage", "outcome"],
+  "properties": {
+    "provider": { "const": "openrouter" },
+    "model": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "correlationId": { "type": "string", "minLength": 1 },
+    "providerRequestId": { "type": "string" },
+    "content": { "type": "string" },
+    "refusal": { "type": "string" },
+    "structuredOutput": { "type": "object" },
+    "finishReason": { "enum": ["stop", "length", "content_filter", "refusal", "error"] },
+    "nativeFinishReason": { "type": "string" },
+    "usage": { "type": "object", "additionalProperties": false, "required": ["promptTokens", "outputTokens", "totalTokens"], "properties": { "promptTokens": { "type": "integer", "minimum": 0 }, "outputTokens": { "type": "integer", "minimum": 0 }, "totalTokens": { "type": "integer", "minimum": 0 }, "reasoningTokens": { "type": "integer", "minimum": 0 } } },
+    "routedProvider": { "type": "string" },
+    "outcome": { "enum": ["ok", "partial", "safety_block", "quota_failure", "timeout", "malformed_output", "provider_error"] },
+    "error": { "$ref": "../provider-error.schema.json" }
+  }
+}

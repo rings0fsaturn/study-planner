@@ -6,7 +6,7 @@
   "additionalProperties": false,
   "required": ["code", "message", "retryable", "requestId", "correlationId"],
   "properties": {
-    "code": { "type": "string", "enum": ["safety_block", "quota_exhausted", "rate_limited", "provider_credentials", "provider_unavailable", "provider_timeout", "malformed_output"] },
+    "code": { "type": "string", "enum": ["safety_block", "quota_exhausted", "rate_limited", "provider_credentials", "provider_unavailable", "provider_timeout", "unsupported_request", "malformed_output"] },
     "message": { "type": "string", "minLength": 1 },
     "retryable": { "type": "boolean" },
     "requestId": { "type": "string", "minLength": 1 },
