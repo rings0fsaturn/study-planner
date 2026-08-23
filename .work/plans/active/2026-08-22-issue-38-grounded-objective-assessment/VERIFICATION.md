@@ -52,6 +52,15 @@
 | Threaded two-arm worker starts/stops cleanly; ingestion arm unaffected | ☐ |
 | Full service suite: only pre-existing golden-fixture failures | ☐ |
 
+### Phase 3 — Worker arm + orchestration
+
+| Check | Result |
+|---|---|
+| `test_generation_worker.py` green (happy, quota, timeout, safety, malformed±repair, citation-drop, embedder-down) | ✅ 2026-08-23 — 12 worker scenarios: happy path inserts question with `answer_block`, assessment ready, job succeeded, telemetry ok; quota keeps assessment `generating` + retryable job with `retryAfterSeconds`; timeout/unsupported retryable flags; safety warning + failed; malformed → one repair (repair feedback carries the actual validation failures) → success and repair-exhausted; format-failure repair; citation-drop without repair; unverified-quote warning on ready; embedder-down → retryable `provider_unavailable`; unexpected exception redelivers the message |
+| Threaded two-arm worker starts/stops cleanly; ingestion arm unaffected | ✅ `test_worker_main.py`: `_build_generation_worker` env defaults + overrides (D-08 values), `_arm_loop` stops on the shared event and survives iteration exceptions. `main()` keeps the ingestion loop unchanged and joins the daemon generation thread on signal |
+| Full service suite: only pre-existing golden-fixture failures | ✅ 379 passed / 7 failed — identical 7 pre-existing failures at baseline (5 calibration golden fixtures + 2 retrieval-probe) |
+| Deviation recorded | ℹ️ D-06 needs `retryAfterSeconds` on the job for the UI; `ingestion_jobs` had no column, so migration `019_ingestion_jobs_retry_after.sql` adds `retry_after_seconds` (rule 35: new migration, 018 was already pushed) and `async_job_from_row` surfaces it in the AsyncJob error. Repo helpers live on `SupabaseIngestionRepo` (canonical service-role repo); `app/generation/repo.py` defines the narrow `GenerationRepo` protocol the worker depends on |
+
 ### Phase 4 — API endpoints
 
 | Check | Result |

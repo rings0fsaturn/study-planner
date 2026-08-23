@@ -17,6 +17,8 @@ from .models import ContentChunk, IngestionError, IngestionJob, Material
 MATERIALS_TABLE = "materials"
 CHUNKS_TABLE = "content_chunks"
 JOBS_TABLE = "ingestion_jobs"
+ASSESSMENTS_TABLE = "assessments"
+QUESTIONS_TABLE = "questions"
 
 
 class IngestionRepo(Protocol):
@@ -251,6 +253,53 @@ class SupabaseIngestionRepo:
             },
         )
 
+    def update_job_status(
+        self,
+        job_id: str,
+        status: str,
+        *,
+        error_code: str | None = None,
+        error_message: str | None = None,
+        retryable: bool = False,
+        retry_after: float | None = None,
+        result_id: str | None = None,
+    ) -> None:
+        """General job transition used by the generation worker."""
+        payload: dict = {"status": status}
+        if error_code is not None:
+            payload["error_code"] = error_code
+        if error_message is not None:
+            payload["error_message"] = error_message
+        if retryable:
+            payload["retryable"] = True
+        if retry_after is not None:
+            payload["retry_after_seconds"] = max(1, int(retry_after))
+        if result_id is not None:
+            payload["result_id"] = result_id
+        if status in ("succeeded", "failed", "cancelled"):
+            payload["completed_at"] = _now()
+        self._patch(f"{self._base}/rest/v1/{JOBS_TABLE}?id=eq.{job_id}", payload)
+
+    def get_assessment(self, assessment_id: str) -> dict:
+        rows = self._get(
+            f"{self._base}/rest/v1/{ASSESSMENTS_TABLE}?id=eq.{assessment_id}&select=*",
+            self._headers(),
+        )
+        if not rows:
+            raise IngestionError("not_found", "assessment not found")
+        return rows[0]
+
+    def update_assessment_status(
+        self, assessment_id: str, status: str, warnings: list[dict]
+    ) -> None:
+        self._patch(
+            f"{self._base}/rest/v1/{ASSESSMENTS_TABLE}?id=eq.{assessment_id}",
+            {"status": status, "warnings": warnings, "updated_at": _now()},
+        )
+
+    def insert_question(self, row: dict) -> None:
+        self._post(f"{self._base}/rest/v1/{QUESTIONS_TABLE}", row)
+
     def publish_ready(
         self,
         material_id: str,
@@ -273,9 +322,7 @@ class SupabaseIngestionRepo:
             },
         )
 
-    def replace_chunks(
-        self, material_id: str, chunks: list[ContentChunk], owner_id: str
-    ) -> None:
+    def replace_chunks(self, material_id: str, chunks: list[ContentChunk], owner_id: str) -> None:
         self.delete_material_chunks(material_id)
         if not chunks:
             return

@@ -45,4 +45,7 @@ def async_job_from_row(row: dict) -> dict:
         created_at=row.get("created_at") or "",
         completed_at=row.get("completed_at"),
     )
-    return job.to_async_job()
+    payload = job.to_async_job()
+    if payload.get("error") and row.get("retry_after_seconds"):
+        payload["error"]["retryAfterSeconds"] = int(row["retry_after_seconds"])
+    return payload
