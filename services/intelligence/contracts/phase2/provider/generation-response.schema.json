@@ -4,7 +4,7 @@
   "title": "NormalizedGenerationResponse",
   "type": "object",
   "additionalProperties": false,
-  "required": ["provider", "model", "traceId", "usage", "outcome"],
+  "required": ["provider", "model", "traceId", "outcome"],
   "properties": {
     "provider": { "const": "openrouter" },
     "model": { "type": "string", "minLength": 1 },
@@ -20,5 +20,14 @@
     "routedProvider": { "type": "string" },
     "outcome": { "enum": ["ok", "partial", "safety_block", "quota_failure", "timeout", "malformed_output", "provider_error"] },
     "error": { "$ref": "../provider-error.schema.json" }
-  }
+  },
+  "allOf": [
+    { "if": { "properties": { "outcome": { "const": "ok" } } }, "then": { "required": ["content"], "not": { "required": ["error"] } } },
+    { "if": { "properties": { "outcome": { "const": "partial" } } }, "then": { "required": ["content"], "not": { "required": ["error"] } } },
+    { "if": { "properties": { "outcome": { "const": "malformed_output" } } }, "then": { "required": ["error"] } },
+    { "if": { "properties": { "outcome": { "const": "quota_failure" } } }, "then": { "required": ["error"] } },
+    { "if": { "properties": { "outcome": { "const": "timeout" } } }, "then": { "required": ["error"] } },
+    { "if": { "properties": { "outcome": { "const": "provider_error" } } }, "then": { "required": ["error"] } },
+    { "if": { "properties": { "outcome": { "const": "safety_block" } } }, "then": { "required": ["error"] } }
+  ]
 }

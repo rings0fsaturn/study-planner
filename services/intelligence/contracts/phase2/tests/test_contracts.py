@@ -7,7 +7,6 @@ import jsonschema
 import pytest
 import yaml
 
-
 ROOT = Path(__file__).parents[1]
 SECRET_FIELDS = {"answerkey", "rubric", "referencesolution", "hiddentests", "hiddenanswer"}
 
@@ -93,7 +92,10 @@ def test_every_json_schema_and_fixture_validates() -> None:
         schema = load_json(ROOT / "fixtures" / item["schema"])
         instance = load_json(ROOT / "fixtures" / item["file"])
         resolver = jsonschema.RefResolver.from_schema(schema, store=schemas)
-        jsonschema.Draft202012Validator(schema, resolver=resolver, format_checker=jsonschema.FormatChecker()).validate(instance)
+        validator = jsonschema.Draft202012Validator(
+            schema, resolver=resolver, format_checker=jsonschema.FormatChecker()
+        )
+        validator.validate(instance)
 
 
 def test_public_contracts_reject_hidden_fields() -> None:
@@ -114,13 +116,22 @@ def test_public_contracts_reject_hidden_fields() -> None:
     events = load_json(ROOT / "durable-events.schema.json")
     assert_no_secret_fields(events)
     assert "$defs" in events
-    assert {"assessmentCreated", "questionAttempted", "questionGraded", "guideRequested", "guideCompleted", "roadmapFeedbackRecorded"} <= set(events["$defs"])
+    event_kinds = {
+        "assessmentCreated",
+        "questionAttempted",
+        "questionGraded",
+        "guideRequested",
+        "guideCompleted",
+        "roadmapFeedbackRecorded",
+    }
+    assert event_kinds <= set(events["$defs"])
 
 
 def test_public_error_matrix_is_explicit() -> None:
     document = yaml.safe_load((ROOT / "openapi.yaml").read_text(encoding="ascii"))
     codes = document["components"]["schemas"]["ServiceError"]["properties"]["code"]["enum"]
     assert {"safety_block", "quota_exhausted", "provider_timeout", "malformed_output"} <= set(codes)
+    assert "unsupported_request" in codes
 
 
 def test_guide_frame_conditionals_reject_mixed_payloads() -> None:
@@ -145,7 +156,12 @@ def test_generation_fixtures_use_flattened_openrouter_envelope() -> None:
         fixture = load_json(ROOT / "fixtures" / name)
         assert fixture["provider"] == "openrouter"
         assert "candidates" not in fixture
-    for name in ["generation-success.json", "generation-malformed.json", "generation-partial.json", "generation-safety-block.json"]:
+    for name in [
+        "generation-success.json",
+        "generation-malformed.json",
+        "generation-partial.json",
+        "generation-safety-block.json",
+    ]:
         fixture = load_json(ROOT / "fixtures" / name)
         assert "content" in fixture or "refusal" in fixture
     success = load_json(ROOT / "fixtures/generation-success.json")
@@ -165,6 +181,66 @@ def test_generation_response_schema_covers_refusal_branch() -> None:
     assert safety["finishReason"] == "refusal"
     assert safety["outcome"] == "safety_block"
     assert safety["refusal"]
+
+
+def test_generation_response_schema_pins_flattened_shape() -> None:
+    schema = load_json(ROOT / "provider/generation-response.schema.json")
+    props = schema["properties"]
+    assert "candidates" not in props
+    assert "safetyFeedback" not in props
+    assert set(props) <= {
+        "provider",
+        "model",
+        "traceId",
+        "correlationId",
+        "providerRequestId",
+        "content",
+        "refusal",
+        "structuredOutput",
+        "finishReason",
+        "nativeFinishReason",
+        "usage",
+        "routedProvider",
+        "outcome",
+        "error",
+    }
+    assert "nativeFinishReason" not in schema["required"]
+    assert "routedProvider" not in schema["required"]
+    assert "usage" not in schema["required"]
+    assert {"reasoningTokens"} <= set(props["usage"]["properties"])
+
+
+def test_generation_response_schema_rejects_invalid_envelope_states() -> None:
+    schemas = {load_json(path)["$id"]: load_json(path) for path in ROOT.rglob("*.schema.json")}
+    schema = load_json(ROOT / "provider/generation-response.schema.json")
+    resolver = jsonschema.RefResolver.from_schema(schema, store=schemas)
+    base = {
+        "provider": "openrouter",
+        "model": "deepseek/deepseek-v4-flash-0731",
+        "traceId": "trace-reject",
+        "usage": {"promptTokens": 1, "outputTokens": 1, "totalTokens": 2},
+    }
+    validator = jsonschema.Draft202012Validator(schema, resolver=resolver)
+    for instance in [
+        {**base, "outcome": "ok"},
+        {**base, "outcome": "partial"},
+        {**base, "outcome": "malformed_output"},
+        {**base, "outcome": "quota_failure"},
+        {**base, "outcome": "timeout"},
+        {**base, "outcome": "provider_error"},
+        {**base, "outcome": "safety_block"},
+    ]:
+        with pytest.raises(jsonschema.ValidationError):
+            validator.validate(instance)
+    with pytest.raises(jsonschema.ValidationError):
+        error = {
+            "code": "safety_block",
+            "retryable": False,
+            "requestId": "req",
+            "correlationId": "corr",
+            "message": "m",
+        }
+        validator.validate({**base, "outcome": "ok", "content": "x", "error": error})
 
 
 def test_provider_error_enum_includes_unsupported_request() -> None:
@@ -187,7 +263,8 @@ def test_generation_request_uses_neutral_envelope() -> None:
     schema = load_json(ROOT / "provider/generation-request.schema.json")
     assert schema["properties"]["provider"]["const"] == "openrouter"
     assert "messages" in schema["properties"]
-    assert schema["properties"]["messages"]["items"]["properties"]["role"]["enum"] == ["system", "user", "assistant"]
+    roles = schema["properties"]["messages"]["items"]["properties"]["role"]["enum"]
+    assert roles == ["system", "user", "assistant"]
     assert "systemInstruction" not in schema["properties"]
     assert "generationConfig" not in schema["properties"]
     assert schema["properties"]["reasoningEffort"]["default"] == "off"

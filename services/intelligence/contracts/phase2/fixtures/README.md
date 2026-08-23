@@ -9,18 +9,22 @@ last_updated: 2026-08-09
 ## Fixture inventory
 
 Each fixture is mapped to its canonical JSON Schema in `manifest.json` and is validated by `tests/test_contracts.py`.
-The six `generation-*.json` fixtures are seeded from sanitized DeepSeek probe shapes
-(`research/doc/deepseek-generation-probe/raw.jsonl`): real `finish_reason`, `native_finish_reason`,
-refusal, usage with reasoning tokens, and routed provider identifiers.
+The `generation-success`, `generation-malformed`, and `generation-partial` fixtures mirror captured
+DeepSeek probe records (`research/doc/deepseek-generation-probe/raw.jsonl`): real `finish_reason`,
+`native_finish_reason`, usage with reasoning tokens, and routed provider identifiers.
+The `generation-safety-block`, `generation-quota-failure`, and `generation-timeout` fixtures
+exercise envelope branches no probe run captured (refusal, 429, deadline) and are synthesized from
+the #54 finish-reason mapping; the timeout and quota fixtures carry no `usage` because a
+transport-level failure yields no provider usage.
 
 | Fixture | Contract | Purpose |
 |---|---|---|
 | `generation-success.json` | OpenRouter generation response | accepted structured output |
 | `generation-malformed.json` | OpenRouter generation response | repair exhausted |
-| `generation-safety-block.json` | OpenRouter generation response | non-retryable safety result |
-| `generation-quota-failure.json` | OpenRouter generation response | quota normalization |
-| `generation-timeout.json` | OpenRouter generation response | deadline normalization |
-| `generation-partial.json` | OpenRouter generation response | accepted subset of slots |
+| `generation-safety-block.json` | OpenRouter generation response | refusal branch, synthesized (no refusal captured by the probe) |
+| `generation-quota-failure.json` | OpenRouter generation response | quota normalization, synthesized (429 branch) |
+| `generation-timeout.json` | OpenRouter generation response | deadline normalization, synthesized (no provider usage) |
+| `generation-partial.json` | OpenRouter generation response | truncated output normalized to partial |
 | `written-grading.json` | written grading response | score and per-skill observation |
 | `embedding-batch.json` | embedding request | batch input and 768-dimension configuration |
 | `coding-answer.json` | coding answer | public source and sandbox configuration |
