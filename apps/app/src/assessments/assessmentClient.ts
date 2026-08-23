@@ -44,6 +44,15 @@ function isAbortError(err: unknown): boolean {
   )
 }
 
+async function errorCode(response: Response): Promise<string | undefined> {
+  try {
+    const body = (await response.json()) as { code?: unknown }
+    return typeof body.code === 'string' ? body.code : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export function normalizeAssessmentError(err: unknown): AssessmentServiceError {
   if (err instanceof AssessmentServiceError) return err
   if (err instanceof TypeError) {
@@ -89,6 +98,16 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
           throw new AssessmentServiceError('unauthorized', 'not signed in', false)
         }
         if (response.status === 409) {
+          // serialization maps validation_failed to 409 too; distinguish the
+          // two 409 meanings by the body code.
+          const code = await errorCode(response)
+          if (code === 'validation_failed') {
+            throw new AssessmentServiceError(
+              'validation',
+              'material is not ready for generation',
+              false,
+            )
+          }
           throw new AssessmentServiceError('conflict', 'assessment already exists', false)
         }
         if (response.status === 429) {

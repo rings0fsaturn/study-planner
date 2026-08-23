@@ -33,6 +33,7 @@ function useAssessmentPolling(assessmentId: string): {
         setAssessment(record)
         setError(null)
         if (record.status === 'generating') {
+          if (timer) clearInterval(timer)
           timer = setInterval(() => {
             void load()
           }, POLL_INTERVAL_MS)
@@ -136,6 +137,20 @@ export function AssessmentDetail() {
             The service is retrieving the source context and authoring a grounded question. This
             usually takes a few seconds. Refresh the page any time to resume here.
           </p>
+          {assessment.warnings.length > 0 && (
+            <div className="banner attention" style={{ marginTop: '1rem' }}>
+              <div className="banner-body">
+                <div className="banner-title">Generation was interrupted</div>
+                <div className="banner-desc">
+                  {assessment.warnings.map((warning) => warning.message).join(' ')} Start a fresh
+                  attempt to continue.
+                </div>
+              </div>
+              <button type="button" className="banner-action-btn" onClick={() => void retry()} disabled={retrying}>
+                {retrying ? 'Requesting…' : 'Retry generation'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

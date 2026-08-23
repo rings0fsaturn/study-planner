@@ -124,23 +124,14 @@ class OpenRouterGenerationClient:
                 if attempt == 1:
                     time.sleep(RETRY_DELAY_SECONDS)
                     continue
-                return NormalizedGenerationResponse(
-                    content=None,
-                    refusal=None,
-                    finish_reason="",
-                    native_finish_reason=None,
-                    structured_output=None,
-                    usage={},
-                    routed_provider=None,
-                    outcome="timeout",
-                    error=_error_envelope(
-                        "provider_timeout",
-                        "provider deadline exceeded",
-                        True,
-                        request_id,
-                        correlation_id,
-                    ),
-                    latency_ms=(time.monotonic() - start) * 1000.0,
+                return self._failure(
+                    "timeout",
+                    "provider_timeout",
+                    "provider deadline exceeded",
+                    True,
+                    request_id,
+                    correlation_id,
+                    start,
                 )
             except APIStatusError as exc:
                 if attempt == 1 and (exc.status_code == 429 or exc.status_code >= 500):
@@ -152,61 +143,38 @@ class OpenRouterGenerationClient:
                     time.sleep(delay)
                     continue
                 outcome, code, retryable = self._classify_status(exc)
-                return NormalizedGenerationResponse(
-                    content=None,
-                    refusal=None,
-                    finish_reason="",
-                    native_finish_reason=None,
-                    structured_output=None,
-                    usage={},
-                    routed_provider=None,
-                    outcome=outcome,
-                    error=_error_envelope(
-                        code,
-                        self._message(exc),
-                        retryable,
-                        request_id,
-                        correlation_id,
-                        retry_after=self._retry_after(exc) if outcome == "quota_failure" else None,
-                    ),
-                    latency_ms=(time.monotonic() - start) * 1000.0,
+                return self._failure(
+                    outcome,
+                    code,
+                    self._message(exc),
+                    retryable,
+                    request_id,
+                    correlation_id,
+                    start,
+                    retry_after=self._retry_after(exc) if outcome == "quota_failure" else None,
                 )
             except APIConnectionError:
                 if attempt == 1:
                     time.sleep(RETRY_DELAY_SECONDS)
                     continue
-                return NormalizedGenerationResponse(
-                    content=None,
-                    refusal=None,
-                    finish_reason="",
-                    native_finish_reason=None,
-                    structured_output=None,
-                    usage={},
-                    routed_provider=None,
-                    outcome="provider_error",
-                    error=_error_envelope(
-                        "provider_unavailable",
-                        "provider connection failed",
-                        True,
-                        request_id,
-                        correlation_id,
-                    ),
-                    latency_ms=(time.monotonic() - start) * 1000.0,
+                return self._failure(
+                    "provider_error",
+                    "provider_unavailable",
+                    "provider connection failed",
+                    True,
+                    request_id,
+                    correlation_id,
+                    start,
                 )
             except APIError as exc:
-                return NormalizedGenerationResponse(
-                    content=None,
-                    refusal=None,
-                    finish_reason="",
-                    native_finish_reason=None,
-                    structured_output=None,
-                    usage={},
-                    routed_provider=None,
-                    outcome="provider_error",
-                    error=_error_envelope(
-                        "provider_error", str(exc)[:300], False, request_id, correlation_id
-                    ),
-                    latency_ms=(time.monotonic() - start) * 1000.0,
+                return self._failure(
+                    "provider_error",
+                    "provider_error",
+                    str(exc)[:300],
+                    False,
+                    request_id,
+                    correlation_id,
+                    start,
                 )
             return self._normalize(
                 body,
@@ -215,6 +183,33 @@ class OpenRouterGenerationClient:
                 correlation_id,
                 response_schema,
             )
+
+    @staticmethod
+    def _failure(
+        outcome: str,
+        code: str,
+        message: str,
+        retryable: bool,
+        request_id: str,
+        correlation_id: str,
+        start: float,
+        *,
+        retry_after: float | None = None,
+    ) -> NormalizedGenerationResponse:
+        return NormalizedGenerationResponse(
+            content=None,
+            refusal=None,
+            finish_reason="",
+            native_finish_reason=None,
+            structured_output=None,
+            usage={},
+            routed_provider=None,
+            outcome=outcome,
+            error=_error_envelope(
+                code, message, retryable, request_id, correlation_id, retry_after=retry_after
+            ),
+            latency_ms=(time.monotonic() - start) * 1000.0,
+        )
 
     @staticmethod
     def _classify_status(exc: APIStatusError) -> tuple[str, str, bool]:

@@ -300,6 +300,23 @@ class SupabaseIngestionRepo:
     def insert_question(self, row: dict) -> None:
         self._post(f"{self._base}/rest/v1/{QUESTIONS_TABLE}", row)
 
+    def complete_assessment(
+        self, question_row: dict, job_id: str, status: str, warnings: list[dict]
+    ) -> None:
+        """Atomic accept: question insert + assessment status + job success in
+        one security-definer transaction (migration 023). Refuses to run when
+        the assessment is not `generating` (re-entry guard)."""
+        self._request(
+            "POST",
+            f"{self._base}/rest/v1/rpc/complete_assessment_generation",
+            payload={
+                "p_question": question_row,
+                "p_job_id": job_id,
+                "p_status": status,
+                "p_warnings": warnings,
+            },
+        )
+
     def publish_ready(
         self,
         material_id: str,

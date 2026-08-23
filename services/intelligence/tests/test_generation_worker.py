@@ -20,6 +20,7 @@ class FakeGenerationRepo:
         self.assessments: dict[str, dict] = {}
         self.materials: dict[str, Material] = {}
         self.questions: list[dict] = []
+        self.completed: list[tuple[dict, str, str, list[dict]]] = []
         self.job_updates: list[dict] = []
         self.assessment_updates: list[tuple[str, str, list[dict]]] = []
         self.embedder_failure: IngestionError | None = None
@@ -66,8 +67,11 @@ class FakeGenerationRepo:
     ) -> None:
         self.assessment_updates.append((assessment_id, status, warnings))
 
-    def insert_question(self, row: dict) -> None:
-        self.questions.append(row)
+    def complete_assessment(
+        self, question_row: dict, job_id: str, status: str, warnings: list[dict]
+    ) -> None:
+        self.completed.append((question_row, job_id, status, warnings))
+        self.questions.append(question_row)
 
 
 class FakeAdapter:
@@ -204,23 +208,44 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     processed = make_worker(repo, queue, adapter, telemetry).run_once()
 
     assert processed == 1
-    assert len(repo.questions) == 1
-    question = repo.questions[0]
-    assert question["assessment_id"] == "a1"
-    assert question["user_id"] == "u1"
-    assert question["format"] == "objective"
-    assert question["prompt"] == VALID_MCQ["stem"]
-    assert question["authored_difficulty"] == 3
-    assert question["options"] == VALID_MCQ["options"]
-    assert question["skill_tags"] == VALID_MCQ["skillTags"]
-    assert question["answer_block"] == {"correctIndex": 0}
-    assert repo.assessment_updates == [("a1", "ready", [])]
-    assert repo.job_updates[-1]["status"] == "succeeded"
-    assert repo.job_updates[-1]["result_id"] == "a1"
+    assert len(repo.completed) == 1
+    question_row, job_id, status, warnings = repo.completed[0]
+    assert job_id == "j1"
+    assert status == "ready"
+    assert warnings == []
+    assert question_row["assessment_id"] == "a1"
+    assert question_row["user_id"] == "u1"
+    assert question_row["format"] == "objective"
+    assert question_row["prompt"] == VALID_MCQ["stem"]
+    assert question_row["authored_difficulty"] == 3
+    assert question_row["options"] == VALID_MCQ["options"]
+    assert question_row["skill_tags"] == VALID_MCQ["skillTags"]
+    assert question_row["answer_block"] == {"correctIndex": 0}
+    assert repo.questions == [question_row]
     assert telemetry.records[0].outcome == "ok"
     assert telemetry.records[0].questions_requested == 1
     assert telemetry.records[0].questions_accepted == 1
     assert telemetry.records[0].reasoning_tokens == 0
+    assert not queue.queues["assessment_generate"]
+
+
+def test_redelivered_message_for_terminal_assessment_is_dropped() -> None:
+    repo = FakeGenerationRepo()
+    seeded = assessment()
+    seeded["status"] = "ready"
+    repo.seed(seeded, material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert adapter.calls == []  # no provider spend on a terminal assessment
+    assert repo.completed == []
     assert not queue.queues["assessment_generate"]
 
 
@@ -238,7 +263,9 @@ def test_quota_failure_fails_job_retryable_and_keeps_assessment_generating() -> 
     make_worker(repo, queue, adapter, telemetry).run_once()
 
     assert repo.questions == []
-    assert repo.assessment_updates == []
+    assert repo.assessment_updates == [
+        ("a1", "generating", [{"code": "quota_exhausted", "message": "quota_exhausted message"}])
+    ]
     assert repo.job_updates[-1] == {
         "job_id": "j1",
         "status": "failed",
@@ -269,7 +296,9 @@ def test_timeout_fails_job_retryable() -> None:
     assert repo.job_updates[-1]["status"] == "failed"
     assert repo.job_updates[-1]["error_code"] == "provider_timeout"
     assert repo.job_updates[-1]["retryable"] is True
-    assert repo.assessment_updates == []
+    assert repo.assessment_updates == [
+        ("a1", "generating", [{"code": "provider_timeout", "message": "provider_timeout message"}])
+    ]
     assert telemetry.records[0].outcome == "timeout"
 
 
@@ -288,7 +317,13 @@ def test_unsupported_request_fails_job_non_retryable() -> None:
 
     assert repo.job_updates[-1]["error_code"] == "unsupported_request"
     assert repo.job_updates[-1]["retryable"] is False
-    assert repo.assessment_updates == []
+    assert repo.assessment_updates == [
+        (
+            "a1",
+            "generating",
+            [{"code": "unsupported_request", "message": "unsupported_request message"}],
+        )
+    ]
 
 
 def test_safety_block_fails_assessment_with_warning() -> None:
@@ -353,8 +388,8 @@ def test_malformed_output_repairs_and_succeeds() -> None:
     assert adapter.calls[0]["repair"] is False
     assert adapter.calls[1]["repair"] is True
     assert adapter.calls[1]["correlation_id"] == "corr-1"
-    assert repo.assessment_updates[0][1] == "ready"
-    assert repo.job_updates[-1]["status"] == "succeeded"
+    assert repo.completed[0][2] == "ready"
+    assert repo.completed[0][1] == "j1"
     assert telemetry.records[0].repair_attempted is True
     assert telemetry.records[0].questions_accepted == 1
 
@@ -453,8 +488,8 @@ def test_unverified_quote_warning_lands_on_ready_assessment() -> None:
     make_worker(repo, queue, adapter, telemetry).run_once()
 
     assert len(repo.questions) == 1
-    assert repo.assessment_updates[0][1] == "ready"
-    assert repo.assessment_updates[0][2][0]["code"] == "citation_unverified"
+    assert repo.completed[0][2] == "ready"
+    assert repo.completed[0][3][0]["code"] == "citation_unverified"
 
 
 def test_embedder_unavailable_fails_job_retryable() -> None:
@@ -492,7 +527,13 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
         "retry_after": None,
         "result_id": None,
     }
-    assert repo.assessment_updates == []
+    assert repo.assessment_updates == [
+        (
+            "a1",
+            "generating",
+            [{"code": "provider_unavailable", "message": "query embedding failed"}],
+        )
+    ]
     assert telemetry.records == []
     assert not queue.queues["assessment_generate"]
 

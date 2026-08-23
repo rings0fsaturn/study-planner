@@ -129,6 +129,43 @@ describe('AssessmentDetail', () => {
     view.unmount()
   })
 
+  it('polls linearly while the assessment keeps generating', async () => {
+    vi.useFakeTimers()
+    const assessments = new FakeAssessmentClient()
+    let polls = 0
+    assessments.getAssessment.mockImplementation(async () => {
+      polls += 1
+      return generatingAssessment()
+    })
+    renderDetail(assessments)
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(12000)
+    })
+    // One poll per 3 s interval: 1 initial + 4 interval ticks = 5; an
+    // exponential re-schedule bug would make this explode.
+    expect(polls).toBe(5)
+  })
+
+  it('shows a retry affordance when a retryable failure warns on a generating assessment', async () => {
+    vi.useFakeTimers()
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetAssessment({
+      ...generatingAssessment(),
+      warnings: [{ code: 'quota_exhausted', message: 'provider quota exhausted' }],
+    })
+    assessments.scriptGenerate(queuedJob({ jobId: 'job-2', resultId: 'assessment-2' }))
+    renderDetail(assessments)
+
+    await act(async () => {})
+    expect(screen.getByText('Generation was interrupted')).toBeInTheDocument()
+    expect(screen.getByText(/provider quota exhausted/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }))
+
+    await act(async () => {})
+    expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+  })
+
   it('restores directly from the route param on refresh', async () => {
     const assessments = new FakeAssessmentClient()
     assessments.scriptGetAssessment(readyAssessment())

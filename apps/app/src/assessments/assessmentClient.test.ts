@@ -228,6 +228,31 @@ describe('HttpAssessmentFetch', () => {
     vi.unstubAllGlobals()
   })
 
+  it('distinguishes a validation 409 from a conflict 409 by body code', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'validation_failed', message: 'material is not ready' }), {
+        status: 409,
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const fetchLike = new HttpAssessmentFetch(async () => null, 'http://intel')
+    const error = await fetchLike.fetchJson('/v1/assessments/generate', {}).catch((err: unknown) => err)
+    expect((error as AssessmentServiceError).code).toBe('validation')
+    expect((error as AssessmentServiceError).message).toMatch(/not ready/)
+    vi.unstubAllGlobals()
+
+    const conflictMock = vi.fn().mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 'conflict' }), { status: 409 }),
+    )
+    vi.stubGlobal('fetch', conflictMock)
+    const conflictError = await fetchLike.fetchJson('/v1/assessments/generate', {}).catch(
+      (err: unknown) => err,
+    )
+    expect((conflictError as AssessmentServiceError).code).toBe('conflict')
+    vi.unstubAllGlobals()
+  })
+
   it('turns an AbortError into a retryable timeout', async () => {
     const abortError = new Error('aborted')
     abortError.name = 'AbortError'

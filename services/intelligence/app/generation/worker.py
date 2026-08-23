@@ -1,11 +1,18 @@
 """Generation worker arm: one grounded question per assessment_generate message.
 
 Runs the D-06 outcome dispatch: accepted questions make the assessment
-`ready` and the job `succeeded`; dropped slots (repair exhausted, no valid
+`ready` and the job `succeeded` (one DB transaction via
+`complete_assessment_generation`); dropped slots (repair exhausted, no valid
 citations) fail the assessment with a warning; quota/timeout/provider errors
-fail the job retryable and leave the assessment `generating` so the UI can
-offer retry/resume. `partial` is reserved for multi-question slices and is
-never produced here.
+fail the job retryable, keep the assessment `generating`, and surface the
+failure as an assessment warning so the UI can offer retry/resume.
+`partial` is reserved for multi-question slices and is never produced here.
+
+Note on drop codes: a candidate dropped purely for the citation gate carries
+`Warning(code=citation_missing)`, while the job error_code and telemetry
+outcome record `malformed_output` (the closest public ServiceError /
+telemetry enum member for "unusable output"); the warning is the specific
+cause, the code is the public bucket.
 """
 
 from __future__ import annotations
@@ -89,6 +96,13 @@ class GenerationWorker:
 
         self._repo.update_job_status(job_id, "running")
         assessment = self._repo.get_assessment(assessment_id)
+        if (assessment.get("status") or "") != "generating":
+            # Re-entry guard: a redelivered message must not re-spend the
+            # provider budget on an assessment that already completed or
+            # failed (the completion RPC enforces the same guard in DB).
+            logger.info("generation message for terminal assessment %s dropped", assessment_id)
+            self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+            return
         material = self._repo.get_material(material_id)
         recipe = assessment.get("recipe") or {}
         difficulty = int(recipe.get("difficulty") or 3)
@@ -120,6 +134,11 @@ class GenerationWorker:
             chunks = self._context_builder(material_id, skill_tags, material.title)
         except IngestionError as exc:
             self._mark_job_retryable(job_id, exc)
+            self._repo.update_assessment_status(
+                assessment_id,
+                "generating",
+                [{"code": exc.code, "message": exc.message}],
+            )
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
 
@@ -169,13 +188,23 @@ class GenerationWorker:
 
         if response.outcome in ("quota_failure", "timeout", "provider_error"):
             retryable = bool((response.error or {}).get("retryable", False))
+            error_code = str((response.error or {}).get("code") or "provider_error")
+            error_message = str((response.error or {}).get("message") or "generation failed")
             self._repo.update_job_status(
                 job_id,
                 "failed",
-                error_code=str((response.error or {}).get("code") or "provider_error"),
-                error_message=str((response.error or {}).get("message") or "generation failed"),
+                error_code=error_code,
+                error_message=error_message,
                 retryable=retryable,
                 retry_after=(response.error or {}).get("retryAfterSeconds"),
+            )
+            # The assessment stays `generating` (D-06) so the UI can offer
+            # retry/resume; surface the retryable failure as a warning so the
+            # page is not stuck on an eternal spinner.
+            self._repo.update_assessment_status(
+                blueprint.assessment_id,
+                "generating",
+                [{"code": error_code, "message": error_message}],
             )
             self._emit_telemetry(blueprint, response.outcome, response, repair_attempted, 0)
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
@@ -246,27 +275,25 @@ class GenerationWorker:
         response,
         repair_attempted: bool,
     ) -> None:
-        self._repo.insert_question(
-            {
-                "id": str(uuid.uuid4()),
-                "assessment_id": blueprint.assessment_id,
-                "user_id": blueprint.owner_id,
-                "material_id": blueprint.material_id,
-                "format": "objective",
-                "prompt": str(accepted["stem"]),
-                # Real JSON values, not dumps() strings: PostgREST stores a
-                # JSON string literally in jsonb, which breaks clients.
-                "options": list(accepted["options"]),
-                "skill_tags": list(accepted["skillTags"]),
-                "authored_difficulty": int(accepted["difficulty"]),
-                "citations": list(accepted["citations"]),
-                "answer_block": {"correctIndex": accepted["correctIndex"]},
-            }
-        )
-        self._repo.update_assessment_status(blueprint.assessment_id, "ready", warnings)
-        self._repo.update_job_status(
-            blueprint.job_id, "succeeded", result_id=blueprint.assessment_id
-        )
+        question_row = {
+            "id": str(uuid.uuid4()),
+            "assessment_id": blueprint.assessment_id,
+            "user_id": blueprint.owner_id,
+            "material_id": blueprint.material_id,
+            "format": "objective",
+            "prompt": str(accepted["stem"]),
+            # Real JSON values, not dumps() strings: PostgREST stores a
+            # JSON string literally in jsonb, which breaks clients.
+            "options": list(accepted["options"]),
+            "skill_tags": list(accepted["skillTags"]),
+            "authored_difficulty": int(accepted["difficulty"]),
+            "citations": list(accepted["citations"]),
+            "answer_block": {"correctIndex": accepted["correctIndex"]},
+        }
+        # One DB transaction (migration 023): question insert + assessment
+        # ready + job succeeded. The RPC refuses to run when the assessment
+        # is not `generating`, so a redelivered message cannot duplicate.
+        self._repo.complete_assessment(question_row, blueprint.job_id, "ready", warnings)
         self._emit_telemetry(blueprint, "ok", response, repair_attempted, 1)
 
     def _fail_assessment(
