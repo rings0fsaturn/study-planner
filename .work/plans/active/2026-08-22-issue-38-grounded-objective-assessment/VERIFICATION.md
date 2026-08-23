@@ -38,9 +38,11 @@
 
 | Check | Result |
 |---|---|
-| Adapter outcome-matrix tests green (every D-08 row incl. single-retry + Retry-After cap) | ☐ |
-| Validation tests green (format gate, citation gate, quote verified/unverified, repair) | ☐ |
-| ruff clean on `services/intelligence/` | ☐ |
+| Adapter outcome-matrix tests green (every D-08 row incl. single-retry + Retry-After cap) | ✅ 2026-08-23 — `test_generation_adapter.py`: stop/ok, schema-invalid, unparseable, length, content_filter, refusal, null content, error finish, unknown finish, 429 (retry honored, capped 60 s, then `quota_failure` + `retryAfterSeconds`), 400-effort → `unsupported_request`, 401 → `provider_credentials`, 5xx ×2 → `provider_unavailable` retryable, timeout ×2 → `provider_timeout` retryable, connection, generic APIError non-retryable, D-08 kwargs locked (no seed/top_p, strict json_schema, reasoning off) |
+| Validation tests green (format gate, citation gate, quote verified/unverified, repair) | ✅ `test_generation_validation.py`: every format failure kind, difficulty mismatch, out-of-context drop, zero-citation drop, quote substring-insensitive verification, `citation_unverified` keeps citation; `test_generation_prompts.py` covers the one-repair message pair |
+| ruff clean on `services/intelligence/` | ✅ on touched files (`app/generation/`, `tests/test_generation_*`); repo baseline keeps its 5 pre-existing E501s |
+| Context module | ✅ `test_generation_context.py`: steer query = title + skillTags, `match_content_chunks` service-role call with top_k=5, embedder-unavailable → retryable `provider_unavailable`, RPC failures retryable |
+| Plan-vs-contract tension recorded | ℹ️ D-08 maps `length` → `malformed_output` (plan) while #54 README maps `length` → `partial`; this slice implements D-08 because `partial` is reserved for multi-question slices (D-06) and a truncated single slot is a drop-after-repair. `GENERATION_TEMPERATURE` remains a runtime knob; the contract envelope's `const 0.3` is the public request shape. |
 
 ### Phase 3 — Worker arm + orchestration
 
