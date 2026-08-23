@@ -211,7 +211,9 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     assert question["format"] == "objective"
     assert question["prompt"] == VALID_MCQ["stem"]
     assert question["authored_difficulty"] == 3
-    assert question["answer_block"] == '{"correctIndex": 0}'
+    assert question["options"] == VALID_MCQ["options"]
+    assert question["skill_tags"] == VALID_MCQ["skillTags"]
+    assert question["answer_block"] == {"correctIndex": 0}
     assert repo.assessment_updates == [("a1", "ready", [])]
     assert repo.job_updates[-1]["status"] == "succeeded"
     assert repo.job_updates[-1]["result_id"] == "a1"

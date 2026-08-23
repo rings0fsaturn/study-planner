@@ -10,7 +10,6 @@ never produced here.
 
 from __future__ import annotations
 
-import json
 import logging
 import uuid
 from collections.abc import Callable
@@ -255,11 +254,13 @@ class GenerationWorker:
                 "material_id": blueprint.material_id,
                 "format": "objective",
                 "prompt": str(accepted["stem"]),
-                "options": json.dumps(accepted["options"]),
-                "skill_tags": json.dumps(accepted["skillTags"]),
+                # Real JSON values, not dumps() strings: PostgREST stores a
+                # JSON string literally in jsonb, which breaks clients.
+                "options": list(accepted["options"]),
+                "skill_tags": list(accepted["skillTags"]),
                 "authored_difficulty": int(accepted["difficulty"]),
-                "citations": json.dumps(accepted["citations"]),
-                "answer_block": json.dumps({"correctIndex": accepted["correctIndex"]}),
+                "citations": list(accepted["citations"]),
+                "answer_block": {"correctIndex": accepted["correctIndex"]},
             }
         )
         self._repo.update_assessment_status(blueprint.assessment_id, "ready", warnings)
