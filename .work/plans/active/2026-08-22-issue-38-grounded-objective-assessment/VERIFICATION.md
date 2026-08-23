@@ -19,19 +19,20 @@
 
 | Check | Result |
 |---|---|
-| `services/intelligence/contracts/phase2/` has no `gemini/` dir | ☐ |
-| `provider/generation-request.schema.json` uses `messages[]` / plain `responseSchema` / `reasoningEffort` | ☐ |
-| `uv run --package intelligence pytest services/intelligence/contracts/phase2/tests/test_contracts.py` | ☐ |
+| `services/intelligence/contracts/phase2/` has no `gemini/` dir | ✅ 2026-08-23 — `git mv gemini provider`, three commits (`1f950ed`, `ae11c8a`, `98a3b12`) |
+| `provider/generation-request.schema.json` uses `messages[]` / plain `responseSchema` / `reasoningEffort` | ✅ |
+| `uv run --package intelligence pytest services/intelligence/contracts/phase2/tests/test_contracts.py` | ✅ 12 passed — `1f950ed` neutralized the pack; two thermo-nuclear review rounds (`ae11c8a`, `98a3b12`) hardened the flattened envelope (outcome-state conditionals, optional usage, transport outcomes without synthetic finish reason, `unsupported_request` in public ServiceError, rejection tests). Review finding 5 (embedding-request `$id` keeps `gemini/`) was intentionally kept per #54 "moves unchanged". Findings 2/4 are plan-side tensions surfaced for #38: D-08 maps `length` → `malformed_output` while the contract maps `length` → `partial` (resolved at Phase 2 by using the contract envelope outcomes for the provider response and slot-level decisions for drop/repair); `temperature const 0.3` vs `GENERATION_TEMPERATURE` env is a runtime knob outside the contract envelope. |
 
 ### Phase 1 — Data layer (migration 018) + job-kind serialization
 
 | Check | Result |
 |---|---|
-| `db push --dry-run` clean; migration applied | ☐ |
-| `ingestion_jobs` constraint is `ingestion_jobs_kind_material_attempt_unique` | ☐ |
-| `assessments`, `questions`, `assessment_generate` queue exist; cross-user SELECT denied | ☐ |
-| `to_async_job()` emits row kind; `GET /v1/jobs/{id}` returns `"kind": "generation"` | ☐ |
-| Telemetry record carries `questions_requested` / `questions_accepted` / `reasoning_tokens` | ☐ |
+| `db push --dry-run` clean; migration applied | ✅ 2026-08-23 — dry-run listed only `018_assessments_generation.sql`; push applied. Migration 018 also carries the Phase-4 `enqueue_assessment_generation` security-definer RPC (its designated home; avoids a second migration) |
+| `ingestion_jobs` constraint is `ingestion_jobs_kind_material_attempt_unique` | ✅ live `db query` confirmed |
+| `assessments`, `questions`, `assessment_generate` queue exist; cross-user SELECT denied | ✅ live `db query` + real-token probe: user A insert/read-back OK; user B (admin-API-created) sees no rows; probe row cleaned up |
+| `to_async_job()` emits row kind; `GET /v1/jobs/{id}` returns `"kind": "generation"` | ✅ `test_ingestion_job_to_async_job_emits_row_kind` + `test_job_status_returns_generation_kind`; `serialization.async_job_from_row` passes `kind` through |
+| Telemetry record carries `questions_requested` / `questions_accepted` / `reasoning_tokens` | ✅ contract dict validates against `generation-telemetry.schema.json` (post-#57, includes `reasoningTokens`) |
+| Test sweep | ✅ `pytest test_models test_telemetry test_materials_api` 36 passed; `ruff check` on touched files clean (repo baseline has 5 pre-existing E501s in `test_retrieval.py`/`test_v1_integration.py`, present at HEAD~4) |
 
 ### Phase 2 — Generation domain
 

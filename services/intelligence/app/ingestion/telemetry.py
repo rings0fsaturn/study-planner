@@ -82,6 +82,9 @@ class TelemetryRecord:
     input_tokens: int = 0
     output_tokens: int = 0
     repair_attempted: bool = False
+    questions_requested: int = 0
+    questions_accepted: int = 0
+    reasoning_tokens: int | None = None
     texts_count: int = 0
     material_id: str = ""
     attempt: int = 1
@@ -89,7 +92,7 @@ class TelemetryRecord:
 
     def to_contract_dict(self) -> dict[str, object]:
         """The exact wire shape validated by generation-telemetry.schema.json."""
-        return {
+        payload: dict[str, object] = {
             "traceId": self.trace_id,
             "ownerId": self.owner_id,
             "task": self.task,
@@ -100,11 +103,16 @@ class TelemetryRecord:
             "inputTokens": self.input_tokens,
             "outputTokens": self.output_tokens,
             "repairAttempted": self.repair_attempted,
+            "questionsRequested": self.questions_requested,
+            "questionsAccepted": self.questions_accepted,
         }
+        if self.reasoning_tokens is not None:
+            payload["reasoningTokens"] = self.reasoning_tokens
+        return payload
 
     def to_row_dict(self) -> dict[str, object]:
         """The persistence row shape (snake_case columns)."""
-        return {
+        payload: dict[str, object] = {
             "trace_id": self.trace_id,
             "owner_id": self.owner_id,
             "material_id": self.material_id,
@@ -118,8 +126,13 @@ class TelemetryRecord:
             "input_tokens": self.input_tokens,
             "output_tokens": self.output_tokens,
             "repair_attempted": self.repair_attempted,
+            "questions_requested": self.questions_requested,
+            "questions_accepted": self.questions_accepted,
             "texts_count": self.texts_count,
         }
+        if self.reasoning_tokens is not None:
+            payload["reasoning_tokens"] = self.reasoning_tokens
+        return payload
 
 
 class TelemetrySink(Protocol):

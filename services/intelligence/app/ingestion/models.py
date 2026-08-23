@@ -134,6 +134,7 @@ class IngestionJob:
     status: JobStatus
     attempt: int
     correlation_id: str
+    kind: str = "ingestion"
     result_id: str | None = None
     error_code: str | None = None
     error_message: str | None = None
@@ -144,7 +145,7 @@ class IngestionJob:
     def to_async_job(self) -> dict[str, object]:
         payload: dict[str, object] = {
             "jobId": self.id,
-            "kind": "ingestion",
+            "kind": self.kind,
             "status": self.status,
             "ownerId": self.owner_id,
             "correlationId": self.correlation_id,

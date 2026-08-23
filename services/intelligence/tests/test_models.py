@@ -137,6 +137,32 @@ def test_ingestion_job_to_async_job_with_error_and_result() -> None:
     }
 
 
+def test_ingestion_job_to_async_job_emits_row_kind() -> None:
+    job = IngestionJob(
+        id="j1",
+        owner_id="u1",
+        material_id="m1",
+        status="queued",
+        attempt=1,
+        correlation_id="c1",
+        kind="generation",
+        created_at="2026-08-14T00:00:00Z",
+    )
+    assert job.to_async_job()["kind"] == "generation"
+
+
+def test_ingestion_job_to_async_job_defaults_to_ingestion_kind() -> None:
+    job = IngestionJob(
+        id="j1",
+        owner_id="u1",
+        material_id="m1",
+        status="queued",
+        attempt=1,
+        correlation_id="c1",
+    )
+    assert job.to_async_job()["kind"] == "ingestion"
+
+
 def test_queue_message_defaults() -> None:
     message = QueueMessage(msg_id=7)
     assert message.payload == {}
