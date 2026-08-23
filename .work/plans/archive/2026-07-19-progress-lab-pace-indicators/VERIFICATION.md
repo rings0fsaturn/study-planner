@@ -128,3 +128,6 @@
 
 ### Resolution
 -
+
+## Archive log (2026-08-23)
+- **2026-08-23** Archived with reviewer-verification waiver (user decision): no independent review landed since 2026-07-19 and the tree moved on; the self-verified evidence stands. Folder moved to plans/archive/.

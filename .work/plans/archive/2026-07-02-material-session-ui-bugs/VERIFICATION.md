@@ -406,3 +406,6 @@ Phases 7 and 8 remain not started.
 **Implementer report:** _(pending)_
 
 **Reviewer findings:** _(pending)_
+
+## Archive log (2026-08-23)
+- **2026-08-23** Archived. Phases 6-8 reviewer verdicts never recorded; waived by user decision. Phase 9 (suggested upcoming sessions) never implemented - parked, not abandoned. Folder moved to plans/archive/.

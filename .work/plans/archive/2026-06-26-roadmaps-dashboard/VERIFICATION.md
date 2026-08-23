@@ -563,3 +563,6 @@ Self-check vs criteria:
 - **Status:** ☐ awaiting implementation
 
 ### Resolution (Developer fills on redo)
+
+## Archive log (2026-08-23)
+- **2026-08-23** Archived. Phase 7 reviewer verdict never recorded; review waived by user decision (code shipped, tree moved on). Folder moved to plans/archive/.

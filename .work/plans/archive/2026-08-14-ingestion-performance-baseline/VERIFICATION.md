@@ -118,3 +118,6 @@ Per-phase evidence lives here as work completes.
 - The 16-question retrieval probe was superseded by the completed 30-question
   retrieval-quality program (2026-08-15). FINDINGS.md carries the same
   reconciliation.
+
+## Archive log (2026-08-23)
+- **2026-08-23** Archived. User decision: close the full-book Gemini E2E re-run as superseded by the Qwen3 GPU sidecar path (rule 54 verifies parity on the same corpus); a sidecar full-book run is queued in STATUS.md. Folder moved to plans/archive/.

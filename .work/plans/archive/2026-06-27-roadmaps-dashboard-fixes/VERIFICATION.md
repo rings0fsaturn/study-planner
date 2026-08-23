@@ -237,3 +237,6 @@ fills findings. A phase is done only at `✅ Verified`.
 - Status: ☐ `✅ Verified` / ☐ `🔁 Changes requested`
 
 ### Resolution (implementer fills on redo)
+
+## Archive log (2026-08-23)
+- **2026-08-23** Archived. Phases A/B/D reviewer verdicts never recorded; waived by user decision. Phase C layout polish still deferred (Rohit). Folder moved to plans/archive/.
