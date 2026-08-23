@@ -74,9 +74,10 @@
 
 | Check | Result |
 |---|---|
-| `assessmentClient.test.ts` green (normalization matrix) | ☐ |
-| `AssessmentCreated` appends through the existing sync path; no Dexie schema bump | ☐ |
-| Account-switch test green | ☐ |
+| `assessmentClient.test.ts` green (normalization matrix) | ✅ 2026-08-23 — 17 tests: success shapes, 401/409/429 (+retryAfterSeconds), AbortError → retryable timeout, TypeError → retryable network, typed-error pass-through, unknown-value classification, Idempotency-Key/X-Request-ID headers, HttpAssessmentFetch bearer auth + one 5xx retry + recover + no-retry-on-429 + AbortError retry |
+| `AssessmentCreated` appends through the existing sync path; no Dexie schema bump | ✅ `ASSESSMENT_CREATED` const in `events/EventStore.ts` (exported via `events/index.ts`); `AssessmentCreatedPayload` in `sync/types.ts` matching `assessmentCreatedPayload`; EventStore test appends/reads back and asserts `db.verno` unchanged |
+| Account-switch test green | ✅ `AssessmentProvider.test.tsx`: injected client served, throws outside provider, remount with a second client does not share state |
+| Suite | ✅ `vitest src/assessments src/events` 39 passed; `pnpm typecheck` + `pnpm lint` clean |
 
 ### Phase 6 — App UI
 

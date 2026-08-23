@@ -66,6 +66,16 @@ export interface MaterialAddedPayload {
   videos?: PlaylistVideoInfo[]
 }
 
+/**
+ * Thin local-first pointer to a server-owned assessment (durable-events
+ * `assessmentCreatedPayload`). Carries ids only; hidden grading content never
+ * reaches the event log.
+ */
+export interface AssessmentCreatedPayload {
+  assessmentId: string
+  materialIds: string[]
+}
+
 export interface RoadmapCreatedPayload {
   startDate: string
   deadline: string
