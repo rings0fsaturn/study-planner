@@ -39,6 +39,9 @@ def build_context(
             "query_embedding": literal,
             "match_material_id": material_id,
             "top_k": CONTEXT_TOP_K,
+            # query_text disambiguates the live 4-arg hybrid overload (016)
+            # and enables lexical fusion for the steer query.
+            "query_text": steer,
         },
         headers={
             "apikey": service_key,

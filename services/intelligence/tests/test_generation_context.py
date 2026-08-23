@@ -41,6 +41,7 @@ def test_build_context_returns_retrieved_chunks(monkeypatch: pytest.MonkeyPatch)
         "query_embedding": "[0.10000000,0.20000000]",
         "match_material_id": "m1",
         "top_k": 5,
+        "query_text": "Book title core recall",
     }
     assert call["headers"]["Authorization"] == "Bearer svc-key"
 
