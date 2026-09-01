@@ -7,7 +7,7 @@ purpose: >
   blocked, and next. It is an INDEX over the per-workstream canonical files, not a runbook.
 audience: [cowork-planning-review-agent, codex-gpt-5.5, claude-code-sonnet, rohit]
 status: active living document
-last_updated: 2026-06-25
+last_updated: 2026-08-23 (reconciled against STATUS.md, git, and disk; §8 NEXT rollup retired — see STATUS.md)
 location_note: >
   This file is the former MASTER_TRACKER.md. On 2026-06-25 the planning pile was consolidated
   into .work/ (see ../.work README) and MASTER_TRACKER.md became .work/STATUS.md — the single
@@ -37,8 +37,8 @@ related:
   - ../college/scope/research-tasklist.md
   - ../college/scope/research-build-plan.md
   - ../college/scope/archetype-preregistration.md
-  - plans/active/2026-06-14-pillar-a-rigour.md
-  - plans/active/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md
+  - plans/archive/2026-06-14-pillar-a-rigour.md
+  - plans/archive/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md
   - ../research/doc/2026-06-14-kt-credibility-tracker.md
   - ../research/doc/2026-06-18-pillar-a-report-claims-and-caveats.md
   - ../research/doc/2026-06-20-change-detection-literature-survey.md
@@ -47,10 +47,14 @@ related:
 
 # study-planner-web — Master Tracker (full workstream detail)
 
-> **What this is.** The **full, long-form workstream detail** — markers, SHAs, findings, caveats,
-> and the consolidated NEXT-actions rollup. It is the **Reference appendix** for the short index
-> [`STATUS.md`](STATUS.md); read STATUS.md first, come here for depth. Preserved verbatim from the
-> former `MASTER_TRACKER.md` when STATUS.md was reshaped into the scannable index on 2026-06-25.
+> **What this is.** The **full, long-form workstream detail** — markers, SHAs, findings, caveats.
+> It is the **Reference appendix** for the short index [`STATUS.md`](STATUS.md); read STATUS.md first,
+> come here for depth. Preserved verbatim from the former `MASTER_TRACKER.md` when STATUS.md was
+> reshaped into the scannable index on 2026-06-25.
+> **Refresh 2026-08-23:** reconciled against git/disk ground truth. Product work from 2026-07 onward
+> (ingestion, retrieval quality, embedder sidecar, Docker runtime, Phase-2 wayfinder #33–#57) is
+> tracked in STATUS.md and the plan folders — it is not duplicated here. Plan links below point at
+> `plans/archive/` following the 2026-08-23 prune (34 of 36 `plans/active/` entries archived).
 > Markers: ✅ done · 🟡 in progress · ☐ not started · 🛑 blocked · ⏳ pending review · 🤔 unconfirmed.
 
 > **Where things live (read [`README.md`](README.md) for the full map).** The pile is organised as:
@@ -124,12 +128,17 @@ The `/research` tier that backs the algorithms (synthetic generator → metrics 
 - Phase 6: P6.1 `make figs` (json → vector PDF + booktabs `.tex`) · P6.2 provenance stamp in captions · P6.3 `\input` generated tables/figures into `main.tex` · P6.4 full artifact inventory wired · P6.5 IMRAD journal-draft skeleton · P6.6 reproducibility gate (clean clone → `make all` → report compiles).
 - The remaining ~3 open `☐` markers sit in the tracker's "Phase 3+ · Pillar-A rigour & extensions" section — **superseded by the A-series plan (§3) and now tracked there**; reconcile the old markers.
 
+> Note (2026-08-23): research work after 2026-06-25 — the retrieval-quality program, the Qwen3
+> embedder/reranker sidecar, corpus restore, and the DeepSeek/OpenRouter generation probes — is
+> tracked in STATUS.md Done/Queued rows with pointers to plans and `../research/doc/`; it is not
+> restated here. Review mapping: Phases 0–3 → Review 2; Phases 4–6 → Review 3; Phase 7 → Phase II.
+
 **Review mapping (presentation gate):** Phases 0–3 → Review 2; Phases 4–6 → Review 3 (full comparison + demo + journal draft); Phase 7 → Phase II.
 
 ## 3. Pillar-A rigour & extensions — A-series  ·  status: ✅ A0–A5 verified
 
 Hardens the Pillar-A tracks (calibration / detection / projection / scheduling) under a rigorous protocol and adds new candidates.
-**Canonical:** [`plans/active/2026-06-14-pillar-a-rigour.md`](plans/active/2026-06-14-pillar-a-rigour.md) + its `VERIFICATION.md`; design notes [`research/doc/2026-06-14-pillar-a-rigour-and-extensions.md`](../research/doc/2026-06-14-pillar-a-rigour-and-extensions.md).
+**Canonical:** [`plans/archive/2026-06-14-pillar-a-rigour.md`](plans/archive/2026-06-14-pillar-a-rigour.md) + its `VERIFICATION.md`; design notes [`research/doc/2026-06-14-pillar-a-rigour-and-extensions.md`](../research/doc/2026-06-14-pillar-a-rigour-and-extensions.md).
 
 | Phase | Title | Status / SHA |
 |---|---|---|
@@ -145,7 +154,7 @@ Hardens the Pillar-A tracks (calibration / detection / projection / scheduling) 
 ## 4. Pillar-A A6 — custom calibration + detection  ·  status: ✅ calibration done; detection = honest null (probe only); ✅ prod integration verified (Cowork 2026-06-20)
 
 Deliberate, honest attempt to beat the A-series calibration null, then (deferred) detection.
-**Canonical:** [`plans/active/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md`](plans/active/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md) + `VERIFICATION.md` (all 5 calibration phases `✅ Verified`). **Latest baton:** [`handovers/2026-06-19-a6-calibration-done-detection-null-next.md`](handovers/2026-06-19-a6-calibration-done-detection-null-next.md).
+**Canonical:** [`plans/archive/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md`](plans/archive/2026-06-18-pillar-a-custom-calibration-detection/PLAN.md) + `VERIFICATION.md` (all 5 calibration phases `✅ Verified`). **Latest baton:** [`handovers/2026-06-19-a6-calibration-done-detection-null-next.md`](handovers/2026-06-19-a6-calibration-done-detection-null-next.md).
 
 | Phase | Title | Status / SHA |
 |---|---|---|
@@ -154,16 +163,16 @@ Deliberate, honest attempt to beat the A-series calibration null, then (deferred
 | 3 | `enriched_shrink` calibrator (fatigue + deadline-proximity + recency, partial-pooling) | ✅ `8545481` — **real Holm-surviving held-out win on `context_pred_mae`; holds on reality. Overturns the calibration null.** |
 | 4 | Archetype-aware variants (hard router + soft) | ✅ `a919ea4` — honest **non-win** (don't beat enriched_shrink) |
 | 5 | Honest decision + findings | ✅ `922c64e` — recommend `enriched_shrink`; archetype layer not recommended |
-| 6 | **Change detection** (two-stage + AR(1)-whitening) | ☐ **deferred** — design probe done → **robust NULL** (see §7); not yet in the real harness |
+| 6 | **Change detection** (two-stage + AR(1)-whitening) | 🛑 **on hold (2026-08-23)** — design probe done → **robust NULL** (see §7); not yet in the real harness; decision parked pending the Review-3 framing |
 
 **Final calibration evidence:** `research/doc/verification-runs/2026-06-19-a6-final/{evidence.json,SUMMARY.md}`.
 **Open loose ends:** (a) OQ-03 ledger caveat (frozen regime "over-clean"; lead deadline claim with reality) **not yet added** to the claims ledger; (b) the Phase 1–5 `VERIFICATION.md` reviewer edits + the lit-survey doc are **uncommitted**; (c) restore the pre-registration stop-gate (bypassed in the batch run) for any Phase 6 dataset change.
 
-**Production integration (implemented locally 2026-06-20):** [`plans/active/2026-06-20-enriched-shrink-production-integration/PLAN.md`](plans/active/2026-06-20-enriched-shrink-production-integration/PLAN.md) (+ `VERIFICATION.md`) shipped `enriched_shrink` into `py_progress` → FastAPI `/v1/calibration` → app `useCalibrationState` (server-side, D-01). Phase 0 was **GO**, so production uses the per-learner reality+frozen dual-prior blend (D-02). Detection/projection/scheduling remain untouched (D-03). 4 implementation phases complete through `e4555c1` and **Cowork-reviewed against the committed diffs — all four `✅ Verified` (2026-06-20)**; local verification covered `py-progress` (76), `intelligence` (38), app Vitest (369), and app typecheck. Playwright calibration-service coverage is written but not run per the repo E2E constraint. **Verification caveat:** the Phase-0 dual-prior GO is a *net* win but band-dependent — 7 Holm wins vs 2 Holm-significant small-band losses on `context_pred_mae` (`recovery_mae` broadly better) — so the claims ledger must record it as a net win with a small-band exception before any write-up.
+**Production integration (implemented locally 2026-06-20):** [`plans/archive/2026-06-20-enriched-shrink-production-integration/PLAN.md`](plans/archive/2026-06-20-enriched-shrink-production-integration/PLAN.md) (+ `VERIFICATION.md`) shipped `enriched_shrink` into `py_progress` → FastAPI `/v1/calibration` → app `useCalibrationState` (server-side, D-01). Phase 0 was **GO**, so production uses the per-learner reality+frozen dual-prior blend (D-02). Detection/projection/scheduling remain untouched (D-03). 4 implementation phases complete through `e4555c1` and **Cowork-reviewed against the committed diffs — all four `✅ Verified` (2026-06-20)**; local verification covered `py-progress` (76), `intelligence` (38), app Vitest (369), and app typecheck. Playwright calibration-service coverage is written but not run per the repo E2E constraint. **Verification caveat:** the Phase-0 dual-prior GO is a *net* win but band-dependent — 7 Holm wins vs 2 Holm-significant small-band losses on `context_pred_mae` (`recovery_mae` broadly better) — the claims ledger records it as a net win with a small-band exception (verified present 2026-08-23).
 
 **Deferred open questions (from the integration plan — carried forward):**
 - **OQ-01 — projection wiring:** should `nextSessionForecast` drive the burn-up projection/ETA, not just display? (`compute_progress` currently ignores calibration.)
-- **OQ-02 — offline / caching:** server-side calibration means the UI returns `null` (pace/prompt blank) while offline and briefly between refetches. → **Implemented** in [`plans/active/2026-06-20-dev-production-readiness/PLAN.md`](plans/active/2026-06-20-dev-production-readiness/PLAN.md) Phase 3 (Dexie-persisted stale cache + UI states), commit `3655f34`; ⏳ pending Cowork review.
+- **OQ-02 — offline / caching:** server-side calibration means the UI returns `null` (pace/prompt blank) while offline and briefly between refetches. → **Implemented** in [`plans/archive/2026-06-20-dev-production-readiness/PLAN.md`](plans/archive/2026-06-20-dev-production-readiness/PLAN.md) Phase 3 (Dexie-persisted stale cache + UI states), commit `3655f34`; ✅ Cowork-verified 2026-06-25.
 - **OQ-03 — production deploy:** Intelligence Service URL + CORS for `studytracker.app`; local dev now requires Supabase JWTs on `/v1/*` and supports both legacy HS256 and Supabase JWKS-backed ES256/RS256 tokens.
 
 ## 5. Pillar-B — Knowledge-Tracing bench  ·  status: ✅ (Phase 4; credibility-gated)
@@ -187,7 +196,7 @@ M.Tech dissertation and review artifacts.
 | Literature evaluation | ✅ | `college/mydeliverables/zero/literatures/` |
 | 1st Review (Phase I) | ✅ | `1st-Review/` — `report/main.tex`, `deck/`, `abstract.md`, `literature-survey-draft.md`, `architecture-diagram.md` + `arch-diagram.png`, `expected-outcomes.md`, `presenter-script.md` |
 | 2nd Guidance call | ✅ | `2nd-Guidance-call/` status deck + script ("7 of 8 research parts done; both datasets in hand; 2 parts left") |
-| Review 2 (intermediate results) | ☐ | gated on research Phases 0–3 (done) → assemble intermediate results |
+| Review 2 (intermediate results) | 🟡 | gated on research Phases 0–3 (done) → assemble. **UNCONFIRMED (2026-08-23):** deck work appears in flight — `college/mydeliverables/phase2-review-2/` is untracked in the working tree with Aug 21 commits nearby; not yet reflected here. |
 | Review 3 (full comparison + demo + journal draft) | ☐ | gated on research Phases 4–6 |
 | Phase II (closed-loop, demo) | ☐ | research Phase 7 built, revealed here |
 
@@ -197,21 +206,22 @@ Feeds the A6 Phase-6 decision (§4).
 - **Literature survey:** [`research/doc/2026-06-20-change-detection-literature-survey.md`](../research/doc/2026-06-20-change-detection-literature-survey.md) — decomposes the detection problem into 6 pain points and maps adaptable families (KSWIN, kernel-MMD/scan-B, NEWMA, e-detectors, residual-coupled, hierarchical hybrid) toward a hybrid. ⏳ uncommitted.
 - **Probe v3:** `research/scripts/unified_detector_sim.py` (`a6-detsim-v3`, committed `2cf9acd`) — adds the 6 survey families; dominance tested for all 11 non-baseline candidates over the CUSUM/CSD frontier.
 - **Result (full run, reviewed):** **robust NULL** — no candidate dominates (all verdicts `worse`/`n/a`). Best aggregate `comp_overall`: `mmd_window` frozen 5.94; reality led by `page_hinkley` 55.64 with `unified_full`/`newma`/`mmd_window` clustered behind. Best partial signal: `mmd_window` frozen-drift dom_frac 0.276 [0.19,0.40] — real but far from dominance. Reality-drift undetectable by everyone. Artifacts: `research/scripts/unified_detector_{results.json,summary.md}`.
-- **Recommendation:** accept the strengthened null; if anything earns a real-harness trial it's residual-coupling to the *actual* `enriched_shrink` calibrator + `mmd_window`, expecting another null. Otherwise write Phase 6 around the null.
+- **Recommendation:** accept the strengthened null; if anything earns a real-harness trial it's residual-coupling to the *actual* `enriched_shrink` calibrator + `mmd_window`, expecting another null. Otherwise write Phase 6 around the null. **⏸ On hold (2026-08-23):** decision parked by user; calibration remains the A6 headline.
 
 ## 8. Consolidated NEXT actions (rollup)
 
-1. **A6 Phase 6 decision (highest priority):** accept the detection null and write the Phase 6 PLAN+VERIFICATION around it, **or** park detection and ship calibration as the headline. (Open question to Rohit.)
-2. **Close A6 calibration loose ends:** add the OQ-03 ledger caveat; commit the uncommitted `VERIFICATION.md` review edits + the lit-survey doc (native side, Step 0); restore the pre-registration stop-gate.
-3. **Research Phase 5 (N=1):** begin/continue logging own sessions; export → harness → face-validity overlay + case study (circularity guard).
-4. **Research Phase 6 (report wiring):** `make figs` → `\input` generated artifacts into `main.tex`; provenance stamps; reproducibility gate.
-5. **Dissertation:** assemble Review 2 from Phases 0–3 results; plan Review 3 (needs Phases 4–6).
-6. **App polish:** PWA (issue 13); confirm Plausible (17) and Week streaming narrative (11).
-7. **Production calibration hardening:** `plans/2026-06-20-enriched-shrink-production-integration/` is ✅ Cowork-verified. **Immediate:** record the Phase-0 dual-prior small-band caveat in `research/doc/2026-06-18-pillar-a-report-claims-and-caveats.md`. **Then carry forward the deferred OQs (see §4):** OQ-01 projection wiring, OQ-02 offline cache/fallback, OQ-03 Intelligence Service deploy/auth/CORS before production release.
-8. **Dev production-readiness (2026-06-20):** [`plans/active/2026-06-20-dev-production-readiness/PLAN.md`](plans/active/2026-06-20-dev-production-readiness/PLAN.md) (+ `VERIFICATION.md`) — 5 phases: Supabase-JWT auth on `/v1`, resilient calibration client (timeout/retry/typed errors), Dexie-persisted stale cache + UI states + error boundary, service hardening (request-id/logging/input-bounds/`/readiness`/rate-limit stub/compose healthcheck), and a one-command `pnpm dev:full` stack. Makes dev mirror prod so going live is config-only. **✅ All 5 phases implemented + committed (SHAs `b71d962`, `5cabf41`, `3655f34`, `dcb1069`, `18dd144`, ES256/JWKS fix `3c7092a` on `project/phase-1`); browser-verified with Rohit's real Supabase account: `/v1/calibration` returned 200 and no auth/service banner rendered. ⏳ Cowork reviewer findings still not filled.** Resolves prior-plan OQ-02; production hosting (OQ-03) still deferred.
+Retired 2026-08-23: this rollup duplicated the index and drifted two months behind (its items are all
+resolved or still open on the map). The live rollup now lives in [`STATUS.md`](STATUS.md) — see its
+**Active** section (currently #38 implementation + Phase 2 execution program) and **Queued** section
+(Learner Growth frontier #24, A6 Phase-6 detection decision, research Phases 5–6, calendar follow-ups,
+PWA/Plausible/Week narrative, deferred OQs, dissertation reviews). Status of the old rollup items:
+1–2 resolved (ledger caveat recorded; detection null decision **on hold**, 2026-08-23) · 3–4 still open (→ Queued)
+· 5 in flight (see §6 UNCONFIRMED note) · 6 still open (→ Queued) · 7 caveat recorded (verified
+2026-08-23), OQ-01/OQ-03 carried to Queued · 8 done (all phases ✅; reviewer findings now moot —
+Dev production-readiness is a completed Done row in STATUS.md).
 
 ## 9. Infra / housekeeping notes
 
 - **Earlier 2026-06-20 housekeeping note:** Cowork had flagged A6 `VERIFICATION.md` reviewer edits, `plans/active/2026-06-14-pillar-a-rigour-VERIFICATION.md` edits, `research/doc/2026-06-20-change-detection-literature-survey.md`, and generated `unified_detector_{results.json,summary.md}` as possible native-side Step 0 cleanup. Re-check `git status` before acting on that older list; the enriched calibration production-integration work itself is clean through `00d1e12`.
 - **Build gotchas (see `.agents/rules/`):** pnpm build needs internal registry (`COREPACK_NPM_REGISTRY`); LaTeX via TinyTeX on PATH; Dexie schema migrations must version-up; React Router `basename="/study"` (never include `/study` in `to`).
-- **This tracker's reconciliation:** last full reconcile 2026-06-20. If a marker here conflicts with a workstream's canonical file, the canonical file wins — fix the row.
+- **This tracker's reconciliation:** last full reconcile 2026-08-23 (before that: 2026-06-20). If a marker here conflicts with a workstream's canonical file, the canonical file wins — fix the row.

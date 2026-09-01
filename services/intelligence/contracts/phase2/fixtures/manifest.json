@@ -1,35 +1,35 @@
 [
   {
     "file": "generation-success.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "generation-malformed.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "generation-safety-block.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "generation-quota-failure.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "generation-timeout.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "generation-partial.json",
-    "schema": "../gemini/generation-response.schema.json"
+    "schema": "../provider/generation-response.schema.json"
   },
   {
     "file": "written-grading.json",
-    "schema": "../gemini/written-grading-response.schema.json"
+    "schema": "../provider/written-grading-response.schema.json"
   },
   {
     "file": "embedding-batch.json",
-    "schema": "../gemini/embedding-request.schema.json"
+    "schema": "../provider/embedding-request.schema.json"
   },
   {
     "file": "coding-answer.json",
@@ -49,23 +49,23 @@
   },
   {
     "file": "guide-start.json",
-    "schema": "../gemini/guide-hint-frame.schema.json"
+    "schema": "../provider/guide-hint-frame.schema.json"
   },
   {
     "file": "guide-delta.json",
-    "schema": "../gemini/guide-hint-frame.schema.json"
+    "schema": "../provider/guide-hint-frame.schema.json"
   },
   {
     "file": "guide-citation.json",
-    "schema": "../gemini/guide-hint-frame.schema.json"
+    "schema": "../provider/guide-hint-frame.schema.json"
   },
   {
     "file": "guide-done.json",
-    "schema": "../gemini/guide-hint-frame.schema.json"
+    "schema": "../provider/guide-hint-frame.schema.json"
   },
   {
     "file": "guide-error.json",
-    "schema": "../gemini/guide-hint-frame.schema.json"
+    "schema": "../provider/guide-hint-frame.schema.json"
   },
   {
     "file": "provider-timeout.json",
@@ -77,7 +77,7 @@
   },
   {
     "file": "gated-reveal.json",
-    "schema": "../gemini/gated-reveal-response.schema.json"
+    "schema": "../provider/gated-reveal-response.schema.json"
   },
   {
     "file": "telemetry-ingestion.json",

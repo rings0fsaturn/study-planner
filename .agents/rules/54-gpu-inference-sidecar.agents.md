@@ -52,8 +52,13 @@ errors per rule 22, and defaults `RERANKER_URL` to `http://localhost:8200`.
 The root compose stack has no reranker service anymore; a containerized caller
 must point `RERANKER_URL` at the GPU host (for example
 `http://host.docker.internal:8200`).
-Rerank is not yet wired into any retrieval endpoint; it is consumed by tests
-and operator scripts only.
+Rerank is wired into the retrieval endpoint `POST /v1/retrieval/search` as an
+opt-in flag.
+Send `"rerank": true` (plus optional `"rerankTopK"`) to reorder the matched
+chunks through `RerankerClient`; reranking stays off by default.
+The endpoint lives in `services/intelligence/app/routers/retrieval.py` and
+calls the typed client from `app/rerank.py`.
+Tests and operator scripts use the client directly against the sidecar.
 
 ## Start
 

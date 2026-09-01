@@ -1,209 +1,261 @@
 ---
 name: scratchpad
-description: "Maintain SCRATCHPAD.md — the living working-memory dashboard inside a .work/ active task — so long or multi-session work survives context compaction without losing its thread. The doc an agent reads to reconstitute its head after compaction or a new session, and rewrites continuously as it works. READ it at session start and whenever you've lost the thread — 'where were we', 'pick up where we left off', 'what's the status', 'let's realign', 'review the task', or any time you're resuming a .work/-managed task and can't account for the plan position, open blockers, and recent decisions from memory. WRITE/UPDATE it after any decision, blocker, deferral, task-state change, or checklist step — 'update the scratchpad', 'context dump', 'checkpoint this', 'capture where we are'. Reach for it on long sessions and possible-compaction moments EVEN IF the user didn't name it. Anti-scope: LIVE in-session scratchpad only; end-of-task distill/archive/STATUS-flip belongs to work-journal."
+description: "Component skill of work-journal-orchestrator – normally driven by the orchestrator, not invoked on its own. It owns the two lower files of the .work/ memory system: SCRATCHPAD.md (the per-session working ledger that survives context compaction) and state.md (the durable, curated per-task context a new session reads to resume). It seeds the scratchpad at session start, appends to it during work, and at session end distills it into state.md and resets it. If you reached this skill directly, prefer running work-journal-orchestrator so the whole session cycle is handled."
 ---
 
-# Scratchpad — the working-memory dashboard for a `.work/` active task
+# Scratchpad – session ledger and task state
 
-`SCRATCHPAD.md` is the **living snapshot of an agent's complete current working context** for one active
-task. It exists to defeat one specific failure: **context compaction**. Your durable records
-(`STATUS.md`, specs, plans, the running log, `research/`) are files on disk — compaction can't touch
-them. What compaction *does* destroy is the in-flight reasoning that only ever lived in the context
-window: *I'm halfway through phase 3, I decided two turns ago to use X, I'm blocked on Y, I still need
-to verify Z.* The scratchpad externalizes exactly that volatile layer so it can be reloaded.
+This skill owns the two lower files of the `.work/` memory system.
+It does more than the file it is named after: it also writes `state.md`.
+That is deliberate.
+The session-end distill reads the scratchpad and writes the state in one move, so keeping both in one skill is what stops them clashing.
 
-Two files sit in the active-task folder and they are **not** the same job:
-
-| File | Shape | You read | You write |
+| File | Altitude | Lifespan | Discipline |
 |---|---|---|---|
-| running log (`state.md` / `VERIFICATION.md`) | **diary** — append-only, chronological history | the tail | append, never rewrite |
-| `SCRATCHPAD.md` | **dashboard** — living snapshot of *now*, overwritten in place | the whole thing | rewrite continuously |
+| `SCRATCHPAD.md` | one session | ephemeral, reset each session | small overwritten header + append-only log |
+| `state.md` | one task | durable, read to resume across sessions | curated: keep true history, strip stale |
 
-The log answers *"what happened over time?"*. The scratchpad answers *"where exactly am I right now,
-and what is my full mental context?"* — which is what an append-log can't restore, because the tail is
-not the whole picture. Because the log preserves history, the scratchpad is free to be overwritten
-without losing anything.
+`STATUS.md` and the `.work/` layout belong to the **work-journal** skill, not here.
+You are the only writer of these two files, and that single-writer rule is what keeps the record clean.
 
-**Do not fold the scratchpad into the running log, `STATUS.md`, or a spec.** A second file for
-something that already has one is how `.work/` rots — but these are genuinely different files with
-different update disciplines, not duplicates. Keep the seam sharp: history → log; current picture →
-scratchpad.
+## Step 0 – Orient
 
----
-
-## Step 0 — Orient first (always, before reading or writing)
-
-The `.work/` layout is **not the same in every project**, so resolve it from the project, never
-hardcode it. This mirrors `work-journal`'s Step 0 on purpose, so both skills agree about the tree.
-
-1. **Read `.work/README.md`** — the canonical folder map for *this* project. Resolve two things:
-   - where the **active-task unit** lives (e.g. `active/<task>/`, or `plans/active/<task>/`), and
-   - the **running-log filename** (`state.md` vs `VERIFICATION.md`).
-2. **Read `.work/STATUS.md`** — the read-first index; find the row/task you're working on and its
-   pointer into the active area.
-3. On any conflict, **the project's own `README.md`/`STATUS.md` wins over this skill.**
-
-The scratchpad's filename is fixed: **`SCRATCHPAD.md`**, placed **inside the resolved active-task
-unit, beside the running log** (uppercase to match the read-first prominence of `STATUS.md` /
-`VERIFICATION.md`, unless the project has a strong lowercase convention — then match it).
-
-**Guard:** if you cannot resolve an active-task unit at all (no `.work/`, or no active task), do **not**
-invent a location and drop a scratchpad somewhere arbitrary. Surface that and ask the user, the same
-way `work-journal` asks before inventing a new shape.
+Resolve the layout from the project; do not hardcode it.
+1. Read `.work/README.md` for the active-task folder location.
+2. Read `.work/STATUS.md` to find the task row and its pointer.
+Both `SCRATCHPAD.md` and `state.md` live inside the active-task folder.
+If no active task resolves, stop and ask – do not drop files in an arbitrary place.
 
 ---
 
-## Reading the scratchpad (the payoff side)
+## SCRATCHPAD.md – the session ledger
 
-The whole value is here. Don't try to *detect* compaction — an agent usually can't tell it was just
-compacted. Bind the read to observable state instead:
+Its one job is to defeat context compaction.
+Your durable files are safe on disk; what compaction destroys is the in-flight reasoning that only lived in the context window.
+The scratchpad externalizes exactly that, so it can be reloaded.
 
-- **Session start:** before touching task work, read `SCRATCHPAD.md` **in full**. This is the opening
-  ritual — it loads your context for the session.
-- **Mid-session self-rescue:** before acting on the task, if you **cannot account for the current
-  plan position, the open blockers, and the recent decisions from your own working memory**, re-read
-  the scratchpad first. Compaction manifests as exactly that thin-context feeling, so this fires
-  precisely when it's needed — no compaction signal required.
-- **Self-location:** the scratchpad names its own task, plan, and log at the top, and `STATUS.md` /
-  the running log point to it — so if you're lost, you can find the scratchpad from any durable anchor
-  still in context.
+### Structure
 
-If the scratchpad doesn't exist yet, go to **Bootstrapping** below before reading.
-
----
-
-## The structure — nine sections, most-load-bearing first
-
-Order matters: a freshly-compacted agent reads top-down, so the context it needs first sits at the
-top. Use this exact template.
+Two parts only. Keep it to these.
 
 ```markdown
-# Scratchpad — <task-id>
-_Plan: <path> · Log: <state.md|VERIFICATION.md> · Updated: <YYYY-MM-DDThh:mm>_
+# Scratchpad – <task-id> · session <YYYY-MM-DD>
+_state.md: <path> · Updated: <YYYY-MM-DDThh:mm>_
 
-## Now
-<current plan + phase, and the one thing being worked on right this moment>
+## Now / Next
+- Doing: <the one thing in progress right now, with plan+phase>
+- Next: <the next concrete action>
+- Blocked: <active blockers only, or "none">
 
-## Alignment
-<is current work still matching the plan? note any drift, scope change, or "still on track">
-
-## Open
-<pending decisions, open questions, unknowns blocking clean progress — each with enough context to act>
-
-## Blockers
-<ACTIVE only. each: what's blocked · on what · unblock path if known>
-
-## Deferrals
-<consciously postponed. each: what · why · trigger to revisit>
-
-## Checklist
-<working to-do for the current phase. [x] done / [ ] pending — "what's left" at a glance>
-
-## In-flight edits
-<files/changes touched but unfinished or unverified, so a reload knows what's half-done>
-
-## Decisions in force
-<load-bearing decisions still GOVERNING current work. NOT a full changelog — history lives in the log>
-
-## Resolved (recent)
-<recently closed items, kept briefly for continuity, pruned as they age out>
+## Session log
+- <hh:mm> FOUND  <discovery / flow-trace note / pitfall>  (file:line)
+- <hh:mm> DECIDED <decision + why>
+- <hh:mm> EDIT   <file changed, what changed, + verified | UNVERIFIED>
+- <hh:mm> BLOCKED <what · on what>
+- <hh:mm> UNBLOCKED <what · how>
+- <hh:mm> DONE   <a piece of work completed>
+- <hh:mm> NEXT   <the next action, when it changes>
 ```
 
-**Why this order:** `Now` + `Alignment` are what a compacted agent needs first to re-anchor. The
-middle block (`Open` / `Blockers` / `Deferrals` / `Checklist`) is the actionable working set.
-`In-flight edits` prevents the "did I already change that file?" hazard on reload. `Decisions in
-force` is deliberately *only* the decisions still constraining current work — keeping it a changelog
-is how it starts duplicating the running log. `Resolved` is the stickiness graveyard (see below), kept
-short.
+- **Now / Next** is overwritten in place and kept to a few lines. It is the first thing a compacted agent reads, so it must always describe the present.
+- **Session log** is append-only. Never edit past lines; just add new ones. The log is the raw trail you distill into `state.md` at session end.
 
-Empty sections are fine — keep the heading with a short `— none` so the reader knows it was
-considered, not forgotten.
+### The six tags – what each captures and where it lands
 
----
+The tags exist so the session-end distill is near-mechanical.
+Each tag has a home section in `state.md`, so promoting is copy-then-compress, not re-think.
 
-## Updating the scratchpad (keeping it current AND complete)
+| Tag | Use it when | Format | Lands in state.md section |
+|---|---|---|---|
+| `FOUND` | you learn how something works, or hit a pitfall | terse fact + `file:line` | Flow trace / Pitfalls & rules |
+| `DECIDED` | you make a choice that will govern later work | `<decision> because <why>` | Decisions in force / Pitfalls & rules |
+| `EDIT` | you change a file | `<path> – <what> – verified\|UNVERIFIED` | Files affected |
+| `BLOCKED` / `UNBLOCKED` | you get stuck, or get unstuck | `<what> · <on what>` / `<what> · <how>` | Open / Done so far |
+| `DONE` | you complete a piece of work | past-tense, cite commit/file | Done so far |
+| `NEXT` | the next action changes | imperative | Current state & next |
 
-**Update at natural checkpoints, not at "compaction time."** Compaction is unpredictable; if you wait
-for it you'll lose the race. Instead rewrite the scratchpad immediately after any of:
+### When to write
 
-- a decision made, or a decision reversed;
-- a blocker hit, or a blocker cleared;
-- a deferral (something consciously postponed);
-- a task-state change (phase started/finished, scope shift, realignment);
-- a checklist item completed;
-- an edit started or finished on a file.
+Append a log line right after each event, and rewrite the header whenever Doing / Next / Blocked changes:
+a discovery, a decision, a file edit, a blocker hit or cleared, a step done.
+The invariant: the scratchpad is never more than one meaningful event stale.
+Then whenever compaction lands, the latest version is already a faithful snapshot.
+Bump `Updated:` on every rewrite.
 
-The invariant: **the scratchpad is never more than one meaningful event stale.** Then *whenever*
-compaction lands, the latest version is already a faithful snapshot. Bump the `Updated:` timestamp on
-every rewrite.
+### Filled sample
 
-**Stickiness — no silent drops.** An overwrite may reorganize and compress, but it may **not** make an
-unresolved item vanish. Open items (blockers, deferrals, open decisions) persist across rewrites until
-**explicitly resolved**. Resolving means moving the item to `Resolved (recent)` with its outcome noted
-— never just deleting it. This rule is what stops an overwrite-in-place doc from quietly amnesia-ing
-itself, which is the single biggest failure mode for a living-snapshot file.
+```markdown
+# Scratchpad – issue-12-edit-business-profile · session 2026-08-25
+_state.md: active/issue-12-edit-business-profile/state.md · Updated: 2026-08-25T14:32_
 
-**Compress, don't accumulate.** The scratchpad is a dashboard, not a log — if a section is growing
-into a history, that history belongs in the running log; leave only the currently-load-bearing subset
-here. When in doubt about whether something is durable, write the durable version to the log/research
-and keep the scratchpad pointer short.
+## Now / Next
+- Doing: Phase 3 – wiring the business-name field into the edit view
+- Next: add the fieldMapper entry in v2, then mirror it into v1
+- Blocked: none
 
----
+## Session log
+- 13:05 FOUND  edit view renders via staticViewMapper only (HostedUAView.js:41)
+- 13:20 DECIDED namespace the field static/editBusinessName to avoid the auth-page collision because the fieldMapper is shared
+- 13:40 EDIT   server/src/config/mappers/v2/fieldMapper/default.json – added static/editBusinessName – UNVERIFIED
+- 14:10 DONE   v2 fieldMapper + elementMapper entries added, unit test green
+- 14:30 NEXT   mirror both entries into v1 (runtime uses v1)
+```
 
-## Bootstrapping — when no scratchpad exists yet
+### Reading it
 
-A brand-new task, or an older active task that predates this skill, won't have a `SCRATCHPAD.md`.
-Create it on first need — **seeded, never blank.** An empty scratchpad is worse than none: the agent
-reads nothing useful, learns to skip it, and the habit dies.
-
-1. After Step 0 resolves the active-task unit, create `SCRATCHPAD.md` there from the template above,
-   with the header filled in (task-id, plan path, resolved running-log name, timestamp).
-2. **Seed it from the durable files already present:**
-   - `Now` / `Alignment` ← current phase from the plan doc;
-   - `Open` / `Decisions in force` / `Checklist` ← recent decisions and the next-action from the tail
-     of the running log;
-   - `Blockers` ← any open gotchas in `STATUS.md` relevant to this task.
-3. Only mark as fact what the durable files actually say. If something's inferred, note it as such
-   rather than inventing state (**no fabrication** — same rule as `work-journal`).
-
-The first read should already reflect reality, demonstrating the doc's job immediately.
+- **Session start:** read `SCRATCHPAD.md` in full before touching the work. This loads your context for the session.
+- **Mid-session self-rescue:** if you cannot account for the current plan position, the open blockers, and the recent decisions from your own memory, re-read it first. That thin-context feeling is what compaction feels like, so this fires exactly when it is needed.
 
 ---
 
-## Completion — reconcile before the wrap, then archive intact
+## state.md – the durable task doc
 
-The scratchpad is **working state, not a durable artifact.** It is the thing you distill *from*, not a
-thing you promote *into* the durable store. `work-journal` still owns the wrap mechanics (distill →
-`mv` to `archive/` → flip `STATUS.md`) — do **not** duplicate that logic here, so the two skills never
-fight over `STATUS.md`.
+This is what a fresh session reads to understand what the task is and where it stands.
+It keeps true task history – flow trace, files touched, pitfalls, rules – plus the current state, curated so no stale line can mislead the next agent.
+It is not an append-forever diary and not a wipe-clean snapshot; it is maintained.
 
-This skill's one completion obligation is a **reconciliation pass, run *before* the wrap:**
+### Structure – seven sections
 
-- Walk `Decisions in force`, any unresolved `Deferrals`, and any durable lesson in the scratchpad.
-- Confirm each already has a home in the right durable file — a final dated line in the running log, a
-  `research/` doc, or a `STATUS.md` gotcha. Anything that lives **only** in the scratchpad, push there
-  first.
-- Then let the scratchpad **ride into `archive/` with the task folder, intact** (`mv`, never deleted —
-  matches `.work/`'s archive-don't-delete invariant). Don't promote it into `research/`; it's a
-  snapshot, not durable knowledge.
+The sections map one-to-one onto the scratchpad tags, so the distill is a promote-and-prune.
 
-The reconciliation pass exists to kill the exact failure this whole skill prevents: a blocker or
-decision that lived only on the whiteboard getting archived into oblivion because nobody copied it
-into the durable record.
+```markdown
+# State – <task-id>
+_Spec: <path> · Plan: <path> · STATUS row: <task-id> · Status: <active|blocked|done> · Updated: <YYYY-MM-DD>_
+
+## Current state & next
+## Done so far
+## Flow trace
+## Files affected
+## Pitfalls & rules
+## Decisions in force
+## Open
+```
+
+### Field guide – what goes in each, and how
+
+| Section | What goes here | Format | Fed by tag |
+|---|---|---|---|
+| Current state & next | where the task stands + the single next action | 2-4 bullets; last is an imperative `Next:` | Now/Next, NEXT, open BLOCKED |
+| Done so far | completed work, curated | past-tense bullets, cite commit/file | DONE |
+| Flow trace | how it works, for a resuming agent | short ordered steps with `file:line` | FOUND (how-it-works) |
+| Files affected | files touched and why | `path – change – why` per line | EDIT |
+| Pitfalls & rules | traps to avoid; rules/specs to honor | `Avoid X because Y` / `Must Z per <ref>` | FOUND (pitfall), DECIDED (rule) |
+| Decisions in force | load-bearing choices still governing | `Decided X because Y (date)` | DECIDED (decision) |
+| Open | unresolved blockers/deferrals/questions | `what · on what · unblock path`, or `none` | unresolved BLOCKED, deferrals |
+
+### Format conventions (state once, keep every line terse)
+
+- Absolute dates (`2026-08-25`), never "today".
+- Cite `file:line` or a commit; do not restate what the code or a research doc already says.
+- One fact per bullet.
+- Never record PII (card, CVV, SMS code, raw phone, password).
+- Mark anything unverified as `UNVERIFIED`.
+- An empty section keeps its heading with `- none`, so the reader sees it was considered, not forgotten.
+
+### Filled sample
+
+```markdown
+# State – issue-12-edit-business-profile
+_Spec: spec/issue-12-edit-business-profile.md · Plan: active/issue-12-edit-business-profile/plan/ · STATUS row: issue-12 · Status: active · Updated: 2026-08-25_
+
+## Current state & next
+- Phase 3 of 4 done: business-name field renders in the edit view at v1 parity.
+- v2 mapper entries landed and unit-tested; v1 not yet mirrored.
+- Next: mirror the fieldMapper + elementMapper entries into v1 (runtime uses v1).
+
+## Done so far
+- Phase 1-2: edit view registered in template/default.json, viewMapper wired (commit 9f3a1c2).
+- Phase 3: v2 fieldMapper + elementMapper for static/editBusinessName, unit test green (commit a1b2c3d).
+
+## Flow trace
+1. Edit view renders through staticViewMapper only – HostedUAView.js:41.
+2. The field name on the wire comes from the elementMapper top-level `name`, not the viewMapper key.
+
+## Files affected
+- server/src/config/mappers/v2/fieldMapper/default.json – added static/editBusinessName – field wiring.
+- server/src/config/mappers/v2/elementMapper/default.json – added editBusinessName element – render + submit.
+
+## Pitfalls & rules
+- Must add mapper entries to BOTH v1 and v2, or the page renders empty on the other version (silent failure).
+- The fieldMapper is shared, so namespace keys (static/editBusinessName) to avoid the auth-page collision.
+
+## Decisions in force
+- Decided to reuse HostedUAWelcomeHeader rather than a new component because it already forwards dataTestId (2026-08-24).
+
+## Open
+- none
+```
 
 ---
+
+## Keeping state.md honest – staleness
+
+On every rewrite, apply one test to each line:
+
+> Would a fresh agent, reading this line with no other memory, be led to do the wrong thing?
+> If yes, fix it or cut it. If it is simply old-but-true history, keep it.
+
+The seven sections split into two kinds, handled differently:
+
+| Kind | Sections | Rule |
+|---|---|---|
+| Current | Current state & next · Open | Drop superseded lines outright. A finished Next becomes a Done-so-far bullet; a cleared blocker moves to Done so far and leaves Open. |
+| Cumulative | Done so far · Flow trace · Files affected · Pitfalls & rules · Decisions in force | Keep true history; correct in place. Delete a line only when it is now false or misleading (reversed decision, a trace the code contradicts, a reverted file, a fixed pitfall). When you remove a load-bearing reversal, leave a one-line note in Done so far: `Reversed X -> now Y (date)`. |
+
+Triggers for the sweep: a decision reversed; code contradicts a line (code is ground truth – fix the doc); a blocker cleared; a pitfall no longer applies.
+Run the sweep as part of the session-end distill, before you reset the scratchpad.
+
+Before / after:
+
+```
+# reversed decision (cumulative section) – correct in place, note the reversal in Done so far
+- Decided to finalize Case A in AuthCode
+  ->
+- Decided to finalize Case A in Confirmation, not AuthCode (2026-08-20)
+  (Done so far gains: "Reversed: Case A finalize moved AuthCode -> Confirmation (2026-08-20)")
+
+# code contradicts doc – code wins
+- Handler lives at HostedUALandingHandler.js
+  ->
+- Handler lives at HostedUAAuthCodeHandler.ts (verified in tree)
+```
+
+---
+
+## The session lifecycle
+
+### Session start / resume
+1. Orient (Step 0).
+2. If `state.md` does not exist, **bootstrap** it (see below).
+3. If `SCRATCHPAD.md` is missing, empty, or reset, seed a fresh one from `state.md` (Now/Next from Current state & next; header filled). This is a START.
+4. If `SCRATCHPAD.md` holds content, read it in full and continue. This is a RESUME.
+
+### During the session
+Append tagged log lines and keep Now / Next current, per the write-triggers above.
+
+### Session end – distill, verify, reset
+This is the core handoff. Do all three, in order.
+1. **Distill:** promote each scratchpad tag into its `state.md` section, fold newly completed work into Done so far, refresh Current state & next, and run the staleness sweep. Bump `Updated:`.
+2. **Verify (the gate):** re-read `state.md` and confirm every still-open item from the scratchpad – blockers, deferrals, in-flight edits, decisions in force – now has a home there. If anything lives only in the scratchpad, put it in `state.md` first.
+3. **Reset:** only after the gate passes, wipe `SCRATCHPAD.md` back to the blank template for the next session. Do not delete the file – a reset file always answers "read me first"; a missing one breeds doubt.
+
+The gate is what makes the whole system safe to re-run: nothing is thrown away until it is provably saved.
+
+## Bootstrapping – when state.md does not exist yet
+
+A brand-new task has no `state.md`.
+Create it – seeded, never blank.
+1. Write the header (task-id, spec/plan pointers, STATUS row id, status active, date).
+2. Seed sections from the durable files already present: Current state & next and Flow trace from the plan/spec; Open from any STATUS gotcha relevant to this task; the rest `- none`.
+3. Record only what the durable files actually say. Mark inferences as inferences. No fabrication.
+
+Then seed the first `SCRATCHPAD.md` from this `state.md`.
 
 ## What NOT to do
 
-- **Don't hardcode `.work/active/<task>/` or assume `state.md`.** Resolve the layout in Step 0; other
-  projects use `plans/active/<task>/` and `VERIFICATION.md`.
-- **Don't turn the scratchpad into a second diary.** Chronological history → running log. The
-  scratchpad holds only the *currently load-bearing* picture.
-- **Don't silently drop an open item on rewrite.** Move it to `Resolved` with an outcome, or it stays.
-- **Don't wait for a compaction signal to update or re-read.** Tie updates to events you control and
-  reads to whether you actually have the context you should.
-- **Don't own the wrap.** Distill/archive/STATUS-flip is `work-journal`'s job; do the reconciliation
-  pass and hand off.
-- **Don't create a scratchpad outside a real `.work/` active task.** If no active unit resolves, ask.
-- **Don't fabricate state when seeding.** Only record what the durable files actually say; mark
-  inferences as inferences.
+- Do not fold the scratchpad into `state.md` or the reverse. Different lifespans, different disciplines.
+- Do not edit past lines in the session log – it is append-only. Curation happens in `state.md`.
+- Do not reset the scratchpad before the verify gate passes.
+- Do not silently drop an open item during a state.md rewrite – move it to Done or Open with an outcome, or keep it.
+- Do not write `STATUS.md` or move folders – that is the work-journal skill's job.
+- Do not fabricate state when seeding or distilling.

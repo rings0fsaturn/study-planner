@@ -1,73 +1,87 @@
-# `.work/` — the project's working directory
+# `.work/` — the project's working-memory system
 
-This is the local "Jira + knowledge base" for **study-planner-web**: where planning,
-specs, in-flight task memory, handovers, and reusable prompts live. It was consolidated
-here on **2026-06-25** from the old scattered `plans/`, `issues/`, `prd/`, `handovers/`,
-and `MASTER_TRACKER.md`.
+This is the **single door** to the project's working record: `STATUS.md` (project index)
++ per-task `state.md` (durable) + per-session `SCRATCHPAD.md` (ephemeral). It follows the
+`work-journal-orchestrator` contract (`.agents/skills/work-journal-orchestrator/SKILL.md`).
 
-If you only read one file, read **[`STATUS.md`](STATUS.md)** — the single read-first index.
+**Read this map and [`STATUS.md`](STATUS.md) before planning, editing, reviewing, or verifying.**
+`STATUS.md` is the read-first index; every row points at a `state.md` for detail.
+
+## The three-file system
+
+Context flows upward as it settles from volatile to durable:
+
+```
+SCRATCHPAD.md   (session, ephemeral)   what I am doing right now; reset each session
+    |  distill at session end
+    v
+state.md        (task, durable)        what the task is and where it stands; read to resume
+    |  roll up one line
+    v
+STATUS.md       (project, durable)     every task, one line + a pointer down to state.md
+```
+
+- `SCRATCHPAD.md` + `state.md` are written by the **scratchpad** skill.
+- `STATUS.md` and the task-centric layout are owned by the **work-journal** skill.
+- Exactly one writer per file — that keeps the files from clashing.
 
 ## Access note
 
-`.work/` sits at this repo's root — an agent working in this repo reaches it directly at
-`.work/...` (single repo, no sibling checkout, no symlink). If ever sandboxed somewhere
-that can't see it, use the absolute repo path.
-
-## Why `.work/` is committed to git (not ignored)
-
-History: working docs were lost once when git was acting as a "janitor" — a `git clean -fdx`
-deletes **ignored and untracked** files, so anything hidden from git was fair game. The fix
-here is the opposite of hiding: **`.work/` is tracked/committed**, so `git clean` cannot touch
-it. Two rules follow from that:
-
-- **Never add `.work/` to `.gitignore`.** Ignoring it re-creates the exact condition that
-  destroyed it before.
-- **Never run `git clean -fdx` at the repo root** without knowing what it will remove.
-
-Because git no longer auto-removes finished docs, **cleanup is now a manual habit** — see the
-lifecycle below. Skipping it is how the pile silently grows again.
+`.work/` lives at this repo's root and is **tracked/committed** on purpose. Two rules follow:
+- **Never add `.work/` to `.gitignore`.** Ignoring it re-creates the condition that destroyed
+  working docs before (`git clean -fdx` deletes ignored + untracked files).
+- **Never run `git clean -fdx` at the repo root.** Because git no longer auto-removes finished
+  docs, **cleanup is now a manual habit** — see the lifecycle below.
 
 ## Folder map
 
-| Folder / file | What it is | Durable or ephemeral |
+### Core (task-centric)
+
+| Path | What it is | Owner skill |
 |---|---|---|
-| **`STATUS.md`** | The one index. One-line rows tagged by workstream (`[APP]` `[RESEARCH]` `[PILLAR-A]` `[KT]` `[DISSERTATION]` `[INFRA]`) under **Active / Queued / Done / Reference / Gotchas**. Read first; keep short and pruned. | durable (the index) |
-| **`master-tracker-detail.md`** | The full long-form workstream detail (markers, SHAs, findings, caveats) — the Reference appendix behind `STATUS.md`. Preserved from the former `MASTER_TRACKER.md`. | durable (reference) |
-| **`specs/`** | The **contracts**. `specs/prd/` = the product PRD; `specs/issues/` = the vertical-slice tickets (`001a…017`) + `images/`. Stable — a developer builds against these. | durable |
-| **`plans/`** | Implementation plans. `plans/active/` = in-flight (each is a `PLAN.md` spec + a `VERIFICATION.md` running log/review). `plans/archive/` = done or superseded. `plans/README.md` = how to write a plan. | mixed |
-| **`handovers/`** | Cross-session batons — where one session hands the next its exact entry point. `handovers/archive/` = finished/historical handoffs. | ephemeral |
-| **`prompts/`** | Reusable prompts meant to be re-fed to an agent (e.g. test-run, calibrator prompts). | durable |
-| **`archive/`** | Retired / stray artifacts kept for safety (old grill session, regenerated detector outputs, commit log). | ephemeral |
+| **`STATUS.md`** | The read-first project index. One line per task under Active / Queued / Done, each pointing at a `state.md`. | work-journal |
+| **`active/<task-id>/`** | Everything about a live task, together: `state.md` + `SCRATCHPAD.md` + `plan/` + `prompts/` + `research/`. | scratchpad (state/scratchpad) + work-journal (layout) |
+| **`archive/<task-id>/`** | Finished task folders, moved intact at WRAP (minus the emptied scratchpad). | work-journal |
+| **`specs/`** | The stable contracts (this repo's `spec/`): `specs/prd/` = PRD, `specs/issues/` = vertical-slice tickets. Built against; outlive a task. | — |
+
+> `spec/` (singular, per the generic contract) is realised here as **`specs/`** — the durable
+> contract home already in the tree and referenced across hundreds of links. Treat the two as
+> the same thing for this repo.
+
+### Legacy (historical, absorbed at WRAP)
+
+Pre-orchestrator storage for completed / in-flight work that predates the task-centric layout.
+These are not migrated wholesale; they are absorbed task-by-task when a WRAP moves a folder.
+
+| Path | What it is | Fate |
+|---|---|---|
+| **`plans/archive/`** | Completed implementation plans (`YYYY-MM-DD-<slug>/PLAN.md` + `VERIFICATION.md`). | stays until each task is wrapped into `archive/<task-id>/` |
+| **`handovers/`** (+ `archive/`) | Cross-session batons. | drained into task `research/` or `archive/` as relevant |
+| **`prompts/`** | Reusable prompts. | promoted to task `prompts/` or kept as reference |
+| **`master-tracker-detail.md`** | Long-form workstream detail — the Reference appendix behind `STATUS.md`. | frozen; pointed at by STATUS, no longer edited |
+| **`archive/`** | Stray / retired artifacts (older grill session, detector outputs, UI mocks). | kept for safety; not task-scoped |
 
 **Not under `.work/`:** the research knowledge base lives at the repo root in
 [`../research/`](../research/) — it's a Python package + datasets the code imports, so it stays
-in place. `STATUS.md` points to its docs under `../research/doc/`. The dissertation lives in
-`../college/mydeliverables/`.
+in place. The dissertation lives in `../college/mydeliverables/`.
 
 ## Spec vs. state (why they're separate)
 
 The per-task **spec** (the contract — `specs/issues/*`, a plan's `PLAN.md`) is kept separate
-from the per-task **state** (the volatile running log — a plan's `VERIFICATION.md`, a handover).
-A developer builds against a spec that isn't moving under them; the state file is where progress,
-deviations, and review verdicts churn. Exactly one current spec per task.
+from the per-task **state** (the volatile running record — `state.md`). A developer builds
+against a spec that isn't moving under them; `state.md` is where progress, deviations, and
+review verdicts churn. Exactly one current spec per task; exactly one `state.md` per live task.
 
-## The multi-agent flow (paths as the API)
+## The lifecycle (manual)
 
-1. **Planner** writes the spec → `specs/` (ticket) and/or `plans/active/<task>/PLAN.md`, and
-   pre-fills `plans/active/<task>/VERIFICATION.md` with acceptance criteria.
-2. **Developer** reads the spec + `../research/`, implements, and writes its log into the same
-   `VERIFICATION.md` (files changed, commit SHA, deviations + why).
-3. **Verifier** reads the spec + the actual diff and writes pass/fail into that same
-   `VERIFICATION.md`. A phase isn't done until it's marked verified.
-
-## Wrapping a task (the manual lifecycle)
-
-Start a task → run the loop above → on wrap: **distill** anything reusable into `../research/`
-or the repo's own docs → **move** the task folder to the matching `archive/` → **update**
-`STATUS.md` (row → Done, delete any fixed gotcha). Do these in that order so nothing is lost.
+Follow the `work-journal-orchestrator` phase router (`.agents/skills/work-journal-orchestrator/`):
+OPEN (open a task folder + STATUS row) → START/RESUME (seed the scratchpad from `state.md`) →
+SESSION END (distill scratchpad → `state.md`, verify, reset) → WRAP (promote reusable research,
+remove the emptied scratchpad, move `active/<id>/` to `archive/<id>/`, flip STATUS to Done).
+Do these in order so nothing is lost.
 
 ## Ceremony dial (ceremony proportional to risk)
 
 - **Trivial** — one line in `STATUS.md`, no folder.
-- **Normal** — a spec + a state log.
-- **Complex** — the full planner → developer → verifier loop.
+- **Normal** — a spec + a task folder (`state.md` + `SCRATCHPAD.md`).
+- **Complex** — the full planner → developer → verifier loop inside a `plan/`.

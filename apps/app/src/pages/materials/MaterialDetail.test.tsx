@@ -50,6 +50,7 @@ function renderDetail(client: FakeMaterialClient, materialId = 'mat-1') {
           <Route path="/materials/:materialId" element={<MaterialDetail />} />
           <Route path="/materials" element={<div data-testid="library-page" />} />
           <Route path="/materials/:materialId/practice" element={<div data-testid="practice-page" />} />
+          <Route path="/materials/:materialId/assessments/new" element={<div data-testid="assessment-config-page" />} />
         </Routes>
       </MaterialsProvider>
     </MemoryRouter>,
@@ -74,6 +75,9 @@ describe('MaterialDetail', () => {
     expect(screen.getByRole('link', { name: 'Practice this' }).getAttribute('href')).toBe(
       '/materials/mat-1/practice',
     )
+    expect(screen.getByRole('link', { name: 'Generate assessment' }).getAttribute('href')).toBe(
+      '/materials/mat-1/assessments/new',
+    )
     expect(screen.getByRole('button', { name: 'Attach to assessment' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Replace keep-ID' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument()
@@ -89,6 +93,7 @@ describe('MaterialDetail', () => {
 
     expect(await screen.findByText(/Grounded generation is disabled/i)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Practice this' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Generate assessment' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Attach to assessment' })).not.toBeInTheDocument()
   })
 

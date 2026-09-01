@@ -66,6 +66,13 @@ Read each selected rule file completely.
 | [`72-ieee-conference-equations.agents.md`](72-ieee-conference-equations.agents.md) | Adding or reviewing equations in the IEEE paper. |
 | [`73-ieee-conference-floats-and-citations.agents.md`](73-ieee-conference-floats-and-citations.agents.md) | Adding or reviewing figures, tables, algorithms, citations, or references in the IEEE paper. |
 
+## Operator Scripts and Verification
+
+| Rule | Read when |
+|---|---|
+| [`80-script-dry-run-before-full-runs.agents.md`](80-script-dry-run-before-full-runs.agents.md) | Running any long-running Python operator script (probes, bake-offs, re-embeds, restores, reports) or before spending API or GPU budget on a full run. |
+| [`81-code2prompt-prompting.agents.md`](81-code2prompt-prompting.agents.md) | Running code2prompt, assembling LLM prompts from repository slices, or sharing codebase context externally. |
+
 ## Maintenance Conventions
 
 - Use the `NN-topic.agents.md` filename pattern with two-digit ordering.

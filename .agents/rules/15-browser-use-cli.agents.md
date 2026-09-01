@@ -7,7 +7,6 @@ description: Use the browser-use CLI and its dedicated WSL automation Chromium, 
 
 Browser automation with the `browser-use` command runs against a dedicated headless Chromium inside this WSL host.
 Read `~/.config/opencode/skills/browser-use/SKILL.md` for the full CLI interface and helper names before relying on them.
-The repo symlink `.opencode/skills/browser-use` points at that user skill directory, so recreating the skill also fixes a stale symlink target.
 
 ## Install and Upgrade
 

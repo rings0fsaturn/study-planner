@@ -17,7 +17,13 @@ SECRET = "test-supabase-jwt-secret-32-bytes-min"
 def _token(sub: str = "user-123") -> str:
     now = datetime.now(UTC)
     return jwt.encode(
-        {"aud": "authenticated", "exp": now + timedelta(minutes=5), "iat": now, "sub": sub, "role": "authenticated"},
+        {
+            "aud": "authenticated",
+            "exp": now + timedelta(minutes=5),
+            "iat": now,
+            "sub": sub,
+            "role": "authenticated",
+        },
         SECRET,
         algorithm="HS256",
     )
@@ -38,7 +44,9 @@ def test_retrieval_disabled_returns_404(monkeypatch):
     monkeypatch.setenv("SUPABASE_JWT_SECRET", SECRET)
     monkeypatch.setenv("RETRIEVAL_ENABLED", "false")
     client = TestClient(app)
-    resp = client.post("/v1/retrieval/search", headers=_auth_headers(), json={"materialId": "m1", "query": "hi"})
+    resp = client.post(
+        "/v1/retrieval/search", headers=_auth_headers(), json={"materialId": "m1", "query": "hi"}
+    )
     assert resp.status_code == 404
 
 
@@ -117,7 +125,9 @@ def test_retrieval_hybrid_false_omits_query_text(monkeypatch):
         if req.url.path.endswith("/rest/v1/rpc/match_content_chunks"):
             body = json.loads(req.content or b"{}")
             captured.update(body)
-            return httpx.Response(200, json=[{"chunk_id": "c1", "chunk_text": "x", "similarity": 0.5}])
+            return httpx.Response(
+                200, json=[{"chunk_id": "c1", "chunk_text": "x", "similarity": 0.5}]
+            )
         return httpx.Response(404, json={})
 
     transport = httpx.MockTransport(handler)
@@ -136,7 +146,7 @@ def test_retrieval_hybrid_false_omits_query_text(monkeypatch):
         json={"materialId": "m1", "query": "hello", "hybrid": False},
     )
     assert resp.status_code == 200
-    # Must send query_text as null to avoid PostgREST overload ambiguity (016 4-arg is the only live function)
+    # query_text must be null: the 4-arg overload (016) is the only live function
     assert captured.get("query_text") is None
 
 

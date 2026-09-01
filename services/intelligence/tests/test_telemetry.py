@@ -58,6 +58,40 @@ def test_record_contract_dict_excludes_persistence_only_fields() -> None:
     assert payload["repairAttempted"] is False
 
 
+def test_record_carries_generation_fields_in_contract_dict() -> None:
+    record = make_record(
+        task="assessment_generation",
+        questions_requested=1,
+        questions_accepted=1,
+        reasoning_tokens=12,
+    )
+    payload = record.to_contract_dict()
+    assert payload["questionsRequested"] == 1
+    assert payload["questionsAccepted"] == 1
+    assert payload["reasoningTokens"] == 12
+    schema = json.loads(CONTRACT_SCHEMA.read_text(encoding="ascii"))
+    jsonschema.Draft202012Validator(schema).validate(payload)
+
+
+def test_record_omits_reasoning_tokens_when_absent() -> None:
+    payload = make_record().to_contract_dict()
+    assert "reasoningTokens" not in payload
+    assert "reasoning_tokens" not in make_record().to_row_dict()
+
+
+def test_record_carries_generation_fields_in_row_dict() -> None:
+    record = make_record(
+        task="assessment_generation",
+        questions_requested=1,
+        questions_accepted=0,
+        reasoning_tokens=None,
+    )
+    row = record.to_row_dict()
+    assert row["questions_requested"] == 1
+    assert row["questions_accepted"] == 0
+    assert "reasoning_tokens" not in row
+
+
 def test_record_row_dict_maps_to_snake_case_columns() -> None:
     row = make_record().to_row_dict()
     assert row["trace_id"] == "trace-1"

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import Dexie from 'dexie';
-import { EventStore } from './EventStore';
+import { ASSESSMENT_CREATED, EventStore } from './EventStore';
 
 describe('EventStore', () => {
   let db: Dexie;
@@ -160,6 +160,32 @@ describe('EventStore', () => {
       const events = await eventStore.getEventsSince(lastId);
 
       expect(events).toHaveLength(0);
+    });
+  });
+
+  describe('AssessmentCreated pointer event', () => {
+    it('appends and reads back the assessment pointer payload', async () => {
+      const id = await eventStore.append(ASSESSMENT_CREATED, {
+        assessmentId: 'assessment-1',
+        materialIds: ['mat-1'],
+      });
+
+      const events = await eventStore.getAll();
+      const event = events.find((entry) => entry.id === id);
+      expect(event?.kind).toBe('AssessmentCreated');
+      expect(event?.payload).toEqual({
+        assessmentId: 'assessment-1',
+        materialIds: ['mat-1'],
+      });
+    });
+
+    it('requires no Dexie schema version bump (events table already indexes kind)', async () => {
+      const versions = db.verno;
+      await eventStore.append(ASSESSMENT_CREATED, {
+        assessmentId: 'assessment-1',
+        materialIds: ['mat-1'],
+      });
+      expect(db.verno).toBe(versions);
     });
   });
 

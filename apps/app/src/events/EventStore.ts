@@ -1,6 +1,9 @@
 import Dexie from 'dexie';
 import { liveQuery } from 'dexie';
 
+/** Durable event kind for a server-owned assessment generation request. */
+export const ASSESSMENT_CREATED = 'AssessmentCreated' as const;
+
 export interface Event {
   id?: number;
   kind: string;

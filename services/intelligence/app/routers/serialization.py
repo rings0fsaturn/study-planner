@@ -12,7 +12,7 @@ _STATUS_BY_CODE = {
     "not_found": 404,
     "conflict": 409,
     "invalid_request": 400,
-    "validation_failed": 400,
+    "validation_failed": 409,
 }
 
 
@@ -37,6 +37,7 @@ def async_job_from_row(row: dict) -> dict:
         status=row.get("status") or "queued",
         attempt=int(row.get("attempt") or 1),
         correlation_id=row.get("correlation_id") or "",
+        kind=row.get("kind") or "ingestion",
         result_id=row.get("result_id"),
         error_code=row.get("error_code"),
         error_message=row.get("error_message"),
@@ -44,4 +45,7 @@ def async_job_from_row(row: dict) -> dict:
         created_at=row.get("created_at") or "",
         completed_at=row.get("completed_at"),
     )
-    return job.to_async_job()
+    payload = job.to_async_job()
+    if payload.get("error") and row.get("retry_after_seconds"):
+        payload["error"]["retryAfterSeconds"] = int(row["retry_after_seconds"])
+    return payload

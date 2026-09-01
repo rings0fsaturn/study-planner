@@ -71,9 +71,7 @@ def _assert_close(actual: Any, expected: Any, path: str = "") -> None:
         assert actual == expected, f"{path}: {actual!r} != {expected!r}"
         return
     if isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
-        if isinstance(expected, int) and isinstance(actual, int) and not isinstance(
-            expected, bool
-        ):
+        if isinstance(expected, int) and isinstance(actual, int) and not isinstance(expected, bool):
             assert actual == expected, f"{path}: {actual!r} != {expected!r}"
             return
         if not math.isclose(float(actual), float(expected), rel_tol=TOLERANCE, abs_tol=TOLERANCE):
@@ -100,7 +98,9 @@ def _assert_close(actual: Any, expected: Any, path: str = "") -> None:
 
 
 @pytest.mark.parametrize(("case_name", "input_path", "endpoint"), _fixture_cases())
-def test_v1_endpoint_matches_golden_fixture(case_name: str, input_path: Path, endpoint: str) -> None:
+def test_v1_endpoint_matches_golden_fixture(
+    case_name: str, input_path: Path, endpoint: str
+) -> None:
     payload = json.loads(input_path.read_text())
     expected_path = input_path.with_name(input_path.name.replace(".input.json", ".expected.json"))
     expected = json.loads(expected_path.read_text())

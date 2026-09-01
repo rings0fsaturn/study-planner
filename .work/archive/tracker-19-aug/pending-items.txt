@@ -1,0 +1,10 @@
+Open-ended / yet-to-complete items
+- Productionizing the worker/embedder runtime is explicitly out-of-scope and not started .work/plans/active/2026-08-17-sidecar-embed-live-e2e/VERIFICATION.md:45 D-01 .work/plans/active/2026-08-17-sidecar-embed-live-e2e/PLAN.md:97: compose orchestration, managed launcher (./docker-app/full-app), monitoring dashboards. Consumes recommended 128/16 point. Next plan needed before qwen-sidecar is live on production corpus.
+
+- Full corpus restore before next live probe: retrieval-quality program 2026-08-15 wiped/restore-gated dev embeddings .work/STATUS.md:37 — flagged as re-do before next live probe (already satisfied by 2026-08-17 re-embeds but will recur).
+
+- Corpus generalization: retrieval levers need second-corpus confirmation .work/STATUS.md:37; rerank production wiring: typed client + sidecar exist but no retrieval endpoint caller yet .work/STATUS.md:37.
+
+
+- Operator-only steps that remain manual: ./docker-app start on a Docker-enabled host .work/plans/archive/2026-08-14-material-ingestion-readiness/PLAN.md:155; sidecar stop when idle (ROCm librocdxg AsyncEventsLoop ~200% burn, 54-gpu-inference-sidecar.agents.md).
+- Queued tickets blocked on above: #38 generation, #39 taking/grading, #43 mastery etc remain queued per specs/issues/README.md order (next frontier #34/#35 prototypes → #38).

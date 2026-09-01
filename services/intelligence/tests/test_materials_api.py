@@ -206,6 +206,18 @@ def test_job_status_returns_async_job(_override_client: FakeUserClient) -> None:
     assert body["attempt"] == 1
 
 
+def test_job_status_returns_generation_kind(_override_client: FakeUserClient) -> None:
+    job = _job()
+    job["kind"] = "generation"
+    job["result_id"] = "assessment-1"
+    _override_client.seed(_material(), jobs=[job])
+    response = asyncio.run(_request("GET", "/v1/jobs/job-1"))
+    assert response.status_code == 200
+    body = response.json()
+    assert body["kind"] == "generation"
+    assert body["resultId"] == "assessment-1"
+
+
 def test_job_status_missing_job_is_404(_override_client: FakeUserClient) -> None:
     response = asyncio.run(_request("GET", "/v1/jobs/nope"))
     assert response.status_code == 404

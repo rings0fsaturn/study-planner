@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 2 Review-2: From Contract Pack to Working Pipeline</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --paper: #F5EFE4;
+      --paper-deep: #EDE3D2;
+      --card: #FBF7EE;
+      --ink: #2A1F18;
+      --ink-soft: #5C4D40;
+      --ink-faint: #8B7B6B;
+      --rule: #D9CDB8;
+      --rule-soft: #E6DCC8;
+      --terra: #B85C38;
+      --terra-d: #8E4429;
+      --moss: #4A6B3A;
+      --moss-soft: #E8F0E3;
+      --clay: #A9762F;
+      --clay-soft: #F5E9D6;
+      --disp: 'Fraunces', Georgia, serif;
+      --body: 'Inter Tight', system-ui, sans-serif;
+      --mono: 'JetBrains Mono', monospace;
+    }
+    html, body { height: 100%; background: #2A241C; font-family: var(--body); overflow: hidden; }
+    #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+    #frame { width: 1280px; height: 720px; position: relative; transform-origin: center; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
+    .slide { position: absolute; inset: 0; background: var(--paper); display: none; overflow: hidden; }
+    .slide.active { display: block; }
+    .pad { padding: 44px 64px; width: 100%; height: 100%; display: flex; flex-direction: column; }
+    .pes { position: absolute; top: 22px; right: 30px; display: flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--ink-faint); }
+    .pes .dot { width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--terra); }
+    .hd { display: flex; align-items: baseline; gap: 16px; border-bottom: 2px solid var(--ink); padding-bottom: 10px; margin-bottom: 20px; }
+    .hd .num { font-family: var(--mono); font-size: 15px; color: var(--terra); }
+    .hd .ttl { font-family: var(--disp); font-size: 30px; font-weight: 600; color: var(--ink); letter-spacing: -0.3px; }
+    .hd .ct { margin-left: auto; font-family: var(--mono); font-size: 12px; color: var(--ink-faint); }
+    .lead { font-family: var(--disp); font-size: 28px; font-weight: 400; line-height: 1.25; color: var(--ink); }
+    .sub { font-size: 17px; color: var(--ink-soft); line-height: 1.5; margin-top: 12px; max-width: 86%; }
+    .footnote { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-top: auto; padding-top: 14px; line-height: 1.45; }
+    .navbar { position: absolute; bottom: 16px; left: 0; right: 0; display: flex; align-items: center; justify-content: center; gap: 14px; font-family: var(--mono); font-size: 11px; color: var(--ink-faint); z-index: 5; }
+    .pbar { position: absolute; bottom: 0; left: 0; height: 4px; background: var(--terra); z-index: 6; transition: width .2s; }
+    .hint { position: fixed; bottom: 14px; right: 18px; font-family: var(--mono); font-size: 11px; color: rgba(245,239,228,.5); z-index: 20; }
+    .btn { cursor: pointer; padding: 4px 10px; border-radius: 6px; border: 1px solid var(--rule); background: var(--card); }
+    .btn:hover { background: var(--paper-deep); }
+
+    /* Title slide */
+    .title-slide .pad { justify-content: center; }
+    .eyebrow { font-family: var(--mono); font-size: 13px; letter-spacing: 2.5px; color: var(--terra); margin-bottom: 18px; text-transform: uppercase; }
+    .title-main { font-family: var(--disp); font-size: 52px; font-weight: 600; line-height: 1.05; color: var(--ink); }
+    .title-sub { font-size: 19px; color: var(--ink-soft); line-height: 1.45; margin-top: 18px; max-width: 80%; }
+    .title-rule { width: 64px; height: 4px; background: var(--terra); margin: 24px 0 20px; border-radius: 2px; }
+    .meta-row { display: flex; gap: 40px; margin-top: 34px; font-size: 15px; color: var(--ink-soft); }
+    .meta-row .label { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--ink-faint); display: block; margin-bottom: 3px; text-transform: uppercase; }
+    .status-pill { display: inline-flex; align-items: center; gap: 8px; margin-top: 28px; padding: 10px 16px; background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 30px; font-size: 15px; color: var(--moss); font-weight: 500; }
+    .status-pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--moss); }
+
+    /* Cards */
+    .cards-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; flex: 1; min-height: 0; }
+    .card { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+    .card .kicker { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--terra); text-transform: uppercase; margin-bottom: 12px; }
+    .card .title { font-family: var(--disp); font-size: 20px; font-weight: 600; color: var(--ink); margin-bottom: 12px; line-height: 1.2; }
+    .card ul { list-style: none; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+    .card li { position: relative; padding-left: 16px; margin-bottom: 7px; }
+    .card li::before { content: "·"; position: absolute; left: 0; color: var(--terra); font-weight: 700; }
+    .card .count { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--moss); margin-bottom: 4px; }
+
+    /* Pipeline */
+    .pipe { display: flex; align-items: flex-start; gap: 5px; margin: 6px 0 16px; }
+    .pipe .col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .pipe .col.arr { flex: 0 0 16px; }
+    .pstep { background: var(--paper-deep); border: 1px solid var(--rule); border-top: 3px solid var(--terra); border-radius: 8px; padding: 8px 6px; font-family: var(--mono); font-size: 13px; color: var(--ink); text-align: center; width: 100%; }
+    .pstep.subbed { border-top-color: var(--moss); }
+    .psub { font-size: 11px; color: var(--ink-faint); text-align: center; line-height: 1.3; }
+    .parrow { font-family: var(--mono); font-size: 15px; color: var(--terra); margin-top: 8px; }
+
+    /* Legend strip */
+    .legend-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 16px; }
+    .lcard { background: var(--paper-deep); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; }
+    .lcard .lname { font-family: var(--mono); font-size: 12px; letter-spacing: .5px; color: var(--terra); text-transform: uppercase; margin-bottom: 5px; }
+    .lcard p { font-size: 13px; color: var(--ink-soft); line-height: 1.45; }
+
+    /* Metric table */
+    .table-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+    .perf-slide .table-wrap,
+    .perf-slide .cards-3 { flex: 0 0 auto; }
+    .metric-table { width: 100%; border-collapse: collapse; }
+    .metric-table th { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; text-align: left; color: var(--ink-faint); padding: 8px 12px; border-bottom: 2px solid var(--ink); }
+    .metric-table th.num, .metric-table td.num { text-align: right; }
+    .metric-table td { font-size: 14.5px; color: var(--ink-soft); padding: 9px 12px; border-bottom: 1px solid var(--rule-soft); }
+    .metric-table td .m { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--ink); }
+    .metric-table td .plain { font-size: 12px; color: var(--ink-faint); display: block; margin-top: 1px; }
+    .metric-table tr.best td { background: var(--moss-soft); }
+    .metric-table tr.best td .m { color: var(--moss); }
+    .metric-table tr.bad td { background: var(--clay-soft); }
+    .metric-table tr.bad td .m { color: var(--clay); }
+    .tblnote { font-size: 11px; color: var(--ink-faint); margin-top: 8px; line-height: 1.4; }
+
+    /* Callout */
+    .callout { background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 10px; padding: 14px 16px; margin-top: 14px; font-size: 14.5px; color: var(--ink); line-height: 1.45; }
+    .callout b { color: var(--moss); }
+
+    /* Parity box */
+    .parity-box { background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 10px; padding: 13px 16px; margin: 14px 0; }
+    .parity-box .plabel { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--moss); text-transform: uppercase; margin-bottom: 5px; }
+    .parity-box p { font-size: 14px; color: var(--ink); line-height: 1.45; }
+
+    /* Pending / checklists */
+    .pending-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; min-height: 0; }
+    .pending-col .colhead { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; padding-bottom: 8px; border-bottom: 2px solid var(--ink); margin-bottom: 12px; }
+    .pending-col.ok .colhead { color: var(--moss); border-color: var(--moss); }
+    .pending-col.todo .colhead { color: var(--terra); border-color: var(--terra); }
+    .pitem { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 11px 14px; margin-bottom: 9px; font-size: 14px; color: var(--ink-soft); line-height: 1.4; }
+    .pitem .mark { font-family: var(--mono); margin-right: 8px; }
+    .pitem.ok { border-left: 3px solid var(--moss); }
+    .pitem.todo { border-left: 3px solid var(--terra); }
+    .pitem .it { color: var(--ink); font-weight: 500; }
+
+    /* Challenges */
+    .ch-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 12px; }
+    .chcard { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 14px 16px; border-top: 3px solid var(--clay); }
+    .chcard .ck { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--clay); text-transform: uppercase; margin-bottom: 8px; }
+    .chcard .ct { font-family: var(--disp); font-size: 17px; font-weight: 600; color: var(--ink); margin-bottom: 7px; line-height: 1.2; }
+    .chcard p { font-size: 12.5px; color: var(--ink-soft); line-height: 1.45; }
+    .ch-head { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--clay); margin-top: 16px; }
+
+    /* Loop / steps */
+    .loop-wrap { display: flex; align-items: stretch; justify-content: center; gap: 8px; flex: 1; padding: 14px 0 6px; }
+    .loop-step { background: var(--card); border: 1px solid var(--rule); border-top: 3px solid var(--terra); border-radius: 10px; padding: 16px 14px; text-align: center; min-width: 200px; display: flex; flex-direction: column; justify-content: center; }
+    .loop-step .lab { font-size: 15px; font-weight: 600; color: var(--ink); line-height: 1.3; }
+    .loop-step .desc { font-size: 12px; color: var(--ink-faint); margin-top: 6px; line-height: 1.4; }
+    .loop-arrow { color: var(--terra); font-size: 22px; align-self: center; }
+    .success-box { background: var(--moss-soft); border: 1px solid rgba(74,107,58,.25); border-radius: 10px; padding: 15px 18px; margin-top: 14px; }
+    .success-box .slabel { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--moss); text-transform: uppercase; margin-bottom: 6px; }
+    .success-box .sbody { font-size: 15px; color: var(--ink); line-height: 1.45; }
+
+    /* Decision chips */
+    .decision-strip { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .dchip { font-family: var(--mono); font-size: 11.5px; padding: 7px 13px; border-radius: 20px; border: 1px solid var(--rule); background: var(--paper-deep); color: var(--ink-soft); }
+    .dchip.dec { background: var(--moss-soft); border-color: rgba(74,107,58,.3); color: var(--moss); }
+    .dchip.rej { background: var(--clay-soft); border-color: rgba(169,118,47,.3); color: var(--clay); }
+
+    /* Timeline */
+    .timeline { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; }
+    .week { background: var(--card); border: 1px solid var(--rule); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; }
+    .week .wkhead { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; color: var(--terra); margin-bottom: 8px; }
+    .week .wktitle { font-family: var(--disp); font-size: 19px; font-weight: 600; color: var(--ink); margin-bottom: 14px; }
+    .week ul { list-style: none; font-size: 13.5px; color: var(--ink-soft); line-height: 1.5; }
+    .week li { position: relative; padding-left: 18px; margin-bottom: 8px; }
+    .week li::before { content: "→"; position: absolute; left: 0; color: var(--moss); }
+    .week li .d { font-family: var(--mono); font-size: 11.5px; color: var(--terra); margin-right: 5px; }
+
+    /* Appendix tables */
+    .app-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; min-height: 0; }
+    .app-col { display: flex; flex-direction: column; }
+    .app-col .ahead { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--terra); margin-bottom: 6px; }
+    .app-col .adetail { font-size: 11.5px; color: var(--ink-faint); margin-bottom: 10px; line-height: 1.4; }
+    .tbl2 { width: 100%; border-collapse: collapse; }
+    .tbl2 th { font-family: var(--mono); font-size: 10px; letter-spacing: .5px; text-transform: uppercase; text-align: left; color: var(--ink-faint); padding: 6px 8px; border-bottom: 2px solid var(--ink); }
+    .tbl2 th.num, .tbl2 td.num { text-align: right; }
+    .tbl2 td { font-family: var(--mono); font-size: 12px; color: var(--ink-soft); padding: 5.5px 8px; border-bottom: 1px solid var(--rule-soft); }
+    .tbl2 td .m { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--ink); }
+    .tbl2 tr.best td { background: var(--moss-soft); }
+  </style>
+</head>
+<body>
+  <div id="stage">
+    <div id="frame">
+
+      <!-- Slide 1: Title -->
+      <section class="slide active title-slide">
+        <div class="pes"><div class="dot"></div>PHASE 2 · REVIEW-2</div>
+        <div class="pad">
+          <div class="eyebrow">UE20CS971 · PROJECT PHASE-2 · REVIEW-2</div>
+          <div class="title-main">From Contract Pack<br>to Working Pipeline</div>
+          <div class="title-sub">Phase 2 update: materials flow from upload to ready chunks. Question generation settings now come from measured evidence.</div>
+          <div class="title-rule"></div>
+          <div class="status-pill">Content spine live · 754-chunk corpus embedded on local GPU</div>
+          <div class="meta-row">
+            <div><span class="label">Presenter</span>Rohit Saji · PES2PGE24DS201</div>
+            <div><span class="label">Guide</span>Prof. Ramesh Prakash Guledgudd</div>
+            <div><span class="label">Program</span>M.Tech · Data Science &amp; AI · PES University</div>
+            <div><span class="label">Date</span>22 August 2026</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 2: Two weeks in review -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>02 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">02</span><span class="ttl">Two weeks in review: from decisions to running systems</span><span class="ct">Timeline</span></div>
+          <div class="timeline">
+            <div class="week">
+              <div class="wkhead">AUG 9 to AUG 15</div>
+              <div class="wktitle">Decisions closed, first slices shipped</div>
+              <ul>
+                <li><span class="d">AUG 11</span>Library UX (#19) and review-surface UX (#20) decisions closed</li>
+                <li><span class="d">AUG 13</span>Material library shipped (#36): server rows, card grid, picker. App tests 612.</li>
+                <li><span class="d">AUG 14</span>Ingestion shipped (#37): worker queue, telemetry, retry. App tests 668.</li>
+                <li><span class="d">AUG 14</span>Full-book failure root-caused: provider token-quota burst. Throttle and resume fixes landed.</li>
+                <li><span class="d">AUG 15</span>Retrieval evaluation built: 30 verified questions scored on the live corpus</li>
+              </ul>
+            </div>
+            <div class="week">
+              <div class="wkhead">AUG 16 to AUG 22</div>
+              <div class="wktitle">Local GPUs, live endpoints, provider decision</div>
+              <ul>
+                <li><span class="d">AUG 16</span>GPU embedder passed its parity gate. A full book embeds in seconds.</li>
+                <li><span class="d">AUG 17</span>Live close-out: real 572-page book reached ready state</li>
+                <li><span class="d">AUG 19</span>Corpus restore tooling rebuilt the dev library. 754 chunks became the durable baseline.</li>
+                <li><span class="d">AUG 21</span>Docker runtime productionized. Gated POST /v1/retrieval/search went live.</li>
+                <li><span class="d">AUG 22</span>Generation probe finished (395 calls). DeepSeek chosen as generation provider.</li>
+              </ul>
+            </div>
+          </div>
+          <div class="footnote">Every line traces to a reviewed plan with a verification log under .work/plans/.</div>
+        </div>
+      </section>
+
+      <!-- Slide 3: Content pipeline live -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>03 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">03</span><span class="ttl">The content pipeline runs end to end</span><span class="ct">Live</span></div>
+          <div class="pipe">
+            <div class="col"><div class="pstep">upload</div><div class="psub">worker queue</div></div>
+            <div class="col arr"><div class="parrow">→</div></div>
+            <div class="col"><div class="pstep">extract</div><div class="psub">PDF, YouTube, web, text</div></div>
+            <div class="col arr"><div class="parrow">→</div></div>
+            <div class="col"><div class="pstep">chunk</div><div class="psub">30-token overlap</div></div>
+            <div class="col arr"><div class="parrow">→</div></div>
+            <div class="col"><div class="pstep">embed</div><div class="psub">Qwen3 on local GPU</div></div>
+            <div class="col arr"><div class="parrow">→</div></div>
+            <div class="col"><div class="pstep subbed">validate</div><div class="psub">count and owner checks</div></div>
+            <div class="col arr"><div class="parrow">→</div></div>
+            <div class="col"><div class="pstep subbed">ready</div><div class="psub">status pushed to the page</div></div>
+          </div>
+          <div class="cards-3">
+            <div class="card">
+              <div class="kicker">Real book, live run</div>
+              <div class="count">754</div>
+              <ul>
+                <li>572-page PDF through the full worker path</li>
+                <li>754 chunks extracted, 754 embedded</li>
+                <li>zero missing vectors. Final status: ready.</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">Observability</div>
+              <div class="count">67</div>
+              <ul>
+                <li>telemetry records for one ingestion job</li>
+                <li>time, tokens, attempts recorded per stage</li>
+                <li>this layer exposed the quota-breach cause</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">One-command runtime</div>
+              <div class="count">1</div>
+              <ul>
+                <li>./docker-app start serves the whole product</li>
+                <li>site, app, service, worker in containers</li>
+                <li>GPU sidecar joins by configuration</li>
+              </ul>
+            </div>
+          </div>
+          <div class="footnote">Migrations 004 to 017 pushed to the hosted Supabase project. Row security scopes every table to its owner.</div>
+        </div>
+      </section>
+
+      <!-- Slide 4: Retrieval today -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>04 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">04</span><span class="ttl">Retrieval today: what search finds on the current corpus</span><span class="ct">Metrics</span></div>
+          <div class="legend-strip">
+            <div class="lcard"><div class="lname">Top-hit share</div><p>How often the FIRST passage shown already contains the answer.</p></div>
+            <div class="lcard"><div class="lname">Top-3 share</div><p>How often the answer sits inside the first THREE passages shown.</p></div>
+            <div class="lcard"><div class="lname">Rank score</div><p>How close to first place the answer lands on average. 1.00 means always first.</p></div>
+          </div>
+          <div class="table-wrap">
+            <table class="metric-table">
+              <tr><th>Search setup</th><th class="num">Top-hit share</th><th class="num">Top-3 share</th><th class="num">Rank score</th></tr>
+              <tr><td>Vectors only</td><td class="num"><span class="m">0.60</span><span class="plain">18 of 30 questions</span></td><td class="num"><span class="m">0.77</span><span class="plain">23 of 30 questions</span></td><td class="num"><span class="m">0.706</span></td></tr>
+              <tr class="best"><td>Keywords + vectors (hybrid)</td><td class="num"><span class="m">0.60</span><span class="plain">18 of 30 questions</span></td><td class="num"><span class="m">0.80</span><span class="plain">24 of 30 questions</span></td><td class="num"><span class="m">0.720</span></td></tr>
+            </table>
+            <div class="callout">The same search, live through our shipped API: rank score <b>0.703</b>. All numbers come from the corpus stored today: 754 chunks of the 572-page book, Qwen embeddings.</div>
+            <div class="tblnote">Hybrid keyword fusion adds one more answered question inside the top three. Reranker re-validation on this corpus is queued.</div>
+          </div>
+          <div class="footnote">Evaluation: 30 verified questions with hand-checked answer passages. Scored with the probe harness under services/intelligence/scripts/.</div>
+        </div>
+      </section>
+
+      <!-- Slide 5: GPU performance -->
+      <section class="slide perf-slide">
+        <div class="pes"><div class="dot"></div>05 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">05</span><span class="ttl">Local GPU: fast embedding, no quota</span><span class="ct">Performance</span></div>
+          <div class="table-wrap">
+            <table class="metric-table">
+              <tr><th>Measure</th><th class="num">Before (CPU)</th><th class="num">Now (GPU sidecar)</th></tr>
+              <tr><td>Embedding speed</td><td class="num"><span class="m">81</span><span class="plain">chunks per minute</span></td><td class="num"><span class="m">up to 4,522</span><span class="plain">chunks per minute · about 56x faster</span></td></tr>
+              <tr><td>Full 572-page book</td><td class="num"><span class="m">about 9.7 min</span></td><td class="num"><span class="m">about 10 s</span></td></tr>
+              <tr><td>Rerank of top-50 passages</td><td class="num"><span class="m">about 41 s</span></td><td class="num"><span class="m">about 0.33 s</span></td></tr>
+              <tr class="best"><td>External limits</td><td class="num"><span class="m">quota-paced API</span></td><td class="num"><span class="m">none, runs locally</span></td></tr>
+            </table>
+            <div class="callout">At this speed, a full textbook is searchable about a minute after upload.</div>
+            <div class="parity-box">
+              <div class="plabel">Parity gate</div>
+              <p>GPU output matched CPU output: identical passage rankings on 29 of 30 test questions.</p>
+            </div>
+          </div>
+          <div class="cards-3" style="margin-top:14px">
+            <div class="card">
+              <div class="kicker">Demand-start lifecycle</div>
+              <ul>
+                <li>The sidecar burns idle CPU while it runs (known upstream defect)</li>
+                <li>We start it for work and stop it after</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">Tuned operating point</div>
+              <ul>
+                <li>Batch size 128 gives 4,381 warm chunks per minute</li>
+                <li>Nine swept configs ran with zero failures</li>
+              </ul>
+            </div>
+            <div class="card">
+              <div class="kicker">Mixing guard</div>
+              <ul>
+                <li>Each material records its embedder</li>
+                <li>Mismatched vector sets fail validation instead of blending</li>
+              </ul>
+            </div>
+          </div>
+          <div class="footnote">AMD RX 9070 XT through ROCm on WSL2. Models cache locally. No external calls during embedding.</div>
+        </div>
+      </section>
+
+      <!-- Slide 6: Generation probe -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>06 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">06</span><span class="ttl">Question generation: probed before we build</span><span class="ct">Probe</span></div>
+          <div class="sub" style="margin-top:0;margin-bottom:14px">395 trial generations from DeepSeek V4 Flash, grounded in the same book corpus, across six reasoning levels. Total cost about $0.17.</div>
+          <div class="table-wrap">
+            <table class="metric-table">
+              <tr><th>What we measured</th><th class="num">Result</th><th>In plain words</th></tr>
+              <tr><td>Format-valid share</td><td class="num"><span class="m">96.7 to 100%</span></td><td>Questions parse into our storage format.</td></tr>
+              <tr><td>Source-reference validity</td><td class="num"><span class="m">83 to 100%</span></td><td>Citations point to passages that exist in the book.</td></tr>
+              <tr><td>Verbatim copying</td><td class="num"><span class="m">at most 6.7%</span></td><td>Questions paraphrase. They do not photocopy.</td></tr>
+              <tr class="best"><td>Duplicate questions</td><td class="num"><span class="m">0%</span></td><td>No two questions were near-identical.</td></tr>
+              <tr class="bad"><td>Latency, reasoning on</td><td class="num"><span class="m">p95 up to 133 s</span></td><td>Broke the 30-second budget with no quality gain.</td></tr>
+              <tr class="best"><td>Latency, reasoning off</td><td class="num"><span class="m">p95 20.8 s, zero breaches</span></td><td>Fits the budget comfortably.</td></tr>
+            </table>
+          </div>
+          <div class="decision-strip">
+            <span class="dchip dec">Decision: reasoning stays OFF for question generation</span>
+            <span class="dchip dec">Decision: DeepSeek replaces Gemini for all generation tasks</span>
+            <span class="dchip dec">Rule: every response passes a local schema check. Provider strict mode alone is not enough.</span>
+            <span class="dchip rej">Rejected: json mode returned its own shape. Format-valid rate 0%.</span>
+          </div>
+          <div class="footnote">Evidence: research/doc/deepseek-generation-probe/report.md · script: services/intelligence/scripts/generation_probe.py</div>
+        </div>
+      </section>
+
+      <!-- Slide 7: Honest status -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>07 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">07</span><span class="ttl">Where we stand against the Review-1 promise</span><span class="ct">Honest status</span></div>
+          <div class="pending-cols">
+            <div class="pending-col ok">
+              <div class="colhead">Delivered since Review 1</div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Server-owned material library (#36)</span></div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Ingestion pipeline with telemetry and retry (#37)</span></div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Search quality measured on the live corpus</span></div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Local GPU embedding inside the product runtime</span></div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Search endpoint behind sign-in (POST /v1/retrieval/search)</span></div>
+              <div class="pitem ok"><span class="mark">✔</span><span class="it">Generation provider chosen from probe evidence</span></div>
+            </div>
+            <div class="pending-col todo">
+              <div class="colhead">Still ahead of us</div>
+              <div class="pitem todo"><span class="mark">☐</span><span class="it">Generation endpoint implementation (#38 starts next)</span></div>
+              <div class="pitem todo"><span class="mark">☐</span><span class="it">Practice run screen and attempt flow</span></div>
+              <div class="pitem todo"><span class="mark">☐</span><span class="it">Server grading paths</span></div>
+              <div class="pitem todo"><span class="mark">☐</span><span class="it">Mastery updates and adaptive difficulty</span></div>
+              <div class="pitem todo"><span class="mark">☐</span><span class="it">Roadmap feedback surface</span></div>
+            </div>
+          </div>
+          <div class="ch-head">What went wrong and what we changed</div>
+          <div class="ch-row">
+            <div class="chcard">
+              <div class="ck">Challenge 1</div>
+              <div class="ct">Quota burst stopped the first full book</div>
+              <p>27,000 tokens in 10 seconds hit the per-minute limit. Throttle, resume-on-retry, and stage telemetry fixed it.</p>
+            </div>
+            <div class="chcard">
+              <div class="ck">Challenge 2</div>
+              <div class="ct">Search quality halved overnight</div>
+              <p>Query and passages used different embedding models. One shared local encoder fixed both sides. Restore tooling now rebuilds corpora safely.</p>
+            </div>
+            <div class="chcard">
+              <div class="ck">Challenge 3</div>
+              <div class="ct">Provider JSON mode lied twice</div>
+              <p>Routed endpoints drifted on 4 of 383 outputs. Local validation became mandatory.</p>
+            </div>
+          </div>
+          <div class="footnote">Review 1 promised a full practice loop in two weeks. We built and hardened the content half. The assessment half starts now.</div>
+        </div>
+      </section>
+
+      <!-- Slide 8: Next two weeks -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>08 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">08</span><span class="ttl">Next two weeks: decisions, then the first generation slice</span><span class="ct">Plan</span></div>
+          <div class="loop-wrap">
+            <div class="loop-step">
+              <div class="lab">Lock runtime settings (#53)</div>
+              <div class="desc">Reasoning level per task, timeout budget, pinned sampling, retry mapping.</div>
+            </div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step">
+              <div class="lab">Neutralize the contract pack (#54)</div>
+              <div class="desc">Provider-neutral envelopes, regenerated fixtures, amended spec text.</div>
+            </div>
+            <div class="loop-arrow">→</div>
+            <div class="loop-step">
+              <div class="lab">Implement grounded generation (#38)</div>
+              <div class="desc">Objective questions from retrieved chunks through the model-neutral interface.</div>
+            </div>
+          </div>
+          <div class="success-box">
+            <div class="slabel">Definition of success for Review 3</div>
+            <div class="sbody">Generated objective questions grounded in retrieved chunks, served by our own endpoint, and scored by the same validity harness used in this probe.</div>
+          </div>
+          <div class="footnote">Assessment-review and roadmap-feedback prototypes (#34, #35) proceed in parallel.</div>
+        </div>
+      </section>
+
+      <!-- Slide 9: Appendix -->
+      <section class="slide">
+        <div class="pes"><div class="dot"></div>09 / 09</div>
+        <div class="pad">
+          <div class="hd"><span class="num">09</span><span class="ttl">Appendix: metric tables in full detail</span><span class="ct">Reference</span></div>
+          <div class="app-grid">
+            <div class="app-col">
+              <div class="ahead">Retrieval on the current corpus (754 chunks, Qwen embeddings)</div>
+              <div class="adetail">Shares show how many of 30 questions found the answer inside the first 1, 3, or 5 passages. Rank score 1.00 means always first.</div>
+              <table class="tbl2">
+                <tr><th>Search setup</th><th class="num">Top-hit</th><th class="num">Top-3</th><th class="num">Top-5</th><th class="num">Rank score</th></tr>
+                <tr><td>Vectors only</td><td class="num"><span class="m">0.60</span></td><td class="num"><span class="m">0.77</span></td><td class="num"><span class="m">0.87</span></td><td class="num"><span class="m">0.706</span></td></tr>
+                <tr class="best"><td>Keywords + vectors</td><td class="num"><span class="m">0.60</span></td><td class="num"><span class="m">0.80</span></td><td class="num"><span class="m">0.87</span></td><td class="num"><span class="m">0.720</span></td></tr>
+                <tr><td>Live endpoint probe</td><td class="num"><span class="m">0.60</span></td><td class="num"><span class="m">0.73</span></td><td class="num"><span class="m">0.87</span></td><td class="num"><span class="m">0.703</span></td></tr>
+              </table>
+            </div>
+            <div class="app-col">
+              <div class="ahead">Generation probe per reasoning level</div>
+              <div class="adetail">S = retrieval-driven generation. R = sampled-context generation. Latency in seconds. Last column counts calls over 30 s.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                  <table class="tbl2">
+                    <tr><th>Tier</th><th class="num">Format-valid</th><th class="num">Citation-valid</th><th class="num">p95 s</th><th class="num">&gt;30 s</th></tr>
+                    <tr class="best"><td>S:off</td><td class="num">96.7</td><td class="num">93.1</td><td class="num">10.5</td><td class="num">0</td></tr>
+                    <tr><td>S:low</td><td class="num">90.0</td><td class="num">85.2</td><td class="num">133.6</td><td class="num">9</td></tr>
+                    <tr><td>S:medium</td><td class="num">96.7</td><td class="num">86.2</td><td class="num">40.9</td><td class="num">5</td></tr>
+                    <tr><td>S:high</td><td class="num">96.7</td><td class="num">93.1</td><td class="num">30.6</td><td class="num">3</td></tr>
+                    <tr><td>S:xhigh</td><td class="num">100.0</td><td class="num">100.0</td><td class="num">41.5</td><td class="num">6</td></tr>
+                    <tr><td>S:max</td><td class="num">96.7</td><td class="num">89.7</td><td class="num">106.2</td><td class="num">5</td></tr>
+                  </table>
+                </div>
+                <div>
+                  <table class="tbl2">
+                    <tr><th>Tier</th><th class="num">Format-valid</th><th class="num">Citation-valid</th><th class="num">p95 s</th><th class="num">&gt;30 s</th></tr>
+                    <tr class="best"><td>R:off</td><td class="num">100.0</td><td class="num">86.7</td><td class="num">20.8</td><td class="num">0</td></tr>
+                    <tr><td>R:low</td><td class="num">96.8</td><td class="num">86.7</td><td class="num">100.5</td><td class="num">10</td></tr>
+                    <tr><td>R:medium</td><td class="num">93.5</td><td class="num">96.5</td><td class="num">40.0</td><td class="num">3</td></tr>
+                    <tr><td>R:high</td><td class="num">96.8</td><td class="num">83.3</td><td class="num">102.3</td><td class="num">5</td></tr>
+                    <tr><td>R:xhigh</td><td class="num">96.8</td><td class="num">93.3</td><td class="num">59.5</td><td class="num">4</td></tr>
+                    <tr><td>R:max</td><td class="num">96.8</td><td class="num">93.3</td><td class="num">57.1</td><td class="num">5</td></tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="footnote">Sources: retrieval-quality program results (2026-08-15) · GPU benchmark (2026-08-16) · productionize verification (2026-08-21) · DeepSeek probe report (2026-08-22)</div>
+        </div>
+      </section>
+
+      <div class="navbar">
+        <span class="btn" onclick="prev()">← Prev</span>
+        <span id="counter">1 / 9</span>
+        <span class="btn" onclick="next()">Next →</span>
+      </div>
+      <div class="pbar" id="pbar" style="width:11.11%"></div>
+    </div>
+  </div>
+  <div class="hint">Use ← / → arrow keys to navigate</div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let current = 0;
+    const total = slides.length;
+
+    function show(i) {
+      slides.forEach((s, idx) => s.classList.toggle('active', idx === i));
+      document.getElementById('counter').textContent = (i + 1) + ' / ' + total;
+      document.getElementById('pbar').style.width = ((i + 1) / total * 100) + '%';
+    }
+
+    function next() {
+      if (current < total - 1) { current++; show(current); }
+    }
+
+    function prev() {
+      if (current > 0) { current--; show(current); }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ') next();
+      if (e.key === 'ArrowLeft') prev();
+    });
+
+    function scaleFrame() {
+      const frame = document.getElementById('frame');
+      const sx = window.innerWidth / 1280;
+      const sy = window.innerHeight / 720;
+      const s = Math.min(sx, sy, 1);
+      frame.style.transform = 'scale(' + s + ')';
+    }
+
+    window.addEventListener('resize', scaleFrame);
+    scaleFrame();
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-export { EventStore, type Event } from './EventStore';
+export { EventStore, ASSESSMENT_CREATED, type Event } from './EventStore';
 export { totalMinutesLogged } from './ProgressEngine';
 export { EventStoreProvider, useEventStoreContext } from './EventStoreProvider';
 export { useEventStore } from './useEventStore';

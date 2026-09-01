@@ -1,0 +1,9 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://study-tracker.local/contracts/phase2/provider/written-grading-response.schema.json",
+  "title": "NormalizedWrittenGrading",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["score", "correct", "rubricVersion", "feedback", "perSkill", "outcome"],
+  "properties": { "score": { "type": "number", "minimum": 0, "maximum": 1 }, "correct": { "type": "boolean" }, "rubricVersion": { "type": "string", "minLength": 1 }, "feedback": { "type": "string" }, "perSkill": { "type": "array", "items": { "type": "object", "required": ["skillTag", "score", "correct"], "properties": { "skillTag": { "type": "string" }, "score": { "type": "number", "minimum": 0, "maximum": 1 }, "correct": { "type": "boolean" } } } }, "outcome": { "enum": ["ok", "malformed_output", "safety_block", "quota_failure", "timeout"] } }
+}

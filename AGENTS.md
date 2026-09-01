@@ -11,7 +11,7 @@ Before planning, editing, reviewing, or running project workflows:
 
 1. Read [`.work/STATUS.md`](.work/STATUS.md) for the current project state and active work.
 2. Read [`.agents/rules/README.agents.md`](.agents/rules/README.agents.md), then read every rule selected by its index for the task.
-3. Read the relevant contract under [`.work/specs/`](.work/specs/) and any active plan under [`.work/plans/active/`](.work/plans/active/).
+3. Read the relevant contract under [`.work/specs/`](.work/specs/) and the active task's `state.md` and `SCRATCHPAD.md` under [`.work/active/<task-id>/`](.work/active/).
 4. Inspect the live implementation and tests before relying on architecture summaries or prior-session notes.
 5. Check `git status --short` and preserve unrelated worktree changes.
 
@@ -53,9 +53,24 @@ For deeper structure, use [`design/architecture.md`](design/architecture.md), [`
 
 The main product contract is [`.work/specs/prd/PRD-study-tracker-web.md`](.work/specs/prd/PRD-study-tracker-web.md).
 Vertical-slice issue contracts live under [`.work/specs/issues/`](.work/specs/issues/).
-Active implementation plans and their verification logs live under [`.work/plans/active/`](.work/plans/active/).
+Active task records (`state.md` + session `SCRATCHPAD.md` + `plan/`) live under [`.work/active/<task-id>/`](.work/active/); the `.work/` layout follows the `work-journal-orchestrator` contract (see [`.work/README.md`](.work/README.md)).
 The Marginalia visual reference is [`design/marginalia.html`](design/marginalia.html).
 Application test credentials are stored in `.work/specs/test-login-cred.txt` and must not be copied into source, tests, logs, or responses.
+
+## Environment Files
+
+These are the repository's environment files. `.env.example` files are tracked templates; copy them to the matching secret-bearing file (listed as gitignored) and fill in values. Never print values, commit these files, or copy secrets into source, tests, or logs.
+
+| Path | Git status | Purpose |
+|---|---|---|
+| `.env.git.local` (root) | gitignored | Operator tokens for tooling: GitHub CLI PAT (`TOKEN`) and Hugging Face token (`HF_TOKEN`). |
+| `apps/app/.env.local` | gitignored | Live local-dev values for the React app: Supabase URL and keys. |
+| `services/intelligence/.env` | gitignored | Live secrets for the Intelligence Service and ingestion worker: Supabase access token, Gemini and OpenRouter API keys. |
+| `apps/app/.env.example` | tracked | Copy-to-`.env.local` template for the React app. |
+| `services/intelligence/.env.example` | tracked | Copy-to-`.env` template for the Intelligence Service. |
+| `docker/.env.example` | tracked | Copy-to-root-`.env` template for the Docker Compose stack. |
+| `.env` (root) | gitignored | Runtime env for the Docker Compose stack, created from `docker/.env.example`. Not currently present. |
+| `research/external/open-notebook/.env.example` | untracked | Config template for a vendored research tool; unrelated to the product. |
 
 ## Common Commands
 
