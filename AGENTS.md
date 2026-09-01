@@ -11,7 +11,7 @@ Before planning, editing, reviewing, or running project workflows:
 
 1. Read [`.work/STATUS.md`](.work/STATUS.md) for the current project state and active work.
 2. Read [`.agents/rules/README.agents.md`](.agents/rules/README.agents.md), then read every rule selected by its index for the task.
-3. Read the relevant contract under [`.work/specs/`](.work/specs/) and any active plan under [`.work/plans/active/`](.work/plans/active/).
+3. Read the relevant contract under [`.work/specs/`](.work/specs/) and the active task's `state.md` and `SCRATCHPAD.md` under [`.work/active/<task-id>/`](.work/active/).
 4. Inspect the live implementation and tests before relying on architecture summaries or prior-session notes.
 5. Check `git status --short` and preserve unrelated worktree changes.
 
@@ -53,7 +53,7 @@ For deeper structure, use [`design/architecture.md`](design/architecture.md), [`
 
 The main product contract is [`.work/specs/prd/PRD-study-tracker-web.md`](.work/specs/prd/PRD-study-tracker-web.md).
 Vertical-slice issue contracts live under [`.work/specs/issues/`](.work/specs/issues/).
-Active implementation plans and their verification logs live under [`.work/plans/active/`](.work/plans/active/).
+Active task records (`state.md` + session `SCRATCHPAD.md` + `plan/`) live under [`.work/active/<task-id>/`](.work/active/); the `.work/` layout follows the `work-journal-orchestrator` contract (see [`.work/README.md`](.work/README.md)).
 The Marginalia visual reference is [`design/marginalia.html`](design/marginalia.html).
 Application test credentials are stored in `.work/specs/test-login-cred.txt` and must not be copied into source, tests, logs, or responses.
 

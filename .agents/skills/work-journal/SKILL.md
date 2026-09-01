@@ -1,217 +1,180 @@
 ---
 name: work-journal
-description: "Maintain the project's .work/ working directory (the local Jira + knowledge base) so its record stays current and nothing is lost. Use at the END of any work worth remembering: a plan or spec was created, a task or phase progressed or finished, after an implementation/grill/research session, or when the user says \"record this\", \"update .work\", \"we finished X\", or \"wrap this up\" - even if they don't name .work. It classifies what happened, creates or updates the right file in the right folder (specs, plans, the task's state/verification log), keeps .work/STATUS.md (the index) honest, and on completion does the wrap: distill findings into research, move the active task folder to archive, flip the STATUS row. The directory LAYOUT differs per project, so it reads .work/README.md first and adapts (see Project profiles). Reach for it whenever a session produced something a future agent needs to resume. Not for editing code, searching the tree, or writing prompts (use prompt-architect)."
+description: "Component skill of work-journal-orchestrator – normally driven by the orchestrator, not invoked on its own. It owns the top of the .work/ memory system: the task-centric directory layout, opening a new task, the STATUS.md project index (schema + cleanup), and the wrap that finishes a task (promote reusable research, move the task to archive, flip its STATUS row). It does not write state.md or SCRATCHPAD.md – those belong to the scratchpad skill; it only reads state.md to keep STATUS honest. If you reached this skill directly, prefer running work-journal-orchestrator."
 ---
 
-# Work Journal — keep `.work/` current
+# Work Journal – layout, index, and task lifecycle
 
-`.work/` is the project's **local Jira + knowledge base**: the index, the per-task specs and
-running logs, the durable research, and the reusable prompts. This skill is the *manual habit* that
-keeps it honest — because in every project that uses `.work/`, git no longer auto-cleans it, so
-record-keeping is on you.
+This skill owns the durable top of the `.work/` system.
+The **scratchpad** skill writes `state.md` and `SCRATCHPAD.md`; you never write those.
+You read `state.md` to keep `STATUS.md` honest, and you own everything at the project and task-boundary level.
 
-> **The layout is NOT the same in every project.** Where `.work/` lives, how it's protected from
-> git, what the subfolders are called, and how rows are tagged all vary. **Two things are constant:**
-> the *method* below (orient → classify → write → update index → wrap) and the *invariants*
-> (durable vs ephemeral; spec vs state; one index; archive-don't-delete; ceremony dial; code is
-> ground truth; no fabrication; manual lifecycle). Everything project-specific you **read from the
-> project itself**.
+`.work/` lives at the project root, a sibling of both repos, **outside both git worktrees on purpose** so git (`merge`, `git clean -fdx`) cannot delete it.
+The cost of that safety is that cleanup is manual – this skill is that habit made repeatable.
 
-## Step 0 — Detect the project and orient (always first)
+## Step 0 – Orient
 
-1. **Read `.work/README.md`** — it is the canonical folder map for *this* project. It tells you
-   where `.work/` sits (inside the repo, or outside as a sibling), how it's protected from git, the
-   exact subfolder names, the task-id convention, and the agent doc(s).
-2. **Read `.work/STATUS.md`** — the read-first index. Learn the section model and the row **tag
-   set** this project uses (e.g. `[UI]`/`[BE]`, or `[APP]`/`[RESEARCH]`/`[PILLAR-A]`/…). Find the
-   row/file that already covers the work in front of you.
-3. If `.work/README.md` is missing, match the tree against **Project profiles** (bottom of this
-   file). If it matches none, infer the layout from what's there and ask the user before inventing a
-   new shape. **On any conflict, the project's own `README.md`/`STATUS.md` wins over this skill.**
+Read `.work/README.md` (the canonical folder map) and `.work/STATUS.md` (the index) before writing anything.
+You are updating a living record, so find the row that already covers the work and update it rather than making a duplicate.
 
-You're updating a living record, not starting fresh — **update the existing row/file rather than
-creating a duplicate.** A second file for something that already has one is the most common way this
-directory rots.
+## The task-centric layout
 
-## Step 1 — Classify what happened
-
-Pick the row(s) that match the session's outcome. A focused session is one row; a rich session
-(grill + plan + kickoff) is legitimately several — apply **one or more** as they fit.
-
-| What happened | Primary action | Where (resolve exact path from README) |
-|---|---|---|
-| A new plan / implementation approach was decided | Create a plan doc | the plans area |
-| A new task's contract/scope was nailed down | Create a spec | the specs area |
-| Durable per-service / API knowledge was learned | Add/extend a research doc | the research area |
-| A task made progress (phase done, decision, blocker) | Append to its running log | the task's state/verification log |
-| A brand-new task is starting | Open its working folder | the active-task area (+ log + spec pointer) |
-| A cross-session baton is needed | Write/append a handover | the handovers area (if the project has one) |
-| A task is fully finished | Do the **wrap** (Step 4) | the archive area + `STATUS.md` |
-| A reusable prompt was written | Save it | the prompts area |
-
-After the primary action, **Step 3 (update STATUS.md) is almost always required too** — the index
-must reflect the new reality.
-
-**Ceremony dial** (don't over-document): trivial change = one line in `STATUS.md`, no new file.
-Normal task = a spec + a running log. Complex task = full planner → developer → verifier trail.
-
-## Naming — keep one task id everywhere
-
-Pick the task's **stable id once** and reuse it verbatim across specs / plans / active / archive so
-the whole task is greppable end to end. **Match the ids already in the tree** — the convention is
-project-specific (read README): e.g. `issue-NN` + backend kebab slices in one project, ticket
-numbers (`001a`) + dated plan slugs (`2026-06-18-<slug>`) in another.
-
-## Step 2 — Write to the right place
-
-General rules for every file you author or edit:
-
-- **Convert relative dates to absolute** (`2026-06-22`, not "today"). A log read months later must be
-  unambiguous.
-- **Code is ground truth.** If a doc and the code disagree about what shipped, fix the doc to match
-  the code — never the reverse. Note the correction in the log.
-- **No fabrication.** Record only what actually happened/was verified. Mark anything unconfirmed as
-  UNCONFIRMED. Never log secrets/PII.
-- **Cite, don't restate.** Point to the source file, the research doc, or the commit rather than
-  re-deriving facts that already live in research.
-
-### Creating a spec
-The spec is the **contract** — stable, the thing a developer builds against. Keep it to scope,
-goals/non-goals, the contract (endpoints/fields/parity/acceptance criteria). Keep the volatile "how
-it's going" out of it — that belongs in the task's running log. **Exactly one current spec per
-task**; if scope changes, edit it, don't fork a second one.
-
-### Creating a plan
-The plan is the **how** — phases, ordering, file paths, decisions. It may churn; that's fine. Place
-it in the project's plans area (some projects split it by repo, others by lifecycle `active/`+`archive/`).
-
-### Adding research
-Durable, cross-task knowledge. One file per service/topic. **Don't thin existing research.** If a
-finding duplicates an existing doc, extend/dedup it rather than adding a near-twin. (Note: research
-may live *inside* `.work/` or at the repo root — README says which.)
-
-### Appending to the task's running log (`state.md` or `VERIFICATION.md`)
-This is the highest-churn file and the one a future agent reads first to resume. Append a dated
-bullet under a `## Log` section; update any status table at the top. Capture: what was done, what's
-in progress, decisions, blockers, and the **next action** — concrete enough that someone with no
-memory of the session could continue. (The file's *name* is project-specific: a free-form
-`state.md`, or a structured `VERIFICATION.md` that round-trips planner → developer → verifier.)
-
-```
-- **2026-06-22** Finished Phase 4: <module> wired + unit tests green (commit abc1234).
-  Next: Phase 5 (<next concrete step>).
-```
-
-### Opening a new active-task folder
-Create the folder, drop the running-log file whose top **points at** the task's spec and plan (don't
-copy them in), and seed the first log line.
-
-### Handovers (projects that have a `handovers/` area)
-When work crosses a session boundary and the next session needs an explicit entry point, write a
-dated handover baton. Finished handovers move to `handovers/archive/`.
-
-## Step 3 — Update `STATUS.md` (the index)
-
-`STATUS.md` is the local Jira and the read-first file; an out-of-date index is one nobody trusts, so
-update it in the same session as the work. **Conform to whatever model this project's STATUS already
-uses** (learned in Step 0) — do not impose a different shape. Two common shapes:
-
-- **Sectioned index** — items as one-line rows tagged by area (`[UI]`/`[BE]`, or
-  `[APP]`/`[RESEARCH]`/`[PILLAR-A]`/`[KT]`/`[DISSERTATION]`/`[INFRA]`, …) under
-  **Active / Queued / Done / Reference / Gotchas**. Move the row between sections as state changes;
-  append within a section (order isn't significant).
-- **Workstream tracker** — per-workstream tables with status **markers** (✅ 🟡 ☐ 🛑 ⏳ 🤔) plus a
-  rollup of next actions and a gotchas section, governed by a frontmatter `update_protocol`/`last_updated`.
-
-Whichever it is:
-
-- **Move/flip only the item you're journaling.** Don't cascade-close sibling rows because a related
-  one finished. Flip another row only if the **code** shows it done (verify — code is ground truth).
-- Update the row's one-line note and the **`last_updated`/`_Last updated:_`** date.
-- **Add a gotcha** when you hit a non-obvious trap a future agent would also hit; **delete a gotcha
-  the moment it's fixed** — stale gotchas are worse than none.
-- **Keep it short.** Push detail down into the spec/plan/log and link to it; the index is a scannable
-  summary, not the record. Trim "Done" entries to a one-liner + pointer to the archived detail.
-- If the project's frontmatter says the **canonical file wins over the index**, never record a status
-  here you haven't grounded in that file/commit.
-
-## Step 4 — Wrap (only when a task is fully finished)
-
-Because git no longer cleans up, finishing a task is an ordered sequence. **Do all of it, in order** —
-stopping after the move leaves the index lying; stopping after the distill leaves the active area cluttered.
-
-0. **Log the finish first.** Append a final dated bullet to the task's running log recording
-   completion (what merged, commit/parity facts, env keys, etc.) *before* you freeze the folder.
-   An archived log that still says "Phase 5 next" is a lie to the next agent.
-1. **Distill** anything reusable from the working notes into research (or the repo's own docs) — so
-   the durable knowledge survives the archive. Extend an existing doc; don't add a near-twin.
-2. **Move** the active-task folder into the archive area **intact** (`mv`, never delete — moved
-   working state is the safety net).
-3. **Flip `STATUS.md`**: item → Done (one-liner + pointer to the archived path), remove any gotcha
-   this task closed, and **repoint any Reference/Done link** that targeted the active path to its new
-   archived path (promote a doc to research only if genuinely reusable beyond this task).
-
-## What NOT to do
-
-- **Don't delete** working state — archive it. The only safe deletions are pure noise (`.DS_Store`,
-  logs, stale zip exports), and even those need a reason.
-- **Respect the project's git-safety model.** If `.work/` is **outside** the repos, don't expect a
-  repo command to touch it. If `.work/` is **inside** the repo and protected by being **tracked**,
-  never add it to `.gitignore`. Either way, **don't aim `git clean -fdx`** at a tree expecting it to
-  spare anything ignored/untracked.
-- **Don't fork a second spec** for one task, and don't duplicate a research doc — update what exists.
-- **Don't bloat `STATUS.md`** with detail that belongs in a spec/plan/log.
-- **Don't impose this skill's preferred layout** over the project's `README.md` — adapt to the project.
-
-## Project profiles
-
-Concrete shapes this skill knows. **Always defer to the live `.work/README.md`** — these are quick
-recognizers, not the source of truth.
-
-### Profile A — `study-planner-web` (single repo)
-- **Location/safety:** `.work/` lives **inside** the repo at its root and is **tracked/committed on
-  purpose** — `git clean -fdx` only deletes ignored/untracked files, so tracking is the protection.
-  **Never gitignore `.work/`; never `git clean -fdx` at the repo root.** Reference paths as `.work/…`
-  (no `../`).
-- **Index:** `STATUS.md` — sectioned **Active / Queued / Done / Reference / Gotchas**, rows tagged
-  `[APP]` (web app) · `[RESEARCH]` (research tier) · `[PILLAR-A]` (rigour/calibration/detection) ·
-  `[KT]` (Pillar-B knowledge-tracing bench) · `[DISSERTATION]` · `[INFRA]`. Frontmatter carries
-  `last_updated` + a "canonical file wins over the index" rule.
-- **Folders:** `specs/{prd,issues}` (PRD + tickets `001a…017`) · `plans/{active,archive}/<YYYY-MM-DD-slug>/`
-  each holding **`PLAN.md` (spec) + `VERIFICATION.md` (running log/review)** · `handovers/`
-  (+ `handovers/archive/`) · `prompts/` · `archive/` (flat).
-- **Running-log file:** `VERIFICATION.md` (structured planner → developer → verifier round-trip),
-  inside `plans/active/<task>/`. The in-flight unit is the **plan folder**, not a top-level `active/`.
-- **Research:** stays at the **repo root** in `../research/` (a Python package + `research/doc/`),
-  **not** under `.work/`. STATUS points to `../research/doc/`.
-- **Naming:** issues `001a…`; plans `YYYY-MM-DD-<slug>`.
-- **Agents:** `CLAUDE.md` (Claude Code) + `AGENTS.md` (Codex), kept as 1:1 mirrors; rules in
-  `.claude/rules/*.md` ↔ `.agents/rules/*.agents.md`.
-
-### Profile B — merchant-onboarding (two repos)
-- **Location/safety:** `.work/` at the **project root**, a sibling of `merchantonbmgmtserv` (backend)
-  and `unifiedonboardnodeweb` (frontend), **outside both git worktrees on purpose** so `merge` /
-  `git clean -fdx` cannot delete it. From inside a repo it is `../.work`. A sandboxed dev agent
-  reaches it via that path (or a symlink the project sets up).
-- **Index:** `STATUS.md` — **Active / Queued / Done / Reference / Gotchas**, rows tagged `[UI]` /
-  `[BE]`.
-- **Folders:** `specs/{ui,backend,mom-contract}` · `plans/{ui,backend}` (single doc, or a folder with
-  `implementation-plan.md` + `phase-NN-*.md`) · `active/<task>/` with **`state.md`** · `archive/{ui,backend}/`
-  · `prompts/` · `research/` **inside** `.work/`.
-- **Naming:** UI `issue-NN`; backend kebab slices (`branch-b`, `s3-setup-credentials`).
-- **Agents:** the `.work` guide is appended to **both** repos' agent docs.
-
-## Quick reference — generic folder map
+Everything about one task lives in one folder, so nobody hunts across directories.
 
 ```
 .work/
-  STATUS.md          # the index — read first, keep short (model per project)
-  README.md          # canonical folder map for THIS project (defer to it)
-  research/  OR  ../research/   # durable knowledge base (location per project) — don't thin it
-  specs/             # per-task CONTRACTS (one current spec per task)
-  plans/             # the HOW (split by repo or by active/archive lifecycle)
-  active task area   # running log (state.md or plans/active/<task>/VERIFICATION.md) + spec pointer
-  handovers/         # cross-session batons (projects that use them)
-  archive/           # finished task working-state, moved intact (never deleted)
-  prompts/           # reusable prompts
+  STATUS.md               # the project index – read first (this skill owns it)
+  README.md               # the folder map
+  spec/                   # CORE – stable contracts, top-level (built against; outlive a task)
+    <task-id>-<slug>.md
+  active/
+    <task-id>/             # everything about the live task, together
+      state.md            #   durable task doc      (scratchpad skill writes)
+      SCRATCHPAD.md        #   session ledger        (scratchpad skill writes)
+      plan/                #   the how
+      prompts/             #   this task's prompts
+      research/            #   this task's research
+  archive/
+    <task-id>/             # the finished task folder, moved intact (minus the emptied scratchpad)
 ```
+
+The core top-level directories are exactly three: `active/`, `archive/`, `spec/`.
+`spec/` stays top-level because a spec is the stable contract – it is built against, sometimes shared across tasks, and outlives any one task folder.
+Everything else about a task (plan, prompts, research) lives inside the task folder.
+
+### Invariants
+
+- **One stable task-id everywhere.** Pick it once and reuse it verbatim across `spec/`, `active/`, and `archive/` so the task is greppable end to end. Match the ids already in the tree (`issue-NN` for UI, kebab names like `branch-b` for backend).
+- **Never delete; archive instead.** Moved working state is the safety net given this project's history of losing work. The only sanctioned deletion is the emptied `SCRATCHPAD.md` at wrap, and that is safe because it is already empty.
+- **Code is ground truth.** If a doc and the code disagree, fix the doc.
+- **Ceremony dial.** Trivial change = one STATUS line, no folder. Normal task = spec + task folder. Complex task = full plan + session loop.
+
+## TASK OPEN
+
+When new work starts and has no folder yet:
+1. Create `active/<task-id>/` and its `plan/`, `prompts/`, `research/` subfolders as needed.
+2. Make sure the task's contract lives at `spec/<task-id>-<slug>.md` (create it or point to the existing one).
+3. Add a STATUS row (see below), usually under Active.
+
+Do **not** create `state.md` here – the scratchpad skill bootstraps it on the first session start.
+Your job at open is the folder, the spec pointer, and the STATUS row.
+
+## STATUS.md – the project index
+
+`STATUS.md` is the read-first file – the local Jira.
+It holds one row per task: a single line plus a pointer down to the detail.
+An out-of-date index is one nobody trusts, so keep it honest in the same session as the work.
+
+### Structure
+
+```markdown
+# <Project> – STATUS
+_Last reconciled: YYYY-MM-DD_
+
+Read first. One line per task – follow Detail for everything else. No stale line survives an edit.
+
+## Active
+| Tag | Task | Where it stands (one line) | Detail |
+|---|---|---|---|
+
+## Queued
+| Tag | Task | Note (one line) | Detail |
+|---|---|---|---|
+
+## Done
+| Tag | Task | Durable record |
+|---|---|---|
+
+## Reference
+- <durable pointers – a link list, not prose>
+
+## Gotchas (active only)
+- <project-wide traps still live; deleted the moment fixed>
+```
+
+### Field guide and rules
+
+| Column | What goes here | Format |
+|---|---|---|
+| Tag | which repo/area | `[UI]`, `[BE]`, or `[UI][BE]` |
+| Task | the stable task-id | matches `active/`, `spec/`, `archive/` |
+| Where it stands / Note | one-line status | one line only; no paragraphs |
+| Detail | the pointer to the record | `active/<task-id>/state.md` (active), `spec/` or `plan/` (queued), `archive/<task-id>/state.md` (done) |
+
+Rules:
+- One row per task, keyed by the stable task-id.
+- One line per row. All detail lives behind the Detail pointer – this is what keeps STATUS from bloating.
+- Move a row between sections on state change; do not copy it.
+- Gotchas are active-only; delete each the moment it is fixed.
+
+### Filled sample
+
+```markdown
+# HostedUA Migration – STATUS
+_Last reconciled: 2026-08-25_
+
+Read first. One line per task – follow Detail for everything else. No stale line survives an edit.
+
+## Active
+| Tag | Task | Where it stands (one line) | Detail |
+|---|---|---|---|
+| [UI][BE] | pre-integration-tests | Phase 4 in progress; app-caller context live across all 8 Nodeweb calls | active/pre-integration-tests/state.md |
+| [UI] | issue-12 | Phase 3 done; v2 mappers landed, v1 mirror pending | active/issue-12-edit-business-profile/state.md |
+
+## Queued
+| Tag | Task | Note (one line) | Detail |
+|---|---|---|---|
+| [UI] | mb-styling-rebalance | verify current code before implementation | spec/mb-styling-rebalance-*.md |
+
+## Done
+| Tag | Task | Durable record |
+|---|---|---|
+| [BE] | branch-b | archive/backend/branch-b/state.md |
+
+## Reference
+- Contract source: spec/mom-contract/.
+- Cross-task rules: .agents/rules/.
+
+## Gotchas (active only)
+- .work is outside both git worktrees; archive cleanup and status updates are manual.
+```
+
+### Cleanup – fix or remove, never tag-and-leave
+
+Stale data is what makes an index untrustworthy, so it is not allowed to accumulate.
+The rule is the same litmus the state doc uses:
+
+> Would this line mislead a fresh agent? Then fix it to the truth or cut it – in the same edit.
+
+Never annotate a line as `STALE:` and leave it sitting.
+That habit is exactly how this file rotted before.
+
+Cleanup runs at two levels:
+- **Incremental tidy (every write):** whenever you touch a row, fix any stale line you pass. Move rows on state change – Queued to Active when work starts, Active to Done when it finishes.
+- **Full reconciliation sweep (on demand, or when the file grows stale):** verify each Active row against its `state.md` and the code (code is ground truth); migrate finished and started rows; prune Done rows to one line plus a pointer; delete gotchas that are fixed; bump `Last reconciled`.
+
+Cleanup is safe because nothing durable lives only in `STATUS.md` – the detail is in `state.md` or `archive/`.
+You are trimming a summary, not destroying a record.
+
+### Session-end STATUS refresh
+
+After the scratchpad skill has updated `state.md` at session end, refresh the task's one-line STATUS note from it.
+You read `state.md`'s Current state & next and compress it to one line; the detail stays behind the pointer.
+
+## TASK WRAP
+
+Finishing a task is an ordered sequence.
+Do all of it, in order – stopping halfway leaves the index lying.
+1. **Confirm state.md is final.** It should read status done with the completion recorded. If the scratchpad still holds content, run the session-end distill first (that is the scratchpad skill).
+2. **Promote reusable research.** Move any genuinely cross-task knowledge from the task's `research/` into `.agents/rules/` (the cross-agent rule set), so it survives beyond this task. Task-only research stays in the folder and rides into archive.
+3. **Remove the emptied `SCRATCHPAD.md`.** Once `state.md` is the durable capture, the reset scratchpad has no value; do not archive noise.
+4. **Move** `active/<task-id>/` into `archive/<task-id>/` intact (`mv`, never delete). Mirror the existing archive shape (UI under `archive/ui/`, backend under `archive/backend/`).
+5. **Flip the STATUS row** to Done: a one-liner plus a pointer to `archive/<task-id>/state.md`. Delete any gotcha this task closed, and repoint any link that targeted the old `active/` path.
+
+## What NOT to do
+
+- Do not write `state.md` or `SCRATCHPAD.md`. Read `state.md`; the scratchpad skill writes both.
+- Do not leave a `STALE:` tag on anything. Fix the truth or cut the line in the same edit.
+- Do not bloat a STATUS row with detail that belongs behind the pointer.
+- Do not delete working state; archive it. The one exception is the emptied scratchpad at wrap.
+- Do not fork a second spec for one task. Edit the existing one.
