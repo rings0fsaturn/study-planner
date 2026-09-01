@@ -23,11 +23,11 @@ If a rule or planning document conflicts with the code, verify the behavior and 
 Use only the repository-local rules and skills for work in this checkout:
 
 - Rules: [`.agents/rules/`](.agents/rules/)
-- Skills: [`.agents/skills/`](.agents/skills/), [`~/.agents/skills/`](~/.agents/skills/), [`.opencode/skills/`](.opencode/skills/)
+- Skills: [`.agents/skills/`](.agents/skills/), [`.opencode/skills/`](.opencode/skills/)
 
 
-When a skill is named or triggered, read `.agents/skills/<skill>/SKILL.md` and follow that local copy.
-Do not use `.opencode/`, `.codex/`, `.claude/`, plugin-cache, user-home, or sibling-checkout copies unless the user explicitly requests an external fallback.
+When a <skill> is named or triggered, read `.agents/skills/<skill>/SKILL.md` and follow that.
+Do not use `.codex/`, `.claude/`, plugin-cache, user-home, or sibling-checkout copies unless the user explicitly requests an external fallback.
 Use `$add-project-rule` for any addition, update, rename, split, or reorganization under `.agents/rules/`.
 
 ## Repository Map
