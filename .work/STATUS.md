@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-08-31_
+_Last reconciled: 2026-09-03_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -9,6 +9,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #34/#35/#12/#50. | active/phase2-wayfinder/state.md |
+| [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |

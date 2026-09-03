@@ -5,13 +5,19 @@ import { useSearchParams } from 'react-router-dom';
 
 const KEYS = ['A', 'B', 'C'];
 
-export function PrototypeSwitcher({ names }: { names: Record<string, string> }) {
+export function PrototypeSwitcher({
+  names,
+  keys = KEYS,
+}: {
+  names: Record<string, string>;
+  keys?: string[];
+}) {
   const [params, setParams] = useSearchParams();
   const current = (params.get('variant') ?? 'A').toUpperCase();
-  const idx = Math.max(0, KEYS.indexOf(current));
+  const idx = Math.max(0, keys.indexOf(current));
 
   function go(delta: number) {
-    const next = KEYS[(idx + delta + KEYS.length) % KEYS.length];
+    const next = keys[(idx + delta + keys.length) % keys.length];
     const p = new URLSearchParams(params);
     p.set('variant', next);
     setParams(p, { replace: true });
@@ -19,11 +25,12 @@ export function PrototypeSwitcher({ names }: { names: Record<string, string> }) 
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      const el = document.activeElement;
+      const el = document.activeElement as HTMLElement | null;
       if (
         el instanceof HTMLInputElement ||
         el instanceof HTMLTextAreaElement ||
-        (el as HTMLElement)?.isContentEditable
+        el?.isContentEditable ||
+        el?.closest('[role="tablist"]')
       ) {
         return;
       }
@@ -42,7 +49,7 @@ export function PrototypeSwitcher({ names }: { names: Record<string, string> }) 
         ‹
       </button>
       <span className="label">
-        <b>{KEYS[idx]}</b> — {names[KEYS[idx]]}
+        <b>{keys[idx]}</b> — {names[keys[idx]]}
       </span>
       <button onClick={() => go(1)} aria-label="Next variant">
         ›
