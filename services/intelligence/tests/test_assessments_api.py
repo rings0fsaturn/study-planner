@@ -24,9 +24,14 @@ class FakeUserClient:
         self.jobs: dict[str, dict] = {}
         self.assessments: dict[str, dict] = {}
         self.questions: dict[str, list[dict]] = {}
+        self.attempts: list[dict] = []
+        self.submitted_jobs: dict[str, dict] = {}
 
     def seed(self, material: dict) -> None:
         self.materials[material["id"]] = material
+
+    def seed_question(self, question: dict) -> None:
+        self.questions.setdefault(question["assessment_id"], []).append(question)
 
     def get_material(self, material_id: str) -> dict:
         if material_id not in self.materials:
@@ -69,6 +74,68 @@ class FakeUserClient:
         }
         self.jobs[job_id] = row
         return row
+
+    def submit_attempt(
+        self,
+        assessment_id: str,
+        question_id: str,
+        body: dict,
+        attempt_id: str,
+        job_id: str,
+    ) -> dict:
+        """Mirror of the 025 submit_assessment_attempt RPC semantics."""
+        question = next(
+            (q for q in self.questions.get(assessment_id, []) if q["id"] == question_id),
+            None,
+        )
+        if question is None:
+            raise IngestionError("not_found", "question not found")
+        if question.get("format", "objective") != "objective":
+            raise IngestionError("invalid_request", "only objective questions grade in this slice")
+        client_attempt_id = str(body.get("clientAttemptId") or "")
+        for attempt in self.attempts:
+            if attempt["client_attempt_id"] == client_attempt_id:
+                return {"attemptId": attempt["id"], "replayed": True}
+        row = {
+            "id": attempt_id,
+            "client_attempt_id": client_attempt_id,
+            "user_id": "fixture-user",
+            "assessment_id": assessment_id,
+            "question_id": question_id,
+            "answer": body.get("answer"),
+            "status": "queued",
+            "elapsed_seconds": body.get("elapsedSeconds"),
+            "correlation_id": str(body.get("correlationId") or ""),
+            "job_id": job_id,
+            "submitted_at": body.get("submittedAt"),
+            "grade": None,
+        }
+        self.attempts.append(row)
+        job_row = {
+            "id": job_id,
+            "user_id": "fixture-user",
+            "material_id": question["material_id"],
+            "kind": "grading",
+            "status": "queued",
+            "attempt": 1,
+            "correlation_id": str(body.get("correlationId") or ""),
+            "result_id": attempt_id,
+        }
+        self.jobs[job_id] = job_row
+        self.submitted_jobs[job_id] = job_row
+        return {
+            "attemptId": attempt_id,
+            "questionId": question_id,
+            "status": "queued",
+            "jobId": job_id,
+        }
+
+    def list_attempts(self, assessment_id: str) -> list[dict]:
+        return [
+            attempt
+            for attempt in self.attempts
+            if attempt["assessment_id"] == assessment_id
+        ]
 
 
 def fake_user_client() -> FakeUserClient:
@@ -389,3 +456,181 @@ def test_generation_job_error_carries_retry_after(_override_client: FakeUserClie
     assert body["kind"] == "generation"
     assert body["error"]["code"] == "quota_exhausted"
     assert body["error"]["retryAfterSeconds"] == 60
+
+
+# --- #39 assessment taking: attempt submission + read ---
+
+
+def _question(
+    question_id: str = "q-1",
+    assessment_id: str = "ass-1",
+    format: str = "objective",
+) -> dict:
+    return {
+        "id": question_id,
+        "assessment_id": assessment_id,
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "format": format,
+        "prompt": "Which term names the shortfall?",
+        "options": ["Planning gap", "Efficiency gap", "Expansion gap", "Diversification gap"],
+        "skill_tags": ["Strategic Planning"],
+        "authored_difficulty": 3,
+        "citations": [{"chunkId": "chunk-1", "quote": "the planning gap is the shortfall"}],
+    }
+
+
+def _attempt_body(
+    client_attempt_id: str = "client-attempt-0000001", question_id: str = "q-1"
+) -> dict:
+    return {
+        "clientAttemptId": client_attempt_id,
+        "questionId": question_id,
+        "answer": {"index": 0},
+        "submittedAt": "2026-09-03T10:00:00Z",
+        "elapsedSeconds": 30,
+        "correlationId": "corr-attempt-1",
+    }
+
+
+def test_submit_assessment_attempt_returns_201_created(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question())
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-1/attempts",
+            json=_attempt_body(),
+            headers={"Idempotency-Key": "idem-key-000000000001"},
+        )
+    )
+    assert response.status_code == 201, response.text
+    body = response.json()
+    assert body["attemptId"]
+    assert body["questionId"] == "q-1"
+    assert body["status"] == "queued"
+    assert body["jobId"]
+    assert len(_override_client.attempts) == 1
+    stored = _override_client.attempts[0]
+    assert stored["answer"] == {"index": 0}
+    assert stored["grade"] is None
+    job = _override_client.jobs[body["jobId"]]
+    assert job["kind"] == "grading"
+    assert job["result_id"] == body["attemptId"]
+
+
+def test_submit_assessment_attempt_is_idempotent_on_client_attempt_id(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question())
+    headers = {"Idempotency-Key": "idem-key-000000000002"}
+    first = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-1/attempts",
+            json=_attempt_body(),
+            headers=headers,
+        )
+    )
+    replay = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-1/attempts",
+            json=_attempt_body(),
+            headers=headers,
+        )
+    )
+    assert first.status_code == 201, first.text
+    assert replay.status_code == 200, replay.text
+    assert replay.json()["attemptId"] == first.json()["attemptId"]
+    assert len(_override_client.attempts) == 1
+
+
+def test_submit_assessment_attempt_unknown_question_is_404(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-missing/attempts",
+            json=_attempt_body(
+                client_attempt_id="client-attempt-missing01", question_id="q-missing"
+            ),
+            headers={"Idempotency-Key": "idem-key-000000000003"},
+        )
+    )
+    assert response.status_code == 404, response.text
+
+
+def test_submit_assessment_attempt_non_objective_is_400(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question(question_id="q-w", format="written"))
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-w/attempts",
+            json=_attempt_body(),
+            headers={"Idempotency-Key": "idem-key-000000000004"},
+        )
+    )
+    assert response.status_code == 400, response.text
+
+
+def test_list_assessment_attempts_returns_public_records(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question())
+    asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-1/attempts",
+            json=_attempt_body(),
+            headers={"Idempotency-Key": "idem-key-000000000005"},
+        )
+    )
+    response = asyncio.run(_request("GET", "/v1/assessments/ass-1/attempts"))
+    assert response.status_code == 200, response.text
+    records = response.json()
+    assert len(records) == 1
+    record = records[0]
+    assert record["attemptId"]
+    assert record["questionId"] == "q-1"
+    assert record["assessmentId"] == "ass-1"
+    assert record["status"] == "queued"
+    assert record["grade"] is None
+    # The stored answer is the learner's own input (allowed); the key is not
+    # present because it lives in questions.answer_block, never on attempts.
+    _assert_no_secret_keys(record)
+    assert "answer" not in record

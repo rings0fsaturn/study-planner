@@ -9,7 +9,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #35/#12/#50; #34 resolved (split-pane), #39 claimed. | active/phase2-wayfinder/state.md |
-| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | Ticket #39 claimed 2026-09-03 (branch phase2/issue-39); planning — codebase inspection in flight, plan pending. | active/issue-39-assessment-taking-objective-grading/state.md |
+| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | Ticket #39 claimed; P1–P4 done + verified (contracts/migration/grader/worker-arm/routes/Dexie-v6/attemptFlow, all green); P5 taking-UI in progress (AttemptTaker wired, UI tests 1/3); P6 sweep pending. | active/issue-39-assessment-taking-objective-grading/state.md |
 | [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
 
 ## Queued

@@ -104,3 +104,65 @@ export class AssessmentServiceError extends Error {
     this.name = 'AssessmentServiceError'
   }
 }
+
+/** Learner's objective answer — one shape per objective subtype (#39). */
+export interface ObjectiveAnswer {
+  /** mcq: the chosen option index. */
+  index?: number
+  /** multi_select: chosen indices (set equality, order-insensitive). */
+  indices?: number[]
+  /** true_false. */
+  flag?: boolean
+  /** cloze / numeric: free text or numeric-as-string. */
+  value?: string
+}
+
+/** Body of POST /v1/assessments/{assessmentId}/questions/{questionId}/attempts. */
+export interface AttemptSubmitInput {
+  clientAttemptId: string
+  questionId: string
+  answer: ObjectiveAnswer
+  submittedAt: string
+  elapsedSeconds?: number
+  correlationId: string
+}
+
+/** 201/200 response of the attempt submit route. */
+export interface AttemptCreated {
+  attemptId: string
+  questionId: string
+  status: 'queued' | 'graded' | 'failed'
+  jobId: string
+}
+
+/** Public grade block (openapi QuestionGraded) — no key material. */
+export interface QuestionGradedResult {
+  attemptId: string
+  questionId: string
+  materialId: string
+  score: number
+  correct: boolean
+  perSkill?: Array<{
+    skillTag: string
+    score: number
+    correct: boolean
+    confidence?: number
+  }>
+  explanation?: string
+  grader: 'objective' | 'llm_rubric' | 'judge0'
+  modelVersion?: string
+  gradedAt: string
+  publicFeedback?: string
+}
+
+/** One attempt in GET /v1/assessments/{assessmentId}/attempts (public record). */
+export interface AttemptRecord {
+  attemptId: string
+  clientAttemptId: string
+  questionId: string
+  assessmentId: string
+  submittedAt: string
+  status: 'queued' | 'graded' | 'failed'
+  elapsedSeconds?: number
+  grade: QuestionGradedResult | null
+}

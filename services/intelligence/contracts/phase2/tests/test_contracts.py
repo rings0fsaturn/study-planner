@@ -291,3 +291,92 @@ def test_generation_request_uses_neutral_envelope() -> None:
     assert schema["properties"]["timeoutMs"]["default"] == 30000
     assert schema["properties"]["temperature"]["const"] == 0.3
     assert schema["properties"]["maxOutputTokens"]["default"] == 4096
+
+
+# --- #39 assessment taking: attempt submission + read contract ---
+
+
+def _openapi() -> dict:
+    return yaml.safe_load((ROOT / "openapi.yaml").read_text(encoding="ascii"))
+
+
+def _validate_against_openapi(document: dict, schema_name: str, instance: object) -> None:
+    schema = document["components"]["schemas"][schema_name]
+    resolver = jsonschema.RefResolver.from_schema(document)
+    validator = jsonschema.Draft202012Validator(
+        schema, resolver=resolver, format_checker=jsonschema.FormatChecker()
+    )
+    validator.validate(instance)
+
+
+def test_assessment_attempt_routes_exist() -> None:
+    document = _openapi()
+    paths = document["paths"]
+
+    submit = paths["/v1/assessments/{assessmentId}/questions/{questionId}/attempts"]["post"]
+    assert submit["operationId"] == "submitAssessmentAttempt"
+    assert submit["requestBody"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "AttemptSubmit"
+    )
+    assert submit["responses"]["201"]["content"]["application/json"]["schema"]["$ref"].endswith(
+        "AttemptCreated"
+    )
+    assert "200" in submit["responses"], "idempotent replay of an existing clientAttemptId"
+
+    read = paths["/v1/assessments/{assessmentId}/attempts"]["get"]
+    assert read["operationId"] == "listAssessmentAttempts"
+    items = read["responses"]["200"]["content"]["application/json"]["schema"]["items"]
+    assert items["$ref"].endswith("AttemptRecord")
+
+
+def test_attempt_schemas_exclude_hidden_content() -> None:
+    document = _openapi()
+    schemas = document["components"]["schemas"]
+
+    record = schemas["AttemptRecord"]
+    assert set(record["properties"]) == {
+        "attemptId",
+        "clientAttemptId",
+        "questionId",
+        "assessmentId",
+        "submittedAt",
+        "status",
+        "elapsedSeconds",
+        "grade",
+    }
+    assert record["properties"]["status"]["enum"] == ["queued", "graded", "failed"]
+    # The record carries the public grade only; the answer key stays in questions.answer_block.
+    grade_schema = record["properties"]["grade"]
+    grade_branches = grade_schema.get("oneOf", [grade_schema])
+    assert any(
+        branch.get("$ref", "").endswith("QuestionGraded") for branch in grade_branches
+    )
+    assert "answerKey" not in record["properties"]
+
+    created = schemas["AttemptCreated"]
+    assert set(created["required"]) == {"attemptId", "questionId", "status", "jobId"}
+
+    objective = schemas["ObjectiveAnswer"]
+    assert set(objective["properties"]) <= {"index", "indices", "flag", "value"}
+    assert objective["additionalProperties"] is False
+
+
+def test_attempt_fixtures_validate_against_openapi() -> None:
+    document = _openapi()
+
+    submit = load_json(ROOT / "fixtures/attempt-submit.json")
+    _validate_against_openapi(document, "AttemptSubmit", submit)
+    _validate_against_openapi(document, "ObjectiveAnswer", submit["answer"])
+
+    created = load_json(ROOT / "fixtures/attempt-created.json")
+    _validate_against_openapi(document, "AttemptCreated", created)
+
+    queued = load_json(ROOT / "fixtures/attempt-record-queued.json")
+    _validate_against_openapi(document, "AttemptRecord", queued)
+    assert queued["grade"] is None
+
+    graded = load_json(ROOT / "fixtures/attempt-record-graded.json")
+    _validate_against_openapi(document, "AttemptRecord", graded)
+    _validate_against_openapi(document, "QuestionGraded", graded["grade"])
+    assert len(graded["grade"]["perSkill"]) >= 1
+    assert_no_secret_fields(graded)

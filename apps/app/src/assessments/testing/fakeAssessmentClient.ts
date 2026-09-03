@@ -1,6 +1,13 @@
 import { vi } from 'vitest'
 import type { AssessmentClientLike } from '../assessmentClient'
-import type { Assessment, AsyncJob, GenerationRequest } from '../types'
+import type {
+  Assessment,
+  AsyncJob,
+  AttemptCreated,
+  AttemptRecord,
+  AttemptSubmitInput,
+  GenerationRequest,
+} from '../types'
 
 /**
  * In-memory AssessmentClientLike double for provider and page tests.
@@ -20,6 +27,32 @@ export class FakeAssessmentClient implements AssessmentClientLike {
     throw new Error('getJob not scripted')
   })
 
+  submitAssessmentAttempt = vi.fn(
+    async (
+      _assessmentId: string,
+      _questionId: string,
+      _input: AttemptSubmitInput,
+    ): Promise<AttemptCreated> => {
+      throw new Error('submitAssessmentAttempt not scripted')
+    },
+  )
+
+  listAssessmentAttempts = vi.fn(async (_assessmentId: string): Promise<AttemptRecord[]> => {
+    throw new Error('listAssessmentAttempts not scripted')
+  })
+
+  /** AttemptTransport view over the scripted calls (attemptFlow DI seam). */
+  readonly transport = {
+    submitAttempt: (
+      assessmentId: string,
+      questionId: string,
+      input: Omit<AttemptSubmitInput, 'questionId'>,
+    ): Promise<AttemptCreated> =>
+      this.submitAssessmentAttempt(assessmentId, questionId, { ...input, questionId }),
+    listAttempts: (assessmentId: string): Promise<AttemptRecord[]> =>
+      this.listAssessmentAttempts(assessmentId),
+  }
+
   scriptGenerate(result: AsyncJob | Error): void {
     this.generateAssessment.mockImplementation(async () => {
       if (result instanceof Error) throw result
@@ -29,6 +62,20 @@ export class FakeAssessmentClient implements AssessmentClientLike {
 
   scriptGetAssessment(result: Assessment | Error): void {
     this.getAssessment.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptSubmitAttempt(result: AttemptCreated | Error): void {
+    this.submitAssessmentAttempt.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptListAttempts(result: AttemptRecord[] | Error): void {
+    this.listAssessmentAttempts.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })

@@ -112,6 +112,21 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
     )
 
 
+def _build_grading_worker(repo, queue):
+    """Construct the grading arm (#39). Deterministic grading needs no env."""
+    from app.grading.worker import GradingWorker, GradingWorkerConfig
+
+    return GradingWorker(
+        repo=repo,
+        queue=queue,
+        config=GradingWorkerConfig(
+            poll_interval_seconds=float(os.getenv("GRADING_POLL_INTERVAL_SECONDS", "1")),
+            visibility_seconds=int(os.getenv("GRADING_VISIBILITY_SECONDS", "30")),
+            max_in_flight=int(os.getenv("GRADING_MAX_IN_FLIGHT", "1")),
+        ),
+    )
+
+
 def _arm_loop(worker, stop: threading.Event, poll_interval: float) -> None:
     """Daemon-arm loop: poll the worker until the stop event is set."""
     while not stop.is_set():
@@ -165,6 +180,7 @@ def main() -> None:
         queue,
         SupabaseTelemetrySink(supabase_url, service_role_key, client=shared_client),
     )
+    grading_worker = _build_grading_worker(repo, queue)
 
     logger.info("ingestion worker starting against %s", supabase_url)
     stop = threading.Event()
@@ -183,6 +199,13 @@ def main() -> None:
     )
     generation_thread.start()
 
+    grading_thread = threading.Thread(
+        target=_arm_loop,
+        args=(grading_worker, stop, grading_worker.config.poll_interval_seconds),
+        daemon=True,
+    )
+    grading_thread.start()
+
     while not stop.is_set():
         try:
             worker.run_once()
@@ -195,6 +218,7 @@ def main() -> None:
 
     stop.set()
     generation_thread.join(timeout=10.0)
+    grading_thread.join(timeout=10.0)
     shared_client.close()
     logger.info("ingestion worker stopped")
 

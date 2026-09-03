@@ -133,3 +133,87 @@ def get_assessment(
         }
     except IngestionError as exc:
         return service_error(request, exc)
+
+
+@router.post("/assessments/{assessmentId}/questions/{questionId}/attempts")
+def submit_assessment_attempt(
+    assessmentId: str,
+    questionId: str,
+    body: dict,
+    request: Request,
+    client: Annotated[UserScopedClient, Depends(get_user_client)],
+    user_id: str = Depends(require_user),  # noqa: ARG001
+    idempotency_key: str = Header(alias="Idempotency-Key", min_length=16),  # noqa: ARG001
+) -> JSONResponse:
+    """Record an attempt and enqueue grading atomically (#39, PLAN D-02).
+
+    The answer is learner input and is stored server-side only; the durable
+    QuestionAttempted event stays answer-free by contract. 201 = new attempt,
+    200 = idempotent replay of the same clientAttemptId.
+    """
+    client_attempt_id = str(body.get("clientAttemptId") or "")
+    if not client_attempt_id or body.get("questionId") != questionId:
+        return service_error(
+            request, IngestionError("invalid_request", "clientAttemptId and questionId must match the route")
+        )
+    if not isinstance(body.get("answer"), dict):
+        return service_error(
+            request, IngestionError("invalid_request", "answer must be an object")
+        )
+
+    attempt_id = str(uuid.uuid4())
+    job_id = str(uuid.uuid4())
+    try:
+        result = client.submit_attempt(assessmentId, questionId, body, attempt_id, job_id)
+    except IngestionError as exc:
+        return service_error(request, exc)
+    if result.get("replayed"):
+        # Same clientAttemptId seen before: return the first attempt's ids.
+        return JSONResponse(
+            status_code=200,
+            content={
+                "attemptId": str(result.get("attemptId") or ""),
+                "questionId": questionId,
+                "status": "queued",
+                "jobId": "",
+            },
+        )
+    return JSONResponse(status_code=201, content=result)
+
+
+def _attempt_record(row: dict) -> dict:
+    """Serialize one attempt row to the public AttemptRecord contract.
+
+    The learner's answer is never echoed back; the grade block is the public
+    QuestionGraded (score/correct/perSkill) with no key material.
+    """
+    grade = row.get("grade")
+    record: dict = {
+        "attemptId": row["id"],
+        "clientAttemptId": row.get("client_attempt_id") or "",
+        "questionId": row.get("question_id") or "",
+        "assessmentId": row.get("assessment_id") or "",
+        "submittedAt": row.get("submitted_at") or "",
+        "status": row.get("status") or "queued",
+    }
+    if row.get("elapsed_seconds") is not None:
+        record["elapsedSeconds"] = int(row["elapsed_seconds"])
+    record["grade"] = grade
+    return record
+
+
+@router.get("/assessments/{assessmentId}/attempts")
+def list_assessment_attempts(
+    assessmentId: str,
+    request: Request,
+    client: Annotated[UserScopedClient, Depends(get_user_client)],
+) -> JSONResponse:
+    try:
+        # 404 when the assessment itself is not in owner scope.
+        client.get_assessment(assessmentId)
+        rows = client.list_attempts(assessmentId)
+    except IngestionError as exc:
+        return service_error(request, exc)
+    return JSONResponse(
+        status_code=200, content=[_attempt_record(row) for row in rows]
+    )

@@ -1,0 +1,10 @@
+{
+  "attemptId": "attempt-01",
+  "clientAttemptId": "client-attempt-01",
+  "questionId": "question-01",
+  "assessmentId": "assessment-01",
+  "submittedAt": "2026-09-03T10:00:00Z",
+  "status": "queued",
+  "elapsedSeconds": 42,
+  "grade": null
+}

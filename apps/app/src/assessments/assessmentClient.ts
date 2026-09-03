@@ -11,6 +11,9 @@ import { AssessmentServiceError } from './types'
 import type {
   Assessment,
   AsyncJob,
+  AttemptCreated,
+  AttemptRecord,
+  AttemptSubmitInput,
   GenerationRequest,
 } from './types'
 
@@ -22,6 +25,21 @@ export interface AssessmentClientLike {
   generateAssessment(input: GenerationRequest): Promise<AsyncJob>
   getAssessment(assessmentId: string): Promise<Assessment>
   getJob(jobId: string): Promise<AsyncJob>
+  submitAssessmentAttempt(
+    assessmentId: string,
+    questionId: string,
+    input: AttemptSubmitInput,
+  ): Promise<AttemptCreated>
+  listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]>
+  /** AttemptTransport view (attemptFlow's DI seam) — same calls, fewer args. */
+  readonly transport: {
+    submitAttempt(
+      assessmentId: string,
+      questionId: string,
+      input: Omit<AttemptSubmitInput, 'questionId'>,
+    ): Promise<AttemptCreated>
+    listAttempts(assessmentId: string): Promise<AttemptRecord[]>
+  }
 }
 
 const TIMEOUT_MS = 15000
@@ -190,5 +208,48 @@ export class AssessmentClient implements AssessmentClientLike {
       const payload = await this.fetchLike.fetchJson(`/v1/jobs/${jobId}`)
       return payload as AsyncJob
     })
+  }
+
+  submitAssessmentAttempt(
+    assessmentId: string,
+    questionId: string,
+    input: AttemptSubmitInput,
+  ): Promise<AttemptCreated> {
+    return this.run(async () => {
+      const payload = await this.fetchLike.fetchJson(
+        `/v1/assessments/${assessmentId}/questions/${questionId}/attempts`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': crypto.randomUUID(),
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+          body: JSON.stringify(input),
+        },
+      )
+      return payload as AttemptCreated
+    })
+  }
+
+  listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]> {
+    return this.run(async () => {
+      const payload = await this.fetchLike.fetchJson(
+        `/v1/assessments/${assessmentId}/attempts`,
+      )
+      return payload as AttemptRecord[]
+    })
+  }
+
+  /** AttemptTransport view over the same calls (attemptFlow DI seam). */
+  readonly transport = {
+    submitAttempt: (
+      assessmentId: string,
+      questionId: string,
+      input: Omit<AttemptSubmitInput, 'questionId'>,
+    ): Promise<AttemptCreated> =>
+      this.submitAssessmentAttempt(assessmentId, questionId, { ...input, questionId }),
+    listAttempts: (assessmentId: string): Promise<AttemptRecord[]> =>
+      this.listAssessmentAttempts(assessmentId),
   }
 }
