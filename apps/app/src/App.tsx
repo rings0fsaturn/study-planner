@@ -36,6 +36,7 @@ import { Step4Confirm } from './onboarding/steps/Step4Confirm';
 import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
+import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentReviewPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { MaterialLibrary } from './pages/materials/MaterialLibrary';
@@ -166,6 +167,12 @@ function AppRoutes() {
       )}
       {import.meta.env.DEV && (
         <Route path="/roadmap-feedback-prototype" element={<RoadmapFeedbackPrototype />} />
+      )}
+      {import.meta.env.DEV && (
+        <Route
+          path="/assessment-review-prototype"
+          element={<AssessmentReviewPrototype />}
+        />
       )}
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
