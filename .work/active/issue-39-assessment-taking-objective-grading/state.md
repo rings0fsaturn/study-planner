@@ -1,11 +1,11 @@
 # State – issue-39-assessment-taking-objective-grading
-_Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #39, parent #32, map #4) · Plan: active/issue-39-assessment-taking-objective-grading/plan/ · STATUS row: issue-39-assessment-taking-objective-grading · Status: active (P5 in progress) · Updated: 2026-09-03_
+_Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #39, parent #32, map #4) · Plan: active/issue-39-assessment-taking-objective-grading/plan/ · STATUS row: issue-39-assessment-taking-objective-grading · Status: active (P6 live leg blocked) · Updated: 2026-09-03_
 
 ## Current state & next
-- Phases 1–4 COMPLETE and verified (contracts 15/15, grader 9/9, worker 7/7, service routes 48/48 domain-total, client data layer 14/14). All committed on `phase2/issue-39`.
-- Phase 5 (taking UI) IN PROGRESS: `AttemptTaker.tsx` implemented + wired into `AssessmentDetail.tsx`; `FakeAssessmentClient` extended with the attempt methods + transport view; UI test is 1/3 passing.
-- Next: **fix the 2 timing-out UI tests**, then P6 sweep (typecheck/lint/full vitest/pytest + redaction grep + live pass per PLAN).
-- Debugging lead for the timeouts (from the last run): (1) the test opens its own `Dexie('StudyTracker_taker-user')` while `EventStoreProvider` opens the same name — the "Another connection wants to delete database" stderr shows two connections fighting; let the provider own the DB and assert through its tables instead of a parallel connection. (2) `pollGrade` polls 20×1 s (attemptFlow GRADE_POLL_ATTEMPTS/GRADE_POLL_INTERVAL_MS); if the read route mock ever misses a clientAttemptId the component waits up to 20 s — longer than the 5 s vitest default timeout. Make the poll budget injectable via `AttemptFlowDeps` (or use `waitFor` with an explicit test timeout). (3) The test's `scriptedGrades` 'next'-key trick is fragile — replace with a plain function mock returning grades per clientAttemptId.
+- Phases 1–5 COMPLETE and verified (contracts 15/15, grader 9/9, worker 7/7, service routes 48/48 domain-total, client data layer 14/14, P5 UI suites 25/25). Committed on `phase2/issue-39` (`7656506`).
+- P6 static sweep GREEN: app tsc 0, lint clean, build clean, full app vitest 717 passed (2 = known WSL TZ seed tests, pass under `--pool=forks`), service pytest 428 passed (7 = known pre-existing), #39 domain 48/48, redaction grep clean. AC1–AC3 ticked; AC4 test-matrix leg ticked.
+- P6 live pass BLOCKED (external): Supabase project host `kabpmbhlvfbrhtbxjaua.supabase.co` returns NXDOMAIN from Google + Cloudflare public DNS (Status 3) — consistent with a paused free-tier project. Browser sign-in fails `net::ERR_NAME_NOT_RESOLVED`; the intelligence log's last real Supabase-backed 200s predate the outage. Not a code defect.
+- Next: restore/pause-lift the Supabase project in the dashboard (owner `iamrohitsaji@gmail.com`) → restart `./full-app` → start the grading arm (grading-only runner pattern or full `worker_main`) → live walk (take the ready assessment online → graded; offline queue → reconnect drain) → wayfinder resolution (comment + close #39 + map #4 line) → WRAP.
 
 ## Done so far
 - Planning (commit `acad118`): surface research verified first-hand (contract gap → this slice amends openapi; QuestionAttempted payload is answer-free by schema; Dexie v5→v6; no attempts table; two-arm worker), PLAN.md with D-01..D-07, VERIFICATION skeleton.
@@ -14,6 +14,8 @@ _Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #3
 - P3 GREEN: routes in `routers/assessments.py` (submit 201/200-replay, list) + `UserScopedClient.submit_attempt/list_attempts`; `FakeUserClient` attempt doubles; 5 route tests incl. redaction walk.
 - P4 GREEN: EventStore `QUESTION_ATTEMPTED`/`QUESTION_GRADED`; Dexie `version(6)` (`assessmentAttempts` keyed by clientAttemptId + `assessmentContentCache`); `sync/types` payload interfaces (schema-exact); `types.ts` ObjectiveAnswer/AttemptSubmitInput/AttemptCreated/QuestionGradedResult/AttemptRecord; `AssessmentClient` submit/list + `transport` DI view; `attemptFlow.ts` coordinator + 14 tests.
 - P5 partial: `AttemptTaker.tsx` (radio group per options / text input, honest phases answering→submitting→queued-offline→grading→graded→failed, score + per-skill + feedback line, Retry question with fresh-attempt copy, attempt history list), wired into AssessmentDetail ready state replacing the static options list.
+- P5 completed (commit `7656506`): root cause of the 2 "timing-out" UI tests was AttemptTaker passing `serviceClient` instead of `serviceClient.transport` as the flow transport (`transport.submitAttempt is not a function` → UI sat queued-offline through the whole poll budget). Fix: `transport: serviceClient.transport`. Also migrated the stale `attemptFlow.test.ts` harness (still injected the removed `fetchLike` seam) to a real `AssessmentClient.transport` over the responder double; rewrote the AssessmentDetail redaction test to assert the true AC1/AC3 DOM boundary; added `as unknown` payload casts + dropped an unused import + `?.` guard for tsc; dropped a stale `react-hooks/exhaustive-deps` eslint-disable (plugin not loaded in the flat config). P5 suites 25/25.
+- P6 static sweep (commit `7656506` + docs): full verification per PLAN item 1–2 — see Current state & next for the numbers.
 
 ## Flow trace
 1. Contract chain: AttemptSubmit (opaque answer) → 025 RPC validates ownership + format=objective + dedupes on (user, clientAttemptId) → attempt row + grading job + pgmq message in one transaction → 201 AttemptCreated{attemptId, jobId}.
@@ -39,11 +41,14 @@ _Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #3
 - `apps/app/src/sync/types.ts` – QuestionAttemptedPayload/QuestionGradedPayload.
 - `apps/app/src/assessments/types.ts` – ObjectiveAnswer/AttemptSubmitInput/AttemptCreated/QuestionGradedResult/AttemptRecord.
 - `apps/app/src/assessments/assessmentClient.ts` – submit/list + transport view.
-- `apps/app/src/assessments/attemptFlow.ts` – flow coordinator (transport DI).
+- `apps/app/src/assessments/attemptFlow.ts` – flow coordinator (transport DI) + `as unknown` payload-cast bridges (tsc, commit `7656506`).
 - `apps/app/src/assessments/testing/fakeAssessmentClient.ts` – attempt mocks + transport.
-- `apps/app/src/pages/assessments/AttemptTaker.tsx` – new taking UI.
+- `apps/app/src/pages/assessments/AttemptTaker.tsx` – new taking UI (radio/text per subtype, honest phases, retry, history); P5 fix `transport: serviceClient.transport`; dropped stale eslint-disable (commit `7656506`).
 - `apps/app/src/pages/assessments/AssessmentDetail.tsx` – AttemptTaker wired into the ready state.
-- `apps/app/src/events/attempts.dataLayer.test.ts`, `apps/app/src/assessments/attemptFlow.test.ts`, `apps/app/src/pages/assessments/AttemptTaker.test.tsx` – new test files (P5 test 1/3 green).
+- `apps/app/src/events/attempts.dataLayer.test.ts` – `as unknown` payload casts + unused-import drop (tsc, commit `7656506`).
+- `apps/app/src/assessments/attemptFlow.test.ts` – P5: harness migrated from the stale `fetchLike` seam to `AssessmentClient.transport` over a responder double (commit `7656506`).
+- `apps/app/src/pages/assessments/AssessmentDetail.test.tsx` – redaction test rewritten to the real AC1/AC3 DOM boundary (commit `7656506`).
+- `apps/app/src/pages/assessments/AttemptTaker.test.tsx` – P5 UI tests (3/3).
 - `.work/active/issue-39-…/` – plan, verification, research, state, scratchpad.
 
 ## Pitfalls & rules
@@ -53,7 +58,11 @@ _Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #3
 - Malformed answer shape = GraderInputError → route 400 (never a silent 0); worker fail-closes to attempt `failed` + ungradable feedback while the job still succeeds.
 - 7 PRE-EXISTING test failures on this checkout (calibration golden ×5, retrieval sidecar probe ×2) — verified identical with changes stashed; not ours, do not chase.
 - WSL: restart the managed runtime before browser verification; playwright-cli sessions die between tool calls (batch compound commands).
-- AssessmentClientLike now carries `transport` (DI seam for attemptFlow); FakeAssessmentClient mirrors it — keep the two in sync when adding methods.
+- AssessmentClientLike carries `transport` (the AttemptTransport view — `submitAttempt`/`listAttempts`); FakeAssessmentClient mirrors it. **Consumers must inject `client.transport`, not the client itself** — AttemptTaker passing the bare client caused the P5 "timeouts" (`transport.submitAttempt is not a function`). Keep all three in sync when adding methods.
+- A stale test seam silently invalidates the flow under test AND leaks Dexie handles: `attemptFlow.test.ts` still injecting the removed `fetchLike` crashed every submit and left the DB open past `db.delete()`, so later same-name suites threw ConstraintError. When a production refactor changes a DI seam, migrate the tests in the same change.
+- The app flat eslint config (`apps/app/eslint.config.js`) loads NO react-hooks plugin — `eslint-disable-next-line react-hooks/exhaustive-deps` is itself a lint error there.
+- WSL host DNS can fail for a single host while others resolve (negative cache / upstream): before assuming a code fault, check `getent hosts <host>` AND a public DoH resolver (dns.google/cloudflare-dns) to separate local cache from real NXDOMAIN.
+- Full-suite vitest under `--pool=forks --singleFork` is NOT the repo's green baseline — it serializes all suites into one process and cross-suite Dexie/fake-timer state explodes failures (38 files failed vs 1 under the default threads pool). Run `pnpm --filter app test` (threads) for the real signal; single-fork only for one-file debugging.
 
 ## Decisions in force
 - D-01 server-owned `question_attempts` table (migration 025) with UNIQUE(user_id, client_attempt_id) idempotency; grades land only via the service path (no authenticated UPDATE).
@@ -65,7 +74,7 @@ _Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #3
 - D-07 restore/account-switch ride existing machinery (per-user Dexie; server rows are the durable attempt record).
 
 ## Open
-- P5: 2 UI tests time out (1/3 green) — debugging leads in Current state & next.
-- P6 pending: full sweep + live pass + AC tick-down + wayfinder resolution (comment + close #39 + map #4 line).
-- `pollGrade` poll budget is hard-coded (20×1 s) — consider making it injectable for tests.
-- Uncommitted-then-committed WIP on `phase2/issue-39` (see git log); branch not pushed since the WIP commit unless noted.
+- P6 live browser pass BLOCKED (external, since 2026-09-03): Supabase project host `kabpmbhlvfbrhtbxjaua.supabase.co` NXDOMAIN from Google + Cloudflare public DNS — free-tier project paused/unavailable. Unblock: restore in the Supabase dashboard (owner `iamrohitsaji@gmail.com`), then restart `./full-app` and rerun the live walk. No code change expected.
+- `pollGrade` poll budget is hard-coded (20×1 s) — consider making it injectable via `AttemptFlowDeps` for tests (not the P5 root cause; harmless to defer).
+- Branch `phase2/issue-39` pushed through `7656506`? Check — the WIP commit history is on the branch but confirm remote state before the PR.
+- Wayfinder resolution pending: comment + close #39 + map #4 line (only after the live leg clears).

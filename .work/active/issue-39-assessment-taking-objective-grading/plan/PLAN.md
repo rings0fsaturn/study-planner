@@ -2,7 +2,7 @@
 
 **Slug:** `2026-09-03-issue-39-assessment-taking-objective-grading`
 **Date written:** 2026-09-03 · **Ticket:** [#39](https://github.com/rings0fsaturn/study-planner/issues/39) (claimed `rings0fsaturn`) · **Parent:** spec #32 · map #4 · **Branch:** `phase2/issue-39`
-**Plan status:** 🟡 In progress — P1–P4 done (2026-09-03, all green), P5 in progress (UI tests 1/3), P6 pending
+**Plan status:** 🟡 In progress — P1–P5 done (2026-09-03, all green), P6 partial (static sweep green; live pass blocked on external Supabase outage)
 **Downstream:** unblocks #40 (review), #41 (written), #42 (coding), #43 (mastery); #44/#48 block on #39+#43.
 
 > Runbook convention inherited from the #38 plan: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
