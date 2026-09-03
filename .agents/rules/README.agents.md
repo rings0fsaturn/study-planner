@@ -20,7 +20,7 @@ Read each selected rule file completely.
 | [`12-react-router-basename.agents.md`](12-react-router-basename.agents.md) | Adding routes, links, redirects, navigation, or route assertions. |
 | [`13-form-layout.agents.md`](13-form-layout.agents.md) | Building or reviewing forms and field-group spacing. |
 | [`14-design-token-package-exports.agents.md`](14-design-token-package-exports.agents.md) | Changing shared CSS exports or imports from the design-token package. |
-| [`15-browser-use-cli.agents.md`](15-browser-use-cli.agents.md) | Using the browser-use CLI and its dedicated WSL automation Chromium, including the browser start and stop lifecycle. |
+| [`15-playwright-cli.agents.md`](15-playwright-cli.agents.md) | Using playwright-cli for interactive browser automation, E2E debugging, and test generation or healing. |
 | [`16-live-e2e-authoring.agents.md`](16-live-e2e-authoring.agents.md) | Writing live E2E specs against the real stack: skip scoping, ready-state assertions, locator scope, and shared-account cleanup. |
 
 ## Auth, Storage, and Sync

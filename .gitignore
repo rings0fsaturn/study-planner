@@ -25,6 +25,12 @@ test-results/
 *.rar
 /tmp/
 
+# playwright-cli session snapshots and traces
+.playwright-cli/
+
+# Hermes agent workspace mirrors of the agents rules/skills (tool-generated)
+.hermes/
+
 # Python / uv
 .venv/
 .venv-bakeoff/
@@ -57,6 +63,7 @@ research/external/open-notebook/
 # These resolve to the operator's home skill library and are not shared.
 .agents/skills/ask-matt
 .agents/skills/code-review
+.agents/skills/playwright-cli
 .agents/skills/codebase-design
 .agents/skills/diagnosing-bugs
 .agents/skills/domain-modeling
