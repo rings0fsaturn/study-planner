@@ -144,7 +144,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       answerKind: question.format,
       ...(elapsedSeconds != null ? { elapsedSeconds } : {}),
     }
-    await eventStore.append(QUESTION_ATTEMPTED, attemptedPayload as Record<string, unknown>)
+    await eventStore.append(QUESTION_ATTEMPTED, attemptedPayload as unknown as Record<string, unknown>)
 
     const input: Omit<AttemptSubmitInput, 'questionId'> = {
       clientAttemptId,
@@ -178,14 +178,14 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
     const events = (await eventStore.getAll()).filter(
       (event) =>
         event.kind === QUESTION_ATTEMPTED &&
-        (event.payload as QuestionAttemptedPayload).clientAttemptId === clientAttemptId,
+        (event.payload as unknown as QuestionAttemptedPayload).clientAttemptId === clientAttemptId,
     )
     const event = events[events.length - 1]
     if (!event?.id) return
     await eventStore
       .table('events')
       .update(event.id, {
-        payload: { ...(event.payload as QuestionAttemptedPayload), attemptId },
+        payload: { ...(event.payload as unknown as QuestionAttemptedPayload), attemptId },
       })
   }
 
@@ -254,7 +254,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       const existing = (await eventStore.getAll()).some(
         (event) =>
           event.kind === QUESTION_GRADED &&
-          (event.payload as QuestionGradedPayload).attemptId === grade.attemptId,
+          (event.payload as unknown as QuestionGradedPayload).attemptId === grade.attemptId,
       )
       if (!existing) {
         const payload: QuestionGradedPayload = {
@@ -266,7 +266,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
           grader: grade.grader,
           ...(grade.publicFeedback != null ? { publicFeedback: grade.publicFeedback } : {}),
         }
-        await eventStore.append(QUESTION_GRADED, payload as Record<string, unknown>)
+        await eventStore.append(QUESTION_GRADED, payload as unknown as Record<string, unknown>)
       }
     }
     const row = (await attempts().get(record.clientAttemptId)) as LocalAttemptRow

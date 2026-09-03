@@ -12,8 +12,9 @@ import {
   type AssessmentAttemptsDexie,
   type LocalAttemptRow,
 } from './attemptFlow'
-import type { AssessmentFetchLike } from '../assessments/assessmentClient'
-import type { AttemptRecord, Assessment } from '../assessments/types'
+import { AssessmentClient } from './assessmentClient'
+import type { AssessmentFetchLike } from './assessmentClient'
+import type { AttemptRecord, Assessment } from './types'
 
 class FetchDouble implements AssessmentFetchLike {
   constructor(
@@ -70,10 +71,13 @@ function harness(responder: (path: string, init?: RequestInit) => unknown) {
   })
   const store = new EventStore(db)
   const fetchDouble = new FetchDouble(responder)
+  // The flow's transport seam is AssessmentClientLike.transport — the real
+  // client plus an AssessmentFetchLike responder double (no hidden fetches).
+  const client = new AssessmentClient(fetchDouble)
   const flow = createAttemptFlow({
     db,
     eventStore: store,
-    fetchLike: fetchDouble,
+    transport: client.transport,
     now: () => '2026-09-03T10:00:00Z',
     uuid: (() => {
       let n = 0
@@ -114,7 +118,7 @@ describe('submitObjectiveAttempt', () => {
 
     expect(result.local.clientAttemptId).toMatch(/^ca-/)
     expect(result.local.attemptId).toBe('att-server-1')
-    expect(result.created.jobId).toBe('job-1')
+    expect(result.created?.jobId).toBe('job-1')
 
     const rows: LocalAttemptRow[] = await db.table('assessmentAttempts').toArray()
     expect(rows).toHaveLength(1)

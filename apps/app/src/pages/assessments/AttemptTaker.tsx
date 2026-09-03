@@ -40,17 +40,16 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
       return
     }
     const db = (eventStore as unknown as { db: import('dexie').Dexie }).db
-    // The transport is the injected assessment client (AssessmentClientLike
-    // satisfies AttemptTransport structurally); no hidden fetches here.
+    // The transport is the injected assessment client's AttemptTransport view
+    // (AssessmentClientLike.transport); no hidden fetches here.
     setFlow(
       createAttemptFlow({
         db,
         eventStore,
-        transport: serviceClient,
+        transport: serviceClient.transport,
       }),
     )
     void refreshAttempts(db, assessment.id, setAttempts)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eventStore, assessment.id, serviceClient])
 
   async function refreshAttempts(db: import('dexie').Dexie, assessmentId: string, apply: (rows: LocalAttemptRow[]) => void) {

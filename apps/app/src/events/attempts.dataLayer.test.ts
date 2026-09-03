@@ -3,7 +3,7 @@
 // AssessmentClient attempt operations (submit/list), and the
 // assessmentContentCache redaction boundary (AC1).
 
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import Dexie from 'dexie'
 import {
   ASSESSMENT_CREATED,
@@ -38,7 +38,7 @@ describe('event constants (#39)', () => {
       answerKind: 'objective',
       elapsedSeconds: 30,
     }
-    const id = await store.append(QUESTION_ATTEMPTED, payload)
+    const id = await store.append(QUESTION_ATTEMPTED, payload as unknown as Record<string, unknown>)
     expect(id).toBeGreaterThan(0)
     const stored = (await store.getAll()).find((event) => event.kind === QUESTION_ATTEMPTED)
     expect(stored).toBeDefined()
@@ -62,7 +62,7 @@ describe('event constants (#39)', () => {
       grader: 'objective',
       publicFeedback: 'Correct.',
     }
-    await store.append(QUESTION_GRADED, payload)
+    await store.append(QUESTION_GRADED, payload as unknown as Record<string, unknown>)
     const stored = (await store.getAll()).find((event) => event.kind === QUESTION_GRADED)
     expect(stored).toBeDefined()
     await db.delete()
