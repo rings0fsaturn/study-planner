@@ -9,7 +9,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #35/#12/#50; #34 resolved (split-pane), #39 claimed. | active/phase2-wayfinder/state.md |
-| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | Ticket #39 claimed; P1–P5 done + verified (contracts 15/15, grader 9/9, worker 7/7, routes 48/48, data layer 14/14, P5 UI 25/25; commit 7656506); P6 static sweep green (tsc/lint/build, app 717, service 428, redaction clean); live pass BLOCKED on external Supabase outage (host NXDOMAIN — project paused); wayfinder resolution pending. | active/issue-39-assessment-taking-objective-grading/state.md |
+| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | P1–P6 done + live-verified 2026-09-09 (025 pushed, 026 material_id fix, submit 201 → graded, browser 2/2 + AC4 walk Score 1.00 redaction CLEAN, evidence in plan/); wayfinder resolution (comment + close #39 + map #4) pending → WRAP. | active/issue-39-assessment-taking-objective-grading/state.md |
 | [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
 
 ## Queued

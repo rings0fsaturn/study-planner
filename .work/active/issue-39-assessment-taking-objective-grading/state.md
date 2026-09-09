@@ -1,11 +1,11 @@
 # State – issue-39-assessment-taking-objective-grading
-_Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #39, parent #32, map #4) · Plan: active/issue-39-assessment-taking-objective-grading/plan/ · STATUS row: issue-39-assessment-taking-objective-grading · Status: active (P6 live leg blocked) · Updated: 2026-09-03_
+_Spec: specs/phase2-tickets/07-assessment-taking-objective-grading.md (ticket #39, parent #32, map #4) · Plan: active/issue-39-assessment-taking-objective-grading/plan/ · STATUS row: issue-39-assessment-taking-objective-grading · Status: active (P6 live GREEN 2026-09-09; wayfinder resolution pending) · Updated: 2026-09-09_
 
 ## Current state & next
 - Phases 1–5 COMPLETE and verified (contracts 15/15, grader 9/9, worker 7/7, service routes 48/48 domain-total, client data layer 14/14, P5 UI suites 25/25). Committed on `phase2/issue-39` (`7656506`).
-- P6 static sweep GREEN: app tsc 0, lint clean, build clean, full app vitest 717 passed (2 = known WSL TZ seed tests, pass under `--pool=forks`), service pytest 428 passed (7 = known pre-existing), #39 domain 48/48, redaction grep clean. AC1–AC3 ticked; AC4 test-matrix leg ticked.
-- P6 live pass BLOCKED (external): Supabase project host `kabpmbhlvfbrhtbxjaua.supabase.co` returns NXDOMAIN from Google + Cloudflare public DNS (Status 3) — consistent with a paused free-tier project. Browser sign-in fails `net::ERR_NAME_NOT_RESOLVED`; the intelligence log's last real Supabase-backed 200s predate the outage. Not a code defect.
-- Next: restore/pause-lift the Supabase project in the dashboard (owner `iamrohitsaji@gmail.com`) → restart `./full-app` → start the grading arm (grading-only runner pattern or full `worker_main`) → live walk (take the ready assessment online → graded; offline queue → reconnect drain) → wayfinder resolution (comment + close #39 + map #4 line) → WRAP.
+- P6 static sweep GREEN (2026-09-03): app tsc 0, lint clean, build clean, full app vitest 717 passed (2 = known WSL TZ seed tests, pass under `--pool=forks`), service pytest 428 passed (7 = known pre-existing), #39 domain 48/48, redaction grep clean. AC1–AC3 ticked; AC4 test-matrix leg ticked.
+- P6 live pass GREEN (2026-09-09): Supabase recovered; 025 pushed (remote sat at 024); live submit exposed a real bug — 025 RPC read `v_question.material_id` without selecting it (42703); repair migration 026 pushed; submit → 201 → worker grades in seconds; browser walk 2/2 (online 8.7 s, offline-drain 12.1 s) + playwright-cli AC4 walk (Score 1.00, per-skill correct, redaction CLEAN, evidence 2 PNGs in `plan/evidence/`). AC1–AC4 all ticked incl. live legs.
+- Next: wayfinder resolution (comment + close #39 + map #4 line) → WRAP (commit 026 + live spec + evidence + records, then archive).
 
 ## Done so far
 - Planning (commit `acad118`): surface research verified first-hand (contract gap → this slice amends openapi; QuestionAttempted payload is answer-free by schema; Dexie v5→v6; no attempts table; two-arm worker), PLAN.md with D-01..D-07, VERIFICATION skeleton.
