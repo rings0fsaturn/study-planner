@@ -23,14 +23,14 @@ import type {
   QuestionGradedResult,
 } from './types'
 
-/** One local attempt row — the only client-side home for the answer. */
+/** One local attempt row — the client-side home for the answer. */
 export interface LocalAttemptRow {
   clientAttemptId: string
   /** Server-minted id, patched in after a successful submit; null while queued. */
   attemptId: string | null
   questionId: string
   assessmentId: string
-  /** Present only on locally-created rows; server-merged rows carry none. */
+  /** Local answer, or the server-echoed answer on restored rows (#40 D-01). */
   answer?: ObjectiveAnswer
   status: 'queued' | 'submitted' | 'graded' | 'failed'
   submittedAt: string
@@ -324,8 +324,9 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
 
   /**
    * Server records are the durable attempt history: merge them into the
-   * local table (fresh device restore, late grades) without touching local
-   * answers. Server rows carry no answer field.
+   * local table (fresh device restore, late grades) without touching
+   * existing local answers. New rows adopt the server-echoed answer (#40
+   * D-01) so "your pick" marking survives a fresh-device restore.
    */
   async function refreshAttempts(assessment: Assessment): Promise<number> {
     let records: AttemptRecord[]
@@ -357,7 +358,8 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
           attemptId: record.attemptId,
           questionId: record.questionId,
           assessmentId: record.assessmentId,
-          // no answer: server records carry none (the answer is write-only)
+          // Fresh-device restore: adopt the server-echoed learner answer (#40 D-01).
+          ...(record.answer != null ? { answer: record.answer } : {}),
           status: record.status,
           submittedAt: record.submittedAt,
           ...(record.elapsedSeconds != null ? { elapsedSeconds: record.elapsedSeconds } : {}),

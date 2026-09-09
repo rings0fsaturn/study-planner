@@ -2,7 +2,8 @@
  * Assessment contract types (openapi.yaml, Phase 2 pack).
  *
  * The server never returns hidden grading content: `answerBlock` /
- * `correctIndex` are absent from these shapes by contract.
+ * `correctIndex` are absent from these shapes by contract. The learner's own
+ * `answer` IS echoed on the owner-scoped attempts read route (#40 D-01).
  */
 
 export type AssessmentFormat = 'objective' | 'written' | 'coding'
@@ -164,5 +165,7 @@ export interface AttemptRecord {
   submittedAt: string
   status: 'queued' | 'graded' | 'failed'
   elapsedSeconds?: number
+  /** Learner's own answer, echoed on the owner-scoped read route (#40 D-01). */
+  answer?: ObjectiveAnswer
   grade: QuestionGradedResult | null
 }

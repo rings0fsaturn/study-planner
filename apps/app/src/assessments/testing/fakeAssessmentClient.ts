@@ -82,6 +82,24 @@ export class FakeAssessmentClient implements AssessmentClientLike {
   }
 }
 
+/**
+ * Answer-bearing attempt record (#40 D-01): the owner-scoped read route
+ * echoes the learner's own answer, so scripted listAttempts rows carry it.
+ */
+export function attemptRecord(overrides: Partial<AttemptRecord> = {}): AttemptRecord {
+  return {
+    attemptId: 'att-1',
+    clientAttemptId: 'ca-1',
+    questionId: 'q1',
+    assessmentId: 'assessment-1',
+    submittedAt: '2026-09-03T10:00:00Z',
+    status: 'queued',
+    answer: { index: 0 },
+    grade: null,
+    ...overrides,
+  }
+}
+
 export function readyAssessment(overrides: Partial<Assessment> = {}): Assessment {
   return {
     id: 'assessment-1',
