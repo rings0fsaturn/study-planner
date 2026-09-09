@@ -8,8 +8,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Active
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
-| [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #35/#12/#50; #34 resolved (split-pane), #39 claimed. | active/phase2-wayfinder/state.md |
-| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | P1–P6 done + live-verified 2026-09-09 (025 pushed, 026 material_id fix, submit 201 → graded, browser 2/2 + AC4 walk Score 1.00 redaction CLEAN, evidence in plan/); wayfinder resolution (comment + close #39 + map #4) pending → WRAP. | active/issue-39-assessment-taking-objective-grading/state.md |
+| [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #35/#12/#50; #34 resolved (split-pane), #39 done (taking+grading live). | active/phase2-wayfinder/state.md |
 | [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
 
 ## Queued
@@ -28,6 +27,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Done
 | Tag | Task | Durable record |
 |---|---|---|
+| [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | Implemented + live-verified 2026-09-09: P1–P6 (contracts 15/15, grader 9/9, worker 7/7, routes 48/48, data layer 14/14, P5 UI 25/25; live: 025 pushed, 026 material_id RPC fix, submit 201 → graded, browser 2/2 + AC4 walk Score 1.00 redaction CLEAN); AC1–AC4 met; #39 closed, map #4 line recorded. | archive/issue-39-assessment-taking-objective-grading/state.md |
 | [APP][RESEARCH][KT] | issue-38-grounded-objective-assessment | Implemented + live-verified 2026-08-23: single grounded objective assessment (P0–P7 + hardening `1149649`, AC1–AC4 met, service 391/7 golden, app 699/699, contracts 12/12); wrapped + archived 2026-08-31. | archive/issue-38-grounded-objective-assessment/state.md |
 | [RESEARCH] | wayfinder-#53-generation-runtime | Resolved + closed 2026-08-22: objective gen runs DeepSeek V4 Flash via OpenRouter, reasoning off, temp 0.3, 30 s timeout, provider-neutral GENERATION_* knobs. | https://github.com/rings0fsaturn/study-planner/issues/53 |
 | [RESEARCH] | wayfinder-#54-contract-amendment | Resolved + closed 2026-08-22: neutralize the Gemini pack behind an OpenAI-style envelope; file edits landed in #57 (now done). | https://github.com/rings0fsaturn/study-planner/issues/54 |
