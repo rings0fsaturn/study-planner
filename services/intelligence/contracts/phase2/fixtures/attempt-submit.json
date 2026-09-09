@@ -1,0 +1,8 @@
+{
+  "clientAttemptId": "client-attempt-01",
+  "questionId": "question-01",
+  "answer": { "index": 2 },
+  "submittedAt": "2026-09-03T10:00:00Z",
+  "elapsedSeconds": 42,
+  "correlationId": "corr-attempt-01"
+}

@@ -47,6 +47,21 @@ export function createEventStore(userId: string): EventStore {
     activeSession: 'id',
     calibrationCache: 'key',
   });
+  db.version(6).stores({
+    events: '++id, kind, createdAt',
+    sync_queue: '++id, kind, createdAt, retries',
+    sync_meta: 'key',
+    onboardingDraft: 'id',
+    activeSession: 'id',
+    calibrationCache: 'key',
+    // #39: local attempt log (the only client-side home for the answer) and
+    // the redacted content cache (envelope + visible payload only, AC1).
+    // Keyed by clientAttemptId: the server mints attemptId on submit and the
+    // row is patched with it afterwards (retry = new clientAttemptId row).
+    // Neither table syncs (calibrationCache precedent).
+    assessmentAttempts: 'clientAttemptId, attemptId, questionId, assessmentId, status, submittedAt',
+    assessmentContentCache: 'assessmentId',
+  });
   return new EventStore(db);
 }
 

@@ -13,6 +13,7 @@ from typing import Any
 import httpx
 
 from app.ingestion.models import IngestionError
+from app.ingestion.repository import ATTEMPTS_TABLE
 
 MATERIALS_TABLE = "materials"
 JOBS_TABLE = "ingestion_jobs"
@@ -122,6 +123,50 @@ class UserScopedClient:
                 "provider_unavailable", "generation enqueue rejected", retryable=True
             )
         return response.json()
+
+    def submit_attempt(
+        self,
+        assessment_id: str,
+        question_id: str,
+        body: dict[str, Any],
+        attempt_id: str,
+        job_id: str,
+    ) -> dict[str, Any]:
+        """Call the DB-atomic attempt-submit RPC (#39, migration 025).
+
+        Verifies ownership + objective format, dedupes on clientAttemptId,
+        inserts the attempt, inserts the grading job, and sends the queue
+        message in one transaction. Returns the RPC's JSONB result.
+        """
+        response = self._http.post(
+            f"{self._base}/rest/v1/rpc/submit_assessment_attempt",
+            json={
+                "p_assessment_id": assessment_id,
+                "p_question_id": question_id,
+                "p_client_attempt_id": str(body.get("clientAttemptId") or ""),
+                "p_attempt_id": attempt_id,
+                "p_job_id": job_id,
+                "p_answer": body.get("answer"),
+                "p_submitted_at": body.get("submittedAt"),
+                "p_elapsed_seconds": body.get("elapsedSeconds"),
+                "p_correlation_id": str(body.get("correlationId") or ""),
+            },
+            headers=self._headers(),
+        )
+        if response.status_code in (403, 404):
+            raise IngestionError("not_found", "question not found")
+        if response.status_code >= 400:
+            raise IngestionError(
+                "provider_unavailable", "attempt submit rejected", retryable=True
+            )
+        return response.json()
+
+    def list_attempts(self, assessment_id: str) -> list[dict[str, Any]]:
+        """Owner-scoped attempt rows (RLS SELECT); grade included when present."""
+        return self._get_rows(
+            f"{self._base}/rest/v1/{ATTEMPTS_TABLE}"
+            f"?assessment_id=eq.{assessment_id}&order=submitted_at.asc&select=*"
+        )
 
     def download_fulltext(self, material_id: str, path: str) -> bytes:
         response = self._http.get(

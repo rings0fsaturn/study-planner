@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import { AssessmentServiceError, type Assessment, type GenerationRequest } from '../../assessments/types'
+import { AttemptTaker } from './AttemptTaker'
 import '../../materials/materials.css'
 
 const POLL_INTERVAL_MS = 3000
@@ -196,13 +197,9 @@ export function AssessmentDetail() {
                   Difficulty band {question.authoredDifficulty}
                   {question.skillTags.length > 0 && ` · ${question.skillTags.join(', ')}`}
                 </div>
-                <ol className="assessment-options" style={{ margin: '0.75rem 0 0 1.25rem', display: 'grid', gap: '0.5rem' }}>
-                  {question.options.map((option, index) => (
-                    <li key={`${question.id}-${index}`} style={{ color: 'var(--text-secondary)' }}>
-                      {option}
-                    </li>
-                  ))}
-                </ol>
+                {question.format === 'objective' && question.options.length > 0 && (
+                  <AttemptTaker assessment={assessment} question={question} />
+                )}
                 <div className="material-detail-block" style={{ marginTop: '1rem' }}>
                   <h3 className="t-display-3" style={{ fontSize: '15px', marginBottom: '0.5rem' }}>
                     Citations

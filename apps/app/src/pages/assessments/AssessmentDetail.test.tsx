@@ -74,13 +74,18 @@ describe('AssessmentDetail', () => {
     expect(screen.getByText('quote drifted')).toBeInTheDocument()
   })
 
-  it('never references answer content', async () => {
+  it('renders only the visible question surface — never the answer key', async () => {
     const assessments = new FakeAssessmentClient()
     assessments.scriptGetAssessment(readyAssessment())
-    renderDetail(assessments)
+    const view = renderDetail(assessments)
 
     await screen.findByText('What is the planning gap?')
-    expect(screen.queryByText(/correct|answer/i)).not.toBeInTheDocument()
+    // AC1/AC3 redaction boundary: the hidden key vocabulary never reaches the
+    // rendered page (the answer_block/correctIndex live server-side only).
+    const html = view.container.innerHTML
+    expect(html).not.toMatch(/answerBlock|answer_block|correctIndex|correct_index/i)
+    // The key itself is not revealed — no option is pre-marked as correct.
+    expect(screen.queryByText(/correct answer|the answer is/i)).not.toBeInTheDocument()
   })
 
   it('shows failed warnings with a retry that creates a fresh observation', async () => {

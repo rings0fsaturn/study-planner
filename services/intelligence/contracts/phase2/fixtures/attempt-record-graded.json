@@ -1,0 +1,20 @@
+{
+  "attemptId": "attempt-02",
+  "clientAttemptId": "client-attempt-02",
+  "questionId": "question-01",
+  "assessmentId": "assessment-01",
+  "submittedAt": "2026-09-03T10:05:00Z",
+  "status": "graded",
+  "grade": {
+    "attemptId": "attempt-02",
+    "questionId": "question-01",
+    "materialId": "material-01",
+    "score": 1,
+    "correct": true,
+    "perSkill": [
+      { "skillTag": "Caching", "score": 1, "correct": true }
+    ],
+    "grader": "objective",
+    "gradedAt": "2026-09-03T10:05:04Z"
+  }
+}

@@ -19,6 +19,7 @@ CHUNKS_TABLE = "content_chunks"
 JOBS_TABLE = "ingestion_jobs"
 ASSESSMENTS_TABLE = "assessments"
 QUESTIONS_TABLE = "questions"
+ATTEMPTS_TABLE = "question_attempts"
 
 
 class IngestionRepo(Protocol):
@@ -336,6 +337,44 @@ class SupabaseIngestionRepo:
                 "p_job_id": job_id,
                 "p_chunk_count": chunk_count,
                 "p_grounding_version": grounding_version,
+            },
+        )
+
+    # --- Grading (#39): the GradingRepo protocol implementation ---
+
+    def get_attempt(self, attempt_id: str) -> dict:
+        rows = self._get(
+            f"{self._base}/rest/v1/{ATTEMPTS_TABLE}?id=eq.{attempt_id}&select=*",
+            self._headers(),
+        )
+        if not rows:
+            raise IngestionError("not_found", "attempt not found")
+        return rows[0]
+
+    def get_question(self, question_id: str) -> dict:
+        # service_role select: answer_block is included and must never leave
+        # the grading path in any response or log.
+        rows = self._get(
+            f"{self._base}/rest/v1/{QUESTIONS_TABLE}?id=eq.{question_id}&select=*",
+            self._headers(),
+        )
+        if not rows:
+            raise IngestionError("not_found", "question not found")
+        return rows[0]
+
+    def complete_attempt(
+        self, attempt_id: str, job_id: str, status: str, grade: dict | None
+    ) -> None:
+        # Transactional completion: attempt status/grade + job success in one
+        # security-definer transaction (migration 025).
+        self._request(
+            "POST",
+            f"{self._base}/rest/v1/rpc/complete_attempt_grading",
+            payload={
+                "p_attempt_id": attempt_id,
+                "p_job_id": job_id,
+                "p_status": status,
+                "p_grade": grade,
             },
         )
 

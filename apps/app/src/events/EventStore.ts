@@ -4,6 +4,12 @@ import { liveQuery } from 'dexie';
 /** Durable event kind for a server-owned assessment generation request. */
 export const ASSESSMENT_CREATED = 'AssessmentCreated' as const;
 
+/** Durable event kind: the learner submitted an answer (answer-free payload). */
+export const QUESTION_ATTEMPTED = 'QuestionAttempted' as const;
+
+/** Durable event kind: the server returned the authoritative grade. */
+export const QUESTION_GRADED = 'QuestionGraded' as const;
+
 export interface Event {
   id?: number;
   kind: string;

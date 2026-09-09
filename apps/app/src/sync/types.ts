@@ -76,6 +76,35 @@ export interface AssessmentCreatedPayload {
   materialIds: string[]
 }
 
+/**
+ * Per-question attempt submitted (durable-events `questionAttemptedPayload`).
+ * additionalProperties:false and NO answer field: the answer lives in the
+ * server attempts table and the local unsynced assessmentAttempts table,
+ * never in the event log (map #10 / #39 AC2).
+ */
+export interface QuestionAttemptedPayload {
+  attemptId: string
+  clientAttemptId: string
+  questionId: string
+  submittedAt: string
+  answerKind?: 'objective' | 'written' | 'coding'
+  elapsedSeconds?: number
+}
+
+/**
+ * Authoritative grade landed (durable-events `questionGradedPayload`).
+ * perSkill stays in the API AttemptRecord — this event is the thin pointer.
+ */
+export interface QuestionGradedPayload {
+  attemptId: string
+  questionId: string
+  score: number
+  correct: boolean
+  gradedAt: string
+  grader?: 'objective' | 'llm_rubric' | 'judge0'
+  publicFeedback?: string
+}
+
 export interface RoadmapCreatedPayload {
   startDate: string
   deadline: string
