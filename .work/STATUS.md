@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-09-03_
+_Last reconciled: 2026-09-09_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -8,8 +8,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Active
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
-| [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #35/#12/#50; #34 resolved (split-pane), #39 done (taking+grading live). | active/phase2-wayfinder/state.md |
-| [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
+| [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #41 (next) + #35/#12/#50; #34 resolved (split-pane), #39 done (taking+grading live), #40 done (review surface live-verified). | active/phase2-wayfinder/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |
@@ -27,6 +26,8 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Done
 | Tag | Task | Durable record |
 |---|---|---|
+| [APP][RESEARCH][KT] | issue-34-assessment-review-prototype | Done 2026-09-03: #34 prototype P1–P4 implemented + verified; HITL chose split-pane (B); recommendation recorded, #34 closed, map #4 appended; #40 next. | archive/issue-34-assessment-review-prototype/state.md |
+| [APP][RESEARCH][KT] | issue-40-assessment-review-implementation | Implemented + live-verified 2026-09-09: P1 answer echo (contracts + routes 32/32), P2 client types + refresh merge (26/26), P3 review module port (22/22), P4 AssessmentDetail wire-up + retry (12/12; full app 744/746 — 2 = WSL TZ flake), P5 live 4/4 (desktop rail + mobile strip, per-question + whole-assessment retry, redaction clean; evidence `plan/evidence/`); AC1–AC4 met; #40 closed, map #4 line recorded. | archive/issue-40-assessment-review-implementation/state.md |
 | [APP][RESEARCH][KT] | issue-39-assessment-taking-objective-grading | Implemented + live-verified 2026-09-09: P1–P6 (contracts 15/15, grader 9/9, worker 7/7, routes 48/48, data layer 14/14, P5 UI 25/25; live: 025 pushed, 026 material_id RPC fix, submit 201 → graded, browser 2/2 + AC4 walk Score 1.00 redaction CLEAN); AC1–AC4 met; #39 closed, map #4 line recorded. | archive/issue-39-assessment-taking-objective-grading/state.md |
 | [APP][RESEARCH][KT] | issue-38-grounded-objective-assessment | Implemented + live-verified 2026-08-23: single grounded objective assessment (P0–P7 + hardening `1149649`, AC1–AC4 met, service 391/7 golden, app 699/699, contracts 12/12); wrapped + archived 2026-08-31. | archive/issue-38-grounded-objective-assessment/state.md |
 | [RESEARCH] | wayfinder-#53-generation-runtime | Resolved + closed 2026-08-22: objective gen runs DeepSeek V4 Flash via OpenRouter, reasoning off, temp 0.3, 30 s timeout, provider-neutral GENERATION_* knobs. | https://github.com/rings0fsaturn/study-planner/issues/53 |

@@ -6,5 +6,6 @@
   "submittedAt": "2026-09-03T10:00:00Z",
   "status": "queued",
   "elapsedSeconds": 42,
+  "answer": { "index": 2 },
   "grade": null
 }

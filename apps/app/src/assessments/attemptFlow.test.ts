@@ -256,7 +256,7 @@ describe('retry identity (AC2)', () => {
 })
 
 describe('refreshAttempts (server as durable attempt record)', () => {
-  it('merges server records into the local table without touching answers', async () => {
+  it('merges server records into the local table without touching local answers', async () => {
     const { db, flow } = harness(() => [
       {
         attemptId: 'att-server-5',
@@ -265,6 +265,8 @@ describe('refreshAttempts (server as durable attempt record)', () => {
         assessmentId: 'ass-1',
         submittedAt: '2026-09-03T10:00:00Z',
         status: 'graded',
+        // #40 D-01: the read route echoes the learner's own answer.
+        answer: { index: 2 },
         grade: GRADE,
       },
     ])
@@ -283,9 +285,29 @@ describe('refreshAttempts (server as durable attempt record)', () => {
     expect(rows).toHaveLength(2)
     const remote = rows.find((row) => row.clientAttemptId === 'ca-remote')
     expect(remote?.grade?.score).toBe(0)
-    expect(remote?.answer).toBeUndefined() // server records carry no answer
+    expect(remote?.answer).toEqual({ index: 2 }) // echoed answer restores the pick
     const local = rows.find((row) => row.clientAttemptId === 'ca-local')
     expect(local?.answer).toEqual({ index: 1 }) // local answer untouched
+    await db.delete()
+  })
+
+  it('leaves restored rows answer-free when the server record carries none', async () => {
+    const { db, flow } = harness(() => [
+      {
+        attemptId: 'att-server-6',
+        clientAttemptId: 'ca-legacy',
+        questionId: 'q-1',
+        assessmentId: 'ass-1',
+        submittedAt: '2026-09-03T10:00:00Z',
+        status: 'graded',
+        grade: GRADE,
+      },
+    ])
+
+    await flow.refreshAttempts(ASSESSMENT)
+    const rows: LocalAttemptRow[] = await db.table('assessmentAttempts').toArray()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].answer).toBeUndefined() // pre-echo row: honest fallback, no pick
     await db.delete()
   })
 })
