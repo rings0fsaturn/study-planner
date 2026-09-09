@@ -5,6 +5,7 @@
   "assessmentId": "assessment-01",
   "submittedAt": "2026-09-03T10:05:00Z",
   "status": "graded",
+  "answer": { "index": 2 },
   "grade": {
     "attemptId": "attempt-02",
     "questionId": "question-01",

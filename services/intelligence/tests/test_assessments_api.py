@@ -13,7 +13,9 @@ from app.ingestion.models import IngestionError
 from app.main import app
 
 TEST_AUTH_SECRET = "test-supabase-jwt-secret-32-bytes-min"
-SECRET_KEYS = {"answer", "answerblock", "correctindex", "hiddenanswer"}
+# The learner's own answer IS echoed on the owner-scoped attempts read route
+# (#40 D-01), so "answer" is allowed here; key material stays banned.
+SECRET_KEYS = {"answerblock", "correctindex", "hiddenanswer"}
 
 
 class FakeUserClient:
@@ -630,7 +632,9 @@ def test_list_assessment_attempts_returns_public_records(
     assert record["assessmentId"] == "ass-1"
     assert record["status"] == "queued"
     assert record["grade"] is None
-    # The stored answer is the learner's own input (allowed); the key is not
-    # present because it lives in questions.answer_block, never on attempts.
+    # D-01: the learner's own answer echoes on the owner-scoped read route;
+    # the key stays out because it lives in questions.answer_block.
+    assert record["answer"] == {"index": 0}
     _assert_no_secret_keys(record)
-    assert "answer" not in record
+    assert "answer_block" not in record
+    assert "correctIndex" not in record

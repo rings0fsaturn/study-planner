@@ -184,8 +184,10 @@ def submit_assessment_attempt(
 def _attempt_record(row: dict) -> dict:
     """Serialize one attempt row to the public AttemptRecord contract.
 
-    The learner's answer is never echoed back; the grade block is the public
-    QuestionGraded (score/correct/perSkill) with no key material.
+    The learner's own answer is echoed back on this owner-scoped read route
+    (#40, PLAN D-01); the grade block is the public QuestionGraded
+    (score/correct/perSkill) with no key material. Key material
+    (answer_block/rubrics/reference solutions) stays service_role-only.
     """
     grade = row.get("grade")
     record: dict = {
@@ -198,6 +200,8 @@ def _attempt_record(row: dict) -> dict:
     }
     if row.get("elapsed_seconds") is not None:
         record["elapsedSeconds"] = int(row["elapsed_seconds"])
+    if row.get("answer") is not None:
+        record["answer"] = row["answer"]
     record["grade"] = grade
     return record
 

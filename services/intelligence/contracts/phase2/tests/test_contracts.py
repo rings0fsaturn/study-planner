@@ -342,7 +342,11 @@ def test_attempt_schemas_exclude_hidden_content() -> None:
         "submittedAt",
         "status",
         "elapsedSeconds",
+        "answer",
         "grade",
+    }
+    assert record["properties"]["answer"] == {
+        "$ref": "#/components/schemas/ObjectiveAnswer"
     }
     assert record["properties"]["status"]["enum"] == ["queued", "graded", "failed"]
     # The record carries the public grade only; the answer key stays in questions.answer_block.
@@ -373,10 +377,17 @@ def test_attempt_fixtures_validate_against_openapi() -> None:
 
     queued = load_json(ROOT / "fixtures/attempt-record-queued.json")
     _validate_against_openapi(document, "AttemptRecord", queued)
+    _validate_against_openapi(document, "ObjectiveAnswer", queued["answer"])
     assert queued["grade"] is None
 
     graded = load_json(ROOT / "fixtures/attempt-record-graded.json")
     _validate_against_openapi(document, "AttemptRecord", graded)
+    _validate_against_openapi(document, "ObjectiveAnswer", graded["answer"])
     _validate_against_openapi(document, "QuestionGraded", graded["grade"])
     assert len(graded["grade"]["perSkill"]) >= 1
     assert_no_secret_fields(graded)
+
+    # D-01: answer is optional — pre-echo rows without the key still validate.
+    legacy = dict(queued)
+    del legacy["answer"]
+    _validate_against_openapi(document, "AttemptRecord", legacy)
