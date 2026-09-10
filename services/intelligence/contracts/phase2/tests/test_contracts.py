@@ -345,10 +345,13 @@ def test_attempt_schemas_exclude_hidden_content() -> None:
         "answer",
         "grade",
     }
-    assert record["properties"]["answer"] == {
-        "$ref": "#/components/schemas/ObjectiveAnswer"
-    }
     assert record["properties"]["status"]["enum"] == ["queued", "graded", "failed"]
+    # #41 widens the echoed answer to objective + written; both are learner input.
+    answer_branches = record["properties"]["answer"]["oneOf"]
+    assert {branch.get("$ref") for branch in answer_branches} == {
+        "#/components/schemas/ObjectiveAnswer",
+        "#/components/schemas/WrittenAnswer",
+    }
     # The record carries the public grade only; the answer key stays in questions.answer_block.
     grade_schema = record["properties"]["grade"]
     grade_branches = grade_schema.get("oneOf", [grade_schema])
@@ -391,3 +394,108 @@ def test_attempt_fixtures_validate_against_openapi() -> None:
     legacy = dict(queued)
     del legacy["answer"]
     _validate_against_openapi(document, "AttemptRecord", legacy)
+
+
+# --- #41 written assessment: written answers, subtype, rubric breakdown ---
+
+# Authored rubric content and reference solutions are server-only; these names
+# must never appear on a client-visible schema (#41 AC1/AC3, PIPELINES.md).
+WRITTEN_SERVER_ONLY_NAMES = {
+    "rubric",
+    "rubricblock",
+    "referencesolution",
+    "referenceanswer",
+    "modelanswer",
+    "answerblock",
+    "answerkey",
+    "hiddentests",
+    "hiddenanswer",
+}
+
+
+def _property_names(value: object) -> set[str]:
+    names: set[str] = set()
+    if isinstance(value, dict):
+        for key, child in value.items():
+            names.add(key)
+            names |= _property_names(child)
+    elif isinstance(value, list):
+        for child in value:
+            names |= _property_names(child)
+    return names
+
+
+def test_written_answer_schema_is_typed_and_bounded() -> None:
+    document = _openapi()
+    written = document["components"]["schemas"]["WrittenAnswer"]
+    assert written["additionalProperties"] is False
+    assert written["required"] == ["text"]
+    assert set(written["properties"]) == {"text"}
+    assert written["properties"]["text"]["minLength"] == 1
+    assert written["properties"]["text"]["maxLength"] == 20000
+
+
+def test_question_subtype_is_optional_and_written_scoped() -> None:
+    document = _openapi()
+    question = document["components"]["schemas"]["Question"]
+    assert "subtype" in question["properties"]
+    assert "subtype" not in question["required"]
+    assert question["properties"]["subtype"]["enum"] == ["short_answer", "long_form"]
+
+
+def test_question_graded_breakdown_is_criterion_typed() -> None:
+    document = _openapi()
+    schemas = document["components"]["schemas"]
+
+    breakdown = schemas["QuestionGraded"]["properties"]["rubricBreakdown"]
+    assert breakdown["type"] == "array"
+    assert breakdown["items"]["$ref"].endswith("RubricCriterionResult")
+
+    criterion = schemas["RubricCriterionResult"]
+    assert criterion["additionalProperties"] is False
+    assert {"criterion", "weight", "score", "met"} <= set(criterion["required"])
+    assert criterion["properties"]["score"]["minimum"] == 0
+    assert criterion["properties"]["score"]["maximum"] == 1
+    assert criterion["properties"]["weight"]["minimum"] == 0
+    assert criterion["properties"]["weight"]["maximum"] == 1
+
+
+def test_written_attempt_fixtures_validate_against_openapi() -> None:
+    document = _openapi()
+
+    submitted = load_json(ROOT / "fixtures/written-attempt-submit.json")
+    _validate_against_openapi(document, "AttemptSubmit", submitted)
+    _validate_against_openapi(document, "WrittenAnswer", submitted["answer"])
+
+    question = load_json(ROOT / "fixtures/written-question.json")
+    _validate_against_openapi(document, "Question", question)
+    assert question["format"] == "written"
+    assert question["subtype"] == "long_form"
+
+    record = load_json(ROOT / "fixtures/written-attempt-record.json")
+    _validate_against_openapi(document, "AttemptRecord", record)
+    _validate_against_openapi(document, "WrittenAnswer", record["answer"])
+    _validate_against_openapi(document, "QuestionGraded", record["grade"])
+    assert record["grade"]["grader"] == "llm_rubric"
+    breakdown = record["grade"]["rubricBreakdown"]
+    assert len(breakdown) >= 2
+    assert abs(sum(line["weight"] for line in breakdown) - 1.0) < 1e-9
+    assert all(0.0 <= line["score"] <= 1.0 for line in breakdown)
+    assert record["grade"]["perSkill"]
+
+
+def test_written_contract_shapes_carry_no_server_only_vocabulary() -> None:
+    document = _openapi()
+    schemas = document["components"]["schemas"]
+
+    client_visible = set()
+    for name in ("WrittenAnswer", "RubricCriterionResult", "AttemptRecord", "Question"):
+        client_visible |= _property_names(schemas[name])
+    offenders = {
+        name for name in client_visible if name.lower() in WRITTEN_SERVER_ONLY_NAMES
+    }
+    assert not offenders, offenders
+
+    # The learner's own written answer fixture carries no key material either.
+    assert_no_secret_fields(load_json(ROOT / "fixtures/written-attempt-record.json"))
+    assert_no_secret_fields(load_json(ROOT / "fixtures/written-question.json"))

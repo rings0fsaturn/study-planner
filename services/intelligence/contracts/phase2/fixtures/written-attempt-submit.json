@@ -1,0 +1,10 @@
+{
+  "clientAttemptId": "ca-written-001",
+  "questionId": "q-written-001",
+  "answer": {
+    "text": "Adam keeps a running average of the gradient and of the squared gradient, and both start at zero, so the early estimates are pulled toward zero. Bias correction divides each estimate by one minus beta raised to the step count, which cancels that initialisation pull and makes the first steps roughly the size they would have been with an unbiased warm start."
+  },
+  "submittedAt": "2026-09-10T10:15:00Z",
+  "elapsedSeconds": 412,
+  "correlationId": "corr-written-001"
+}
