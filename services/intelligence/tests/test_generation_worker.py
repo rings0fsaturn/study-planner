@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from app.generation.models import NormalizedGenerationResponse, RetrievedChunk
+from app.generation.prompts import (
+    MCQ_SCHEMA,
+    WRITTEN_PROMPT_TEMPLATE_VERSION,
+    WRITTEN_SCHEMA,
+)
 from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 from app.ingestion.models import IngestionError, Material
 from tests.ingestion_doubles import FakeQueue
@@ -83,7 +88,12 @@ class FakeAdapter:
         self, messages, response_schema, *, repair=False, request_id="", correlation_id=""
     ):
         self.calls.append(
-            {"messages": messages, "repair": repair, "correlation_id": correlation_id}
+            {
+                "messages": messages,
+                "schema": response_schema,
+                "repair": repair,
+                "correlation_id": correlation_id,
+            }
         )
         return self._responses.pop(0)
 
@@ -223,6 +233,7 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     assert question_row["answer_block"] == {"correctIndex": 0}
     assert repo.questions == [question_row]
     assert telemetry.records[0].outcome == "ok"
+    assert adapter.calls[0]["schema"] is MCQ_SCHEMA
     assert telemetry.records[0].questions_requested == 1
     assert telemetry.records[0].questions_accepted == 1
     assert telemetry.records[0].reasoning_tokens == 0
@@ -564,3 +575,198 @@ def test_unexpected_exception_redelivers_message() -> None:
     worker.run_once()
 
     assert queue.redelivered == [("assessment_generate", 1)]
+
+
+# --- #41 written generation ---
+
+VALID_WRITTEN = {
+    "stem": "Explain how bias correction changes the first update steps in Adam.",
+    "subtype": "long_form",
+    "expectedLengthWords": 150,
+    "difficulty": 3,
+    "skillTags": ["Strategic Planning"],
+    "citations": [{"chunkId": "c1", "quote": "the shortfall between forecast and target"}],
+    "rubric": [
+        {"criterion": "Names both running moment estimates", "weight": 0.4, "maxPoints": 4},
+        {"criterion": "States the correction divisor", "weight": 0.6, "maxPoints": 6},
+    ],
+    "referenceAnswer": "Adam divides each estimate by one minus beta to the step count.",
+    "rubricVersion": "rubric-v1",
+}
+
+# A single criterion cannot sum its weights to 1 with a second one absent; the
+# gate reads the total, so this shape is repairable-but-invalid.
+UNNORMALIZED_WRITTEN = {
+    **VALID_WRITTEN,
+    "rubric": [{"criterion": "Names both running moment estimates", "weight": 0.4, "maxPoints": 4}],
+}
+
+
+def written_assessment() -> dict:
+    seeded = assessment()
+    seeded["recipe"] = {**seeded["recipe"], "formats": ["written"]}
+    return seeded
+
+
+def test_written_recipe_uses_written_schema_and_accepts_written_row() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response(structured_output=VALID_WRITTEN)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert adapter.calls[0]["schema"] is WRITTEN_SCHEMA
+    assert adapter.calls[0]["messages"][0]["content"].startswith(
+        "You author one written exam question"
+    )
+    assert len(repo.completed) == 1
+    question_row, job_id, status, warnings = repo.completed[0]
+    assert job_id == "j1"
+    assert status == "ready"
+    assert warnings == []
+    assert question_row["format"] == "written"
+    assert question_row["subtype"] == "long_form"
+    assert question_row["prompt"] == VALID_WRITTEN["stem"]
+    assert question_row["options"] == []
+    assert question_row["skill_tags"] == ["Strategic Planning"]
+    assert question_row["authored_difficulty"] == 3
+    assert question_row["answer_block"] == {
+        "rubricVersion": "rubric-v1",
+        "referenceAnswer": VALID_WRITTEN["referenceAnswer"],
+        "rubric": VALID_WRITTEN["rubric"],
+    }
+    assert telemetry.records[0].outcome == "ok"
+    assert telemetry.records[0].questions_accepted == 1
+    assert telemetry.records[0].prompt_template_version == WRITTEN_PROMPT_TEMPLATE_VERSION
+    assert not queue.queues["assessment_generate"]
+
+
+def test_written_answer_block_drops_unexpected_provider_keys() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    smuggled = {
+        **VALID_WRITTEN,
+        "rubric": [
+            {
+                "criterion": "Names both running moment estimates",
+                "weight": 0.4,
+                "maxPoints": 4,
+                "answerKey": "leak",
+            },
+            {"criterion": "States the correction divisor", "weight": 0.6, "maxPoints": 6},
+        ],
+    }
+    adapter = FakeAdapter([ok_response(structured_output=smuggled)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.completed[0][0]["answer_block"]["rubric"][0] == {
+        "criterion": "Names both running moment estimates",
+        "weight": 0.4,
+        "maxPoints": 4,
+    }
+
+
+def test_written_format_failure_repairs_with_written_schema() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=VALID_WRITTEN),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(repo.questions) == 1
+    assert repo.questions[0]["format"] == "written"
+    assert adapter.calls[1]["repair"] is True
+    assert adapter.calls[1]["schema"] is WRITTEN_SCHEMA
+    assert "rubric_weights_not_normalized" in adapter.calls[1]["messages"][-1]["content"]
+    assert telemetry.records[0].repair_attempted is True
+    assert telemetry.records[0].questions_accepted == 1
+
+
+def test_written_repair_exhausted_fails_assessment_malformed() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.questions == []
+    assert repo.assessment_updates[0][1] == "failed"
+    assert repo.assessment_updates[0][2][0]["code"] == "malformed_output"
+    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].outcome == "malformed_output"
+    assert telemetry.records[0].questions_accepted == 0
+
+
+def test_written_citation_drop_fails_without_repair() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    out_of_context = {**VALID_WRITTEN, "citations": [{"chunkId": "nope", "quote": "x"}]}
+    adapter = FakeAdapter([ok_response(structured_output=out_of_context)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(adapter.calls) == 1
+    assert repo.questions == []
+    assert repo.assessment_updates[0][2][0]["code"] == "citation_missing"
+
+
+def test_written_quota_failure_keeps_assessment_generating() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([failure_response("quota_failure", "quota_exhausted", retry_after=60)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.questions == []
+    assert repo.assessment_updates[0][1] == "generating"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert repo.job_updates[-1]["retry_after"] == 60
+    assert telemetry.records[0].outcome == "quota_failure"

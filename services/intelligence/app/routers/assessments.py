@@ -27,13 +27,18 @@ router = APIRouter()
 DIFFICULTY_MIN = 1
 DIFFICULTY_MAX = 5
 DEFAULT_SKILL_TAGS = ["core"]
+# One question family per assessment in this slice (#41, D-01); mixed-family
+# generation is out of scope.
+SUPPORTED_FORMATS = (["objective"], ["written"])
+# Contract bound for WrittenAnswer.text (openapi, Phase 2 #41).
+WRITTEN_TEXT_MAX_LENGTH = 20000
 
 
 def _validate_recipe(recipe: dict) -> list[str]:
     failures: list[str] = []
     formats = recipe.get("formats")
-    if formats != ["objective"]:
-        failures.append("formats must be ['objective'] for this slice")
+    if formats not in SUPPORTED_FORMATS:
+        failures.append("formats must be ['objective'] or ['written'] for this slice")
     question_count = recipe.get("questionCount")
     if question_count != 1:
         failures.append("questionCount must be 1 for this slice")
@@ -49,7 +54,7 @@ def _validate_recipe(recipe: dict) -> list[str]:
 
 
 def _question(row: dict) -> dict:
-    return {
+    question = {
         "id": row["id"],
         "assessmentId": row["assessment_id"],
         "materialId": row["material_id"],
@@ -60,6 +65,12 @@ def _question(row: dict) -> dict:
         "authoredDifficulty": int(row.get("authored_difficulty") or 1),
         "citations": row.get("citations") or [],
     }
+    # Optional by contract: written questions carry the authored subtype, and
+    # objective rows omit the key entirely rather than sending a null.
+    subtype = row.get("subtype")
+    if subtype:
+        question["subtype"] = subtype
+    return question
 
 
 @router.post("/assessments/generate")
@@ -160,6 +171,24 @@ def submit_assessment_attempt(
         return service_error(
             request, IngestionError("invalid_request", "answer must be an object")
         )
+    # Written answers (#41, D-02): `{ text }` is the only accepted shape, and an
+    # empty or oversized submission never reaches the queue. Objective answers
+    # carry no `text` key, so this gate cannot touch them.
+    text = body["answer"].get("text")
+    if text is not None:
+        if not isinstance(text, str) or not text.strip():
+            return service_error(
+                request,
+                IngestionError("invalid_request", "written answer text must be a non-empty string"),
+            )
+        if len(text) > WRITTEN_TEXT_MAX_LENGTH:
+            return service_error(
+                request,
+                IngestionError(
+                    "invalid_request",
+                    f"written answer text exceeds {WRITTEN_TEXT_MAX_LENGTH} characters",
+                ),
+            )
 
     attempt_id = str(uuid.uuid4())
     job_id = str(uuid.uuid4())
