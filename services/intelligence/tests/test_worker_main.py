@@ -117,3 +117,48 @@ def test_arm_loop_survives_iteration_exceptions(monkeypatch: pytest.MonkeyPatch)
     thread.join(timeout=2.0)
     assert not thread.is_alive()
     assert worker.runs >= 2
+
+
+def test_build_grading_worker_wires_the_rubric_adapter(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """#41: the written-grading arm rides the shared adapter, rubric schema."""
+    captured: dict = {}
+    sentinel = object()
+
+    def fake_adapter_factory(**kwargs):
+        captured.update(kwargs)
+        return sentinel
+
+    monkeypatch.setattr(
+        "app.generation.openrouter_client.OpenRouterGenerationClient", fake_adapter_factory
+    )
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-test")
+    monkeypatch.delenv("GRADING_MODEL", raising=False)
+
+    adapter = worker_main._build_openrouter_adapter("GRADING", "written_rubric")
+    worker = worker_main._build_grading_worker(object(), object(), adapter)
+
+    assert adapter is sentinel
+    assert captured["schema_name"] == "written_rubric"
+    assert captured["api_key"] == "sk-test"
+    assert captured["model"] == "deepseek/deepseek-v4-flash-0731"
+    assert worker.config.model == "deepseek/deepseek-v4-flash-0731"
+    assert worker.config.visibility_seconds == 30
+    assert worker._adapter is sentinel
+
+
+def test_build_grading_worker_parses_grading_env_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("GRADING_MODEL", "deepseek/deepseek-v4-flash-9999")
+    monkeypatch.setenv("GRADING_POLL_INTERVAL_SECONDS", "3")
+    monkeypatch.setenv("GRADING_VISIBILITY_SECONDS", "45")
+    monkeypatch.setenv("GRADING_MAX_IN_FLIGHT", "2")
+
+    worker = worker_main._build_grading_worker(object(), object(), object())
+
+    assert worker.config.model == "deepseek/deepseek-v4-flash-9999"
+    assert worker.config.poll_interval_seconds == 3.0
+    assert worker.config.visibility_seconds == 45
+    assert worker.config.max_in_flight == 2
