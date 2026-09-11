@@ -125,6 +125,24 @@ def test_file_material_extracts_pdf_text() -> None:
     assert content.text == "PDF body text"
 
 
+def test_file_material_exposes_pages_and_bookmarks_for_the_outline() -> None:
+    class ReaderWithBookmarks(FakePdfReader):
+        def bookmarks(self, data: bytes) -> tuple[tuple[str, int], ...]:
+            return (("Chapter 1", 3),)
+
+    content = extract(
+        make_material("file", "paper.pdf"),
+        pdf=ReaderWithBookmarks(["page one", "page two", "page three"]),
+    )
+    assert content.pages == ("page one", "page two", "page three")
+    assert content.bookmarks == (("Chapter 1", 3),)
+
+
+def test_reader_without_a_bookmark_capability_is_not_an_error() -> None:
+    content = extract(make_material("file", "paper.pdf"), pdf=FakePdfReader(["page one"]))
+    assert content.bookmarks == ()
+
+
 def test_file_material_missing_object_is_validation_failure() -> None:
     with pytest.raises(IngestionError) as exc_info:
         extract(

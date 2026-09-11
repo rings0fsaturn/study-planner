@@ -25,6 +25,7 @@ from .extractors import (
     extract_material,
 )
 from .models import PROGRESS_BY_STAGE, ContentChunk, IngestionError, Material
+from .outline import build_outline
 from .queue import (
     DEFAULT_VISIBILITY_SECONDS,
     EMBED_QUEUE,
@@ -344,6 +345,15 @@ class IngestionWorker:
         )
 
         started = time.perf_counter()
+        # The outline (chapters -> PDF pages) comes from the same parse as the
+        # page-tagged segments, so it is derived here instead of in its own
+        # stage (D-04). Best-effort: a document without a usable outline is
+        # still a readable material, and the learner keeps the typed page range.
+        outline = build_outline(
+            content.pages,
+            bookmarks=content.bookmarks,
+            page_count=len(content.pages),
+        )
         fulltext_path = f"{material.owner_id}/{material.id}/fulltext.txt"
         self.storage.upload(fulltext_path, content.text.encode("utf-8"), "text/plain")
         self._emit_telemetry(
@@ -413,6 +423,9 @@ class IngestionWorker:
             PROGRESS_BY_STAGE["chunking"],
             chunk_count=len(chunks),
             extracted_text_path=fulltext_path,
+            outline=outline.to_json() if outline else None,
+            page_count=outline.page_count if outline else None,
+            page_offset=outline.page_offset if outline else None,
         )
         self.queue.send(
             EMBED_QUEUE,

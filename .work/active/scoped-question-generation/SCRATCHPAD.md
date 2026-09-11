@@ -1,11 +1,10 @@
 # Scratchpad – scoped-question-generation · session 2026-09-11
-_state.md: active/scoped-question-generation/state.md · Updated: 2026-09-11T07:40_
+_state.md: active/scoped-question-generation/state.md · Updated: 2026-09-11T10:49_
 
 ## Now / Next
-- Doing: nothing in flight — **P2 is done, verified live, committed (`2ea2d77`) and pushed.**
-- Next: **P3 outline at ingestion** — `app/ingestion/outline.py` from `scripts/pdf_outline.py` (deterministic core unchanged, DeepSeek only as fallback/judge), run in stage 1, persisted on `materials` via a **new migration 030** (029 is already applied remotely and never re-runs), `--self-check` layouts become unit tests.
-- Blocked: none. Left running for hands-on testing: the managed runtime (intelligence :8000 healthy, app :5173 healthy), the detached ingestion worker (new code), and the GPU sidecar on :8200.
-- Session end not requested: the scratchpad is current rather than reset, so the next session can either continue here or seed from `state.md`.
+- Doing: nothing in flight — **P3 is done, verified live, not yet committed** (records written, commit next).
+- Next: P4 — scope contract (`AssessmentRecipe.scope`), router validation against `page_count`, scope → retrieval (worker/context + the "no query" branch for a page-only scope), the config picker fed by `materials.outline`, D-06 widen-and-warn, then the live gate (pick a chapter, assert every citation's chunk page is inside the range).
+- Blocked: none. Left running for hands-on testing: managed runtime (intelligence :8000, app :5173), the detached ingestion worker (new P3 code), the GPU sidecar (`embedder-embedder-1`, healthy, :8200).
 
 ## Session log
 - 06:2x RESUMED  P1 closed and pushed; scratchpad/state agree with the worktree, no disk-vs-record drift this time.
@@ -30,3 +29,16 @@ _state.md: active/scoped-question-generation/state.md · Updated: 2026-09-11T07:
 - 07:4x DONE   records: PLAN Phase 2 status + notes (incl. the 029-vs-030 correction for P3), VERIFICATION AC2 note + P2 gate ticked + live-evidence line, state.md (current/Done/Files/Pitfalls/D-03/Open), STATUS row. Evidence file `research/2026-09-11-p2-live-verification.md`.
 - 07:4x FOUND  a stale `.git/index.lock` (dated 06:10, no git process alive) blocked the first commit attempt; removed after checking `pgrep -af git` was empty (the same pitfall P1 recorded).
 - 07:4x DONE   committed `2ea2d77` (18 files) and pushed to `phase2/issue-62-scoped-question-generation` (c30cd43..2ea2d77); `graphify update .` re-run.
+- 10:0x RESUMED  P3+P4 requested. Worktree check: `git status --short` shows only `graphify-out/` untracked; scratchpad and state agree with disk (P2 committed at `e02fa52` docs / `2ea2d77` code).
+- 10:1x FOUND  the offset must come from the running headers, and the *strict* reading is the only safe one: a standalone number (not part of `3.2`/`P.5`/`20X9`) on one of the first two lines, ≤6 words, 1..page_count, and a page votes only when all its candidates agree. Measured on the 572-page fixture: 282 of 284 voting pages agree on **-33** (99.3%); the loose rule (all head/footer numbers) reaches only 64.8%, too close to a threshold to trust. Tail lines were dropped: body prose carries numbers and cost 34 votes.
+- 10:2x DECIDED  entries persist as **PDF page numbers** (`printed - page_offset`), the numbering chunk pages and the viewer both use; and `build_outline` returns None when no offset is derivable, because a chapter range off by the offset would silently scope the right chapter to the wrong chunks (the typed page range still works, since `page_count` is always the true PDF count).
+- 10:2x EDIT   `app/ingestion/outline.py` (new, from `scripts/pdf_outline.py`: deterministic core verbatim + `derive_page_offset` + `build_outline` + the OpenRouter fallback wired to the app adapter) – 14 unit tests green.
+- 10:3x EDIT   `models.py` (`ExtractedContent.pages`/`bookmarks`), `extractors.py` (`PypdfTextReader.bookmarks`, optional-capability adapter so a reader without it is not an error, pages/bookmarks on the file branch), `worker.py` (outline computed right after extraction, persisted with the chunking transition), `repository.py` + `ingestion_doubles.py` (three new columns) – focused suites green.
+- 10:3x EDIT   `apps/app/supabase/migrations/030_material_outline.sql` (new): `outline JSONB`, `page_count INT` (≥1), `page_offset INT`, plus 008's server-owned guard re-created with the three columns added, so a client token cannot forge a derived outline.
+- 10:3x FOUND  the fake repo broke on `Material(**row)` once the outline columns were written: the double now pops them, matching the production row mapper, which ignores columns it does not map.
+- 10:3x EDIT   `tests/test_outline.py` (new, 14 tests: three real contents layouts, permissive gating, offset rules, bookmarks, refused outline, LLM gating + failure, implausible entries), `tests/test_extractors.py` +2, `tests/test_ingestion_worker.py` +2, `scripts/pdf_outline.py` rewritten as a thin CLI over the module (its `--self-check` assertions are the unit test now) – focused 123 passed.
+- 10:4x DONE   migration 030 dry-run listed exactly 030, then the real push applied it.
+- 10:4x DONE   worker restarted (pids 35066/35074/35077), chunk rows deleted (D-07), retry RPC 200 (job `e6be81a0-7401-4dfd-9dda-8f985125e6a5`); the `chunking` transition already carries `pages=572 offset=-33 entries=16`, `ready` in ~80 s with 754 re-embeddings.
+- 10:4x DONE   stored `materials.outline` asserted against the offline parse of the same fixture: 16/16 entries identical, same offset and page count, source `contents` (so the DeepSeek fallback was never called). Evidence: `research/2026-09-11-p3-live-verification.md`.
+- 10:4x DONE   whole service 533 passed / 7 failed — the identical 7 pre-existing failures (2 probe-test imports, 5 calibration golden drifts).
+- 10:4x NEXT   write the P3 records (PLAN/VERIFICATION/STATUS), commit P3, then start P4.

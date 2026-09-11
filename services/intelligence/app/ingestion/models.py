@@ -96,6 +96,12 @@ class ExtractedContent:
 
     text: str
     segments: tuple[TextSegment, ...] = ()
+    # Raw per-page text for page-bearing sources (PDF) so the outline can be
+    # derived from the document's own contents page; empty for other kinds.
+    pages: tuple[str, ...] = ()
+    # Top-level PDF bookmarks as (title, 1-based PDF page); empty when the
+    # source is not a PDF or carries no bookmark tree.
+    bookmarks: tuple[tuple[str, int], ...] = ()
 
     def preview(self, limit: int = 4000) -> str:
         if len(self.text) <= limit:

@@ -1,7 +1,7 @@
 # Scoped Question Generation (#18) — Implementation Plan
 
 **Date written:** 2026-09-11 · **Ticket:** GitHub #62 (filed + claimed 2026-09-11) · **Parent:** spec #32 · map #4 · **Branch:** `phase2/issue-62-scoped-question-generation` (cut off `phase2/issue-40-41` at `237faf8`)
-**Plan status:** 🟡 In progress — P1 done (2026-09-11); P2…P5 defined, evidence measured, decisions locked with the user on 2026-09-11.
+**Plan status:** 🟡 In progress — P1 + P2 + P3 done (2026-09-11); P4/P5 defined, evidence measured, decisions locked with the user on 2026-09-11.
 **Trigger:** user report — "I dont like the questions being generated in the assessment"; 25/25 generated questions asked about the exam instead of the material's content.
 
 > Runbook convention inherited from the #38/#39/#40/#41 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -106,7 +106,8 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 | `services/intelligence/app/ingestion/worker.py` | P2/P3 — persist page columns; compute the outline in stage 1 |
 | `services/intelligence/app/ingestion/outline.py` (new) | P3 — contents-page parse, offset derivation, LLM fallback |
 | `services/intelligence/app/ingestion/repository.py` | P2/P3 — chunk page columns, material outline columns |
-| `apps/app/supabase/migrations/029_page_scoped_chunks.sql` (new) | P2/P3 — chunk page columns, material outline columns, RPC page bounds |
+| `apps/app/supabase/migrations/029_page_scoped_chunks.sql` (new) | P2 — chunk page columns, RPC page bounds |
+| `apps/app/supabase/migrations/030_material_outline.sql` (new) | P3 — `materials.outline`/`page_count`/`page_offset` + the server-owned-column guard extended |
 | `services/intelligence/contracts/phase2/openapi.yaml` | P4 — `AssessmentRecipe.scope` (load-bearing: `additionalProperties: false`). Optional: sync the `Material` schema with `outline`/`pageCount` for documentation honesty — the client reads materials straight from the DB, so this is not on the feature path. |
 | `services/intelligence/app/routers/assessments.py` | P4 — scope validation against `page_count` |
 | `services/intelligence/contracts/phase2/fixtures/` + `tests/` | P4 — scoped recipe fixture + contract assertions |
@@ -164,7 +165,7 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 - Migration 029: two chunk columns; the 016 hybrid body copied verbatim with two page params (`DEFAULT NULL`) and the range predicate added to **both** CTEs; `page_start`/`page_end` added to `RETURNS TABLE`. The 4-arg overload is `DROP`ped first (CREATE OR REPLACE cannot change params or the return type) and the 6-arg signature's defaults keep every existing 4-named-argument caller resolving to it unambiguously — verified live (§3A of the evidence file replays P1's chapter steer to the same ordinals). Range matching is **overlap**, not containment: a single-page range must keep the chunk that carries the page boundary's text.
 - **Verification (evidence: `research/2026-09-11-p2-live-verification.md`).** Offline on the real 572-page fixture: paragraph stream 1257 identical, chunks 754 with identical texts, 754/754 paged, 372 straddling, all inside 1..572. Live: 029 pushed; APM material re-ingested from scratch (rows deleted per D-07, detached worker restarted per rule 53, sidecar up) -> `total=754 paged=754 min_p=1 max_p=572 straddling=372 out_of_range=0 embedded=754`. RPC: unscoped chapter steer -> ordinals 203/271/204/269/202 (P1's measured result), scoped 124..170 -> 5 hits all in range with page 203 excluded, single-page ranges keep straddling chunks, pageless material -> 0 hits. Focused suites 126 passed; whole service 515 passed / 7 failed with the identical 7 failing on the untouched base.
 
-### Phase 3 — Outline at ingestion `⬜ Not started`
+### Phase 3 — Outline at ingestion `✅ Done 2026-09-11`
 1. `app/ingestion/outline.py` from `scripts/pdf_outline.py` (deterministic core unchanged; the LLM path wired to the existing OpenRouter adapter and schema).
 2. ~~Migration 029 (same file)~~ → **its own migration 030**: 029 was pushed to the dev project during P2 (2026-09-11), and an applied migration is never re-run, so the `materials.outline`/`page_count`/`page_offset` columns must ship in a new file. `materials.outline JSONB`, `materials.page_count INT`, `materials.page_offset INT`.
 3. Stage-1 extraction computes and persists the outline. `url`/`manual`/`youtube` materials take the LLM-or-empty path (no page scope offered).
@@ -172,6 +173,17 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 **Verification:** the `--self-check` layouts become unit tests (wrapped title, dot leaders, single-space page, permissive gating); live: the APM outline equals the printed contents page (16 chapters, offset -33), and re-running on SICP/CSAPP/DDIA stays deterministic.
 
 **Notes (filled in during implementation):**
+
+- `outline.py` owns `build_outline(pages, *, bookmarks=(), page_count=None, llm=None) -> Outline | None` where `Outline = (entries, page_count, page_offset, source)`. The deterministic core moved verbatim; `scripts/pdf_outline.py` is now a thin CLI over the module, so there is one implementation. Its `--self-check` assertions became `tests/test_outline.py` (the flag is gone).
+- **The printed→PDF offset is the load-bearing measurement.** Measured on the real 572-page fixture: the strict rule (standalone number, not part of `3.2`/`P.5`/`20X9`, on one of the first two lines, ≤6 words, within 1..page_count, and a page votes only when its candidates agree on one delta) gives **282 of 284 voting pages on -33 = 99.3%**; reading every head/footer number gives only 64.8%, too close to a threshold to trust. Tail lines were dropped because body prose carries numbers and cost 34 votes. Floors: `OFFSET_MIN_PAGES = 20`, `OFFSET_MIN_AGREEMENT = 0.6`.
+- **Entries are stored as PDF page numbers**, not the numbers printed on the page: `page = printed - page_offset`. Chunk pages and the viewer are PDF-page numbered, so the conversion happens once, server-side; `page_offset` (-33) is persisted for provenance and printed-page labelling. Measured conversion: Chapter 1 printed 1 -> pdf 34, Chapter 5 123 -> 156, Chapter 16 525 -> 558.
+- **No derivable offset means no outline** (`build_outline` returns None): without the conversion a chapter range would silently scope the right chapter to the wrong chunks. A typed page range still works for such a material because `page_count` is always the true PDF page count. Documented as a deliberate refusal, not a gap.
+- Bookmarks are the first rung of D-04's cascade: `PypdfTextReader.bookmarks` is an *optional* reader capability (`getattr`, so a test double or another adapter without it is not an error), top-level destinations only, already in PDF pages, `page_offset` stays NULL. 0 bookmarks on this corpus, so the path is covered by a unit test rather than by the live run.
+- The LLM fallback runs only when the deterministic parse yields fewer than 3 entries, and any provider failure returns None instead of failing ingestion (`_safe_fallback`) — the outline is best-effort, a readable material is still a readable material. The model's `page` is the printed number and is converted with the same measured offset. The live run never called it (source `contents`).
+- `ExtractedContent` gained `pages` (raw per-page text) and `bookmarks` so stage 1 derives the outline from the parse that already happened (D-04, no second read of the PDF, no new queue stage). The outline is persisted in the same `set_material_state` call as the `chunking` transition, i.e. before any embedding work.
+- Migration 030 also re-creates 008's `guard_server_owned_material_columns` with the three columns added, so a client token cannot forge a derived outline (the worker writes as service_role).
+- **Verification (evidence: `research/2026-09-11-p3-live-verification.md`).** Offline on the real fixture: contents page pdf 6, 16 entries exactly matching the printed contents, offset -33 (99.3% agreement), 0.01 s on cached page texts, source `contents` (no provider call). Live: migration 030 pushed (dry-run listed exactly 030), worker restarted, APM material re-ingested -> the `chunking` transition already carries `pages=572 offset=-33 entries=16`, `ready` in ~80 s with 754 re-embeddings; the stored outline equals the offline parse entry for entry. Focused suites 123 passed; whole service 533 passed / 7 failed (the identical 7 pre-existing failures).
+
 
 ### Phase 4 — Scope contract + picker + scoped retrieval `⬜ Not started`
 1. `openapi.yaml`: `AssessmentRecipe.scope`; a new fixture; contract tests.

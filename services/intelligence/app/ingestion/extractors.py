@@ -115,6 +115,51 @@ class PypdfTextReader:
         except Exception as exc:
             raise IngestionError("validation_failed", "PDF could not be read") from exc
 
+    def bookmarks(self, data: bytes) -> tuple[tuple[str, int], ...]:
+        """Top-level bookmark titles with their 1-based PDF page.
+
+        Optional adapter capability (the outline prefers bookmarks when a
+        document has them); a broken bookmark tree is not a read failure.
+        """
+        import io
+
+        from pypdf import PdfReader
+
+        try:
+            reader = PdfReader(io.BytesIO(data))
+            return _bookmark_entries(reader)
+        except Exception:
+            logger.warning("PDF bookmarks could not be read", exc_info=True)
+            return ()
+
+
+def _bookmark_entries(reader) -> tuple[tuple[str, int], ...]:
+    entries: list[tuple[str, int]] = []
+    for item in getattr(reader, "outline", None) or []:
+        if isinstance(item, list):
+            # Nested children of the previous bookmark: top-level only.
+            continue
+        title = str(getattr(item, "title", "") or "").strip()
+        try:
+            page_index = reader.get_destination_page_number(item)
+        except Exception:
+            continue
+        if title and page_index is not None and page_index >= 0:
+            entries.append((title, int(page_index) + 1))
+    return tuple(entries)
+
+
+def _bookmarks(pdf_reader: PdfTextReader, raw: bytes) -> tuple[tuple[str, int], ...]:
+    """Optional reader capability: adapters that can list bookmarks do."""
+    reader_bookmarks = getattr(pdf_reader, "bookmarks", None)
+    if reader_bookmarks is None:
+        return ()
+    try:
+        return tuple(reader_bookmarks(raw))
+    except Exception:
+        logger.warning("bookmark read failed; using the contents parse", exc_info=True)
+        return ()
+
 
 class YoutubeTranscriptClient:
     """Fetch a YouTube transcript with timestamps."""
@@ -200,7 +245,12 @@ def extract_material(
         text = "\n\n".join(pages)
         if not text.strip():
             raise IngestionError("validation_failed", "PDF contains no extractable text")
-        return ExtractedContent(text=clean_text(text), segments=_page_segments(pages))
+        return ExtractedContent(
+            text=clean_text(text),
+            segments=_page_segments(pages),
+            pages=tuple(pages),
+            bookmarks=_bookmarks(pdf_reader, raw),
+        )
 
     if kind == "youtube":
         video_id = youtube_video_id(source)

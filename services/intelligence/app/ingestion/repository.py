@@ -36,6 +36,9 @@ class IngestionRepo(Protocol):
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
         embedding_provider: str | None = None,
+        outline: dict | None = None,
+        page_count: int | None = None,
+        page_offset: int | None = None,
     ) -> None: ...
     def get_job(self, job_id: str) -> IngestionJob: ...
     def set_job_running(self, job_id: str) -> None: ...
@@ -194,6 +197,9 @@ class SupabaseIngestionRepo:
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
         embedding_provider: str | None = None,
+        outline: dict | None = None,
+        page_count: int | None = None,
+        page_offset: int | None = None,
     ) -> None:
         payload: dict[str, object] = {
             "ingestion_state": state,
@@ -208,6 +214,12 @@ class SupabaseIngestionRepo:
             payload["extracted_text_path"] = extracted_text_path
         if embedding_provider is not None:
             payload["embedding_provider"] = embedding_provider
+        if outline is not None:
+            payload["outline"] = outline
+        if page_count is not None:
+            payload["page_count"] = page_count
+        if page_offset is not None:
+            payload["page_offset"] = page_offset
         self._patch(
             f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}",
             payload,

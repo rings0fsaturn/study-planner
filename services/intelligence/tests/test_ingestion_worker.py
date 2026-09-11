@@ -14,6 +14,7 @@ from tests.ingestion_doubles import (
     ZeroVectorEmbedder,
 )
 from tests.test_extractors import FakeFetcher, FakePdfReader, FakeTranscripts
+from tests.test_outline import paged_book
 
 
 def make_material(kind: str = "manual", source: str = "body text") -> Material:
@@ -245,6 +246,40 @@ def test_file_material_with_upload_extracts_and_readies() -> None:
     run_pipeline(worker, queue)
     assert repo.materials["mat-1"]["ingestion_state"] == "ready"
     assert repo.jobs[job_id]["status"] == "succeeded"
+
+
+def test_file_material_persists_the_outline_at_extraction() -> None:
+    worker, repo, queue, storage = make_worker(pdf_reader=FakePdfReader(paged_book()))
+    material = make_material(kind="file", source="paper.pdf")
+    storage.objects["user-1/mat-1/paper.pdf"] = b"pdf bytes"
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    row = repo.materials["mat-1"]
+    assert row["ingestion_state"] == "ready"
+    assert row["page_count"] == 30
+    assert row["page_offset"] == -3
+    assert row["outline"] == {
+        "entries": [
+            {"title": "Chapter 1 Alpha", "page": 10},
+            {"title": "Chapter 2 Beta", "page": 12},
+            {"title": "Chapter 3 Gamma", "page": 14},
+            {"title": "Chapter 4 Delta", "page": 16},
+        ],
+        "source": "contents",
+    }
+
+
+def test_page_less_materials_leave_the_outline_columns_empty() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material(source="plain text body")
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+
+    row = repo.materials["mat-1"]
+    assert "outline" not in row
+    assert "page_count" not in row
+    assert "page_offset" not in row
 
 
 def test_embedding_quota_is_terminal_immediately() -> None:
