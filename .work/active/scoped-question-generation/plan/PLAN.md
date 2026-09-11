@@ -139,7 +139,7 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 - Wart to close in P4 (P1 is "no UI"): `AssessmentConfig.tsx:135` still sends `skillTags: ['core']` when the tag box is empty, so an untagged browser request still steers on a meaningless term. The tag box and that default both go in P4.
 - Not run: the browser click-through — P1 changed no UI, so the authenticated API run (same request the browser sends) is the real path; a browser pass would exercise pre-P4 UI.
 
-### Phase 2 — Page provenance through ingestion + the RPC `⬜ Not started`
+### Phase 2 — Page provenance through ingestion + the RPC `✅ Done 2026-09-11`
 1. `models.py`: `TextSegment.page`, `ContentChunk.page_start/page_end`.
 2. `extractors.py`: `PypdfTextReader` returns per-page text; the `file` branch builds page-tagged segments. **The joined text must remain byte-identical** (D-03) or every existing embedding is invalidated.
 3. `chunking.py`: propagate pages; a boundary-straddling chunk carries `page_start != page_end`.
@@ -156,9 +156,17 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 
 **Notes (filled in during implementation):**
 
+- `PypdfTextReader.extract` now returns `list[str]` (one entry per page) instead of the joined string; the `file` branch rebuilds `"\n\n".join(pages)` so `ExtractedContent.text` is built by the same single `clean_text` as before. `_page_segments(pages)` derives the page-tagged paragraph segments alongside it (per-page cleaning, split on `\n\n`, blanks dropped) — the same paragraph texts today's path produced, which is what keeps the chunk boundaries still.
+- `chunking.py`: `_page_bounds(parts)` gives `page_start` = first part's page, `page_end` = last part's page; the overlap tail carries the previous chunk's `page_end` (without it most chunks, which open with a tail, would have no page); the recursive oversized re-split carries `segment.page`. Chunks from sources without pages keep both bounds NULL.
+- `worker.py`: the resume-on-retry reuse key is now `(text, page_start, page_end)`, not `text`. Text-only reuse would re-publish rows written before the columns existed (identical text, NULL pages) and silently produce an unscopable material after any retry.
+- `generation/models.py` + `generation/context.py`: `RetrievedChunk` gained `page_start`/`page_end` and the RPC rows map them, so P4's citation-in-scope check (AC5) needs no second migration. **Deferred to P4: `GenerationBlueprint.scope`** — this phase has no consumer for it, and the plan's file index lists it here only because the two live in the same file.
+- `to_schema_dict` deliberately untouched: pages are retrieval metadata, not part of the visible chunk contract (`content-chunk.schema.json` unchanged, its test still passes).
+- Migration 029: two chunk columns; the 016 hybrid body copied verbatim with two page params (`DEFAULT NULL`) and the range predicate added to **both** CTEs; `page_start`/`page_end` added to `RETURNS TABLE`. The 4-arg overload is `DROP`ped first (CREATE OR REPLACE cannot change params or the return type) and the 6-arg signature's defaults keep every existing 4-named-argument caller resolving to it unambiguously — verified live (§3A of the evidence file replays P1's chapter steer to the same ordinals). Range matching is **overlap**, not containment: a single-page range must keep the chunk that carries the page boundary's text.
+- **Verification (evidence: `research/2026-09-11-p2-live-verification.md`).** Offline on the real 572-page fixture: paragraph stream 1257 identical, chunks 754 with identical texts, 754/754 paged, 372 straddling, all inside 1..572. Live: 029 pushed; APM material re-ingested from scratch (rows deleted per D-07, detached worker restarted per rule 53, sidecar up) -> `total=754 paged=754 min_p=1 max_p=572 straddling=372 out_of_range=0 embedded=754`. RPC: unscoped chapter steer -> ordinals 203/271/204/269/202 (P1's measured result), scoped 124..170 -> 5 hits all in range with page 203 excluded, single-page ranges keep straddling chunks, pageless material -> 0 hits. Focused suites 126 passed; whole service 515 passed / 7 failed with the identical 7 failing on the untouched base.
+
 ### Phase 3 — Outline at ingestion `⬜ Not started`
 1. `app/ingestion/outline.py` from `scripts/pdf_outline.py` (deterministic core unchanged; the LLM path wired to the existing OpenRouter adapter and schema).
-2. Migration 029 (same file): `materials.outline JSONB`, `materials.page_count INT`, `materials.page_offset INT`.
+2. ~~Migration 029 (same file)~~ → **its own migration 030**: 029 was pushed to the dev project during P2 (2026-09-11), and an applied migration is never re-run, so the `materials.outline`/`page_count`/`page_offset` columns must ship in a new file. `materials.outline JSONB`, `materials.page_count INT`, `materials.page_offset INT`.
 3. Stage-1 extraction computes and persists the outline. `url`/`manual`/`youtube` materials take the LLM-or-empty path (no page scope offered).
 4. No client plumbing: `materialClient` reads `materials` with `select('*')` (`materialClient.ts:193,216`), so the outline and `page_count` arrive on the material record the config page already fetches. No new route, no new fetch.
 **Verification:** the `--self-check` layouts become unit tests (wrapped title, dot leaders, single-space page, permissive gating); live: the APM outline equals the printed contents page (16 chapters, offset -33), and re-running on SICP/CSAPP/DDIA stays deterministic.

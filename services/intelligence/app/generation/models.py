@@ -49,6 +49,8 @@ class RetrievedChunk:
     material_id: str
     text: str
     ordinal: int
+    page_start: int | None = None
+    page_end: int | None = None
 
 
 @dataclass(frozen=True)

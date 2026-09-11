@@ -198,6 +198,8 @@ class FakeIngestionRepo:
                 "ordinal": chunk.ordinal,
                 "text": chunk.text,
                 "start_seconds": chunk.start_seconds,
+                "page_start": chunk.page_start,
+                "page_end": chunk.page_end,
                 "embedding": None,
                 "skipped": False,
             }
@@ -234,6 +236,8 @@ class FakeIngestionRepo:
                 text=row["text"],
                 ordinal=row["ordinal"],
                 start_seconds=row["start_seconds"],
+                page_start=row.get("page_start"),
+                page_end=row.get("page_end"),
             )
             for row in rows[:limit]
         ]

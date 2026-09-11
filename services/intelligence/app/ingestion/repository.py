@@ -390,6 +390,8 @@ class SupabaseIngestionRepo:
                 "ordinal": chunk.ordinal,
                 "text": chunk.text,
                 "start_seconds": chunk.start_seconds,
+                "page_start": chunk.page_start,
+                "page_end": chunk.page_end,
             }
             for chunk in chunks
         ]
@@ -418,7 +420,8 @@ class SupabaseIngestionRepo:
     def list_chunks(self, material_id: str, limit: int = 10000) -> list[ContentChunk]:
         rows = self._get(
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
-            f"&order=ordinal.asc&limit={limit}&select=id,ordinal,text,start_seconds",
+            f"&order=ordinal.asc&limit={limit}"
+            f"&select=id,ordinal,text,start_seconds,page_start,page_end",
             self._headers(),
         )
         return [
@@ -428,6 +431,8 @@ class SupabaseIngestionRepo:
                 text=row.get("text") or "",
                 ordinal=int(row.get("ordinal") or 0),
                 start_seconds=row.get("start_seconds"),
+                page_start=row.get("page_start"),
+                page_end=row.get("page_end"),
             )
             for row in rows
         ]

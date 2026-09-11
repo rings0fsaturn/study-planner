@@ -84,6 +84,37 @@ def test_defaults_match_approved_constants() -> None:
     assert DEFAULT_OVERLAP_TOKENS == 30
 
 
+def test_chunk_carries_the_page_range_of_its_parts() -> None:
+    segments = [
+        TextSegment(text=make_words(200), page=3),
+        TextSegment(text=make_words(150), page=4),
+        TextSegment(text=make_words(200), page=5),
+    ]
+    chunks = chunk_segments(segments, word_counter, target_tokens=400, overlap_tokens=0)
+    assert [(chunk.page_start, chunk.page_end) for chunk in chunks] == [(3, 4), (5, 5)]
+
+
+def test_overlap_tail_carries_the_page_into_the_next_chunk() -> None:
+    segments = [TextSegment(text=make_words(120), page=7) for _ in range(8)]
+    chunks = chunk_segments(segments, word_counter, target_tokens=400, overlap_tokens=60)
+    assert len(chunks) > 1
+    assert all(chunk.page_start == 7 and chunk.page_end == 7 for chunk in chunks)
+
+
+def test_chunks_without_pages_keep_null_bounds() -> None:
+    chunks = chunk_segments([TextSegment(text=make_words(500))], word_counter)
+    assert chunks
+    assert all(chunk.page_start is None and chunk.page_end is None for chunk in chunks)
+
+
+def test_splitting_an_oversized_page_paragraph_keeps_its_page() -> None:
+    chunks = chunk_segments(
+        [TextSegment(text=make_words(2000), page=9)], word_counter, target_tokens=400
+    )
+    assert len(chunks) >= 5
+    assert all(chunk.page_start == 9 and chunk.page_end == 9 for chunk in chunks)
+
+
 def test_document_segments_uses_transcript_segments_when_present() -> None:
     extracted = ExtractedContent(
         text="full", segments=(TextSegment("part", 1.0), TextSegment("two", 2.0))

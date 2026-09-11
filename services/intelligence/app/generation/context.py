@@ -86,6 +86,12 @@ def build_context(
             material_id=str(row.get("material_id") or material_id),
             text=str(row.get("chunk_text") or ""),
             ordinal=int(row.get("ordinal") or 0),
+            page_start=_optional_int(row.get("page_start")),
+            page_end=_optional_int(row.get("page_end")),
         )
         for row in hits
     ]
+
+
+def _optional_int(value: object) -> int | None:
+    return None if value is None else int(value)  # type: ignore[arg-type]

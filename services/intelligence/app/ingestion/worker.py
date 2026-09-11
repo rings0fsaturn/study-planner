@@ -393,7 +393,15 @@ class IngestionWorker:
         # only pays for the missing vectors instead of the whole book again.
         # Chunks are still replaced (not merged) whenever the text differs.
         existing_chunks = self.repo.list_chunks(material.id)
-        if [chunk.text for chunk in existing_chunks] == [chunk.text for chunk in chunks]:
+        # Page provenance is part of the reuse key: rows written before the
+        # page columns existed have identical text but NULL pages, and reusing
+        # them would silently publish a material that cannot be scoped.
+        def reuse_key(chunk: ContentChunk) -> tuple[str, int | None, int | None]:
+            return (chunk.text, chunk.page_start, chunk.page_end)
+
+        if [reuse_key(chunk) for chunk in existing_chunks] == [
+            reuse_key(chunk) for chunk in chunks
+        ]:
             chunks = existing_chunks
         else:
             # Prior chunks (from a replaced or earlier attempt) are cleared

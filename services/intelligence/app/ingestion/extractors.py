@@ -30,7 +30,7 @@ class Fetcher(Protocol):
 
 
 class PdfTextReader(Protocol):
-    def extract(self, data: bytes) -> str: ...
+    def extract(self, data: bytes) -> list[str]: ...
 
 
 class TranscriptClient(Protocol):
@@ -102,19 +102,18 @@ class HttpxFetcher:
 
 
 class PypdfTextReader:
-    """Extract text from PDF bytes with pypdf."""
+    """Extract text from PDF bytes with pypdf, one entry per page (page 1 first)."""
 
-    def extract(self, data: bytes) -> str:
+    def extract(self, data: bytes) -> list[str]:
         import io
 
         from pypdf import PdfReader
 
         try:
             reader = PdfReader(io.BytesIO(data))
-            pages = [page.extract_text() or "" for page in reader.pages]
+            return [page.extract_text() or "" for page in reader.pages]
         except Exception as exc:
             raise IngestionError("validation_failed", "PDF could not be read") from exc
-        return "\n\n".join(pages)
 
 
 class YoutubeTranscriptClient:
@@ -139,6 +138,21 @@ class YoutubeTranscriptClient:
                 "provider_unavailable", "transcript fetch failed", retryable=True
             ) from exc
         return [(float(item.start), str(item.text)) for item in transcript]
+
+
+def _page_segments(pages: list[str]) -> tuple[TextSegment, ...]:
+    """One paragraph segment per blank-line block, tagged with its 1-based page.
+
+    Chunking consumes the segment stream, so tagging the same paragraphs the
+    pre-page-provenance path derived (from `text.split("\\n\\n")`) cannot move a
+    chunk boundary. Page-sized segments would.
+    """
+    segments: list[TextSegment] = []
+    for number, page in enumerate(pages, start=1):
+        for part in clean_text(page).split("\n\n"):
+            if part.strip():
+                segments.append(TextSegment(text=part.strip(), page=number))
+    return tuple(segments)
 
 
 def extract_material(
@@ -175,10 +189,18 @@ def extract_material(
 
     if kind == "file":
         raw = read_source.read(material)
-        text = pdf_reader.extract(raw)
+        pages = pdf_reader.extract(raw)
+        # `text` keeps the pre-page-provenance construction exactly: one clean
+        # over the pages joined with a blank line. It is the uploaded
+        # `fulltext.txt` and the resume-on-retry reuse key, so it must stay
+        # byte-identical or existing embeddings are invalidated. Per-page
+        # cleaning loses the blank-line runs that span page boundaries
+        # (963,136 -> 962,401 chars on the 572-page fixture), so the page-tagged
+        # segments are derived *alongside* it from the same pages.
+        text = "\n\n".join(pages)
         if not text.strip():
             raise IngestionError("validation_failed", "PDF contains no extractable text")
-        return ExtractedContent(clean_text(text))
+        return ExtractedContent(text=clean_text(text), segments=_page_segments(pages))
 
     if kind == "youtube":
         video_id = youtube_video_id(source)
