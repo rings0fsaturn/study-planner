@@ -163,6 +163,13 @@ describe('answer helpers', () => {
     expect(pickedOptionIndexes(undefined)).toEqual([])
   })
 
+  it('describeAnswer voices the written answer text (#41)', () => {
+    expect(describeAnswer({ text: 'Bias correction rescales the moments.' })).toBe(
+      'Bias correction rescales the moments.',
+    )
+    expect(pickedOptionIndexes({ text: 'Bias correction rescales the moments.' })).toEqual([])
+  })
+
   it('describeAnswer voices cloze/numeric and true_false restores', () => {
     expect(describeAnswer({ value: '42' })).toBe('42')
     expect(describeAnswer({ flag: true })).toBe('True')

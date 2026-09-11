@@ -378,13 +378,25 @@ export function AssessmentDetail() {
   if (!assessment) return null
 
   const materialIds = assessment.materialIds
+  // One family per assessment (P2 recipe gate); the heading and a generation
+  // retry keep that family instead of silently re-requesting objective (#41).
+  // While generating there is no question to read the family from yet, so the
+  // heading stays neutral rather than guessing "objective".
+  const formats: GenerationRequest['recipe']['formats'] =
+    assessment.questions[0]?.format === 'written' ? ['written'] : ['objective']
+  const familyHeading =
+    assessment.questions.length === 0
+      ? 'Generating assessment'
+      : formats[0] === 'written'
+        ? 'Written assessment'
+        : 'Objective assessment'
 
   async function retry() {
     setRetrying(true)
     const request: GenerationRequest = {
       clientId: crypto.randomUUID(),
       materialIds,
-      recipe: { formats: ['objective'], questionCount: 1, difficulty: 3, skillTags: ['core'] },
+      recipe: { formats, questionCount: 1, difficulty: 3, skillTags: ['core'] },
       correlationId: crypto.randomUUID(),
     }
     try {
@@ -402,7 +414,7 @@ export function AssessmentDetail() {
         ← Back to library
       </button>
       <h1 style={{ margin: '0.5rem 0 0.25rem', font: '2rem var(--font-display)', lineHeight: 1.1 }}>
-        Objective assessment
+        {familyHeading}
       </h1>
 
       {assessment.status === 'generating' && (

@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
-import { AssessmentServiceError, type GenerationRequest } from '../../assessments/types'
+import {
+  AssessmentServiceError,
+  type AssessmentFormat,
+  type GenerationRequest,
+} from '../../assessments/types'
 import { ASSESSMENT_CREATED } from '../../events/EventStore'
 import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
@@ -9,6 +13,17 @@ import { isReady, type MaterialRecord } from '../../materials/types'
 import '../../materials/materials.css'
 
 const DIFFICULTY_OPTIONS = ['1', '2', '3', '4', '5'] as const
+
+/** Families the generation slice supports (one family per assessment). */
+const FAMILY_OPTIONS: Array<{ format: AssessmentFormat; label: string }> = [
+  { format: 'objective', label: 'Objective' },
+  { format: 'written', label: 'Written' },
+]
+
+const FAMILY_COPY: Record<string, string> = {
+  objective: 'One objective question grounded in',
+  written: 'One written question grounded in',
+}
 
 export function AssessmentConfig() {
   const { materialId } = useParams<{ materialId: string }>()
@@ -20,6 +35,7 @@ export function AssessmentConfig() {
   const [material, setMaterial] = useState<MaterialRecord | null>(null)
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [difficulty, setDifficulty] = useState<number>(3)
+  const [family, setFamily] = useState<AssessmentFormat>('objective')
   const [skillTagsInput, setSkillTagsInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<AssessmentServiceError | null>(null)
@@ -113,7 +129,7 @@ export function AssessmentConfig() {
       clientId: crypto.randomUUID(),
       materialIds: [materialIdForRequest],
       recipe: {
-        formats: ['objective'],
+        formats: [family],
         questionCount: 1,
         difficulty,
         skillTags: skillTags.length > 0 ? skillTags : ['core'],
@@ -149,12 +165,32 @@ export function AssessmentConfig() {
         Generate assessment
       </h1>
       <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-        One objective question grounded in <strong>{material.title}</strong>.
+        {FAMILY_COPY[family] ?? FAMILY_COPY.objective} <strong>{material.title}</strong>.
       </p>
 
       <div className="card card-large" style={{ maxWidth: '640px' }}>
         <div className="card-title">{material.title}</div>
         <div className="material-practice-options">
+          <div className="field-group" style={{ maxWidth: '100%' }}>
+            <label className="field-label">Question family</label>
+            <div className="chip-row" role="group" aria-label="Question family">
+              {FAMILY_OPTIONS.map((option) => (
+                <button
+                  key={option.format}
+                  type="button"
+                  className={`chip${family === option.format ? ' selected' : ''}`}
+                  aria-pressed={family === option.format}
+                  onClick={() => setFamily(option.format)}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <p className="field-hint">
+              Objective questions grade deterministically; written answers grade against a rubric
+              with per-criterion feedback.
+            </p>
+          </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
             <label className="field-label">Difficulty band</label>
             <div className="chip-row">

@@ -132,6 +132,28 @@ describe('AssessmentConfig', () => {
     expect(recipe.skillTags).toEqual(['Strategic Planning', 'Gap Analysis'])
   })
 
+  it('defaults to the objective family and sends the written family when picked', async () => {
+    const materials = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments)
+
+    await screen.findByText('Difficulty band')
+    expect(screen.getByRole('button', { name: 'Objective' }).className).toContain('selected')
+    expect(screen.getByRole('button', { name: 'Written' }).className).not.toContain('selected')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Written' }))
+    expect(screen.getByRole('button', { name: 'Written' }).className).toContain('selected')
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    const recipe = assessments.generateAssessment.mock.calls[0][0].recipe
+    expect(recipe.formats).toEqual(['written'])
+    expect(recipe.questionCount).toBe(1)
+  })
+
   it('shows a quota banner with retryAfterSeconds', async () => {
     const materials = new FakeMaterialClient([material({})])
     const assessments = new FakeAssessmentClient()

@@ -9,17 +9,19 @@
  *
  * Family treatments keyed off `question.format`: objective renders the full
  * treatment (options + your-pick marker + per-skill + citations); written
- * and coding render the shared grade shape with a placeholder line their
- * slices (#41/#42) replace without touching the shell.
+ * renders the learner's text + rubric breakdown (#41, D-04); coding renders
+ * the shared grade shape with a placeholder line #42 replaces without
+ * touching the shell.
  */
 
-import { useState, type KeyboardEvent, type ReactNode } from 'react'
+import { Fragment, useState, type KeyboardEvent, type ReactNode } from 'react'
 import type { LocalAttemptRow } from '../../../assessments/attemptFlow'
 import type {
   Assessment,
   AssessmentFormat,
   Question,
   QuestionGradedResult,
+  RubricCriterionResult,
 } from '../../../assessments/types'
 import {
   describeAnswer,
@@ -408,23 +410,35 @@ function ObjectiveFeedback({
 }
 
 /**
- * Written treatment: shared grade shape now; the detailed rubric breakdown
- * arrives with written grading (#41 replaces only this placeholder).
+ * Written treatment (#41 D-04): the learner's own text, the rubric
+ * explanation, the criterion breakdown table, per-skill observations and the
+ * source evidence. Only learner-facing criterion fields render — the authored
+ * rubric text and any reference answer stay server-side.
  */
 function WrittenFeedback({
   question,
   attempt,
+  shownFeedback,
 }: {
   question: Question
   attempt: LocalAttemptRow
+  /** The narrative already rendered as the card's feedback line, if any. */
+  shownFeedback: string | null
 }) {
   const grade = attempt.grade
+  const written = describeAnswer(attempt.answer)
+  const criteria = grade?.rubricBreakdown ?? []
   return (
     <>
-      {grade?.explanation && <p className="ar-explanation">{grade.explanation}</p>}
-      <p className="ar-panel-placeholder t-body-sm">
-        Detailed rubric breakdown arrives with written grading.
-      </p>
+      {written != null && (
+        <p className="ar-answer-line">
+          Your answer: <span className="t-mono-sm">{written}</span>
+        </p>
+      )}
+      {grade?.explanation && grade.explanation !== shownFeedback && (
+        <p className="ar-explanation">{grade.explanation}</p>
+      )}
+      {criteria.length > 0 && <RubricBreakdown criteria={criteria} />}
       {grade && <PerSkillList grade={grade} />}
       <CitationList question={question} />
     </>
@@ -454,6 +468,47 @@ function CodingFeedback({
   )
 }
 
+/** Public per-criterion breakdown of a written grade (#41) — public keys only. */
+function RubricBreakdown({ criteria }: { criteria: RubricCriterionResult[] }) {
+  return (
+    <table className="ar-rubric-table" aria-label="Rubric breakdown">
+      <thead>
+        <tr>
+          <th scope="col">Criterion</th>
+          <th scope="col">Share</th>
+          <th scope="col">Score</th>
+          <th scope="col">Outcome</th>
+        </tr>
+      </thead>
+      <tbody>
+        {criteria.map((criterion, index) => (
+          <Fragment key={`${criterion.criterion}-${index}`}>
+            <tr className={criterion.met ? '' : 'is-miss'}>
+              <td className="ar-rubric-criterion">{criterion.criterion}</td>
+              <td className="ar-rubric-share t-mono-sm">
+                {Math.round(criterion.weight * 100)}%
+              </td>
+              <td className="ar-rubric-points t-mono-sm">{criterion.score.toFixed(2)}</td>
+              <td className="ar-rubric-outcome">
+                <span className={`tag tag-sm ${criterion.met ? 'tag-moss' : 'tag-rust'}`}>
+                  {criterion.met ? 'met' : 'not met'}
+                </span>
+              </td>
+            </tr>
+            {criterion.feedback && (
+              <tr className="ar-rubric-feedback-row">
+                <td className="ar-rubric-feedback" colSpan={4}>
+                  {criterion.feedback}
+                </td>
+              </tr>
+            )}
+          </Fragment>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 /**
  * Shared question-review primitive — `QuestionReviewCard(question, attempt)`
  * keeps the `(question, attempt)` signature so Practice (#16) can reuse it.
@@ -472,7 +527,9 @@ export function QuestionReviewCard({
       {question.format === 'objective' && (
         <ObjectiveFeedback question={question} attempt={attempt} />
       )}
-      {question.format === 'written' && <WrittenFeedback question={question} attempt={attempt} />}
+      {question.format === 'written' && (
+        <WrittenFeedback question={question} attempt={attempt} shownFeedback={feedback} />
+      )}
       {question.format === 'coding' && <CodingFeedback question={question} attempt={attempt} />}
     </>
   )

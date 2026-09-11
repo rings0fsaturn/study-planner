@@ -10,7 +10,7 @@ import Dexie from 'dexie'
 import { EventStoreProvider } from '../../events/EventStoreProvider'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
 import { AttemptTaker } from './AttemptTaker'
-import { FakeAssessmentClient, readyAssessment } from '../../assessments/testing/fakeAssessmentClient'
+import { FakeAssessmentClient, readyAssessment, writtenGrade, writtenQuestion } from '../../assessments/testing/fakeAssessmentClient'
 import type { AttemptRecord } from '../../assessments/types'
 
 vi.mock('../../lib/supabase', () => ({
@@ -130,5 +130,112 @@ describe('AttemptTaker', () => {
       { timeout: 6000 },
     )
     expect(screen.getByText('Not correct.')).toBeInTheDocument()
+  })
+})
+
+// ---- #41 written branch ----------------------------------------------------
+
+const WRITTEN_TEXT =
+  'Adam keeps running averages of the gradient and of the squared gradient, so early estimates are pulled toward zero.'
+
+describe('AttemptTaker written (#41)', () => {
+  let writtenClient: FakeAssessmentClient
+  let submitted: string[]
+
+  beforeEach(async () => {
+    await Dexie.delete(DB_NAME)
+    submitted = []
+    writtenClient = new FakeAssessmentClient()
+    writtenClient.submitAssessmentAttempt.mockImplementation(
+      async (_assessmentId, questionId, input) => {
+        submitted.push(input.clientAttemptId)
+        return {
+          attemptId: `att-${input.clientAttemptId}`,
+          questionId,
+          status: 'queued',
+          jobId: 'job-written-1',
+        }
+      },
+    )
+    writtenClient.listAssessmentAttempts.mockImplementation(async (): Promise<AttemptRecord[]> =>
+      submitted.map((clientAttemptId) => ({
+        attemptId: `att-${clientAttemptId}`,
+        clientAttemptId,
+        questionId: 'q-written-1',
+        assessmentId: ASSESSMENT.id,
+        submittedAt: '2026-09-10T10:00:00Z',
+        status: 'graded',
+        answer: { text: WRITTEN_TEXT },
+        grade: writtenGrade({ attemptId: `att-${clientAttemptId}` }),
+      })),
+    )
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await Dexie.delete(DB_NAME)
+  })
+
+  function mountWritten(subtype: 'short_answer' | 'long_form') {
+    const question = writtenQuestion({ assessmentId: ASSESSMENT.id, subtype })
+    const assessment = readyAssessment({ questions: [question] })
+    return render(
+      <EventStoreProvider userId="taker-user">
+        <AssessmentProvider client={writtenClient}>
+          <AttemptTaker assessment={assessment} question={question} />
+        </AssessmentProvider>
+      </EventStoreProvider>,
+    )
+  }
+
+  it('sizes the textarea from the authored subtype and gates submit on real text', async () => {
+    mountWritten('long_form')
+    const textarea = await screen.findByLabelText('Your answer')
+    expect(textarea.tagName).toBe('TEXTAREA')
+    expect(textarea).toHaveAttribute('rows', '8')
+    const submitButton = screen.getByRole('button', { name: 'Submit answer' })
+    expect(submitButton).toBeDisabled()
+
+    fireEvent.change(textarea, { target: { value: '   ' } })
+    expect(submitButton).toBeDisabled()
+
+    fireEvent.change(textarea, { target: { value: WRITTEN_TEXT } })
+    expect(submitButton).toBeEnabled()
+  })
+
+  it('keeps the short-answer subtype compact', async () => {
+    mountWritten('short_answer')
+    expect(await screen.findByLabelText('Your answer')).toHaveAttribute('rows', '3')
+  })
+
+  it('submits { text } and walks answering → grading → graded with the rubric narrative', async () => {
+    mountWritten('long_form')
+    const textarea = await screen.findByLabelText('Your answer')
+    fireEvent.change(textarea, { target: { value: WRITTEN_TEXT } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }))
+    })
+
+    await waitFor(
+      () => expect(screen.getByText(/Score 0\.75 · correct/)).toBeInTheDocument(),
+      { timeout: 6000 },
+    )
+    // The written answer shape rides the wire; no objective keys are invented.
+    expect(writtenClient.submitAssessmentAttempt.mock.calls[0][2].answer).toEqual({ text: WRITTEN_TEXT })
+    // A written grade carries no publicFeedback, so the rubric explanation surfaces.
+    expect(
+      screen.getByText('You named both running estimates; the early-step mechanism is implied.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Optimization: correct/)).toBeInTheDocument()
+    expect(screen.getByText(/Attempt history \(1\)/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry question' })).toBeInTheDocument()
+  })
+
+  it('posts nothing while the answer is blank or whitespace only', async () => {
+    mountWritten('short_answer')
+    const textarea = await screen.findByLabelText('Your answer')
+    fireEvent.change(textarea, { target: { value: '  ' } })
+    expect(screen.getByRole('button', { name: 'Submit answer' })).toBeDisabled()
+    expect(writtenClient.submitAssessmentAttempt).not.toHaveBeenCalled()
   })
 })

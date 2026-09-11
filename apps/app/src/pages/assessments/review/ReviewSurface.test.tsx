@@ -2,7 +2,7 @@
 // placeholders, redaction DOM gate. Ports the prototype AC4 comparison.
 
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { LocalAttemptRow } from '../../../assessments/attemptFlow'
 import type { Assessment, Question } from '../../../assessments/types'
 import {
@@ -191,15 +191,93 @@ describe('ReviewSurface retried', () => {
 })
 
 describe('family extension points', () => {
-  it('written renders shared shape plus rubric placeholder', () => {
+  it('written renders the learner answer, the rubric breakdown and the explanation', () => {
+    const q = question({ format: 'written', subtype: 'long_form', options: [], prompt: 'Explain in your own words.' })
+    const attempt = gradedRow({
+      questionId: q.id,
+      answer: { text: 'Bias correction rescales the moments so early steps are not pulled toward zero.' },
+      grade: {
+        ...gradedRow().grade!,
+        grader: 'llm_rubric',
+        score: 0.75,
+        explanation: 'Clear trade-off.',
+        rubricBreakdown: [
+          {
+            criterion: 'Names both running estimates',
+            weight: 0.4,
+            score: 1,
+            met: true,
+            feedback: 'Both averages are identified.',
+          },
+          {
+            criterion: 'Explains why early steps are affected most',
+            weight: 0.6,
+            score: 0.5833,
+            met: false,
+            feedback: 'The mechanism is asserted but not explained.',
+          },
+        ],
+      },
+    })
+    const view = render(<QuestionReviewCard question={q} attempt={attempt} />)
+
+    // The learner's own text stays reviewable, but no key material rides with it.
+    expect(
+      screen.getByText('Bias correction rescales the moments so early steps are not pulled toward zero.'),
+    ).toBeInTheDocument()
+
+    const table = screen.getByRole('table', { name: 'Rubric breakdown' })
+    expect(within(table).getByText('Names both running estimates')).toBeInTheDocument()
+    expect(within(table).getByText('Explains why early steps are affected most')).toBeInTheDocument()
+    expect(within(table).getByText('40%')).toBeInTheDocument()
+    expect(within(table).getByText('60%')).toBeInTheDocument()
+    expect(within(table).getByText('0.58')).toBeInTheDocument()
+    expect(within(table).getByText('met')).toBeInTheDocument()
+    expect(within(table).getByText('not met')).toBeInTheDocument()
+    expect(within(table).getByText('Both averages are identified.')).toBeInTheDocument()
+    expect(within(table).getByText('The mechanism is asserted but not explained.')).toBeInTheDocument()
+
+    expect(screen.getByText('Clear trade-off.')).toBeInTheDocument()
+    expect(screen.getByText('Skills observed')).toBeInTheDocument()
+    expect(screen.queryByText('Detailed rubric breakdown arrives with written grading.')).not.toBeInTheDocument()
+
+    expect(view.container.innerHTML).not.toMatch(
+      /answerBlock|answer_block|correctIndex|correct_index|referenceSolution|hiddenTest|referenceAnswer|reference_answer|rubricVersion|rubric_version|maxPoints|max_points/i,
+    )
+  })
+
+  it('written without a breakdown renders the explanation and no table', () => {
     const q = question({ format: 'written', options: [], prompt: 'Explain in your own words.' })
     const attempt = gradedRow({
       questionId: q.id,
-      grade: { ...gradedRow().grade!, grader: 'llm_rubric', explanation: 'Clear trade-off.' },
+      answer: { text: 'An attempt.' },
+      grade: { ...gradedRow().grade!, grader: 'llm_rubric', explanation: 'Grading could not complete.' },
     })
     render(<QuestionReviewCard question={q} attempt={attempt} />)
-    expect(screen.getByText('Clear trade-off.')).toBeInTheDocument()
-    expect(screen.getByText('Detailed rubric breakdown arrives with written grading.')).toBeInTheDocument()
+    expect(screen.getByText('Grading could not complete.')).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Rubric breakdown' })).not.toBeInTheDocument()
+  })
+
+  it('renders the rubric explanation exactly once when it doubles as the feedback line', () => {
+    const q = question({ format: 'written', options: [], prompt: 'Explain in your own words.' })
+    const base = gradedRow().grade!
+    const attempt = gradedRow({
+      questionId: q.id,
+      answer: { text: 'An attempt.' },
+      grade: {
+        ...base,
+        grader: 'llm_rubric',
+        publicFeedback: undefined,
+        explanation: 'You covered the mechanism but not the consequence.',
+        rubricBreakdown: [
+          { criterion: 'Names the mechanism', weight: 1, score: 1, met: true, feedback: 'Named.' },
+        ],
+      },
+    })
+    render(<QuestionReviewCard question={q} attempt={attempt} />)
+    // The shell's feedback line already prefers the explanation, so the
+    // treatment must not print the same sentence twice.
+    expect(screen.getAllByText('You covered the mechanism but not the consequence.')).toHaveLength(1)
   })
 
   it('coding renders shared shape plus execution placeholder', () => {

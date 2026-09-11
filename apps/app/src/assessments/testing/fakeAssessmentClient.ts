@@ -7,6 +7,8 @@ import type {
   AttemptRecord,
   AttemptSubmitInput,
   GenerationRequest,
+  Question,
+  QuestionGradedResult,
 } from '../types'
 
 /**
@@ -136,6 +138,64 @@ export function queuedJob(overrides: Partial<AsyncJob> = {}): AsyncJob {
     attempt: 1,
     resultId: 'assessment-1',
     createdAt: '2026-08-14T00:00:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * A written question (#41): the visible payload only — the authored rubric
+ * and reference answer live server-side in `answer_block` and never appear in
+ * a client shape.
+ */
+export function writtenQuestion(overrides: Partial<Question> = {}): Question {
+  return {
+    id: 'q-written-1',
+    assessmentId: 'assessment-1',
+    materialId: 'mat-1',
+    format: 'written',
+    subtype: 'long_form',
+    prompt: 'Explain how bias correction changes the first update steps.',
+    options: [],
+    skillTags: ['Optimization'],
+    authoredDifficulty: 4,
+    citations: [
+      { chunkId: 'c1', materialId: 'mat-1', quote: 'the first updates are too large' },
+    ],
+    ...overrides,
+  }
+}
+
+/**
+ * A normalized `llm_rubric` grade (#41): public criterion fields only, with a
+ * mixed met/not-met breakdown so a partial score is exercised.
+ */
+export function writtenGrade(overrides: Partial<QuestionGradedResult> = {}): QuestionGradedResult {
+  return {
+    attemptId: 'att-written-1',
+    questionId: 'q-written-1',
+    materialId: 'mat-1',
+    score: 0.75,
+    correct: true,
+    perSkill: [{ skillTag: 'Optimization', score: 0.75, correct: true }],
+    explanation: 'You named both running estimates; the early-step mechanism is implied.',
+    grader: 'llm_rubric',
+    gradedAt: '2026-09-10T10:05:00Z',
+    rubricBreakdown: [
+      {
+        criterion: 'Names both running estimates',
+        weight: 0.4,
+        score: 1,
+        met: true,
+        feedback: 'Both averages identified.',
+      },
+      {
+        criterion: 'Explains the early-step effect',
+        weight: 0.6,
+        score: 0.5833,
+        met: false,
+        feedback: 'Mechanism not explained.',
+      },
+    ],
     ...overrides,
   }
 }

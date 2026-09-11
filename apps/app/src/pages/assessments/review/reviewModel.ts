@@ -11,7 +11,7 @@ import type { LocalAttemptRow } from '../../../assessments/attemptFlow'
 import type {
   Assessment,
   AssessmentFormat,
-  ObjectiveAnswer,
+  LearnerAnswer,
   Question,
   QuestionGradedResult,
 } from '../../../assessments/types'
@@ -200,20 +200,22 @@ export function feedbackText(grade: QuestionGradedResult | null | undefined): st
 }
 
 /**
- * Human-readable learner answer for non-option objective subtypes
- * (cloze/numeric true_false). Option questions mark the pick inline, so
- * this returns null for the index/indices shapes.
+ * Human-readable learner answer for the non-option shapes: written free text
+ * (#41) and the cloze/numeric/true_false objective restores. Option questions
+ * mark the pick inline, so this returns null for the index/indices shapes.
  */
-export function describeAnswer(answer: ObjectiveAnswer | undefined): string | null {
+export function describeAnswer(answer: LearnerAnswer | undefined): string | null {
   if (!answer) return null
+  if ('text' in answer) return answer.text
   if (answer.value != null) return answer.value
   if (answer.flag != null) return answer.flag ? 'True' : 'False'
   return null
 }
 
 /** Option indexes marked as the learner's pick (mcq / multi_select). */
-export function pickedOptionIndexes(answer: ObjectiveAnswer | undefined): number[] {
+export function pickedOptionIndexes(answer: LearnerAnswer | undefined): number[] {
   if (!answer) return []
+  if ('text' in answer) return []
   if (answer.index != null) return [answer.index]
   if (answer.indices != null) return [...answer.indices]
   return []
