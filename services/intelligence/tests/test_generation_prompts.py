@@ -2,19 +2,25 @@ from __future__ import annotations
 
 from app.generation.models import GenerationBlueprint, RetrievedChunk
 from app.generation.prompts import (
-    MCQ_SCHEMA,
     REPAIR_SUFFIX,
     SYSTEM_TEMPLATE,
     USER_TEMPLATE,
     WRITTEN_PROMPT_TEMPLATE_VERSION,
-    WRITTEN_SCHEMA,
     WRITTEN_SYSTEM_TEMPLATE,
     WRITTEN_USER_TEMPLATE,
     build_messages,
     build_written_messages,
     chunk_block,
+    mcq_schema,
     prompt_template_version,
+    written_schema,
 )
+
+# Bound to a fixed context so the id-enum assertions below are meaningful; the
+# worker passes its real retrieved ids (see `test_generation_worker.py`).
+CITATION_IDS = {"c1", "c2"}
+MCQ_SCHEMA = mcq_schema(CITATION_IDS)
+WRITTEN_SCHEMA = written_schema(CITATION_IDS)
 
 
 def blueprint(**overrides: object) -> GenerationBlueprint:
@@ -57,6 +63,17 @@ def test_mcq_schema_pins_grounded_shape() -> None:
     assert citations["items"]["required"] == ["chunkId", "quote"]
     assert MCQ_SCHEMA["properties"]["options"]["maxItems"] == 4
     assert MCQ_SCHEMA["properties"]["correctIndex"]["maximum"] == 3
+    # chunkId is enum-bound to the retrieved context (#41): the provider cannot
+    # return a chunk id that does not exist, which used to fail the whole
+    # generation at the citation gate.
+    assert citations["items"]["properties"]["chunkId"]["enum"] == ["c1", "c2"]
+
+
+def test_schemas_leave_chunk_id_unconstrained_without_a_context() -> None:
+    # No context handed in: the id stays a plain string, so the schema cannot
+    # reject a legitimate id (callers with a context must pass it).
+    unbound = mcq_schema()["properties"]["citations"]["items"]["properties"]["chunkId"]
+    assert unbound == {"type": "string"}
 
 
 def test_chunk_block_formats_chunks() -> None:
@@ -131,6 +148,11 @@ def test_written_schema_pins_visible_payload_and_hidden_block() -> None:
     assert rubric["items"]["properties"]["weight"]["maximum"] == 1
     assert "correctIndex" not in WRITTEN_SCHEMA["properties"]
     assert "options" not in WRITTEN_SCHEMA["properties"]
+    # Same id binding as the objective arm (#41).
+    assert (
+        WRITTEN_SCHEMA["properties"]["citations"]["items"]["properties"]["chunkId"]["enum"]
+        == ["c1", "c2"]
+    )
 
 
 def test_written_prompt_template_version_is_written_v1() -> None:

@@ -62,6 +62,8 @@ export interface Assessment {
   materialIds: string[]
   status: AssessmentStatus
   questions: Question[]
+  /** Echoed by the read route; absent on rows stored before the retry fix (#41). */
+  recipe?: AssessmentRecipe
   warnings: Warning[]
   groundingStale: boolean
   createdAt: string

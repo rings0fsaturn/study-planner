@@ -9,7 +9,11 @@ from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
 
 import app.generation.openrouter_client as adapter_module
 from app.generation.openrouter_client import OpenRouterGenerationClient
-from app.generation.prompts import MCQ_SCHEMA
+from app.generation.prompts import mcq_schema
+
+# Adapter tests only need a representative schema; the worker binds the real one
+# to its retrieved chunk ids (see `test_generation_worker.py`).
+MCQ_SCHEMA = mcq_schema({"c1"})
 
 VALID_MCQ = {
     "stem": "What is the planning gap?",

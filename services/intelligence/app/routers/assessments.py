@@ -132,7 +132,7 @@ def get_assessment(
     try:
         assessment = client.get_assessment(assessmentId)
         questions = client.list_questions(assessmentId)
-        return {
+        payload = {
             "id": assessment["id"],
             "ownerId": str(assessment.get("user_id") or ""),
             "materialIds": [assessment["material_id"]],
@@ -142,6 +142,14 @@ def get_assessment(
             "groundingStale": False,
             "createdAt": assessment.get("created_at") or "",
         }
+        # The stored recipe is echoed so the client can re-request the same
+        # shape after a failed generation. The retry path used to infer the
+        # family from questions[0] — which does not exist when generation
+        # failed, so a written retry silently became objective (#41).
+        recipe = assessment.get("recipe")
+        if isinstance(recipe, dict) and recipe:
+            payload["recipe"] = recipe
+        return payload
     except IngestionError as exc:
         return service_error(request, exc)
 

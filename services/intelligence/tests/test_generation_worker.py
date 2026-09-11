@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from app.generation.models import NormalizedGenerationResponse, RetrievedChunk
 from app.generation.prompts import (
-    MCQ_SCHEMA,
     WRITTEN_PROMPT_TEMPLATE_VERSION,
-    WRITTEN_SCHEMA,
 )
 from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 from app.ingestion.models import IngestionError, Material
@@ -233,7 +231,12 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     assert question_row["answer_block"] == {"correctIndex": 0}
     assert repo.questions == [question_row]
     assert telemetry.records[0].outcome == "ok"
-    assert adapter.calls[0]["schema"] is MCQ_SCHEMA
+    # The response schema is bound to this generation's retrieved chunk ids, so
+    # the provider cannot return a chunk id outside the context (#41).
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "correctIndex" in adapter.calls[0]["schema"]["required"]
     assert telemetry.records[0].questions_requested == 1
     assert telemetry.records[0].questions_accepted == 1
     assert telemetry.records[0].reasoning_tokens == 0
@@ -621,7 +624,12 @@ def test_written_recipe_uses_written_schema_and_accepts_written_row() -> None:
 
     make_worker(repo, queue, adapter, telemetry).run_once()
 
-    assert adapter.calls[0]["schema"] is WRITTEN_SCHEMA
+    # Written arm: the schema carries the rubric and is id-bound, so a written
+    # generation cannot cite a chunk outside the retrieved context.
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "rubric" in adapter.calls[0]["schema"]["required"]
     assert adapter.calls[0]["messages"][0]["content"].startswith(
         "You author one written exam question"
     )
@@ -700,7 +708,11 @@ def test_written_format_failure_repairs_with_written_schema() -> None:
     assert len(repo.questions) == 1
     assert repo.questions[0]["format"] == "written"
     assert adapter.calls[1]["repair"] is True
-    assert adapter.calls[1]["schema"] is WRITTEN_SCHEMA
+    # The repair call carries the same id-bound written schema as the first.
+    assert adapter.calls[1]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "rubric" in adapter.calls[1]["schema"]["required"]
     assert "rubric_weights_not_normalized" in adapter.calls[1]["messages"][-1]["content"]
     assert telemetry.records[0].repair_attempted is True
     assert telemetry.records[0].questions_accepted == 1

@@ -8,6 +8,8 @@ plus the server-only rubric block the grader consumes.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+
 from app.generation.models import GenerationBlueprint, RetrievedChunk
 
 prompt_template_version = "v1"
@@ -16,14 +18,25 @@ prompt_template_version = "v1"
 WRITTEN_PROMPT_TEMPLATE_VERSION = "written-v1"
 
 
-def _citation_schema() -> dict:
-    """Citations block shared by the MCQ and written schemas (fresh copy)."""
+def _citation_schema(citation_ids: Iterable[str] | None = None) -> dict:
+    """Citations block shared by the MCQ and written schemas (fresh copy).
+
+    With `citation_ids`, `chunkId` is enum-constrained to this generation's
+    retrieval context, so the provider cannot emit a chunk id that does not
+    exist. Without it any string passes the schema and only the citation gate
+    catches it, which fails the whole generation: live 2026-09-11 the written
+    arm returned the same invented id on four consecutive attempts, so every
+    "Retry generation" repeated the same failure.
+    """
+    chunk_id: dict = {"type": "string"}
+    if citation_ids:
+        chunk_id = {"type": "string", "enum": sorted(citation_ids)}
     return {
         "type": "array",
         "items": {
             "type": "object",
             "properties": {
-                "chunkId": {"type": "string"},
+                "chunkId": chunk_id,
                 "quote": {"type": "string"},
             },
             "required": ["chunkId", "quote"],
@@ -33,19 +46,22 @@ def _citation_schema() -> dict:
     }
 
 
-MCQ_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "stem": {"type": "string"},
-        "options": {"type": "array", "items": {"type": "string"}, "minItems": 4, "maxItems": 4},
-        "correctIndex": {"type": "integer", "minimum": 0, "maximum": 3},
-        "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
-        "skillTags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-        "citations": _citation_schema(),
-    },
-    "required": ["stem", "options", "correctIndex", "difficulty", "skillTags", "citations"],
-    "additionalProperties": False,
-}
+def mcq_schema(citation_ids: Iterable[str] | None = None) -> dict:
+    """Objective-arm response schema, bound to the retrieved ids when given."""
+    return {
+        "type": "object",
+        "properties": {
+            "stem": {"type": "string"},
+            "options": {"type": "array", "items": {"type": "string"}, "minItems": 4, "maxItems": 4},
+            "correctIndex": {"type": "integer", "minimum": 0, "maximum": 3},
+            "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
+            "skillTags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "citations": _citation_schema(citation_ids),
+        },
+        "required": ["stem", "options", "correctIndex", "difficulty", "skillTags", "citations"],
+        "additionalProperties": False,
+    }
+
 
 # Written arm (#41): the visible payload (stem, subtype, difficulty, skillTags,
 # citations) plus the hidden block that is written to `questions.answer_block`
@@ -54,45 +70,47 @@ MCQ_SCHEMA = {
 # is holistic grading in disguise (the user chose per-criterion, 2.a); the hard
 # gate in `validation.py` stays at one so an otherwise usable rubric is graded
 # rather than dropped.
-WRITTEN_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "stem": {"type": "string"},
-        "subtype": {"type": "string", "enum": ["short_answer", "long_form"]},
-        "expectedLengthWords": {"type": "integer", "minimum": 10, "maximum": 1200},
-        "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
-        "skillTags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
-        "citations": _citation_schema(),
-        "rubric": {
-            "type": "array",
-            "minItems": 2,
-            "maxItems": 6,
-            "items": {
-                "type": "object",
-                "properties": {
-                    "criterion": {"type": "string"},
-                    "weight": {"type": "number", "minimum": 0.05, "maximum": 1},
-                    "maxPoints": {"type": "integer", "minimum": 1, "maximum": 100},
+def written_schema(citation_ids: Iterable[str] | None = None) -> dict:
+    """Written-arm response schema, bound to the retrieved ids when given."""
+    return {
+        "type": "object",
+        "properties": {
+            "stem": {"type": "string"},
+            "subtype": {"type": "string", "enum": ["short_answer", "long_form"]},
+            "expectedLengthWords": {"type": "integer", "minimum": 10, "maximum": 1200},
+            "difficulty": {"type": "integer", "minimum": 1, "maximum": 5},
+            "skillTags": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+            "citations": _citation_schema(citation_ids),
+            "rubric": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 6,
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "criterion": {"type": "string"},
+                        "weight": {"type": "number", "minimum": 0.05, "maximum": 1},
+                        "maxPoints": {"type": "integer", "minimum": 1, "maximum": 100},
+                    },
+                    "required": ["criterion", "weight", "maxPoints"],
+                    "additionalProperties": False,
                 },
-                "required": ["criterion", "weight", "maxPoints"],
-                "additionalProperties": False,
             },
+            "referenceAnswer": {"type": "string"},
+            "rubricVersion": {"type": "string"},
         },
-        "referenceAnswer": {"type": "string"},
-        "rubricVersion": {"type": "string"},
-    },
-    "required": [
-        "stem",
-        "subtype",
-        "difficulty",
-        "skillTags",
-        "citations",
-        "rubric",
-        "referenceAnswer",
-        "rubricVersion",
-    ],
-    "additionalProperties": False,
-}
+        "required": [
+            "stem",
+            "subtype",
+            "difficulty",
+            "skillTags",
+            "citations",
+            "rubric",
+            "referenceAnswer",
+            "rubricVersion",
+        ],
+        "additionalProperties": False,
+    }
 
 SYSTEM_TEMPLATE = (
     "You author one multiple-choice exam question grounded STRICTLY in the provided source chunks. "

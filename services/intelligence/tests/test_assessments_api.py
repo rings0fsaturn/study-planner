@@ -450,7 +450,31 @@ def test_get_assessment_returns_redacted_shape(_override_client: FakeUserClient)
     assert question["skillTags"] == ["Strategic Planning"]
     assert question["authoredDifficulty"] == 3
     assert question["citations"][0]["chunkId"] == "c1"
+    # The stored recipe is echoed so a failed generation can be retried with
+    # the same family (#41); without it the client guessed from questions[0],
+    # which does not exist on a failed generation.
+    assert body["recipe"] == {"formats": ["objective"], "questionCount": 1, "difficulty": 3}
     _assert_no_secret_keys(body)
+
+
+def test_get_assessment_omits_recipe_when_absent(_override_client: FakeUserClient) -> None:
+    _override_client.seed(_material())
+    _override_client.assessments["a1"] = {
+        "id": "a1",
+        "user_id": "fixture-user",
+        "client_id": "client-1",
+        "material_id": "mat-1",
+        "recipe": None,
+        "status": "generating",
+        "warnings": [],
+        "correlation_id": "corr-1",
+        "created_at": "2026-08-14T00:00:00Z",
+        "updated_at": "2026-08-14T00:02:00Z",
+    }
+    _override_client.questions["a1"] = []
+    response = asyncio.run(_request("GET", "/v1/assessments/a1"))
+    assert response.status_code == 200, response.text
+    assert "recipe" not in response.json()
 
 
 def test_get_assessment_serializes_written_subtype_and_omits_it_for_objective(

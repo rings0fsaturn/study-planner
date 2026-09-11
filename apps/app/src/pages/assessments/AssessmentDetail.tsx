@@ -380,10 +380,14 @@ export function AssessmentDetail() {
   const materialIds = assessment.materialIds
   // One family per assessment (P2 recipe gate); the heading and a generation
   // retry keep that family instead of silently re-requesting objective (#41).
+  // The stored recipe is the source of truth: on a failed generation there is
+  // no question to read the family from, which is exactly the state the retry
+  // button exists for. Older rows without a recipe fall back to the question.
+  const recipe = assessment.recipe
+  const formats: GenerationRequest['recipe']['formats'] =
+    recipe?.formats ?? (assessment.questions[0]?.format === 'written' ? ['written'] : ['objective'])
   // While generating there is no question to read the family from yet, so the
   // heading stays neutral rather than guessing "objective".
-  const formats: GenerationRequest['recipe']['formats'] =
-    assessment.questions[0]?.format === 'written' ? ['written'] : ['objective']
   const familyHeading =
     assessment.questions.length === 0
       ? 'Generating assessment'
@@ -396,7 +400,12 @@ export function AssessmentDetail() {
     const request: GenerationRequest = {
       clientId: crypto.randomUUID(),
       materialIds,
-      recipe: { formats, questionCount: 1, difficulty: 3, skillTags: ['core'] },
+      recipe: {
+        formats,
+        questionCount: recipe?.questionCount ?? 1,
+        difficulty: recipe?.difficulty ?? 3,
+        skillTags: recipe?.skillTags ?? ['core'],
+      },
       correlationId: crypto.randomUUID(),
     }
     try {

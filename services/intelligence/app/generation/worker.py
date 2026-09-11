@@ -9,11 +9,13 @@ failure as an assessment warning so the UI can offer retry/resume.
 `partial` is reserved for multi-question slices and is never produced here.
 
 Two question families ride this arm (#41): an objective recipe authors one
-MCQ (`MCQ_SCHEMA`, answer block = correct index) and a written recipe authors
-one written question plus its server-only rubric block (`WRITTEN_SCHEMA`,
-migration 027 stores `format`/`subtype`). Everything else in the pipeline is
-shared: same context, same adapter, same one-repair policy, same completion
-RPC.
+MCQ (`mcq_schema(context_ids)`, answer block = correct index) and a written
+recipe authors one written question plus its server-only rubric block
+(`written_schema(context_ids)`, migration 027 stores `format`/`subtype`).
+Both schemas are built per message and bind `citations[].chunkId` to the
+retrieved ids by enum, so a hallucinated chunk id cannot reach the citation
+gate. Everything else in the pipeline is shared: same context, same adapter,
+same one-repair policy, same completion RPC.
 
 Note on drop codes: a candidate dropped purely for the citation gate carries
 `Warning(code=citation_missing)`, while the job error_code and telemetry
@@ -33,12 +35,12 @@ from app.generation.context import build_context
 from app.generation.models import GenerationBlueprint, RetrievedChunk
 from app.generation.openrouter_client import OpenRouterGenerationClient
 from app.generation.prompts import (
-    MCQ_SCHEMA,
     WRITTEN_PROMPT_TEMPLATE_VERSION,
-    WRITTEN_SCHEMA,
     build_messages,
     build_written_messages,
+    mcq_schema,
     prompt_template_version,
+    written_schema,
 )
 from app.generation.repo import GenerationRepo
 from app.generation.validation import validate_question, validate_written
@@ -200,7 +202,7 @@ class GenerationWorker:
         chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
         build = build_written_messages if written else build_messages
         validate = validate_written if written else validate_question
-        schema = WRITTEN_SCHEMA if written else MCQ_SCHEMA
+        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
         messages = build(blueprint, chunks, title=material.title)
         response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
         repair_attempted = False
@@ -314,7 +316,7 @@ class GenerationWorker:
         written: bool,
     ) -> tuple[dict | None, list[dict]]:
         build = build_written_messages if written else build_messages
-        schema = WRITTEN_SCHEMA if written else MCQ_SCHEMA
+        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
         validate = validate_written if written else validate_question
         messages = build(
             blueprint,

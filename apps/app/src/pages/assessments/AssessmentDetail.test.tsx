@@ -126,6 +126,38 @@ describe('AssessmentDetail', () => {
     expect(input.correlationId).not.toBe('')
   })
 
+  it('retries a failed written assessment with its own recipe, never objective (#41)', async () => {
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetAssessment({
+      ...generatingAssessment(),
+      status: 'failed',
+      warnings: [
+        { code: 'citation_missing', message: 'citation chunk deadbeef is outside the retrieval context' },
+      ],
+      recipe: {
+        formats: ['written'],
+        questionCount: 1,
+        difficulty: 4,
+        skillTags: ['multi-part comparison'],
+      },
+    })
+    assessments.scriptGenerate(queuedJob({ jobId: 'job-written', resultId: 'assessment-written' }))
+    renderDetail(assessments)
+
+    expect(await screen.findByText('Generation did not complete')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    // The failed row has no questions to read a family from, so the retry must
+    // take it (and the learner's band and tags) from the stored recipe.
+    const input = assessments.generateAssessment.mock.calls[0][0]
+    expect(input.recipe.formats).toEqual(['written'])
+    expect(input.recipe.difficulty).toBe(4)
+    expect(input.recipe.skillTags).toEqual(['multi-part comparison'])
+  })
+
   it('stops polling on a terminal status and clears the timer on unmount', async () => {
     vi.useFakeTimers()
     const assessments = new FakeAssessmentClient()
