@@ -23,7 +23,8 @@ _Ticket: GitHub #62 (filed + claimed 2026-09-11) · Parent spec #32 · Plan: pla
 
 - 2026-09-11 (P1): retrieval probe + real-model A/B on the ACCA APM material — `research/2026-09-11-p1-live-verification.md`.
 - 2026-09-11 (P1): empty-steer measurement (ordinals 393/259/90/532/344, fragments) that produced D-08.
-- Not run (P1): authenticated `POST /v1/assessments/generate` click-through — `.work/specs/test-login-cred.txt` fails Supabase's password grant (`invalid_credentials`), so the browser/API pass needs the user's credentials; the generation proof drives the same worker objects directly.
+- 2026-09-11 (P1): **authenticated API run** — password grant -> `POST /v1/assessments/generate` with `skillTags: ["Chapter 5 Budgeting and control"]` -> `202` -> poll -> `ready`; the question is Chapter 5 content (ZBB) citing chunk ordinal 203. One `citation_unverified` warning (paraphrase quote, pre-existing gate behaviour).
+- Not run (P1): the browser click-through — P1 changed no UI (the config tag box is the steer surface until P4), so the authenticated API run is the real request path.
 
 ## Wayfinder resolution (exit)
 

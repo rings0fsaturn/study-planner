@@ -35,12 +35,31 @@ Reading:
 - The steer fix is what makes the question **grounded**: arm A's context is the index/cover/contents, so "ZBB" there is only an index line ("Zero Based Budgeting (ZBB).....133") and the correct answer is the model's own knowledge of the term. Arm B's context is Chapter 5 body text, and the stem-with-options follows the "top-down budget" passage at ordinal 271.
 - Therefore P1 alone is not sufficient for an unscoped request: the blocklist stops meta questions but cannot manufacture grounding. Page scope (P2/P4) is what closes that half.
 
-## 3. Test suites
+## 3. Authenticated API run — the real request path
+
+`/tmp/p1_live_api.py`: password grant against the dev project with the repo's test account, then `POST /v1/assessments/generate` (service on :8000) with `skillTags: ["Chapter 5 Budgeting and control"]`, polling `GET /v1/assessments/{id}`.
+
+- Auth: `200`, token len 936 (the credential file wraps each value in backticks; stripping them is the whole trick — keeping them yields `invalid_credentials` for a valid account).
+- `POST /v1/assessments/generate` -> `202`, `resultId 3772f165-...`, then poll 1 -> `ready`.
+- Recipe echoed back: `{'formats': ['objective'], 'skillTags': ['Chapter 5 Budgeting and control'], 'difficulty': 3, 'questionCount': 1}`.
+- Warning: one `citation_unverified` (the model's quote is a paraphrase, not a verbatim fragment — pre-existing citation-gate behaviour, not a P1 change).
+- Question:
+
+> Q: Which characteristic is unique to zero-based budgeting as described in the scenario?
+> 0. It uses historical data to set next period's budget.
+> 1. Each cost element must be justified or no resources are allocated.
+> 2. It is prepared only once per year and remains fixed.
+> 3. It is imposed on budget holders by senior management.
+> cite `16d2471af0cc435a9d8b24fe58ff5fd0`: "ZBB requires each cost element to be justified, otherwise no resources are allocated."
+
+The cited chunk is **ordinal 203** — the first Chapter 5 chunk the chapter steer retrieves (printed page 124). Content question about Chapter 5's subject matter, not the examination: the ticket's reported defect is closed on the real path.
+
+## 4. Test suites
 
 - Focused: `pytest tests/test_generation_context.py tests/test_generation_prompts.py tests/test_generation_worker.py tests/test_assessments_api.py tests/test_generation_models.py tests/test_generation_validation.py` -> **139 passed**.
 - Whole service: **509 passed, 7 failed** — the identical 7 failures on the untouched base (503 passed there): 2 `test_retrieval_probe.py` (`ModuleNotFoundError: No module named 'services'`, an invocation-path artefact) and 5 `test_v1_integration.py` calibration goldens (`timeOfDay: 'afternoon' != 'evening'`, the known WSL TZ flake). No new failures; 6 new tests in the delta.
 
-## 4. Reproduction
+## 5. Reproduction
 
 ```
 # retrieval
@@ -49,6 +68,9 @@ uv run --package intelligence python services/intelligence/scripts/diagnose_gene
 
 # pre-fix vs P1 generation A/B (ad-hoc script, not committed)
 uv run --package intelligence python /tmp/p1_live_ab.py
+
+# authenticated API run (ad-hoc script, not committed)
+python3 /tmp/p1_live_api.py
 ```
 
-Not run: the browser/API click-through. `.work/specs/test-login-cred.txt` no longer satisfies Supabase's password grant (`invalid_credentials` with both the service-role and publishable apikey), so the authenticated `POST /v1/assessments/generate` path was exercised by unit tests only (`test_assessments_api.py`, 2 new route cases) and the generation proof above runs the same worker objects directly.
+Not run: the browser click-through. P1 changed no UI and the config page's tag box is the only steer surface until P4 replaces it, so a browser pass would exercise pre-P4 UI rather than the P1 change; the authenticated API run above is the same request the browser sends.
