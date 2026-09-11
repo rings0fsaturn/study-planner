@@ -26,7 +26,6 @@ router = APIRouter()
 
 DIFFICULTY_MIN = 1
 DIFFICULTY_MAX = 5
-DEFAULT_SKILL_TAGS = ["core"]
 # One question family per assessment in this slice (#41, D-01); mixed-family
 # generation is out of scope.
 SUPPORTED_FORMATS = (["objective"], ["written"])
@@ -45,9 +44,13 @@ def _validate_recipe(recipe: dict) -> list[str]:
     difficulty = recipe.get("difficulty")
     if not isinstance(difficulty, int) or not DIFFICULTY_MIN <= difficulty <= DIFFICULTY_MAX:
         failures.append(f"difficulty must be an integer from {DIFFICULTY_MIN} to {DIFFICULTY_MAX}")
-    skill_tags = recipe.get("skillTags", DEFAULT_SKILL_TAGS)
-    if not isinstance(skill_tags, list) or not all(
-        isinstance(tag, str) and tag.strip() for tag in skill_tags
+    # skillTags is optional in the contract (openapi AssessmentRecipe). A
+    # missing key stays missing: every tag rides into the retrieval steer and
+    # the prompt, so a placeholder ("core") only drags retrieval off topic.
+    skill_tags = recipe.get("skillTags")
+    if skill_tags is not None and (
+        not isinstance(skill_tags, list)
+        or not all(isinstance(tag, str) and tag.strip() for tag in skill_tags)
     ):
         failures.append("skillTags must be a list of non-empty strings")
     return failures

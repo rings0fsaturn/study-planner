@@ -46,7 +46,7 @@ from app.generation.repo import GenerationRepo
 from app.generation.validation import validate_question, validate_written
 from app.ingestion.models import IngestionError, QueueMessage
 from app.ingestion.queue import WorkQueue
-from app.ingestion.telemetry import TelemetryRecord, TelemetrySink
+from app.ingestion.telemetry import TelemetryRecord, TelemetrySink, outcome_for_error_code
 
 logger = logging.getLogger("generation.worker")
 
@@ -96,7 +96,9 @@ class GenerationWorkerConfig:
     model: str = DEFAULT_MODEL
 
 
-ContextBuilder = Callable[[str, tuple[str, ...], str], list[RetrievedChunk]]
+# The context builder is keyed on the steer parts only: the material title is
+# document context for the prompt, never the retrieval query (D-01).
+ContextBuilder = Callable[[str, tuple[str, ...]], list[RetrievedChunk]]
 
 
 class GenerationWorker:
@@ -156,7 +158,10 @@ class GenerationWorker:
         material = self._repo.get_material(material_id)
         recipe = assessment.get("recipe") or {}
         difficulty = int(recipe.get("difficulty") or 3)
-        skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or ["core"]))
+        # No ["core"] default (D-01): a meaningless tag would ride into the
+        # steer and the prompt. No tags and no scope means no steer, which the
+        # context builder rejects rather than grounding on noise.
+        skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or []))
         question_format = _recipe_format(recipe)
         written = question_format == WRITTEN_FORMAT
         blueprint = GenerationBlueprint(
@@ -187,15 +192,31 @@ class GenerationWorker:
             return
 
         try:
-            chunks = self._context_builder(material_id, skill_tags, material.title)
+            chunks = self._context_builder(material_id, skill_tags)
         except IngestionError as exc:
-            self._mark_job_retryable(job_id, exc)
-            self._repo.update_assessment_status(
-                assessment_id,
-                "generating",
-                [{"code": exc.code, "message": exc.message}],
+            if exc.retryable:
+                self._mark_job_retryable(job_id, exc)
+                self._repo.update_assessment_status(
+                    assessment_id,
+                    "generating",
+                    [{"code": exc.code, "message": exc.message}],
+                )
+                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                return
+            # A non-retryable context fault (no topic steer to ground on)
+            # cannot succeed on a retry, so fail the assessment outright
+            # instead of leaving it spinning with a warning.
+            self._fail_assessment(
+                blueprint,
+                warnings=[{"code": exc.code, "message": exc.message}],
+                error_code=exc.code,
+                error_message=exc.message,
+                retryable=False,
+                outcome=outcome_for_error_code(exc.code),
+                latency_ms=0.0,
+                repair_attempted=False,
+                message_id=message.msg_id,
             )
-            self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
 
         context_ids = {chunk.chunk_id for chunk in chunks}

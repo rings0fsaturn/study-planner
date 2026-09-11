@@ -198,7 +198,7 @@ def make_worker(repo, queue, adapter, telemetry, **config_overrides: object):
         adapter=adapter,
         telemetry=telemetry,
         config=config,
-        context_builder=lambda material_id, skill_tags, title: chunks(),
+        context_builder=lambda material_id, skill_tags: chunks(),
     )
 
 
@@ -513,7 +513,7 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def failing_context(material_id, skill_tags, title):
+    def failing_context(material_id, skill_tags):
         raise IngestionError("provider_unavailable", "query embedding failed", retryable=True)
 
     worker = GenerationWorker(
@@ -552,6 +552,42 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     assert not queue.queues["assessment_generate"]
 
 
+def test_non_retryable_context_error_fails_the_assessment() -> None:
+    """No topic steer cannot be retried into success, so fail instead of spin."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+
+    def unsteered_context(material_id, skill_tags):
+        raise IngestionError("validation_failed", "no topic steer", retryable=False)
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=unsteered_context,
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    worker.run_once()
+
+    assert adapter.calls == []
+    assert repo.assessment_updates == [
+        ("a1", "failed", [{"code": "validation_failed", "message": "no topic steer"}])
+    ]
+    assert repo.job_updates[-1]["status"] == "failed"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert [record.outcome for record in telemetry.records] == ["partial"]
+    assert not queue.queues["assessment_generate"]
+
+
 def test_unexpected_exception_redelivers_message() -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
@@ -559,7 +595,7 @@ def test_unexpected_exception_redelivers_message() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def broken_context(material_id, skill_tags, title):
+    def broken_context(material_id, skill_tags):
         raise RuntimeError("boom")
 
     worker = GenerationWorker(

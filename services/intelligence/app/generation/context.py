@@ -1,10 +1,18 @@
-"""Retrieval-driven RAG context for generation (D-02).
+"""Retrieval-driven RAG context for generation (D-01, D-02).
 
-The pipeline embeds a steer query (material title + requested skill tags)
-and calls `match_content_chunks` with the service role, exactly the proven
-path in `app/routers/retrieval.py`. If the embedder is unavailable the job
-fails retryable with `provider_unavailable`; there is no silent ungrounded
-fallback.
+The pipeline embeds the learner's topic steer - the chosen section label plus
+any requested skill tags - and calls `match_content_chunks` with the service
+role, exactly the proven path in `app/routers/retrieval.py`. The material
+title is deliberately NOT part of the steer: it matches the cover, the
+contents page and the index, so a title-bearing query retrieves front matter
+and the model can then only author exam-format questions. Measured 2026-09-11
+on the 572-page ACCA APM corpus: 5/5 retrieved chunks were front or back
+matter for every steer that contained the title, while dropping it retrieved
+the technical chapters (`gap analysis` -> the F0/F1/F2 planning-gap chunks).
+The title reaches the prompt as document context in `prompts.py` instead.
+
+If the embedder is unavailable the job fails retryable with
+`provider_unavailable`; there is no silent ungrounded fallback.
 """
 
 from __future__ import annotations
@@ -21,13 +29,23 @@ CONTEXT_TOP_K = 5
 def build_context(
     material_id: str,
     skill_tags: tuple[str, ...],
-    title: str,
     supabase_url: str,
     service_key: str,
     client: httpx.Client,
 ) -> list[RetrievedChunk]:
     """Retrieve up to CONTEXT_TOP_K owner-scoped chunks for the steer query."""
-    steer = " ".join(part for part in (title, *skill_tags) if part).strip() or title
+    steer = " ".join(tag for tag in skill_tags if tag).strip()
+    if not steer:
+        # No title fallback: the title is what retrieved the cover and the
+        # contents page. With nothing to steer on there is no honest query -
+        # an empty steer embeds to a degenerate vector and returns fragments
+        # (measured 2026-09-11: "likes". / "produced." / "369"), so refuse
+        # instead of grounding a question on noise.
+        raise IngestionError(
+            "validation_failed",
+            "no topic steer: a section scope or at least one skill tag is required",
+            retryable=False,
+        )
     vectors = embed_queries([steer], client=client)
     if not vectors or vectors[0] is None:
         raise IngestionError("provider_unavailable", "query embedding failed", retryable=True)

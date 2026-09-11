@@ -360,6 +360,42 @@ def test_generate_assessment_wrong_question_count_is_400(_override_client: FakeU
     assert response.json()["code"] == "invalid_request"
 
 
+def test_generate_assessment_without_skill_tags_is_accepted(
+    _override_client: FakeUserClient,
+) -> None:
+    """skillTags is optional in the contract: it must not be defaulted (D-01)."""
+    _override_client.seed(_material())
+    body = _request_body()
+    body["recipe"].pop("skillTags")
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/generate",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000000"},
+        )
+    )
+    assert response.status_code == 202, response.text
+    stored = next(iter(_override_client.assessments.values()))
+    assert "skillTags" not in stored["recipe"]
+
+
+def test_generate_assessment_blank_skill_tag_is_400(_override_client: FakeUserClient) -> None:
+    _override_client.seed(_material())
+    body = _request_body()
+    body["recipe"]["skillTags"] = ["Strategic Planning", "  "]
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/generate",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000000"},
+        )
+    )
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+
+
 def test_generate_assessment_multi_material_is_400(_override_client: FakeUserClient) -> None:
     _override_client.seed(_material())
     body = _request_body()

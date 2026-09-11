@@ -90,16 +90,36 @@ def test_build_messages_assembles_system_and_user() -> None:
         {
             "role": "user",
             "content": USER_TEMPLATE.format(
-                steer="Book title, core, recall", chunks=chunk_block(chunks())
+                title_line="Material: Book title\n",
+                steer="core, recall",
+                chunks=chunk_block(chunks()),
             ),
         },
     ]
 
 
-def test_build_messages_steer_without_title() -> None:
+def test_build_messages_titles_the_document_and_steers_on_tags() -> None:
+    """The title is document context; the steer is the learner's tags (D-01)."""
+    messages = build_messages(blueprint(), chunks(), title="Book title")
+    user = messages[1]["content"]
+    assert "Material: Book title" in user
+    assert "Learner need (topic steer): core, recall" in user
+
+
+def test_build_messages_omits_the_document_line_without_a_title() -> None:
     messages = build_messages(blueprint(), chunks())
-    assert "Book title" not in messages[1]["content"]
-    assert "core, recall" in messages[1]["content"]
+    assert "Material:" not in messages[1]["content"]
+    assert "Learner need (topic steer): core, recall" in messages[1]["content"]
+
+
+def test_both_system_prompts_carry_the_meta_blocklist() -> None:
+    """D-02: the blocklist holds even when the retrieved chunks are front matter."""
+    for template in (SYSTEM_TEMPLATE, WRITTEN_SYSTEM_TEMPLATE):
+        assert "Never ask about the examination, the syllabus, marks, duration" in template
+        assert "study or revision guidance" in template
+        assert "the material or study text itself" in template
+        assert "must test one concept, technique or piece of subject content" in template
+    assert "or compute with it" in SYSTEM_TEMPLATE
 
 
 def test_build_messages_injects_difficulty_hint() -> None:
@@ -170,7 +190,9 @@ def test_build_written_messages_assembles_system_and_user() -> None:
         {
             "role": "user",
             "content": WRITTEN_USER_TEMPLATE.format(
-                steer="Book title, core, recall", chunks=chunk_block(chunks())
+                title_line="Material: Book title\n",
+                steer="core, recall",
+                chunks=chunk_block(chunks()),
             ),
         },
     ]
@@ -188,10 +210,12 @@ def test_build_written_messages_asks_for_rubric_subtype_and_reference() -> None:
     assert "difficulty 5" not in system
 
 
-def test_build_written_messages_steer_without_title() -> None:
-    messages = build_written_messages(blueprint(), chunks())
-    assert "Book title" not in messages[1]["content"]
-    assert "core, recall" in messages[1]["content"]
+def test_build_written_messages_titles_the_document_and_steers_on_tags() -> None:
+    """Same D-01 split as the objective arm: title = context, tags = steer."""
+    messages = build_written_messages(blueprint(), chunks(), title="Book title")
+    user = messages[1]["content"]
+    assert "Material: Book title" in user
+    assert "Learner need (topic steer): core, recall" in user
 
 
 def test_build_written_messages_repair_appends_assistant_user_pair() -> None:

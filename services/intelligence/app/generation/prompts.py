@@ -112,16 +112,35 @@ def written_schema(citation_ids: Iterable[str] | None = None) -> dict:
         "additionalProperties": False,
     }
 
+# D-02: both arms carry this blocklist verbatim. Nothing forbade exam-format
+# questions before, so on a front-matter steer the model authored them for
+# 25/25 stored questions; the blocklist is the arm that holds even when the
+# retrieved chunks are meta (an unscoped steer, a material with no outline).
+META_BLOCKLIST = (
+    "The question must test one concept, technique or piece of subject content from those "
+    "chunks - define or identify it, explain why or how it works, compare it with a related "
+    "idea, apply it to a scenario, or compute with it. Never ask about the examination, the "
+    "syllabus, marks, duration, pass marks, section structure or question formats; never ask "
+    "about study or revision guidance, how to use the material, or the structure of the "
+    "document (its chapters, contents, index or page layout); never ask about the material or "
+    "study text itself. If the chunks carry only that kind of front or back matter, still ask "
+    "the closest subject-content question they support. "
+)
+
 SYSTEM_TEMPLATE = (
     "You author one multiple-choice exam question grounded STRICTLY in the provided source chunks. "
-    "Rules: cite every chunk you used by its chunkId and quote the exact sentence fragment you "
+    + META_BLOCKLIST
+    + "Rules: cite every chunk you used by its chunkId and quote the exact sentence fragment you "
     "grounded the question on; invent nothing outside the chunks; make distractors plausible but "
     "clearly wrong to an expert; do not copy a full sentence verbatim into the stem; target "
     "difficulty {difficulty_hint}; respond only with the required JSON object."
 )
 
+# {title_line} carries the material title as document context (never as the
+# steer: the title is what retrieved the cover and the contents page, D-01).
 USER_TEMPLATE = (
-    "Learner need (topic steer): {steer}\n\nSource chunks:\n{chunks}\n\nAuthor one grounded MCQ."
+    "{title_line}Learner need (topic steer): {steer}\n\n"
+    "Source chunks:\n{chunks}\n\nAuthor one grounded MCQ."
 )
 
 CHUNK_FMT = '<chunk id="{cid}">{text}</chunk>'
@@ -133,6 +152,16 @@ def chunk_block(chunks: list[RetrievedChunk]) -> str:
     return "\n".join(CHUNK_FMT.format(cid=chunk.chunk_id, text=chunk.text) for chunk in chunks)
 
 
+def _topic_steer(blueprint: GenerationBlueprint) -> str:
+    """The topic steer: the learner's skill tags, never the material title (D-01)."""
+    return ", ".join(tag for tag in blueprint.skill_tags if tag)
+
+
+def _title_line(title: str) -> str:
+    """The material title as document context; empty when the caller has none."""
+    return f"Material: {title}\n" if title else ""
+
+
 def build_messages(
     blueprint: GenerationBlueprint,
     chunks: list[RetrievedChunk],
@@ -142,7 +171,6 @@ def build_messages(
     assistant_content: str | None = None,
 ) -> list[dict]:
     """Assemble the system/user messages (plus one repair pair when asked)."""
-    steer = ", ".join(part for part in (title, *blueprint.skill_tags) if part)
     messages: list[dict] = [
         {
             "role": "system",
@@ -152,7 +180,11 @@ def build_messages(
         },
         {
             "role": "user",
-            "content": USER_TEMPLATE.format(steer=steer, chunks=chunk_block(chunks)),
+            "content": USER_TEMPLATE.format(
+                title_line=_title_line(title),
+                steer=_topic_steer(blueprint),
+                chunks=chunk_block(chunks),
+            ),
         },
     ]
     if repair_feedback is not None:
@@ -171,7 +203,9 @@ def build_messages(
 
 WRITTEN_SYSTEM_TEMPLATE = (
     "You author one written exam question grounded STRICTLY in the provided source chunks, "
-    "together with the rubric that will grade the answer. Rules: cite every chunk you used by "
+    "together with the rubric that will grade the answer. "
+    + META_BLOCKLIST
+    + "Rules: cite every chunk you used by "
     "its chunkId and quote the exact sentence fragment you grounded the question on; invent "
     "nothing outside the chunks; set subtype to short_answer for a focused explanation a learner "
     "can give in two to four sentences, or to long_form for a multi-part explanation, comparison, "
@@ -183,7 +217,7 @@ WRITTEN_SYSTEM_TEMPLATE = (
 )
 
 WRITTEN_USER_TEMPLATE = (
-    "Learner need (topic steer): {steer}\n\nSource chunks:\n{chunks}\n\n"
+    "{title_line}Learner need (topic steer): {steer}\n\nSource chunks:\n{chunks}\n\n"
     "Author one grounded written question with its grading rubric and reference answer."
 )
 
@@ -197,7 +231,6 @@ def build_written_messages(
     assistant_content: str | None = None,
 ) -> list[dict]:
     """Assemble the written-arm system/user messages (plus one repair pair)."""
-    steer = ", ".join(part for part in (title, *blueprint.skill_tags) if part)
     messages: list[dict] = [
         {
             "role": "system",
@@ -207,7 +240,11 @@ def build_written_messages(
         },
         {
             "role": "user",
-            "content": WRITTEN_USER_TEMPLATE.format(steer=steer, chunks=chunk_block(chunks)),
+            "content": WRITTEN_USER_TEMPLATE.format(
+                title_line=_title_line(title),
+                steer=_topic_steer(blueprint),
+                chunks=chunk_block(chunks),
+            ),
         },
     ]
     if repair_feedback is not None:
