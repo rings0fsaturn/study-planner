@@ -4,6 +4,7 @@ import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import {
   AssessmentServiceError,
   type AssessmentFormat,
+  type AssessmentScope,
   type GenerationRequest,
 } from '../../assessments/types'
 import { ASSESSMENT_CREATED } from '../../events/EventStore'
@@ -25,6 +26,18 @@ const FAMILY_COPY: Record<string, string> = {
   written: 'One written question grounded in',
 }
 
+/** The pages a chapter chip covers: its own page to the next chapter's minus one. */
+function chapterRange(
+  material: MaterialRecord,
+  index: number,
+): { pageStart: number; pageEnd: number } {
+  const entries = material.outline?.entries ?? []
+  const start = entries[index].page
+  const next = entries[index + 1]
+  if (next) return { pageStart: start, pageEnd: Math.max(start, next.page - 1) }
+  return { pageStart: start, pageEnd: material.pageCount ?? start }
+}
+
 export function AssessmentConfig() {
   const { materialId } = useParams<{ materialId: string }>()
   const navigate = useNavigate()
@@ -36,7 +49,12 @@ export function AssessmentConfig() {
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [difficulty, setDifficulty] = useState<number>(3)
   const [family, setFamily] = useState<AssessmentFormat>('objective')
-  const [skillTagsInput, setSkillTagsInput] = useState('')
+  // The scope (D-05): a chapter chip fills the range and carries its label;
+  // editing either page by hand drops the label, because it no longer
+  // describes the range the learner asked for.
+  const [selectedChapter, setSelectedChapter] = useState<number | null>(null)
+  const [pageStart, setPageStart] = useState('')
+  const [pageEnd, setPageEnd] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<AssessmentServiceError | null>(null)
 
@@ -114,15 +132,54 @@ export function AssessmentConfig() {
     )
   }
 
-  const skillTags = skillTagsInput
-    .split(',')
-    .map((tag) => tag.trim())
-    .filter((tag) => tag.length > 0)
-
+  const outlineEntries = material.outline?.entries ?? []
+  const pageCount = material.pageCount ?? null
   const materialIdForRequest = material.id
 
+  function pickChapter(index: number) {
+    if (!material) return
+    const range = chapterRange(material, index)
+    setSelectedChapter(index)
+    setPageStart(String(range.pageStart))
+    setPageEnd(String(range.pageEnd))
+  }
+
+  function clearScope() {
+    setSelectedChapter(null)
+    setPageStart('')
+    setPageEnd('')
+  }
+
+  const trimmedStart = pageStart.trim()
+  const trimmedEnd = pageEnd.trim()
+  const numericStart = Number(trimmedStart)
+  const numericEnd = Number(trimmedEnd)
+  const hasRange = trimmedStart !== '' || trimmedEnd !== ''
+  let rangeError = ''
+  if (hasRange) {
+    if (!Number.isInteger(numericStart) || !Number.isInteger(numericEnd)) {
+      rangeError = 'Enter whole page numbers for both pages.'
+    } else if (numericStart < 1 || numericEnd < 1) {
+      rangeError = 'Pages start at 1.'
+    } else if (numericStart > numericEnd) {
+      rangeError = 'The first page must not be after the last page.'
+    } else if (pageCount !== null && numericEnd > pageCount) {
+      rangeError = `This material has ${pageCount} pages.`
+    }
+  }
+  const scope: AssessmentScope | undefined =
+    hasRange && rangeError === ''
+      ? {
+          pageStart: numericStart,
+          pageEnd: numericEnd,
+          ...(selectedChapter !== null && outlineEntries[selectedChapter]
+            ? { sectionLabel: outlineEntries[selectedChapter].title }
+            : {}),
+        }
+      : undefined
+
   async function submit() {
-    if (submitting) return
+    if (submitting || rangeError !== '') return
     setSubmitting(true)
     setError(null)
     const request: GenerationRequest = {
@@ -132,7 +189,7 @@ export function AssessmentConfig() {
         formats: [family],
         questionCount: 1,
         difficulty,
-        skillTags: skillTags.length > 0 ? skillTags : ['core'],
+        ...(scope ? { scope } : {}),
       },
       correlationId: crypto.randomUUID(),
     }
@@ -207,26 +264,87 @@ export function AssessmentConfig() {
             </div>
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
-            <label className="field-label" htmlFor="assessment-skill-tags">
-              Skill tags (optional, comma-separated)
-            </label>
-            <input
-              id="assessment-skill-tags"
-              className="field"
-              type="text"
-              value={skillTagsInput}
-              onChange={(event) => setSkillTagsInput(event.target.value)}
-              placeholder="e.g. Strategic Planning, Gap Analysis"
-            />
-            {skillTagsInput.trim() !== '' && skillTags.length === 0 && (
-              <p className="field-hint" style={{ color: 'var(--danger)' }}>
-                Enter at least one non-empty tag, or leave blank to use the default.
+            <label className="field-label">Scope (optional)</label>
+            {outlineEntries.length > 0 && (
+              <div className="chip-row" role="group" aria-label="Chapter scope">
+                <button
+                  type="button"
+                  className={`chip${selectedChapter === null ? ' selected' : ''}`}
+                  aria-pressed={selectedChapter === null}
+                  onClick={clearScope}
+                >
+                  Whole material
+                </button>
+                {outlineEntries.map((entry, index) => (
+                  <button
+                    key={`${entry.page}-${entry.title}`}
+                    type="button"
+                    className={`chip${selectedChapter === index ? ' selected' : ''}`}
+                    aria-pressed={selectedChapter === index}
+                    onClick={() => pickChapter(index)}
+                  >
+                    {entry.title}
+                  </button>
+                ))}
+              </div>
+            )}
+            {pageCount !== null ? (
+              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end', marginTop: '0.5rem' }}>
+                <div>
+                  <label className="field-label" htmlFor="assessment-page-start">
+                    From page
+                  </label>
+                  <input
+                    id="assessment-page-start"
+                    className="field"
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    value={pageStart}
+                    onChange={(event) => {
+                      setSelectedChapter(null)
+                      setPageStart(event.target.value)
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="field-label" htmlFor="assessment-page-end">
+                    To page
+                  </label>
+                  <input
+                    id="assessment-page-end"
+                    className="field"
+                    type="number"
+                    min={1}
+                    max={pageCount}
+                    value={pageEnd}
+                    onChange={(event) => {
+                      setSelectedChapter(null)
+                      setPageEnd(event.target.value)
+                    }}
+                  />
+                </div>
+              </div>
+            ) : (
+              <p className="field-hint">
+                This material has no page numbering, so the whole material is used.
               </p>
             )}
+            <p className="field-hint" style={rangeError ? { color: 'var(--danger)' } : undefined}>
+              {rangeError ||
+                (outlineEntries.length > 0
+                  ? 'Pick a chapter or a page range to ground the question; leave both blank for the whole material.'
+                  : 'The question is grounded in the material’s own pages.')}
+            </p>
           </div>
         </div>
         <div className="material-practice-actions">
-          <button type="button" className="btn btn-accent" onClick={() => void submit()} disabled={submitting}>
+          <button
+            type="button"
+            className="btn btn-accent"
+            onClick={() => void submit()}
+            disabled={submitting || rangeError !== ''}
+          >
             {submitting ? 'Requesting generation…' : 'Generate question'}
           </button>
         </div>

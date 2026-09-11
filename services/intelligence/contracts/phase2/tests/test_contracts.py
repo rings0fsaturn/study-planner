@@ -499,3 +499,41 @@ def test_written_contract_shapes_carry_no_server_only_vocabulary() -> None:
     # The learner's own written answer fixture carries no key material either.
     assert_no_secret_fields(load_json(ROOT / "fixtures/written-attempt-record.json"))
     assert_no_secret_fields(load_json(ROOT / "fixtures/written-question.json"))
+
+
+# --- #62 scoped question generation: recipe.scope ---
+
+
+def test_assessment_recipe_scope_is_in_the_contract() -> None:
+    document = _openapi()
+    schemas = document["components"]["schemas"]
+
+    recipe = schemas["AssessmentRecipe"]
+    assert recipe["additionalProperties"] is False
+    assert recipe["properties"]["scope"]["$ref"].endswith("AssessmentScope")
+
+    scope = schemas["AssessmentScope"]
+    assert scope["additionalProperties"] is False
+    assert set(scope["required"]) == {"pageStart", "pageEnd"}
+    assert set(scope["properties"]) == {"pageStart", "pageEnd", "sectionLabel"}
+
+    # Unscoped requests keep validating: the scope is opt-in.
+    _validate_against_openapi(
+        document, "AssessmentRecipe", {"formats": ["written"], "questionCount": 1}
+    )
+
+    scoped = load_json(ROOT / "fixtures/assessment-recipe-scoped.json")
+    _validate_against_openapi(document, "AssessmentRecipe", scoped)
+    _validate_against_openapi(document, "AssessmentScope", scoped["scope"])
+
+
+def test_assessment_scope_rejects_malformed_ranges() -> None:
+    document = _openapi()
+    for invalid in (
+        {"pageStart": 156},  # pageEnd is required
+        {"pageStart": 156, "pageEnd": 213, "chapterId": "ch-5"},  # unknown key
+        {"pageStart": 0, "pageEnd": 213},  # pages are 1-based
+        {"pageStart": 156, "pageEnd": 213, "sectionLabel": ""},  # label must be non-empty
+    ):
+        with pytest.raises(jsonschema.ValidationError):
+            _validate_against_openapi(document, "AssessmentScope", invalid)

@@ -15,11 +15,23 @@ export type AssessmentStatus = 'generating' | 'ready' | 'partial' | 'failed'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled'
 export type JobKind = 'ingestion' | 'generation' | 'grading' | 'roadmap_feedback'
 
+/** The learner's page scope for one generation request (openapi AssessmentScope). */
+export interface AssessmentScope {
+  /** First PDF page of the range, in the numbering the viewer shows. */
+  pageStart: number
+  /** Last PDF page of the range; the server bounds it by the material's page count. */
+  pageEnd: number
+  /** The outline row's title when a chapter was picked; it steers retrieval. */
+  sectionLabel?: string
+}
+
 export interface AssessmentRecipe {
   formats: AssessmentFormat[]
   questionCount: number
   difficulty?: number
   skillTags?: string[]
+  /** Chosen pages (P4/D-05). Absent means the whole material. */
+  scope?: AssessmentScope
 }
 
 export interface GenerationRequest {

@@ -31,8 +31,8 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from app.generation.context import build_context
-from app.generation.models import GenerationBlueprint, RetrievedChunk
+from app.generation.context import CONTEXT_TOP_K
+from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
 from app.generation.openrouter_client import OpenRouterGenerationClient
 from app.generation.prompts import (
     WRITTEN_PROMPT_TEMPLATE_VERSION,
@@ -96,9 +96,15 @@ class GenerationWorkerConfig:
     model: str = DEFAULT_MODEL
 
 
-# The context builder is keyed on the steer parts only: the material title is
-# document context for the prompt, never the retrieval query (D-01).
-ContextBuilder = Callable[[str, tuple[str, ...]], list[RetrievedChunk]]
+# The context builder is keyed on the steer parts and the learner's scope: the
+# material title is document context for the prompt, never the retrieval query
+# (D-01), and the scope's page bounds decide which part of the material is
+# eligible (D-05).
+ContextBuilder = Callable[[str, tuple[str, ...], AssessmentScope | None], list[RetrievedChunk]]
+
+# D-06: a scoped context thinner than this widens to neighbouring pages.
+WIDEN_STEPS = 2
+WIDEN_MIN_PAD = 5
 
 
 class GenerationWorker:
@@ -112,14 +118,14 @@ class GenerationWorker:
         adapter: OpenRouterGenerationClient,
         telemetry: TelemetrySink,
         config: GenerationWorkerConfig,
-        context_builder: ContextBuilder | None = None,
+        context_builder: ContextBuilder,
     ) -> None:
         self._repo = repo
         self._queue = queue
         self._adapter = adapter
         self._telemetry = telemetry
         self.config = config
-        self._context_builder = context_builder or build_context
+        self._context_builder = context_builder
 
     def run_once(self) -> int:
         messages = self._queue.poll(
@@ -162,6 +168,10 @@ class GenerationWorker:
         # steer and the prompt. No tags and no scope means no steer, which the
         # context builder rejects rather than grounding on noise.
         skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or []))
+        # The learner's page range, when one was requested (P4/D-05). The
+        # router already rejected a malformed or out-of-range scope; an
+        # unparseable one is treated as absent rather than crashing the job.
+        scope = AssessmentScope.from_recipe(recipe)
         question_format = _recipe_format(recipe)
         written = question_format == WRITTEN_FORMAT
         blueprint = GenerationBlueprint(
@@ -176,6 +186,7 @@ class GenerationWorker:
             prompt_template_version=(
                 WRITTEN_PROMPT_TEMPLATE_VERSION if written else prompt_template_version
             ),
+            scope=scope,
         )
         if not blueprint.owner_id:
             self._fail_assessment(
@@ -192,7 +203,22 @@ class GenerationWorker:
             return
 
         try:
-            chunks = self._context_builder(material_id, skill_tags)
+            chunks = self._context_builder(material_id, skill_tags, scope)
+            if not chunks:
+                # D-06's only rejection: a scope (or a material) with no chunk
+                # to ground on cannot produce a grounded question.
+                raise IngestionError(
+                    "validation_failed",
+                    (
+                        f"pages {scope.page_start}-{scope.page_end} contain no content"
+                        if scope is not None
+                        else "this material has no content chunks"
+                    ),
+                    retryable=False,
+                )
+            chunks, scope_warnings = self._widen_thin_context(
+                material_id, skill_tags, scope, chunks
+            )
         except IngestionError as exc:
             if exc.retryable:
                 self._mark_job_retryable(job_id, exc)
@@ -228,12 +254,14 @@ class GenerationWorker:
         response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
         repair_attempted = False
         accepted = None
-        warnings: list[dict] = []
+        warnings: list[dict] = list(scope_warnings)
 
         if response.outcome == "ok" and response.structured_output is not None:
             accepted, warnings = validate(
                 response.structured_output, blueprint, context_ids, chunk_texts
             )
+            # The scope's own warnings (D-06's widen) travel with the question.
+            warnings = [*scope_warnings, *warnings]
             if accepted is None and any(w["code"] == "malformed_output" for w in warnings):
                 repair_feedback = "; ".join(str(w["message"]) for w in warnings)
                 accepted, warnings = self._repair_once(
@@ -246,6 +274,7 @@ class GenerationWorker:
                     repair_feedback=repair_feedback,
                     written=written,
                 )
+                warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
         elif response.outcome == "malformed_output":
             repair_feedback = str(
@@ -261,6 +290,7 @@ class GenerationWorker:
                 repair_feedback=repair_feedback,
                 written=written,
             )
+            warnings = [*scope_warnings, *warnings]
             repair_attempted = True
 
         if accepted is not None:
@@ -323,6 +353,41 @@ class GenerationWorker:
             repair_attempted=repair_attempted,
             message_id=message.msg_id,
         )
+
+    def _widen_thin_context(
+        self,
+        material_id: str,
+        skill_tags: tuple[str, ...],
+        scope: AssessmentScope | None,
+        chunks: list[RetrievedChunk],
+    ) -> tuple[list[RetrievedChunk], list[dict]]:
+        """D-06: a thin scoped context widens to neighbouring pages and warns.
+
+        A scoped query can legitimately return fewer than CONTEXT_TOP_K chunks
+        (a three-page range), and grounding a question on almost nothing is how
+        the original front-matter defect hid. The widened range is a superset
+        of the requested one, so the result can only grow; when it does not, the
+        learner still gets the honest count in the warning.
+        """
+        if scope is None or len(chunks) >= CONTEXT_TOP_K:
+            return chunks, []
+        found = len(chunks)
+        widened = scope
+        for _ in range(WIDEN_STEPS):
+            widened = widened.widened(WIDEN_MIN_PAD)
+            chunks = self._context_builder(material_id, skill_tags, widened)
+            if len(chunks) >= CONTEXT_TOP_K:
+                break
+        return chunks, [
+            {
+                "code": "scope_widened",
+                "message": (
+                    f"pages {scope.page_start}-{scope.page_end} held only {found} "
+                    f"chunk(s); the search widened to pages "
+                    f"{widened.page_start}-{widened.page_end}"
+                ),
+            }
+        ]
 
     def _repair_once(
         self,

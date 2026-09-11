@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from app.generation.models import NormalizedGenerationResponse, RetrievedChunk
+from app.generation.models import (
+    AssessmentScope,
+    NormalizedGenerationResponse,
+    RetrievedChunk,
+)
 from app.generation.prompts import (
     WRITTEN_PROMPT_TEMPLATE_VERSION,
 )
@@ -198,7 +202,7 @@ def make_worker(repo, queue, adapter, telemetry, **config_overrides: object):
         adapter=adapter,
         telemetry=telemetry,
         config=config,
-        context_builder=lambda material_id, skill_tags: chunks(),
+        context_builder=lambda material_id, skill_tags, scope: chunks(),
     )
 
 
@@ -513,7 +517,7 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def failing_context(material_id, skill_tags):
+    def failing_context(material_id, skill_tags, scope):
         raise IngestionError("provider_unavailable", "query embedding failed", retryable=True)
 
     worker = GenerationWorker(
@@ -560,7 +564,7 @@ def test_non_retryable_context_error_fails_the_assessment() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def unsteered_context(material_id, skill_tags):
+    def unsteered_context(material_id, skill_tags, scope):
         raise IngestionError("validation_failed", "no topic steer", retryable=False)
 
     worker = GenerationWorker(
@@ -595,7 +599,7 @@ def test_unexpected_exception_redelivers_message() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def broken_context(material_id, skill_tags):
+    def broken_context(material_id, skill_tags, scope):
         raise RuntimeError("boom")
 
     worker = GenerationWorker(
@@ -818,3 +822,140 @@ def test_written_quota_failure_keeps_assessment_generating() -> None:
     assert repo.job_updates[-1]["retryable"] is False
     assert repo.job_updates[-1]["retry_after"] == 60
     assert telemetry.records[0].outcome == "quota_failure"
+
+
+# --- #62 P4: the learner's page scope (D-05, D-06) ---
+
+
+def scoped_assessment(page_start: int = 156, page_end: int = 213) -> dict:
+    base = assessment()
+    base["recipe"] = {
+        **base["recipe"],
+        "scope": {
+            "pageStart": page_start,
+            "pageEnd": page_end,
+            "sectionLabel": "Chapter 5 Budgeting and control",
+        },
+    }
+    return base
+
+
+def scoped_chunks(count: int) -> list[RetrievedChunk]:
+    return [
+        RetrievedChunk(
+            chunk_id=f"c{index}",
+            material_id="m1",
+            text="The planning gap is the shortfall between forecast and target.",
+            ordinal=index,
+        )
+        for index in range(count)
+    ]
+
+
+def scoped_worker(repo, queue, adapter, telemetry, context_builder) -> GenerationWorker:
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    return GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+    )
+
+
+def test_scope_from_the_recipe_reaches_the_context_builder() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    seen: list[tuple] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        seen.append((material_id, skill_tags, scope))
+        return scoped_chunks(5)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert seen == [
+        (
+            "m1",
+            ("Strategic Planning",),
+            AssessmentScope(156, 213, "Chapter 5 Budgeting and control"),
+        )
+    ]
+    # A scope with a full context needs no warning.
+    assert repo.completed[0][3] == []
+    assert repo.questions[0]["citations"][0]["chunkId"] == "c1"
+
+
+def test_thin_scoped_context_widens_to_neighbouring_pages_and_warns() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    calls: list[object] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        calls.append(scope)
+        return scoped_chunks(2) if len(calls) == 1 else scoped_chunks(5)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    # The pad is 5 pages per round (WIDEN_MIN_PAD), so 156-213 -> 151-218.
+    assert calls == [
+        AssessmentScope(156, 213, "Chapter 5 Budgeting and control"),
+        AssessmentScope(151, 218, "Chapter 5 Budgeting and control"),
+    ]
+    warnings = repo.completed[0][3]
+    assert [warning["code"] for warning in warnings] == ["scope_widened"]
+    assert "pages 156-213 held only 2" in warnings[0]["message"]
+    assert "widened to pages 151-218" in warnings[0]["message"]
+
+
+def test_unscoped_thin_context_is_not_widened() -> None:
+    """D-06 widens a chosen range; an unscoped request has no neighbouring pages."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    calls: list[object] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        calls.append(scope)
+        return scoped_chunks(2)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert calls == [None]
+    assert repo.completed[0][3] == []
+
+
+def test_a_scope_with_no_chunks_fails_the_assessment() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+
+    def context_builder(material_id, skill_tags, scope):
+        return []
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert adapter.calls == []
+    assert repo.assessment_updates == [
+        (
+            "a1",
+            "failed",
+            [{"code": "validation_failed", "message": "pages 156-213 contain no content"}],
+        )
+    ]
+    assert repo.job_updates[-1]["status"] == "failed"
+    assert repo.job_updates[-1]["retryable"] is False

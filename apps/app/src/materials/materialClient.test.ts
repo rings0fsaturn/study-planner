@@ -26,6 +26,15 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     chunk_count: 0,
     grounding_version: null,
     extracted_text_path: null,
+    outline: {
+      entries: [
+        { title: 'Chapter 1 Introduction', page: 34 },
+        { title: 'Chapter 2 Performance', page: 60 },
+      ],
+      source: 'contents',
+    },
+    page_count: 572,
+    page_offset: -33,
     created_at: '2026-07-15T10:00:00.000Z',
     updated_at: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -116,6 +125,31 @@ describe('MaterialClient', () => {
       contentVersion: 'v1',
       estimatedMinutes: 420,
     })
+  })
+
+  it('maps the outline, page count and page offset, and reads a junk outline as none', async () => {
+    const fake = fakeDb()
+    fake.rows.push(
+      row(),
+      row({ id: 'mat-2', outline: { entries: 'not a list' }, page_count: null, page_offset: null }),
+    )
+    const client = new MaterialClient(fake.db)
+
+    const [mapped, junk] = await client.listMaterials()
+
+    expect(mapped).toMatchObject({
+      outline: {
+        entries: [
+          { title: 'Chapter 1 Introduction', page: 34 },
+          { title: 'Chapter 2 Performance', page: 60 },
+        ],
+      },
+      pageCount: 572,
+      pageOffset: -33,
+    })
+    expect(junk.outline).toBeNull()
+    expect(junk.pageCount).toBeNull()
+    expect(junk.pageOffset).toBeNull()
   })
 
   it('applies status, search, archived, and ordering options to the query', async () => {

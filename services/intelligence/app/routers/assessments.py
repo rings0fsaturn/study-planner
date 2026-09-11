@@ -53,7 +53,59 @@ def _validate_recipe(recipe: dict) -> list[str]:
         or not all(isinstance(tag, str) and tag.strip() for tag in skill_tags)
     ):
         failures.append("skillTags must be a list of non-empty strings")
+    failures.extend(_validate_scope(recipe.get("scope")))
     return failures
+
+
+def _validate_scope(scope: object) -> list[str]:
+    """Shape check for `recipe.scope` (D-05); the page range is checked later."""
+    if scope is None:
+        return []
+    if not isinstance(scope, dict):
+        failures = ["scope must be an object with pageStart and pageEnd"]
+    else:
+        failures = []
+        start, end = scope.get("pageStart"), scope.get("pageEnd")
+        if not _is_page(start) or not _is_page(end):
+            failures.append("scope.pageStart and scope.pageEnd must be integers of at least 1")
+        elif start > end:
+            failures.append("scope.pageStart must not be greater than scope.pageEnd")
+        label = scope.get("sectionLabel")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            failures.append("scope.sectionLabel must be a non-empty string when present")
+        unknown = sorted(set(scope) - {"pageStart", "pageEnd", "sectionLabel"})
+        if unknown:
+            failures.append(f"scope has unsupported keys: {', '.join(unknown)}")
+    return failures
+
+
+def _is_page(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _scope_range_failure(recipe: dict, material: dict) -> str:
+    """The scope must fit the material's own page count (D-05).
+
+    `materials.page_count` is written by the ingestion worker from the parsed
+    PDF, so a material without page numbering cannot be scoped by page at all.
+    """
+    scope = recipe.get("scope")
+    if not isinstance(scope, dict):
+        return ""
+    page_count = _material_page_count(material)
+    if page_count == 0:
+        return "this material has no page numbering to scope by"
+    if int(scope["pageEnd"]) > page_count:
+        return f"scope.pageEnd must not exceed the material's {page_count} pages"
+    return ""
+
+
+def _material_page_count(material: dict) -> int:
+    """The stored page count, or 0 when the material has no page numbering."""
+    value = material.get("page_count")
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        return 0
+    return value
 
 
 def _question(row: dict) -> dict:
@@ -101,6 +153,9 @@ def generate_assessment(
             return service_error(
                 request, IngestionError("validation_failed", "material is not ready")
             )
+        scope_failure = _scope_range_failure(recipe, material)
+        if scope_failure:
+            return service_error(request, IngestionError("validation_failed", scope_failure))
     except IngestionError as exc:
         return service_error(request, exc)
 

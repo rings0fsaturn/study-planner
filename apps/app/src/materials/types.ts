@@ -43,6 +43,32 @@ export const SOURCE_FIELDS: Record<
   manual: { label: 'Plain text', placeholder: 'Paste text here…', textarea: true },
 }
 
+/** One chapter of a material's outline; `page` is a PDF page number (P3). */
+export interface OutlineEntry {
+  title: string
+  page: number
+}
+
+export interface MaterialOutline {
+  entries: OutlineEntry[]
+  source?: string
+}
+
+/** Parse `materials.outline`; anything unexpected reads as "no outline". */
+export function outlineFromRow(value: unknown): MaterialOutline | null {
+  if (!value || typeof value !== 'object') return null
+  const entries = (value as { entries?: unknown }).entries
+  if (!Array.isArray(entries)) return null
+  const parsed: OutlineEntry[] = []
+  for (const entry of entries) {
+    if (!entry || typeof entry !== 'object') continue
+    const { title, page } = entry as { title?: unknown; page?: unknown }
+    if (typeof title !== 'string' || typeof page !== 'number' || !title) continue
+    parsed.push({ title, page })
+  }
+  return parsed.length > 0 ? { entries: parsed } : null
+}
+
 export interface MaterialRecord {
   id: string
   ownerId: string
@@ -60,6 +86,11 @@ export interface MaterialRecord {
   chunkCount: number
   groundingVersion: string | null
   extractedTextPath: string | null
+  /** Derived at ingestion (P3); absent on rows read before the outline shipped. */
+  outline?: MaterialOutline | null
+  /** PDF page count, and the printed->PDF offset the outline was built with. */
+  pageCount?: number | null
+  pageOffset?: number | null
   createdAt: string
   updatedAt: string
 }

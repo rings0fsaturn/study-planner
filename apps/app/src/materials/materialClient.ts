@@ -5,7 +5,7 @@ import type {
   MaterialReplaceInput,
   MaterialServiceErrorCode,
 } from './types'
-import { MaterialServiceError } from './types'
+import { MaterialServiceError, outlineFromRow } from './types'
 
 interface DbRow {
   id: string
@@ -146,6 +146,9 @@ export function materialRowToRecord(row: Record<string, unknown>): MaterialRecor
     chunkCount: Number(row.chunk_count ?? 0),
     groundingVersion: row.grounding_version == null ? null : String(row.grounding_version),
     extractedTextPath: row.extracted_text_path == null ? null : String(row.extracted_text_path),
+    outline: outlineFromRow(row.outline),
+    pageCount: row.page_count == null ? null : Number(row.page_count),
+    pageOffset: row.page_offset == null ? null : Number(row.page_offset),
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   }

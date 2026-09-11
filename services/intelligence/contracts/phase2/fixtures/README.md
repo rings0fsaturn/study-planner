@@ -49,3 +49,4 @@ These fixtures target schemas declared inline in `openapi.yaml`, which the JSON-
 | `written-question.json` | `Question` | a written question as the client sees it, with subtype and no key material |
 | `written-attempt-submit.json` | `AttemptSubmit` with `WrittenAnswer` | a learner's free-text written submission |
 | `written-attempt-record.json` | `AttemptRecord` with `WrittenAnswer` and `QuestionGraded` | a graded written attempt with the per-criterion `rubricBreakdown` |
+| `assessment-recipe-scoped.json` | `AssessmentRecipe` with `AssessmentScope` | a chapter-scoped generation request (PDF pages plus the section label that steers retrieval) |

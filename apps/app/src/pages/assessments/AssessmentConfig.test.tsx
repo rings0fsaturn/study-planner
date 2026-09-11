@@ -102,8 +102,10 @@ describe('AssessmentConfig', () => {
       formats: ['objective'],
       questionCount: 1,
       difficulty: 3,
-      skillTags: ['core'],
     })
+    // No skillTags placeholder and no scope: the whole material is used.
+    expect(input.recipe.scope).toBeUndefined()
+    expect(input.recipe.skillTags).toBeUndefined()
     expect(input.clientId).toBeTruthy()
     expect(input.correlationId).toBeTruthy()
     expect(mockAppend).toHaveBeenCalledWith('AssessmentCreated', {
@@ -113,23 +115,99 @@ describe('AssessmentConfig', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/assessments/assessment-1')
   })
 
-  it('uses the typed skill tags when provided', async () => {
-    const materials = new FakeMaterialClient([material({})])
+  it('sends the chapter range and its label when a chapter is picked', async () => {
+    const materials = new FakeMaterialClient([
+      material({
+        pageCount: 572,
+        pageOffset: -33,
+        outline: {
+          entries: [
+            { title: 'Chapter 1 Introduction to performance management', page: 34 },
+            { title: 'Chapter 5 Budgeting and control', page: 156 },
+            { title: 'Chapter 6 Business structure', page: 214 },
+          ],
+        },
+      }),
+    ])
     const assessments = new FakeAssessmentClient()
-    assessments.scriptGenerate(queuedJob())
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
     renderConfig(materials, assessments)
 
-    await screen.findByText('Difficulty band')
-    fireEvent.change(screen.getByLabelText(/Skill tags/), {
-      target: { value: 'Strategic Planning, Gap Analysis' },
-    })
+    fireEvent.click(await screen.findByRole('button', { name: 'Chapter 5 Budgeting and control' }))
+    expect((screen.getByLabelText('From page') as HTMLInputElement).value).toBe('156')
+    expect((screen.getByLabelText('To page') as HTMLInputElement).value).toBe('213')
+
     fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
 
     await waitFor(() => {
       expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
     })
-    const recipe = assessments.generateAssessment.mock.calls[0][0].recipe
-    expect(recipe.skillTags).toEqual(['Strategic Planning', 'Gap Analysis'])
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.scope).toEqual({
+      pageStart: 156,
+      pageEnd: 213,
+      sectionLabel: 'Chapter 5 Budgeting and control',
+    })
+  })
+
+  it('sends a typed range without a label and clears it back to the whole material', async () => {
+    const materials = new FakeMaterialClient([
+      material({
+        pageCount: 572,
+        outline: {
+          entries: [{ title: 'Chapter 5 Budgeting and control', page: 156 }],
+        },
+      }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments)
+
+    fireEvent.change(await screen.findByLabelText('From page'), { target: { value: '200' } })
+    fireEvent.change(screen.getByLabelText('To page'), { target: { value: '210' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.scope).toEqual({
+      pageStart: 200,
+      pageEnd: 210,
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Whole material' }))
+    expect((screen.getByLabelText('From page') as HTMLInputElement).value).toBe('')
+  })
+
+  it('refuses an inverted or out-of-range page range', async () => {
+    const materials = new FakeMaterialClient([material({ pageCount: 572 })])
+    const assessments = new FakeAssessmentClient()
+    renderConfig(materials, assessments)
+
+    fireEvent.change(await screen.findByLabelText('From page'), { target: { value: '300' } })
+    fireEvent.change(screen.getByLabelText('To page'), { target: { value: '200' } })
+    expect(screen.getByText('The first page must not be after the last page.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Generate question' })).toBeDisabled()
+
+    fireEvent.change(screen.getByLabelText('To page'), { target: { value: '900' } })
+    expect(screen.getByText('This material has 572 pages.')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+    expect(assessments.generateAssessment).not.toHaveBeenCalled()
+  })
+
+  it('uses the whole material when it has no page numbering', async () => {
+    const materials = new FakeMaterialClient([material({ pageCount: null, outline: null })])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments)
+
+    expect(await screen.findByText(/no page numbering/)).toBeInTheDocument()
+    expect(screen.queryByLabelText('From page')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.scope).toBeUndefined()
   })
 
   it('defaults to the objective family and sends the written family when picked', async () => {

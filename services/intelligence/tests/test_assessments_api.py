@@ -172,7 +172,9 @@ def _auth_headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def _material(material_id: str = "mat-1", state: str = "ready") -> dict:
+def _material(
+    material_id: str = "mat-1", state: str = "ready", page_count: int | None = 572
+) -> dict:
     return {
         "id": material_id,
         "user_id": "fixture-user",
@@ -187,6 +189,9 @@ def _material(material_id: str = "mat-1", state: str = "ready") -> dict:
         "grounding_version": "v1",
         "extracted_text_path": None,
         "upload_complete_at": None,
+        "page_count": page_count,
+        "page_offset": -33 if page_count else None,
+        "outline": None,
         "created_at": "2026-08-14T00:00:00Z",
         "updated_at": "2026-08-14T00:01:00Z",
     }
@@ -358,6 +363,96 @@ def test_generate_assessment_wrong_question_count_is_400(_override_client: FakeU
     )
     assert response.status_code == 400
     assert response.json()["code"] == "invalid_request"
+
+
+# --- #62 P4: recipe.scope (D-05) ---
+
+
+def _scoped_body(**scope: object) -> dict:
+    body = _request_body()
+    body["recipe"]["scope"] = {"pageStart": 156, "pageEnd": 213, **scope}
+    return body
+
+
+def _post_generate(body: dict) -> httpx.Response:
+    return asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/generate",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000000"},
+        )
+    )
+
+
+def test_generate_assessment_keeps_the_scope_in_the_recipe(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.seed(_material())
+    response = _post_generate(_scoped_body(sectionLabel="Chapter 5 Budgeting and control"))
+
+    assert response.status_code == 202, response.text
+    assessment = next(iter(_override_client.assessments.values()))
+    assert assessment["recipe"]["scope"] == {
+        "pageStart": 156,
+        "pageEnd": 213,
+        "sectionLabel": "Chapter 5 Budgeting and control",
+    }
+
+
+def test_generate_assessment_scope_beyond_the_page_count_is_409(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.seed(_material())
+    response = _post_generate(_scoped_body(pageEnd=600))
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "validation_failed"
+    assert "572" in response.json()["message"]
+    assert not _override_client.assessments
+
+
+def test_generate_assessment_scope_without_page_numbers_is_409(
+    _override_client: FakeUserClient,
+) -> None:
+    """A url/manual/youtube material has no page numbering to scope by."""
+    _override_client.seed(_material(page_count=None))
+    response = _post_generate(_scoped_body())
+
+    assert response.status_code == 409
+    assert response.json()["code"] == "validation_failed"
+    assert not _override_client.assessments
+
+
+def test_generate_assessment_inverted_scope_is_400(_override_client: FakeUserClient) -> None:
+    _override_client.seed(_material())
+    response = _post_generate(_scoped_body(pageStart=300, pageEnd=200))
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+    assert "pageStart" in response.json()["message"]
+
+
+def test_generate_assessment_scope_with_a_non_integer_page_is_400(
+    _override_client: FakeUserClient,
+) -> None:
+    _override_client.seed(_material())
+    response = _post_generate(_scoped_body(pageStart="156"))
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+
+
+def test_generate_assessment_scope_with_an_unknown_key_is_400(
+    _override_client: FakeUserClient,
+) -> None:
+    """`scope` mirrors the contract's additionalProperties: false."""
+    _override_client.seed(_material())
+    response = _post_generate(_scoped_body(chapterId="ch-5"))
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+    assert "chapterId" in response.json()["message"]
 
 
 def test_generate_assessment_without_skill_tags_is_accepted(

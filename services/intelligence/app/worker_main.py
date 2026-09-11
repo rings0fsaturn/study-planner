@@ -105,8 +105,10 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 
-    def context_builder(material_id, skill_tags):
-        return build_context(material_id, skill_tags, supabase_url, service_key, shared_client)
+    def context_builder(material_id, skill_tags, scope):
+        return build_context(
+            material_id, skill_tags, scope, supabase_url, service_key, shared_client
+        )
 
     return GenerationWorker(
         repo=repo,

@@ -1,7 +1,7 @@
 # Scoped Question Generation (#18) — Implementation Plan
 
 **Date written:** 2026-09-11 · **Ticket:** GitHub #62 (filed + claimed 2026-09-11) · **Parent:** spec #32 · map #4 · **Branch:** `phase2/issue-62-scoped-question-generation` (cut off `phase2/issue-40-41` at `237faf8`)
-**Plan status:** 🟡 In progress — P1 + P2 + P3 done (2026-09-11); P4/P5 defined, evidence measured, decisions locked with the user on 2026-09-11.
+**Plan status:** 🟡 In progress — P1 + P2 + P3 + P4 done (2026-09-11); P5 (pdf.js viewer) remaining. Evidence measured and decisions locked with the user on 2026-09-11.
 **Trigger:** user report — "I dont like the questions being generated in the assessment"; 25/25 generated questions asked about the exam instead of the material's content.
 
 > Runbook convention inherited from the #38/#39/#40/#41 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -185,7 +185,7 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 - **Verification (evidence: `research/2026-09-11-p3-live-verification.md`).** Offline on the real fixture: contents page pdf 6, 16 entries exactly matching the printed contents, offset -33 (99.3% agreement), 0.01 s on cached page texts, source `contents` (no provider call). Live: migration 030 pushed (dry-run listed exactly 030), worker restarted, APM material re-ingested -> the `chunking` transition already carries `pages=572 offset=-33 entries=16`, `ready` in ~80 s with 754 re-embeddings; the stored outline equals the offline parse entry for entry. Focused suites 123 passed; whole service 533 passed / 7 failed (the identical 7 pre-existing failures).
 
 
-### Phase 4 — Scope contract + picker + scoped retrieval `⬜ Not started`
+### Phase 4 — Scope contract + picker + scoped retrieval `✅ Done 2026-09-11`
 1. `openapi.yaml`: `AssessmentRecipe.scope`; a new fixture; contract tests.
 2. `routers/assessments.py`: validate the range against `materials.page_count`.
 3. `worker.py` + `context.py`: the scope reaches the RPC; the blueprint carries it for telemetry.
@@ -194,6 +194,16 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 **Verification:** contract test for the scoped recipe; route matrix for out-of-range/zero-chunk/thin-range; app tests for the picker; **live gate: pick Chapter 5, generate, and assert every citation's chunk page lies inside that chapter's range.**
 
 **Notes (filled in during implementation):**
+
+- **Contract.** `AssessmentRecipe.scope` plus a new `AssessmentScope` (`pageStart`/`pageEnd` required integers ≥ 1, `sectionLabel` optional and non-empty, `additionalProperties: false` on both) and the `assessment-recipe-scoped.json` fixture; 2 contract tests bring `contracts/phase2` to **22 passed**. The free-text-era request shape (no `scope`, optional `skillTags`) stays valid, so nothing breaks for an older client, and an unknown scope key is rejected rather than ignored.
+- **Router.** `_validate_scope` owns the shape (integers ≥ 1, start ≤ end, non-empty label, unknown keys rejected) and `_scope_range_failure` owns the range (409 when the material has no `page_count`, or `pageEnd > page_count`); 6 new route tests. Live: `start > end` → 400, `pageEnd = 600` on a 572-page material → 409 `validation_failed`, a pageless `url` material → 409 "no page numbering to scope by".
+- **Retrieval.** `build_context(material_id, skill_tags, scope, supabase_url, service_key, client)` — the steer is `scope.sectionLabel` and then the tags, and the page bounds ride into `match_content_chunks` as `p_page_start`/`p_page_end`. **The no-steer case now spreads** (`_spread_context`: id/ordinal listing → evenly spaced picks → text fetch), bounded by the scope: this is D-08's long-deferred "no query → spread inside the range" branch, and it is what makes a page-only scope render a grounded question instead of failing. `build_context` still refuses an *empty material*.
+- **Worker.** The scope comes off the stored recipe into the blueprint; an empty context is a non-retryable `validation_failed`; `_widen_thin_context` implements D-06 (pad 5 pages per round, 2 rounds, `scope_widened` warning re-prepended so a repair round cannot drop it). `ContextBuilder` is now a **required 3-arg callable with no default**, so production cannot silently fall back to the wrong arity again.
+- **The widen threshold is `CONTEXT_TOP_K` = 5, and it is cheaper to reach than the plan assumed.** Measured live: the 3-page range 156..158 already returns 5 chunks (overlap matching pulls in the straddling chunks) so it does **not** widen, while the single page 156..156 returns 4 and widens to 151..161 with `scope_widened`.
+- **Client.** `AssessmentScope` on `AssessmentRecipe`; the chapter chip resolves to its own page and the next chapter's page − 1 (the last chapter runs to `page_count`); editing either page drops the label, because it no longer describes the range; "Whole material" clears the range. The free-text tag box and the `['core']` default are gone — the P1 wart closed.
+- **No new migration.** The scope rides the existing `assessments.recipe` jsonb and the read route echoes it, so retry/restore round-trip it with no plumbing. Confirmed live: every one of the six P4 runs came back with its recipe — scope included — verbatim. This is D-05's bet paying off.
+- **The e2e spec was stale, not P4-broken.** `e2e/assessment-generation-live.spec.ts` waited for `Difficulty band` and read the citation out of `.card-large`; the detail page has rendered "Difficulty 3" and a `Citations` heading (the review surface) since the #40/#41 rework, so the spec had been failing at those two assertions regardless of this phase. Fixed to the real DOM, and a scoped scenario (chapter chip → both page inputs → generate → citations) plus the mobile chip/reset assertions were added; the retry-poll loop is now one shared `waitForQuestion` helper instead of an inline copy.
+- **Verification (evidence: `research/2026-09-11-p4-live-verification.md`).** Contract fixture + tests green; whole app suite 762 passed / 2 failed (the documented WSL TZ pair in `src/dev/seedTestData.test.ts`, 2/2 green under `--pool=forks`); `pnpm typecheck` + `pnpm lint` clean; service `tests/` minus the 7 known pre-existing failures = 518 passed. Live: a Chapter 5 scope (pdf 156..213) → `ready` with no warnings, every citation inside the range (ordinals 204 page (158,158) and 269 page (202,202)); the route matrix (thin range widens and warns, over-572 409, pageless 409, inverted 400); a page-only scope with no label spreads and still cites inside the range; the browser click-through at 1280 and 375.
 
 ### Phase 5 — pdf.js viewer `⬜ Not started`
 1. `pdfjs-dist` in `apps/app`; worker wired via `pdfjs-dist/build/pdf.worker.min.mjs?url` (Vite: without `workerSrc` the canvas renders blank).
