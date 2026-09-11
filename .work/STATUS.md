@@ -9,7 +9,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #41 claimed + #42/#35/#12/#50; #34/#39/#40 closed. | active/phase2-wayfinder/state.md |
-| [APP][RESEARCH][KT] | issue-41-written-assessment-rubric-grading | Ticket #41 claimed; P1 contract + P2 written generation + P3 llm_rubric grading arm done (service 501 pass/7 pre-existing, 027+028 live-verified, rubric schema live-probed); P4 client taking/review/config next. | active/issue-41-written-assessment-rubric-grading/state.md |
+| [APP][RESEARCH][KT] | issue-41-written-assessment-rubric-grading | Ticket #41 claimed; P1–P5 done and verified — P5 live pass 4/4 green 2026-09-11 (real `llm_rubric` grades, desktop+mobile, retry, restore); two live-found defects fixed in P5 (retry kept `objective`; `chunkId` unbound to context → now enum-bound); AC1–AC4 ticked. Wayfinder exit + commit/push still open. | active/issue-41-written-assessment-rubric-grading/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |
