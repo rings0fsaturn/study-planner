@@ -147,6 +147,13 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 5. Migration 029: `content_chunks.page_start/page_end INT NULL`; `match_content_chunks` gains `p_page_start`/`p_page_end` applied in both CTEs. **Copy the migration-016 body verbatim as the base** — it is the latest definition, and 027 already broke this repo by re-creating a function from a stale body.
 **Verification:** unit tests for page propagation, boundary straddling and filter inclusivity; migration applies clean on dev Supabase (rule 36); live re-ingest of the APM material, then assert every chunk has pages and `count(page_start between 1 and 572) == 754`.
 
+**Entry conditions (measured offline 2026-09-11, evidence `research/2026-09-11-p2-precheck-page-identity.md`):**
+
+- **Attach the page to the paragraph segments, not to new page-sized segments.** Chunking consumes segments; tagging today's 1257 paragraphs with their page leaves the chunk boundaries (and therefore the chunk texts and the 754 baseline) untouched. Page-level segments would re-cut every chunk.
+- **Build `ExtractedContent.text` exactly as today** (one `clean_text` over the joined raw pages) and derive the page-tagged segments alongside it: per-page cleaning and joining loses 735 characters of page-boundary blank lines (963,136 vs 962,401 chars on the 572-page fixture), and that text is the uploaded `fulltext.txt`.
+- **Carry the page through the chunker, including the overlap tail.** Only 3/754 chunks begin at a paragraph boundary because `flush()` composes `carry + current`; the tail is currently built as a bare `TextSegment(tail)` with no page (`chunking.py:127-130`).
+- `page_start` = page of the first part, `page_end` = page of the last part; both NULL for `url`/`manual`/`youtube` materials.
+
 **Notes (filled in during implementation):**
 
 ### Phase 3 — Outline at ingestion `⬜ Not started`

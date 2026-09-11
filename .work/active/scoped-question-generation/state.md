@@ -3,9 +3,9 @@ _Spec: specs/phase2-tickets/18-scoped-question-generation.md · GitHub #62 · Pl
 
 ## Current state & next
 - **P1 done 2026-09-11** (prompt meta blocklist + steer fix, no DB/contract/UI) on branch `phase2/issue-62-scoped-question-generation`, cut off `phase2/issue-40-41` at `237faf8`.
-- P2–P5 are defined in `plan/PLAN.md` (now with D-08); the ACs and per-phase gates are in `plan/VERIFICATION.md`; measured evidence is in `research/2026-09-11-evidence.md` and `research/2026-09-11-p1-live-verification.md`.
+- P2–P5 are defined in `plan/PLAN.md` (now with D-08); the ACs and per-phase gates are in `plan/VERIFICATION.md`; measured evidence is in `research/2026-09-11-evidence.md`, `research/2026-09-11-p1-live-verification.md` and `research/2026-09-11-p2-precheck-page-identity.md`.
 - Scoping locked with the user 2026-09-11 (four decisions, below); decisions D-01–D-08 in force.
-- **Next:** P2 — page provenance through ingestion (`TextSegment.page`, chunk `page_start`/`page_end`, migration 029 with the RPC's nullable page bounds), copying the migration-016 body verbatim.
+- **Next:** P2 — page provenance through ingestion (`TextSegment.page`, chunk `page_start`/`page_end`, migration 029 with the RPC's nullable page bounds), copying the migration-016 body verbatim. Entry conditions and the three traps are pinned in `plan/PLAN.md` (Phase 2) and `research/2026-09-11-p2-precheck-page-identity.md`; a fresh session can start P2 directly from the branch tip `7411ebb`.
 - Sequence note: this branch was cut *before* issue-41's wayfinder exit; that exit is still open in its own task and touches `.work/` records only, not this ticket's code.
 
 ## Done so far
@@ -50,6 +50,9 @@ _Spec: specs/phase2-tickets/18-scoped-question-generation.md · GitHub #62 · Pl
 - `services/intelligence/scripts/pdf_outline.py` (new) – outline parser prototype and P3 seed; `--self-check` becomes the unit-test seed. Committed with P1.
 
 ## Pitfalls & rules
+- **P2 attaches pages to the existing paragraph segments.** Page-sized segments would re-cut every chunk: chunking consumes segments (`document_segments`), and today's paragraph stream on the 572-page fixture reproduces the live 754 chunks exactly. Evidence: `research/2026-09-11-p2-precheck-page-identity.md`.
+- **`ExtractedContent.text` stays built as one `clean_text` over the joined raw pages.** Cleaning per page and joining loses 735 chars of page-boundary blank lines (963,136 vs 962,401), and that text is the uploaded `fulltext.txt` (`worker.py:347-348`).
+- **Pages must be propagated inside `chunk_segments`, including the overlap tail.** Only 3/754 chunks start at a paragraph boundary (`flush()` composes `carry + current`, `chunking.py:88`) and the tail is currently a bare `TextSegment(tail)` with no page (`chunking.py:127-130`); text-lookup page derivation does not work.
 - **Never embed an empty steer.** `""` (or whitespace) embeds to a degenerate vector and `match_content_chunks` answers with fragments (measured ordinals 393 `'likes'.`, 259 `produced.`, 90 `GU.`, 532 `369`, 344 `necessary.`). `context.build_context` now raises `validation_failed` (non-retryable) instead, and the worker fails the assessment on a non-retryable context error rather than leaving it `generating` (D-08).
 - **The material title is front matter.** Any steer containing it retrieves the cover, contents page and index (5/5 measured); the title belongs in the prompt as document context only, never in the query.
 - `.work/specs/test-login-cred.txt` **wraps each value in backticks** (`` `user@host` ``, `` `password` ``). A password grant that keeps them fails with `invalid_credentials` for a credential that is perfectly valid — strip backticks/quotes before use (the P1 run lost time to exactly this).
