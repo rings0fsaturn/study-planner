@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import {
   AssessmentServiceError,
@@ -40,6 +40,7 @@ function chapterRange(
 
 export function AssessmentConfig() {
   const { materialId } = useParams<{ materialId: string }>()
+  const [params] = useSearchParams()
   const navigate = useNavigate()
   const materials = useMaterialsClient()
   const assessments = useAssessmentClient()
@@ -51,10 +52,11 @@ export function AssessmentConfig() {
   const [family, setFamily] = useState<AssessmentFormat>('objective')
   // The scope (D-05): a chapter chip fills the range and carries its label;
   // editing either page by hand drops the label, because it no longer
-  // describes the range the learner asked for.
+  // describes the range the learner asked for. A viewer handoff (`?from=&to=`)
+  // arrives the same way a typed range does: numbers, no label.
   const [selectedChapter, setSelectedChapter] = useState<number | null>(null)
-  const [pageStart, setPageStart] = useState('')
-  const [pageEnd, setPageEnd] = useState('')
+  const [pageStart, setPageStart] = useState(() => params.get('from') ?? '')
+  const [pageEnd, setPageEnd] = useState(() => params.get('to') ?? '')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<AssessmentServiceError | null>(null)
 
@@ -68,6 +70,13 @@ export function AssessmentConfig() {
         if (!cancelled) {
           setMaterial(record)
           setLoadStatus('ready')
+          // A viewer handoff can only carry a usable range for a material that
+          // has page numbering; otherwise the inputs never render and the
+          // scope would ship unvalidated.
+          if (record.pageCount == null) {
+            setPageStart('')
+            setPageEnd('')
+          }
         }
       })
       .catch(() => {
@@ -336,6 +345,12 @@ export function AssessmentConfig() {
                   ? 'Pick a chapter or a page range to ground the question; leave both blank for the whole material.'
                   : 'The question is grounded in the material’s own pages.')}
             </p>
+            {material.kind === 'file' && pageCount !== null && (
+              <p className="field-hint">
+                <Link to={`/materials/${material.id}/view`}>Open the viewer</Link> to read the page
+                numbers you are choosing.
+              </p>
+            )}
           </div>
         </div>
         <div className="material-practice-actions">

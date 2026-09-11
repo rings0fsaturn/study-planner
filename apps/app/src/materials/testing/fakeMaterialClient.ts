@@ -100,6 +100,17 @@ export class FakeMaterialClient {
     })
   }
 
+  /** Stands in for a Storage signed URL; tests assert on the requested path. */
+  fileUrlCalls: string[] = []
+  fileUrl: string = 'https://example.test/signed.pdf'
+
+  async getMaterialFileUrl(
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>,
+  ): Promise<string> {
+    this.fileUrlCalls.push(`${material.ownerId}/${material.id}/${material.source}`)
+    return this.fileUrl
+  }
+
   uploadCalls: Array<{ id: string; file: File }> = []
   uploadError: Error | null = null
 

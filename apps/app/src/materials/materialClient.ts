@@ -7,6 +7,9 @@ import type {
 } from './types'
 import { MaterialServiceError, outlineFromRow } from './types'
 
+/** Signed-URL lifetime for the viewer's range-fetched source PDF. */
+const SIGNED_URL_TTL_SECONDS = 600
+
 interface DbRow {
   id: string
   user_id: string
@@ -66,7 +69,7 @@ export interface MaterialTableLike {
   }
 }
 
-/** Narrow Storage surface for private material uploads. */
+/** Narrow Storage surface for private material uploads and signed reads. */
 export interface MaterialStorageLike {
   from: (bucket: 'material-raw') => {
     upload: (
@@ -74,6 +77,10 @@ export interface MaterialStorageLike {
       file: Blob,
       options?: { upsert?: boolean },
     ) => PromiseLike<{ error: DbError | null }>
+    createSignedUrl: (
+      path: string,
+      expiresIn: number,
+    ) => PromiseLike<{ data: { signedUrl: string } | null; error: DbError | null }>
   }
 }
 
@@ -170,6 +177,7 @@ export interface MaterialClientLike {
   restoreMaterial(id: string): Promise<void>
   replaceMaterial(id: string, input: MaterialReplaceInput): Promise<void>
   retryIngestion(id: string): Promise<void>
+  getMaterialFileUrl(material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>): Promise<string>
   uploadMaterialFile(id: string, file: File): Promise<void>
   completeUpload(id: string): Promise<void>
   markUploadFailed(id: string, message: string): Promise<void>
@@ -312,6 +320,32 @@ export class MaterialClient implements MaterialClientLike {
       }
       const { error } = await this.rpc.rpc('retry_material_ingestion', { p_material_id: id })
       if (error) throw normalizeMaterialError(error)
+    })
+  }
+
+  /**
+   * A short-lived signed URL for the material's stored source file. The raw
+   * file is private (`material-raw/<uid>/<materialId>/<fileName>`, owner-read
+   * RLS), so the viewer range-fetches through this URL instead of pulling the
+   * whole 22.9 MB book into the page.
+   */
+  getMaterialFileUrl(
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>,
+  ): Promise<string> {
+    return this.run(async () => {
+      if (!this.storage) {
+        throw new MaterialServiceError('unknown', 'material storage is not configured')
+      }
+      const path = `${material.ownerId}/${material.id}/${material.source}`
+      const { data, error } = await this.storage
+        .from('material-raw')
+        .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+      if (error) throw normalizeMaterialError(error)
+      const signed = data?.signedUrl
+      if (!signed) {
+        throw new MaterialServiceError('not_found', 'the material file is missing from storage')
+      }
+      return signed
     })
   }
 

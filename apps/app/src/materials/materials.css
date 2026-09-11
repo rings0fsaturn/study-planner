@@ -663,3 +663,69 @@
   border-radius: 8px;
   padding: 0.875rem;
 }
+
+/* ---- pdf.js viewer (P5) ------------------------------------------------- */
+
+.pdf-toolbar,
+.pdf-scope-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.pdf-scope-bar {
+  padding: 0.625rem 0.75rem;
+  background: var(--surface-card, #fbf7ee);
+  border: 1px solid var(--border-subtle, #e6dcc8);
+  border-radius: 8px;
+}
+
+.pdf-field {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.pdf-field .field {
+  width: 90px;
+  height: auto;
+  padding: 0.25rem 0.375rem;
+}
+
+.pdf-field select.field {
+  width: 190px;
+}
+
+/* No padding or border on the measuring frame: clientWidth is then exactly the
+   space a page may occupy, which is what fit-to-width measures against. */
+.pdf-frame {
+  margin-top: 0.75rem;
+  max-height: 78vh;
+  overflow: auto;
+  background: var(--surface-recessed, #ede3d2);
+  border-radius: 8px;
+}
+
+.pdf-canvas {
+  display: block;
+  margin: 0 auto;
+  background: #fff;
+}
+
+@media (max-width: 640px) {
+  .pdf-field .field,
+  .pdf-field select.field {
+    width: 100%;
+  }
+
+  .pdf-scope-bar {
+    align-items: flex-start;
+  }
+
+  .pdf-frame {
+    max-height: 62vh;
+  }
+}
+

@@ -400,6 +400,11 @@ export function MaterialDetail() {
                 <Link className="btn btn-secondary" to={`/materials/${material.id}/assessments/new`}>
                   Generate assessment
                 </Link>
+                {material.kind === 'file' && (
+                  <Link className="btn btn-secondary" to={`/materials/${material.id}/view`}>
+                    Open in viewer
+                  </Link>
+                )}
                 <button
                   type="button"
                   className="btn btn-secondary"

@@ -19,7 +19,7 @@ import { Settings } from './pages/Settings';
 import { Session } from './pages/Session';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useEffect } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
 import { RequireOnboarding } from './onboarding/RequireOnboarding';
 import { OnboardingProvider } from './onboarding/OnboardingProvider';
@@ -46,6 +46,12 @@ import { PracticeThis } from './pages/materials/PracticeThis';
 import { AssessmentConfig } from './pages/assessments/AssessmentConfig';
 import { AssessmentDetail } from './pages/assessments/AssessmentDetail';
 import { DevSeeder } from './dev/DevSeeder';
+
+// pdf.js is ~1 MB and only the viewer route needs it, so it stays out of the
+// main bundle (and out of the jsdom unit-test graph).
+const PdfViewer = lazy(() =>
+  import('./materials/PdfViewer').then((module) => ({ default: module.PdfViewer })),
+);
 
 const metadataFetcher: MetadataFetcher = import.meta.env.DEV
   ? new DevMetadataFetcher(supabase)
@@ -194,6 +200,22 @@ function AppRoutes() {
         <Route path="/materials/new" element={<MaterialCreate />} />
         <Route path="/materials/:materialId" element={<MaterialDetail />} />
         <Route path="/materials/:materialId/practice" element={<PracticeThis />} />
+        <Route
+          path="/materials/:materialId/view"
+          element={
+            <Suspense
+              fallback={
+                <div className="materials-page">
+                  <p className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
+                    Opening viewer…
+                  </p>
+                </div>
+              }
+            >
+              <PdfViewer />
+            </Suspense>
+          }
+        />
         <Route path="/materials/:materialId/assessments/new" element={<AssessmentConfig />} />
         <Route path="/assessments/:assessmentId" element={<AssessmentDetail />} />
         <Route path="/replan" element={<Replan />} />

@@ -52,9 +52,13 @@ function material(overrides: Partial<MaterialRecord> = {}): MaterialRecord {
   }
 }
 
-function renderConfig(materials: FakeMaterialClient, assessments: FakeAssessmentClient) {
+function renderConfig(
+  materials: FakeMaterialClient,
+  assessments: FakeAssessmentClient,
+  entry = '/materials/mat-1/assessments/new',
+) {
   return render(
-    <MemoryRouter initialEntries={['/materials/mat-1/assessments/new']}>
+    <MemoryRouter initialEntries={[entry]}>
       <MaterialsProvider client={materials}>
         <AssessmentProvider client={assessments}>
           <Routes>
@@ -192,6 +196,51 @@ describe('AssessmentConfig', () => {
     expect(screen.getByText('This material has 572 pages.')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
     expect(assessments.generateAssessment).not.toHaveBeenCalled()
+  })
+
+  it('seeds the range handed over from the viewer and submits it without a label', async () => {
+    const materials = new FakeMaterialClient([
+      material({ kind: 'file', source: 'book.pdf', pageCount: 572 }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments, '/materials/mat-1/assessments/new?from=156&to=213')
+
+    expect((await screen.findByLabelText('From page') as HTMLInputElement).value).toBe('156')
+    expect((screen.getByLabelText('To page') as HTMLInputElement).value).toBe('213')
+    // The viewer is reachable from the scope picker for a PDF material.
+    expect(screen.getByRole('link', { name: 'Open the viewer' })).toHaveAttribute(
+      'href',
+      '/materials/mat-1/view',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    // A viewer range is a typed range: numbers, no section label.
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.scope).toEqual({
+      pageStart: 156,
+      pageEnd: 213,
+    })
+  })
+
+  it('drops a viewer handoff for a material with no page numbering', async () => {
+    const materials = new FakeMaterialClient([
+      material({ kind: 'file', source: 'scan.pdf', pageCount: null, outline: null }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments, '/materials/mat-1/assessments/new?from=156&to=213')
+
+    expect(await screen.findByText(/no page numbering/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.scope).toBeUndefined()
   })
 
   it('uses the whole material when it has no page numbering', async () => {
