@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-09-10_
+_Last reconciled: 2026-09-11_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -10,6 +10,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 |---|---|---|---|
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33–#49 spine; frontier #41 claimed + #42/#35/#12/#50; #34/#39/#40 closed. | active/phase2-wayfinder/state.md |
 | [APP][RESEARCH][KT] | issue-41-written-assessment-rubric-grading | Ticket #41 claimed; P1–P5 done and verified — P5 live pass 4/4 green 2026-09-11 (real `llm_rubric` grades, desktop+mobile, retry, restore); two live-found defects fixed in P5 (retry kept `objective`; `chunkId` unbound to context → now enum-bound); AC1–AC4 ticked. Wayfinder exit + commit/push still open. | active/issue-41-written-assessment-rubric-grading/state.md |
+| [APP][RESEARCH] | scoped-question-generation | GitHub **#62** filed + claimed 2026-09-11; **P1 done** (steer is no longer the material title, `META_BLOCKLIST` in both prompts, empty steer refused — live A/B: pre-fix steer → 5/5 front matter, chapter steer → 5/5 Chapter 5 body and a body-grounded question); branch `phase2/issue-62-scoped-question-generation` off `237faf8`; next P2 (page provenance + migration 029). | active/scoped-question-generation/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |
