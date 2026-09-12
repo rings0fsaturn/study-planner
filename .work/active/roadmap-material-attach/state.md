@@ -8,6 +8,7 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 - **P1, P2 and P3 done and live-verified at 1280.** One shared reader (`roadmapMaterialPayloads` + `materialTitleIndex`) replaces the three duplicated joins; a library material attaches through the directory "+" with its own minutes and role; the row's badge reveals a `×` on hover that detaches it, disclosing any upcoming sessions in its tooltip. `typecheck`/`lint` clean, `src/roadmap` + `src/progress` 122/122. AC1/AC2/AC3/AC4/AC6/AC7 ticked with their caveats.
 - **The dev account is clean.** P3's live run took the leftover test attaches back off and deleted the throwaway library material; the roadmap holds only the two materials it started with. The earlier note about "3 attached" was wrong by one - a fresh browser was reading a partly-restored event log, and the roadmap had 2 of its own all along.
 - **The dev stack runs from this worktree** (the main checkout's stack was stopped first; its gitignored env files were copied over). `./full-app status full` shows app 5173 + intelligence 8000 healthy.
+- **Branch state:** `d2f3176` (P1), `33c46d9` (P1 records), `6e4d142` (P2), `9f7aecc` (P3), all pushed to `origin/phase2/issue-63-roadmap-material-attach`. Per-phase commits with the `.work/` records riding along in the same commit.
 - **Still unmeasured: OQ-07** (per-row minutes+role vs one batch role at 375) and the fresh 375 attach. Nothing blocks either now that detach exists.
 - Five phases: P1 attach + shared reader (done), P2 minutes + role at attach time (done), P3 detach (done), P4 session surfaces + live E2E, P5 library usage.
 
@@ -54,7 +55,7 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 - **A detach must not blank a booked bubble.** The calendar label lookup must stay independent of the active set (D-09 / `materialTitleIndex`), and `RoadmapCalendar`'s header count must keep using the active set, not the title index.
 - **Session length ≠ material budget.** A booking's `estimatedDuration` is session length; the material's `estimatedDuration` is its roadmap budget, consumed through the ledger. Do not merge them.
 - **Progress is global per materialId.** `buildMaterialLedger` matches sessions by `materialId` across all roadmaps, so the same library material attached to two roadmaps shares its consumed minutes (pre-existing behaviour; note it, do not "fix" it here). This is also why a re-attach resurrects the removed material's logged minutes.
-- **Nested buttons are invalid.** `dir-head` is currently a `<button>`; the "+" must become a sibling with the collapse control moved to `.dir-head-toggle` (D-05).
+- **Nested interactive elements are invalid.** `dir-head` was a single `<button>`, so the "+" became its sibling (the collapse control moved to `.dir-head-toggle`, D-05). The same trap bit twice more: the detach `×` sits beside the badge, not inside it, and the picker's minutes/role fields sit beside the row `<label>` — a control nested in a label also fires the label's click.
 - **WSL/drvfs staleness (rule 53).** Vite misses edits on `/mnt/d`; after frontend changes run `./full-app restart app` and hard-reload before judging the UI.
 - **Rule 30/33 boundaries.** New kinds are additive rows on the event log; no direct page-level Supabase writes, no Dexie schema change.
 
@@ -67,9 +68,13 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 - Decided the role is user-selected per attached material via a native select over the engine's `ROLE_TO_LABEL` (2026-09-12, D-06 — user: "add a role chip let user select"). **Supersedes** the earlier fixed-`role: 'foundation'` simplification.
 - Decided an empty library routes to the Materials create flow (`/materials/new`) rather than creating inline (2026-09-12, D-10 — user: "let them add new material from materials tab if empty").
 - Decided attached materials are pointers: archiving the library row does not detach it (2026-09-12, D-08, per #19's no-silent-detachment rule).
+- Decided the picker seeds each selected row's minutes from the library row's own estimate (`estimatedMinutes ?? 60`) and its role from `foundation`, rather than taking a `defaultMinutes` prop from the caller: the calendar holds no library rows and never sees `estimatedMinutes` (2026-09-12, P2 — supersedes that part of the plan).
+- Decided the detach affordance is a `×` revealed on hover (or keyboard focus) over the row's material badge, with the upcoming-session count disclosed in its tooltip, and that one click removes the material with **no** confirm sheet and **no** cascade into bookings (2026-09-12, user instruction — supersedes the planned `MaterialRemoveSheet` and resolves OQ-06).
 
 ## Open
 
-- OQ-06 whether the detach confirm should also offer to clear the affected upcoming sessions (assumed no: no cascade) · ask before P3 ships if the warning copy reads weakly.
-- OQ-07 per-row role select vs one batch role for the whole selection (D-06) · resolve in the P2 hands-on pass.
-- Ticket not filed: Phase 0 owns it, including the issue body and the branch point (#62's exit is the queue head).
+- **OQ-07** per-row minutes + role controls vs one batch role for the whole selection (D-06) · unmeasured at 375 — the picker had no rows to render then · resolve by re-running the attach at 375 and deciding from that; D-06's fallback is one batch role.
+- **The fresh 375 attach** (AC1's second viewport) · deferred through P1–P3 and still not run · unblocked now that P3 can take an attach back off; fold it into P4's live spec.
+- **AC6's booked-bubble leg is unit-covered only** — no detached material had a booking · exercise it live in P4's spec, which books a session on the material before removing it.
+- **The repo Playwright config cannot run in a worktree:** its marketing webServer (`pnpm --filter @study-tracker/marketing dev`, port 4321) never becomes reachable, so `config.webServer` times out and every project fails before a test runs · workaround used was a throwaway config declaring only the app webServer · promote to rule 10/16 at WRAP so the next worktree-based live pass does not rediscover it.
+- **P4 and P5 remain** (session-surface empty-state CTA + the real live E2E spec; material-detail roadmap usage) · AC5 is still unticked.
