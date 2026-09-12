@@ -249,4 +249,45 @@ describe('summarizeRoadmapProgress', () => {
       percentComplete: 100,
     })
   })
+
+  it('drops a detached material back out of the ledger', () => {
+    const createdAt = '2026-06-01T00:00:00.000Z'
+    const payload = noSlotsRoadmapPayload({ materialIds: ['mat-1'] })
+    const events = [
+      event('RoadmapCreated', payload, createdAt),
+      event(
+        'MaterialAdded',
+        {
+          materialId: 'mat-1',
+          title: 'Concepts',
+          estimatedDuration: 100,
+          kind: 'manual',
+          role: 'foundation',
+        },
+        '2026-06-01T00:01:00.000Z',
+      ),
+      event(
+        'MaterialAttached',
+        {
+          roadmapCreatedAt: createdAt,
+          materialId: 'mat-lib',
+          title: 'OSTEP',
+          estimatedDuration: 90,
+          kind: 'file',
+          role: 'anchor',
+        },
+        '2026-06-01T00:03:00.000Z',
+      ),
+      event(
+        'MaterialDetached',
+        { roadmapCreatedAt: createdAt, materialId: 'mat-lib' },
+        '2026-06-01T00:04:00.000Z',
+      ),
+    ]
+
+    expect(summarizeRoadmapProgress(activeEntry(createdAt, payload), events)).toMatchObject({
+      totalPlannedMinutes: 100,
+      toGoMinutes: 100,
+    })
+  })
 })

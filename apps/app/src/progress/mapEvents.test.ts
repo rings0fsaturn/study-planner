@@ -433,6 +433,56 @@ describe('roadmapMaterialPayloads', () => {
       'mat-9',
     ])
   })
+
+  function detached(roadmapCreatedAt: string, materialId: string, createdAt: string): Event {
+    return event('MaterialDetached', { roadmapCreatedAt, materialId }, createdAt)
+  }
+
+  it('masks an attached material after a detach and restores it on re-attach', () => {
+    const scope = roadmapPayload({ slots: undefined, materialIds: [] })
+    const events = [
+      event('RoadmapCreated', scope, roadmapA),
+      attached(roadmapA, 'mat-lib', 60, '2026-06-02T00:00:00.000Z'),
+      detached(roadmapA, 'mat-lib', '2026-06-03T00:00:00.000Z'),
+    ]
+
+    expect(roadmapMaterialPayloads(events, scope, roadmapA)).toEqual([])
+
+    const reattached = [
+      ...events,
+      attached(roadmapA, 'mat-lib', 45, '2026-06-04T00:00:00.000Z'),
+    ]
+    expect(roadmapMaterialPayloads(reattached, scope, roadmapA)).toMatchObject([
+      { materialId: 'mat-lib', estimatedDuration: 45 },
+    ])
+  })
+
+  it('masks a declared material too', () => {
+    const scope = roadmapPayload({ slots: undefined, materialIds: ['mat-1', 'mat-2'] })
+    const events = [
+      event('MaterialAdded', { materialId: 'mat-1', title: 'One', estimatedDuration: 30, kind: 'manual', role: 'anchor' }, '2026-05-01T00:00:00.000Z'),
+      event('MaterialAdded', { materialId: 'mat-2', title: 'Two', estimatedDuration: 40, kind: 'manual', role: 'foundation' }, '2026-05-01T00:00:00.000Z'),
+      event('RoadmapCreated', scope, roadmapA),
+      detached(roadmapA, 'mat-1', '2026-06-03T00:00:00.000Z'),
+    ]
+
+    expect(roadmapMaterialPayloads(events, scope, roadmapA).map((m) => m.materialId)).toEqual([
+      'mat-2',
+    ])
+  })
+
+  it('ignores a detach that belongs to another roadmap', () => {
+    const scope = roadmapPayload({ slots: undefined, materialIds: [] })
+    const events = [
+      event('RoadmapCreated', scope, roadmapA),
+      attached(roadmapA, 'mat-lib', 60),
+      detached(roadmapB, 'mat-lib', '2026-06-03T00:00:00.000Z'),
+    ]
+
+    expect(roadmapMaterialPayloads(events, scope, roadmapA).map((m) => m.materialId)).toEqual([
+      'mat-lib',
+    ])
+  })
 })
 
 describe('materialTitleIndex', () => {
@@ -445,5 +495,14 @@ describe('materialTitleIndex', () => {
     expect(index.get('mat-old')).toEqual({ title: 'Old book' })
     expect(index.get('mat-lib')).toEqual({ title: 'OSTEP', url: 'https://example.test/ostep.pdf' })
     expect(index.get('mat-missing')).toBeUndefined()
+  })
+
+  it('still labels a detached material, so a booked bubble keeps its title', () => {
+    const index = materialTitleIndex([
+      event('MaterialAttached', { roadmapCreatedAt: '2026-06-01T00:00:00.000Z', materialId: 'mat-lib', title: 'OSTEP', estimatedDuration: 60, kind: 'file', role: 'foundation' }, '2026-06-02T00:00:00.000Z'),
+      event('MaterialDetached', { roadmapCreatedAt: '2026-06-01T00:00:00.000Z', materialId: 'mat-lib' }, '2026-06-03T00:00:00.000Z'),
+    ])
+
+    expect(index.get('mat-lib')).toEqual({ title: 'OSTEP' })
   })
 })

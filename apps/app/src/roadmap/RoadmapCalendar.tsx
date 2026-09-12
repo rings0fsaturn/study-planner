@@ -412,6 +412,23 @@ export function RoadmapCalendar({
     }
     setAddMaterialOpen(false)
   }
+  // Disclosure for the detach control: removal never touches history, so the
+  // only thing to warn about is what stays behind on the calendar.
+  const detachTooltip = (material: MaterialLedgerEntry): string => {
+    const upcoming = bookings.filter(
+      (booking) => booking.materialId === material.materialId && booking.date >= today,
+    ).length
+    if (upcoming === 0) return 'Detach material from roadmap?'
+    return `Detach material from roadmap? ${upcoming} upcoming session${upcoming === 1 ? ' keeps its' : 's keep their'} label and logged time.`
+  }
+  const handleDetachMaterial = async (material: MaterialLedgerEntry) => {
+    if (!selectedRoadmap || readOnly) return
+
+    await logEvent('MaterialDetached', {
+      roadmapCreatedAt: selectedRoadmap.roadmapCreatedAt,
+      materialId: material.materialId,
+    })
+  }
 
   return (
     <div className="roadmap-page">
@@ -595,8 +612,21 @@ export function RoadmapCalendar({
                   : 0
                 return (
                   <div className="dir-row" key={material.materialId}>
-                    <div className="material-icon art" aria-hidden="true">
-                      {material.title.slice(0, 2).toUpperCase()}
+                    <div className="dir-icon">
+                      <div className="material-icon art" aria-hidden="true">
+                        {material.title.slice(0, 2).toUpperCase()}
+                      </div>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          className="dir-detach"
+                          aria-label={`Detach ${material.title} from this roadmap`}
+                          title={detachTooltip(material)}
+                          onClick={() => void handleDetachMaterial(material)}
+                        >
+                          &times;
+                        </button>
+                      )}
                     </div>
                     <div className="dir-prog">
                       <div className="dir-title">{material.title}</div>

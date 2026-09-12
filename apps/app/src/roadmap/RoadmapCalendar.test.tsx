@@ -192,7 +192,11 @@ describe('RoadmapCalendar booking interactions', () => {
     openBookingEditor()
 
     fireEvent.click(screen.getByRole('button', { name: 'Change material' }))
-    fireEvent.click(screen.getByRole('button', { name: /Operating Systems/ }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Edit booking' })).getByRole('button', {
+        name: /Operating Systems/,
+      }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Use this material' }))
     fireEvent.click(screen.getByLabelText('Increase booking duration'))
     fireEvent.change(screen.getByLabelText('Booking date'), {
@@ -230,7 +234,11 @@ describe('RoadmapCalendar booking interactions', () => {
 
     fireEvent.click(screen.getAllByRole('button', { name: '+ add session' })[0])
     fireEvent.click(screen.getByRole('button', { name: /Attach/ }))
-    fireEvent.click(screen.getByRole('button', { name: /Operating Systems/ }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Add session' })).getByRole('button', {
+        name: /Operating Systems/,
+      }),
+    )
     fireEvent.click(screen.getByRole('button', { name: 'Use this material' }))
     fireEvent.click(screen.getByLabelText('Decrease new session duration'))
     fireEvent.click(screen.getByRole('button', { name: 'Add session' }))
@@ -421,5 +429,92 @@ describe('RoadmapCalendar booking interactions', () => {
         estimatedDuration: 90,
       }))
     })
+  })
+
+  it('detaches a material from its icon, naming what stays behind', async () => {
+    const roadmapCreatedAt = '2026-05-01T09:00:00.000Z'
+    mockState.events = [
+      ...baseEvents(),
+      event(
+        'MaterialAttached',
+        {
+          roadmapCreatedAt,
+          materialId: 'mat-3',
+          title: 'OSTEP',
+          estimatedDuration: 90,
+          kind: 'file',
+          role: 'foundation',
+        },
+        '2026-05-01T09:03:00.000Z',
+      ),
+    ]
+
+    renderCalendar()
+
+    const directory = screen.getByLabelText('Materials directory')
+    const detach = within(directory).getByRole('button', {
+      name: 'Detach OSTEP from this roadmap',
+    })
+    expect(detach).toHaveAttribute('title', 'Detach material from roadmap?')
+
+    fireEvent.click(detach)
+
+    await waitFor(() => {
+      expect(mockState.logEvent).toHaveBeenCalledWith('MaterialDetached', {
+        roadmapCreatedAt,
+        materialId: 'mat-3',
+      })
+    })
+  })
+
+  it('warns that upcoming sessions keep their label', () => {
+    const roadmapCreatedAt = '2026-05-01T09:00:00.000Z'
+    mockState.events = [
+      ...baseEvents(),
+      event(
+        'MaterialAttached',
+        {
+          roadmapCreatedAt,
+          materialId: 'mat-3',
+          title: 'OSTEP',
+          estimatedDuration: 90,
+          kind: 'file',
+          role: 'foundation',
+        },
+        '2026-05-01T09:03:00.000Z',
+      ),
+      event(
+        'SessionBooked',
+        {
+          roadmapCreatedAt,
+          bookingId: 'booking-3',
+          date: '2099-06-17',
+          estimatedDuration: 60,
+          materialId: 'mat-3',
+        },
+        '2026-05-01T09:04:00.000Z',
+      ),
+    ]
+
+    renderCalendar()
+
+    expect(
+      within(screen.getByLabelText('Materials directory')).getByRole('button', {
+        name: 'Detach OSTEP from this roadmap',
+      }),
+    ).toHaveAttribute(
+      'title',
+      'Detach material from roadmap? 1 upcoming session keeps its label and logged time.',
+    )
+  })
+
+  it('keeps the detach control out of read-only history mode', () => {
+    renderHistoricalCalendar()
+
+    expect(
+      within(screen.getByLabelText('Materials directory')).queryByRole('button', {
+        name: /^Detach/,
+      }),
+    ).not.toBeInTheDocument()
   })
 })

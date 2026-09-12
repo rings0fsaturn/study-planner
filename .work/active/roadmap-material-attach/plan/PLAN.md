@@ -2,7 +2,7 @@
 
 **Date written:** 2026-09-12 · **Ticket:** [#63](https://github.com/rings0fsaturn/study-planner/issues/63) (filed and claimed 2026-09-12) · **Parent:** spec #32 · wayfinder map #4
 **Branch:** `phase2/issue-63-roadmap-material-attach` · **Worktree:** `/mnt/d/study/git/study-planner-web-issue-63` (cut off `2091d8e`, the post-#62 tip)
-**Plan status:** 🟡 P0–P2 done and live-verified at 1280 (P1's 375 attach and OQ-07's mobile check deferred). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
+**Plan status:** 🟡 P0–P3 done and live-verified at 1280 (P1's 375 attach and OQ-07's mobile check deferred). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
 **Trigger:** user report (2026-09-12) — "within roadmap page, I don't see an option to add materials that are present within the materials [library]; also I don't see the materials of a roadmap listed under materials tab", followed by the concrete ask: a "+" in the roadmap's Materials panel that opens a material picker, and an Attach + in New session that lists this roadmap's materials.
 
 > Runbook convention inherited from the #38/#39/#40/#41/#62 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -203,7 +203,7 @@ This plan builds that half: one new event kind (`MaterialAttached` — the thin 
 | `apps/app/src/roadmap/RoadmapCalendar.tsx` | modify | P1, P2, P3, P4 | "+", attach handler, row Remove, picker mount, title index |
 | `apps/app/src/pages/materials/MaterialLibrary.tsx`, `pages/materials/MaterialDetail.tsx`, `pages/materials/PracticeThis.tsx` | modify | P1 | picker call sites move to selection records |
 | `apps/app/src/roadmap/roadmap.css` | modify | P1, P3 | `.dir-head` row + `.dir-add`; row action spacing |
-| `apps/app/src/roadmap/MaterialRemoveSheet.tsx` | new | P3 | confirm removal + affected-session count |
+| `apps/app/src/roadmap/MaterialRemoveSheet.tsx` | ~~new~~ dropped | P3 | **superseded** — the user asked for a hover-× on the row badge instead of a confirm sheet |
 | `apps/app/src/roadmap/booking/MaterialPickerSheet.tsx`, `AddSessionSheet.tsx`, `BookingEditorSheet.tsx` | modify | P4 | empty-state "Add a material to this roadmap" |
 | `apps/app/src/materials/useMaterialUsage.ts` | new | P5 | event-log reverse index (roadmap refs for a material) |
 | `apps/app/src/pages/materials/MaterialDetail.tsx` | modify | P5 | wire `usage` (and the delete warning) |
@@ -482,7 +482,7 @@ Revert; P1's defaults still work.
 
 ## Phase 3: A material can be removed from the roadmap's set
 
-**Status:** ☐ Not started
+**Status:** ✅ Done 2026-09-12 (unit + live at 1280; the booked-bubble leg is unit-covered)
 **Depends on:** Phase 1
 **Estimated scope:** ~5 files, ~140 lines
 
@@ -521,7 +521,20 @@ Live: remove a material with an upcoming booking → the booked bubble still sho
 Revert; existing `MaterialDetached` rows become inert (the reader falls back to declared ∪ attached).
 
 ### Notes (filled in during implementation)
-*(empty)*
+
+**2026-09-12 — implemented, unit-verified and live-verified at 1280.**
+
+**UX changed on the user's instruction (supersedes this phase's `MaterialRemoveSheet`).** Rather than a ghost `Remove` button in the row opening a confirm sheet, the affordance is the row's own material badge: hover it and a `×` fades in over the badge (also revealed on keyboard focus), with `title="Detach material from roadmap? …"` naming how many upcoming sessions stay behind, and one click writes `MaterialDetached`. No confirm step. D-09 holds unchanged - nothing cascades into bookings or logged sessions, and re-attaching restores the material with its logged minutes - so the one destructive-looking action here is fully reversible, which is what makes the click-through safe.
+
+- `RoadmapCalendar.tsx`: `handleDetachMaterial` logs `MaterialDetached {roadmapCreatedAt, materialId}`; `detachTooltip(material)` counts `bookings` for that id with `date >= today` and discloses them ("1 upcoming session keeps its label and logged time." / "N upcoming sessions keep their label and logged time."). The control renders only when not `readOnly`, so the history view keeps its read-only promise.
+- `roadmap.css`: `.dir-icon` wrapper (positioning context) + `.dir-detach`, a `color-mix`-darkened overlay inheriting `--radius-sm` so it sits exactly on the 32 px badge; `opacity: 0` until `.dir-icon:hover` or `.dir-detach:focus-visible`.
+- No other file needed a change: P1 already wrote the reader's detach mask, so the directory, the session pickers, `roadmapProgress` and Replan all drop the material the moment the event lands.
+
+**OQ-06 resolved:** the confirm does **not** offer to clear the affected upcoming sessions - the user asked for "just remove it", and the tooltip discloses what stays behind instead. Revisit only if a learner asks for the cascade.
+
+**Verified:** `pnpm --filter app typecheck` clean · `pnpm --filter app lint` clean · `src/roadmap` + `src/progress` 122/122 (`mapEvents.test.ts` 20, `roadmapProgress.test.ts` 4, `RoadmapCalendar.test.tsx` 16), all red-first. Live at 1280: the `×` measured `opacity: 0` before hover and `1` after, its tooltip read `Detach material from roadmap?`, one click dropped the row and moved the header count, re-attaching the same material through the picker restored the row and the count, and the run then used the control to take the three leftover test attaches off the dev account (the roadmap is back to its own materials only) and to delete the throwaway library material.
+
+**Not exercised live:** "a booked bubble keeps its title after removal" - none of the detached materials had bookings, and booking one just to prove it would have left a booked session pointing at a detached material on the user's roadmap. The behaviour is covered by `mapEvents.test.ts` ("still labels a detached material, so a booked bubble keeps its title") and by the calendar rendering labels from `materialTitleIndex`.
 
 ---
 
