@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as pdfjs from 'pdfjs-dist'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
@@ -12,7 +12,9 @@ import {
   pageAtTop,
   pagesInWindow,
   rasterScale,
+  stepZoom,
   type SlotRect,
+  type ZoomMode,
 } from './pdfView'
 import './materials.css'
 
@@ -27,11 +29,16 @@ const samePages = (a: number[], b: number[]): boolean =>
  * so the learner reads the page numbers they are about to scope a question to.
  *
  * Reading is one vertical scroll of page slots (P6): a `ResizeObserver` is the
- * single source of the frame width, every slot is laid out from page 1's
- * viewport so the scroll height is stable before any ink, and only the slots
- * around the viewport are rasterised. The page/chapter controls jump the
+ * single source of the frame's width and height, every slot is laid out from
+ * page 1's viewport so the scroll height is stable before any ink, and only the
+ * slots around the viewport are rasterised. The page/chapter controls jump the
  * scroll rather than page through it. Selecting a range hands off to the
  * assessment config (`?from=&to=`, PDF page numbers, per D-05).
+ *
+ * P8 made it a reader: the default fit mode is the whole page (`Page`), the
+ * zoom stepper re-rasterises the bitmap, a mouse drag pans the frame, and every
+ * rendered page carries a pdf.js text layer, so text is selectable, copyable
+ * and highlighted by the browser's own selection.
  */
 export function PdfViewer() {
   const { materialId } = useParams<{ materialId: string }>()
@@ -41,8 +48,10 @@ export function PdfViewer() {
   const [material, setMaterial] = useState<MaterialRecord | null>(null)
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
   const [base, setBase] = useState<{ width: number; height: number } | null>(null)
-  const [containerWidth, setContainerWidth] = useState(0)
-  const [zoom, setZoom] = useState(1)
+  const [frame, setFrame] = useState({ width: 0, height: 0 })
+  const [mode, setMode] = useState<ZoomMode>('page')
+  const [textSelectable, setTextSelectable] = useState(false)
+  const [zoomIndex, setZoomIndex] = useState(0)
   const [rendered, setRendered] = useState<number[]>([])
   const [page, setPage] = useState(1)
   const [rangeStart, setRangeStart] = useState<number | null>(null)
@@ -52,12 +61,23 @@ export function PdfViewer() {
   const frameRef = useRef<HTMLDivElement>(null)
   const slotRefs = useRef(new Map<number, HTMLDivElement>())
   const canvasRefs = useRef(new Map<number, HTMLCanvasElement>())
-  /** page -> bitmap width of its last completed render. */
-  const drawnRef = useRef(new Map<number, number>())
+  const textRefs = useRef(new Map<number, HTMLDivElement>())
+  /**
+   * canvas element -> bitmap width of its last completed render, and text-layer
+   * element -> the scale its spans were laid out at. Both are keyed by the
+   * element, not the page: a slot that scrolls out of the window unmounts its
+   * children, and a page-keyed record would then skip the fresh element and
+   * leave that page blank for good.
+   */
+  const drawnRef = useRef(new WeakMap<HTMLCanvasElement, number>())
+  const textScaleRef = useRef(new WeakMap<HTMLDivElement, number>())
   /** Serialises rasterisation: pdf.js allows one render per canvas at a time. */
   const chainRef = useRef<Promise<void>>(Promise.resolve())
+  /** Tears down an in-flight drag's window listeners (see `onPointerDown`). */
+  const panCleanupRef = useRef<(() => void) | null>(null)
 
   const numPages = doc?.numPages ?? 0
+  const zoom = ZOOM_LEVELS[zoomIndex]
 
   useEffect(() => {
     if (!materialId) return
@@ -130,13 +150,20 @@ export function PdfViewer() {
     }
   }, [client, material])
 
-  // One width source. The old viewer measured the frame once, so a resize or an
-  // orientation change left a bitmap wider than the frame forever (the reported
-  // mobile crop) - this is the fix for that class.
+  // One measure source for both axes: the fit mode needs the height as well as
+  // the width, and a resize or an orientation change must move both. The old
+  // viewer measured once, so a resize left a bitmap wider than the frame
+  // forever (the reported mobile crop) - this is the fix for that class.
   useEffect(() => {
     const frame = frameRef.current
     if (!frame) return
-    const measure = () => setContainerWidth(frame.clientWidth)
+    const measure = () => {
+      const width = frame.clientWidth
+      const height = frame.clientHeight
+      setFrame((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      )
+    }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(frame)
@@ -144,24 +171,24 @@ export function PdfViewer() {
   }, [material])
 
   const measureScroll = useCallback(() => {
-    const frame = frameRef.current
+    const node = frameRef.current
     // No width yet means the slots are still at their natural size; measuring
     // then would render the wrong window (page heights change with the width).
-    if (!frame || !numPages || !containerWidth) return
-    const frameTop = frame.getBoundingClientRect().top
+    if (!node || !numPages || !frame.width) return
+    const frameTop = node.getBoundingClientRect().top
     const rects: SlotRect[] = []
     for (const [pageNumber, slot] of slotRefs.current) {
       const rect = slot.getBoundingClientRect()
       rects.push({ page: pageNumber, top: rect.top - frameTop, bottom: rect.bottom - frameTop })
     }
     rects.sort((a, b) => a.page - b.page)
-    const inWindow = pagesInWindow(rects, 0, frame.clientHeight)
+    const inWindow = pagesInWindow(rects, 0, node.clientHeight)
     setRendered((previous) => (samePages(previous, inWindow) ? previous : inWindow))
     setPage((previous) => {
       const next = pageAtTop(rects, 0, numPages)
       return next === previous ? previous : next
     })
-  }, [containerWidth, numPages])
+  }, [frame.width, numPages])
 
   useEffect(() => {
     const frame = frameRef.current
@@ -180,6 +207,40 @@ export function PdfViewer() {
     return () => frame.removeEventListener('scroll', onScroll)
   }, [measureScroll])
 
+  // ctrl/cmd + wheel steps the zoom ladder. The listener is native and
+  // non-passive because React attaches `onWheel` passively at the root, and
+  // without preventDefault the browser zooms the whole page instead.
+  useEffect(() => {
+    const frame = frameRef.current
+    if (!frame || !doc) return
+    const onWheel = (event: WheelEvent) => {
+      if (!event.ctrlKey && !event.metaKey) return
+      event.preventDefault()
+      setZoomIndex((index) => stepZoom(index, event.deltaY < 0 ? 1 : -1))
+    }
+    frame.addEventListener('wheel', onWheel, { passive: false })
+    return () => frame.removeEventListener('wheel', onWheel)
+  }, [doc])
+
+  // Shift turns the text layer selectable (see onPointerDown); a plain drag pans
+  // instead, so the two gestures never fight over the same pointer stream.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => setTextSelectable(event.shiftKey)
+    const onBlur = () => setTextSelectable(false)
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKey)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKey)
+      window.removeEventListener('blur', onBlur)
+    }
+  }, [])
+
+  // A drag interrupted by this component unmounting must not leave its window
+  // listeners (and the frame they hold) behind.
+  useEffect(() => () => panCleanupRef.current?.(), [])
+
   /** The page and chapter controls jump the scroll; they do not page the scroll. */
   const goToPage = useCallback(
     (target: number) => {
@@ -193,7 +254,64 @@ export function PdfViewer() {
     [measureScroll],
   )
 
-  // Rasterise the slots in the window, one render at a time.
+  /**
+   * Drag the page to pan (P8). Mouse only: touch keeps the browser's own
+   * scrolling and pinch. A plain drag pans wherever it starts - the gesture a
+   * reader reaches for - and the text layer is left non-selectable so the
+   * browser does not start a selection gesture mid-pan. Holding Shift makes the
+   * layer selectable again and stands this handler down.
+   *
+   * The gesture is tracked on `window`, not with pointer capture: a drag that
+   * leaves the frame must keep panning (a drag that starts on a glyph leaves it
+   * almost immediately), and capture alone did not survive that - the pan
+   * received one move, then nothing, and the frame moved 18 px of the 220.
+   */
+  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return
+    if (event.shiftKey) {
+      // Shift+drag is the browser's *extend* gesture: with nothing selected its
+      // anchor is the top of the document, so a Shift+drag selects every line
+      // above the pointer. Anchor the selection under the pointer first, then
+      // let the browser extend from there.
+      const caret = (
+        document as unknown as {
+          caretRangeFromPoint?: (x: number, y: number) => Range | null
+        }
+      ).caretRangeFromPoint
+      const range = caret?.call(document, event.clientX, event.clientY)
+      const selection = window.getSelection()
+      if (range && selection) {
+        selection.removeAllRanges()
+        selection.addRange(range)
+      }
+      return
+    }
+    const frame = frameRef.current
+    if (!frame) return
+    const origin = {
+      x: event.clientX,
+      y: event.clientY,
+      left: frame.scrollLeft,
+      top: frame.scrollTop,
+    }
+    const onMove = (move: PointerEvent) => {
+      frame.scrollLeft = origin.left - (move.clientX - origin.x)
+      frame.scrollTop = origin.top - (move.clientY - origin.y)
+    }
+    const onDone = () => {
+      panCleanupRef.current = null
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onDone)
+      window.removeEventListener('pointercancel', onDone)
+    }
+    panCleanupRef.current = onDone
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onDone)
+    window.addEventListener('pointercancel', onDone)
+  }
+
+  // Rasterise the slots in the window, one render at a time, and lay out their
+  // text layers.
   //
   // pdf.js refuses a second render on a canvas that is still drawing, and a
   // render that is cancelled mid-flight can leave its canvas blank for good, so
@@ -202,8 +320,8 @@ export function PdfViewer() {
   // replaced it re-renders at the new raster. The second run's body only starts
   // once the first has returned, which is what makes the canvas hand-off safe.
   useEffect(() => {
-    if (!doc || !base || !containerWidth) return
-    const scale = displayScale(containerWidth, base.width, zoom)
+    if (!doc || !base || !frame.width) return
+    const scale = displayScale(mode, frame.width, frame.height, base.width, base.height, zoom)
     const ratio = rasterScale(scale, window.devicePixelRatio || 1) / scale
     let cancelled = false
     chainRef.current = chainRef.current
@@ -216,29 +334,51 @@ export function PdfViewer() {
           if (cancelled) return
           const viewport = pdfPage.getViewport({ scale })
           const width = Math.floor(viewport.width * ratio)
-          if (drawnRef.current.get(pageNumber) === width) continue
-          canvas.width = width
-          canvas.height = Math.floor(viewport.height * ratio)
-          canvas.style.width = `${Math.floor(viewport.width)}px`
-          canvas.style.height = `${Math.floor(viewport.height)}px`
-          if (!canvas.getContext('2d')) continue
-          await pdfPage
-            .render({
-              canvas,
+          if (drawnRef.current.get(canvas) !== width) {
+            canvas.width = width
+            canvas.height = Math.floor(viewport.height * ratio)
+            canvas.style.width = `${Math.floor(viewport.width)}px`
+            canvas.style.height = `${Math.floor(viewport.height)}px`
+            if (canvas.getContext('2d')) {
+              await pdfPage
+                .render({
+                  canvas,
+                  viewport,
+                  transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
+                })
+                .promise.then(
+                  () => drawnRef.current.set(canvas, width),
+                  () => undefined,
+                )
+            }
+          }
+          const layer = textRefs.current.get(pageNumber)
+          if (layer && textScaleRef.current.get(layer) !== scale) {
+            // The spans are laid out in page units and sized by
+            // `--total-scale-factor`, which nothing in the library ever sets
+            // (its own stylesheet reads it on the page element), and the
+            // container box is measured by setLayerDimensions in the same
+            // units, so it has to be set before the TextLayer is constructed.
+            layer.style.setProperty('--total-scale-factor', String(scale))
+            layer.replaceChildren()
+            await new pdfjs.TextLayer({
+              textContentSource: pdfPage.streamTextContent(),
+              container: layer,
               viewport,
-              transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
             })
-            .promise.then(
-              () => drawnRef.current.set(pageNumber, width),
-              () => undefined,
-            )
+              .render()
+              .then(
+                () => textScaleRef.current.set(layer, scale),
+                () => undefined,
+              )
+          }
         }
       })
       .catch(() => undefined)
     return () => {
       cancelled = true
     }
-  }, [base, containerWidth, doc, rendered, zoom])
+  }, [base, doc, frame.height, frame.width, mode, rendered, zoom])
 
   if (!materialId) return null
 
@@ -272,7 +412,7 @@ export function PdfViewer() {
   const selectable = rangeStart !== null && rangeEnd !== null
   const scopeStart = selectable ? Math.min(rangeStart, rangeEnd) : 0
   const scopeEnd = selectable ? Math.max(rangeStart, rangeEnd) : 0
-  const scale = base ? displayScale(containerWidth, base.width, zoom) : 0
+  const scale = base ? displayScale(mode, frame.width, frame.height, base.width, base.height, zoom) : 0
   const slotWidth = base ? Math.floor(base.width * scale) : 0
   const pageNumbers = base ? Array.from({ length: numPages }, (_, index) => index + 1) : []
 
@@ -331,18 +471,45 @@ export function PdfViewer() {
           </label>
         )}
         <div className="pdf-zoom" role="group" aria-label="Zoom">
-          {ZOOM_LEVELS.map((level) => (
-            <button
-              key={level}
-              type="button"
-              className={`btn btn-sm ${level === zoom ? 'btn-secondary' : 'btn-ghost'}`}
-              aria-pressed={level === zoom}
-              disabled={!doc}
-              onClick={() => setZoom(level)}
-            >
-              {level === 1 ? 'Fit' : `${level}×`}
-            </button>
-          ))}
+          <button
+            type="button"
+            className={`btn btn-sm ${mode === 'page' ? 'btn-secondary' : 'btn-ghost'}`}
+            aria-pressed={mode === 'page'}
+            disabled={!doc}
+            onClick={() => setMode('page')}
+          >
+            Page
+          </button>
+          <button
+            type="button"
+            className={`btn btn-sm ${mode === 'width' ? 'btn-secondary' : 'btn-ghost'}`}
+            aria-pressed={mode === 'width'}
+            disabled={!doc}
+            onClick={() => setMode('width')}
+          >
+            Width
+          </button>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            aria-label="Zoom out"
+            disabled={!doc || zoomIndex === 0}
+            onClick={() => setZoomIndex((index) => stepZoom(index, -1))}
+          >
+            -
+          </button>
+          <span className="pdf-zoom-value" aria-live="polite">
+            {zoom}×
+          </span>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost"
+            aria-label="Zoom in"
+            disabled={!doc || zoomIndex === ZOOM_LEVELS.length - 1}
+            onClick={() => setZoomIndex((index) => stepZoom(index, 1))}
+          >
+            +
+          </button>
         </div>
       </div>
 
@@ -418,7 +585,11 @@ export function PdfViewer() {
         </div>
       )}
 
-      <div className={`pdf-frame${zoom === 1 ? ' pdf-fit' : ''}`} ref={frameRef}>
+      <div
+        className={`pdf-frame${zoomIndex === 0 ? ' pdf-fit' : ''}`}
+        ref={frameRef}
+        onPointerDown={onPointerDown}
+      >
         {pageNumbers.map((pageNumber) => (
           <div
             key={pageNumber}
@@ -434,14 +605,23 @@ export function PdfViewer() {
             }}
           >
             {rendered.includes(pageNumber) && (
-              <canvas
-                ref={(element) => {
-                  if (element) canvasRefs.current.set(pageNumber, element)
-                  else canvasRefs.current.delete(pageNumber)
-                }}
-                className="pdf-canvas"
-                aria-label={`Rendered page ${pageNumber}`}
-              />
+              <>
+                <canvas
+                  ref={(element) => {
+                    if (element) canvasRefs.current.set(pageNumber, element)
+                    else canvasRefs.current.delete(pageNumber)
+                  }}
+                  className="pdf-canvas"
+                  aria-label={`Rendered page ${pageNumber}`}
+                />
+                <div
+                  ref={(element) => {
+                    if (element) textRefs.current.set(pageNumber, element)
+                    else textRefs.current.delete(pageNumber)
+                  }}
+                  className={`pdf-text-layer${textSelectable ? ' pdf-text-selectable' : ''}`}
+                />
+              </>
             )}
           </div>
         ))}

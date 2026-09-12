@@ -8,6 +8,7 @@ import {
   pageAtTop,
   pagesInWindow,
   rasterScale,
+  stepZoom,
 } from './pdfView'
 
 describe('fitScale', () => {
@@ -22,17 +23,42 @@ describe('fitScale', () => {
 })
 
 describe('displayScale', () => {
-  it('is fit-to-width at zoom 1', () => {
-    expect(displayScale(375, 595, 1)).toBeCloseTo(375 / 595)
+  it('fits the whole page inside the frame in page mode', () => {
+    expect(displayScale('page', 1280, 480, 595, 842, 1)).toBeCloseTo(480 / 842)
+  })
+
+  it('fits the width in width mode, ignoring the frame height', () => {
+    expect(displayScale('width', 1280, 480, 595, 842, 1)).toBeCloseTo(1280 / 595)
   })
 
   it('multiplies the fit scale by the zoom level', () => {
-    expect(displayScale(375, 595, 1.5)).toBeCloseTo((375 / 595) * 1.5)
-    expect(displayScale(375, 595, 3)).toBeCloseTo((375 / 595) * 3)
+    expect(displayScale('page', 1280, 480, 595, 842, 1.5)).toBeCloseTo((480 / 842) * 1.5)
+    expect(displayScale('width', 1280, 480, 595, 842, 3)).toBeCloseTo((1280 / 595) * 3)
   })
 
-  it('offers Fit plus 1.25/1.5/2/3, with Fit first and default', () => {
+  it('falls back to natural size before the frame has been measured', () => {
+    expect(displayScale('page', 0, 0, 595, 842, 1)).toBe(1)
+    expect(displayScale('width', 0, 480, 595, 842, 1)).toBe(1)
+  })
+
+  it('offers 1x plus 1.25/1.5/2/3, with 1x first and default', () => {
     expect(ZOOM_LEVELS).toEqual([1, 1.25, 1.5, 2, 3])
+  })
+})
+
+describe('stepZoom', () => {
+  it('walks the ladder one level at a time', () => {
+    expect(ZOOM_LEVELS[stepZoom(0, 1)]).toBe(1.25)
+    expect(ZOOM_LEVELS[stepZoom(2, -1)]).toBe(1.25)
+  })
+
+  it('clamps at both ends of the ladder', () => {
+    expect(stepZoom(0, -1)).toBe(0)
+    expect(stepZoom(ZOOM_LEVELS.length - 1, 1)).toBe(ZOOM_LEVELS.length - 1)
+  })
+
+  it('ignores a zero direction', () => {
+    expect(stepZoom(2, 0)).toBe(2)
   })
 })
 
