@@ -1,9 +1,9 @@
 # Scratchpad – scoped-question-generation · session 2026-09-12 (P6)
-_state.md: active/scoped-question-generation/state.md · Updated: 2026-09-12T04:42_
+_state.md: active/scoped-question-generation/state.md · Updated: 2026-09-12T04:55_
 
 ## Now / Next
-- Doing: **P6 (viewer revision: fit, vertical scroll, mobile zoom) is implemented and verified** — `pdfView.ts` (+18 TDD unit cases), `PdfViewer.tsx` rewritten, `materials.css`, `e2e/material-viewer-live.spec.ts` reworked. R1/R2 closed; R3 measured and waiting on the user's own phone pass.
-- Next: commit `feat(app): #62 P6 - vertical-scroll viewer with fit and zoom` (code + `.work/` records together), push, `graphify update .` — then P7 (streaming) in a fresh session.
+- Doing: **P6 (viewer revision: fit, vertical scroll, mobile zoom) is implemented, verified and committed** — `a9ec0d7` (`feat(app): #62 P6 - vertical-scroll viewer with fit and zoom`), pushed to origin together with `ff3ab07`. R1/R2 closed; R3 measured and waiting on the user's own phone pass.
+- Next: P7 (streaming) in a fresh session — same-origin range route, prefetch on intent, session document cache, then the probe's before/after table (R4) and the wayfinder exit.
 - Blocked: none.
 
 ## Session log
