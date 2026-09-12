@@ -208,7 +208,17 @@ test.describe('material viewer (live)', () => {
   }) => {
     test.setTimeout(300_000);
     const pageErrors: string[] = [];
+    // pdf.js reports a missing image decoder as a console warning and paints
+    // nothing, so the ink assertions above cannot see it: a page can keep its
+    // text and lose every figure. The wasm decoders come from
+    // /study/pdfjs-wasm/ (apps/app/scripts/sync-pdfjs-wasm.mjs).
+    const decodeWarnings: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
+    page.on('console', (message) => {
+      if (message.type() === 'warning' && /Unable to decode image/i.test(message.text())) {
+        decodeWarnings.push(message.text());
+      }
+    });
 
     await signIn(page);
     await openViewer(page);
@@ -293,6 +303,7 @@ test.describe('material viewer (live)', () => {
     await expect(page.getByText(/chunk [0-9a-f]+/).first()).toBeVisible();
 
     expect(pageErrors).toEqual([]);
+    expect(decodeWarnings).toEqual([]);
   });
 });
 

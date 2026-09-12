@@ -122,3 +122,53 @@ Recorded in the code as a `ponytail:` ceiling with its upgrade path.
   upgrade path if a mixed-size document ever looks wrong.
 - **The zoom control is five segmented buttons**, not a `-`/`+` stepper: no state
   machine, every level one click away, and `aria-pressed` is the assertion hook.
+
+## 7. Defect found in the user's hands-on pass: every figure image was skipped
+
+Reported after the P6 pass: "Where are the images in the pdf, not a single image is
+seen in the doc", with a console full of
+`Warning: Unable to decode image "img_p104_1": "Jbig2Error: JBig2 failed to initialize"`
+and `Dependent image isn't ready yet 3` for pages ~96-206.
+
+**The material is not the corpus.** It is `grokking-algorithms-2nd-edition-2nd_compress`
+(315 pages, ready), served as the repaired copy `view-2e1fbb5e-....pdf` (3,420,085 B).
+Measured with pypdf: **587 JBIG2 images across 260 of its 315 pages** (`/Im0 /Im1 /Im2` on
+page 104, which are the three `img_p104_1..3` in the log). The original upload carries the
+same JBIG2 (590 raw `JBIG2Decode` names), so the `ff3ab07` repair is not the source. The
+corpus has none (432 DCTDecode + 943 FlateDecode), which is why the P6 live spec, the
+probes and every pixel measurement so far never saw the defect.
+
+**Root cause.** pdf.js decodes JBIG2/CCITT images with a wasm module it fetches at runtime
+from the `wasmUrl` directory (`getFactoryUrlProp` requires a trailing slash and the worker
+fetches `${wasmUrl}jbig2.wasm`). Nothing set `wasmUrl`, so pdf.js used its default
+relative `"wasm"`, resolved it against the page, got nothing, and skipped every JBIG2
+image with a console warning. Text and the other image filters still painted, so the page
+looked full rather than broken.
+
+**Fix.** `apps/app/scripts/sync-pdfjs-wasm.mjs` copies `pdfjs-dist/wasm/` (1.6 MB: jbig2,
+openjpeg, qcms and their no-wasm fallbacks) into `apps/app/public/pdfjs-wasm/`, which Vite
+serves at the app base in dev and copies into `dist/` on build; the app's `dev` and
+`build` scripts run it, and the folder is gitignored so the binaries cannot drift from the
+installed pdfjs-dist version. `PdfViewer` passes
+`wasmUrl: ${import.meta.env.BASE_URL}pdfjs-wasm/`. No nginx, contract or DB change.
+
+**Verified on the user's own material** (throwaway probe, screenshot-checked):
+
+| Reading | Value |
+|---|---|
+| `/study/pdfjs-wasm/jbig2.wasm`, `/study/pdfjs-wasm/openjpeg.wasm` | 200, 104,852 B / 252,032 B |
+| decode warnings on pages 104, 96, 35, 26 | 0 (one per image before the fix, per the user's console) |
+| page 104 ink | 65,752 dark pixels, the hash-function diagram present |
+| page 96 ink | 80,456 dark pixels, the array-partitioning diagram present |
+
+The corpus path is unaffected: it never requests the wasm (measured with the wasm requests
+blocked, pages 104/101/49 pixels identical to the unblocked run, 0 warnings).
+
+**Guard.** `e2e/material-viewer-live.spec.ts` now fails on any `Unable to decode image`
+console warning. Ink sampling cannot see a page that lost only its artwork, since the page
+keeps its text and its other images, which is exactly how this hid. The spec still runs on
+the corpus, so the guard is armed for the class rather than for the Grokking book.
+
+**Recorded, not fixed:** the corpus is a poor regression fixture for image rendering (zero
+JBIG2). A second ready material with JBIG2 figures would make the spec's image path real -
+a `retrieval-followups-2nd-corpus`-shaped decision, not a P6 one.

@@ -93,7 +93,15 @@ export function PdfViewer() {
       // passes `disableAutoFetch` to the transport stream. Details:
       // research/2026-09-11-p5-live-verification.md; P7 serves ranges from a
       // same-origin route instead.
-      return pdfjs.getDocument({ url })
+      //
+      // wasmUrl is the jbig2/openjpeg/qcms decoders, fetched by the worker at
+      // runtime (scripts/sync-pdfjs-wasm.mjs copies them into public/). Without
+      // it every JBIG2 image fails with "JBig2 failed to initialize" and the
+      // page silently loses its figures.
+      return pdfjs.getDocument({
+        url,
+        wasmUrl: `${import.meta.env.BASE_URL}pdfjs-wasm/`,
+      })
     }
     void open()
       .then((started) => {

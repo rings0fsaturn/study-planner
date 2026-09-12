@@ -28,6 +28,9 @@ test-results/
 # playwright-cli session snapshots and traces
 .playwright-cli/
 
+# pdf.js wasm decoders, copied into public/ by apps/app/scripts/sync-pdfjs-wasm.mjs
+apps/app/public/pdfjs-wasm/
+
 # Hermes agent workspace mirrors of the agents rules/skills (tool-generated)
 .hermes/
 
