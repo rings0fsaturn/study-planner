@@ -9,9 +9,8 @@ import { test, expect, type Page } from '@playwright/test';
  *
  * Covers the full lifecycle: plain text, web URL, and PDF materials move
  * through pending -> extracting/chunking/embedding -> ready via the worker,
- * partial extracted content is previewable while processing, a retryable
- * failure surfaces the retry action and a retry creates a new attempt, and a
- * second account cannot read the first account's material.
+ * a retryable failure surfaces the retry action and a retry creates a new
+ * attempt, and a second account cannot read the first account's material.
  *
  * The PDF scenario uploads the real fixture `e2e/pdf/sample-textbook-572page.pdf`
  * (a 572-page textbook, ~23 MB), so extraction, chunking, and embedding are
@@ -124,11 +123,11 @@ async function openDetailAndCheckReady(page: Page, title: string): Promise<void>
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
   await expect(page.getByText('Ready', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Practice this' })).toBeVisible();
-  await expect(
-    page.getByRole('heading', { name: /Extracted content/ }),
-  ).toBeVisible({ timeout: 15000 });
-  const preview = page.locator('.material-preview-text');
-  await expect(preview).not.toBeEmpty();
+  // The extracted-content card was deleted in #62 P8 (2026-09-12): it rendered
+  // the first 4,000 characters of fulltext.txt, which for a book is the cover,
+  // the foreword and the preface.
+  await expect(page.getByRole('heading', { name: /Extracted content/ })).toHaveCount(0);
+  await expect(page.locator('.material-preview-text')).toHaveCount(0);
 }
 
 /**

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
-import { fetchMaterialContentPreview } from '../../materials/previewClient'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { IngestionProgress, MaterialStatusBadge } from '../../materials/StatusBadge'
 import '../../materials/materials.css'
@@ -109,8 +108,6 @@ export function MaterialDetail() {
   const [replaceValue, setReplaceValue] = useState('')
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [preview, setPreview] = useState<string | null>(null)
-  const [previewError, setPreviewError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!materialId) return
@@ -134,31 +131,6 @@ export function MaterialDetail() {
       cancelled = true
     }
   }, [client, materialId])
-
-  // Partial extracted content is displayable while processing; RAG generation
-  // stays blocked until ready. The service resolves the preview owner-scoped.
-  useEffect(() => {
-    if (!material || material.ingestionState === 'pending' || material.ingestionState === 'failed') {
-      return
-    }
-    if (!material.extractedTextPath) return
-    let cancelled = false
-    void fetchMaterialContentPreview(material.id)
-      .then((body) => {
-        if (!cancelled) {
-          setPreview(body.previewText)
-          setPreviewError(null)
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) {
-          setPreviewError(err instanceof Error ? err.message : 'Preview unavailable')
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [material])
 
   // The detail row is fetched once; a direct landing (e.g. right after
   // creation) must still observe worker progress, so poll while processing.
@@ -343,24 +315,6 @@ export function MaterialDetail() {
             <p className="t-body-sm" style={{ color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>
               Grounded generation is disabled until this material is ready.
             </p>
-          </div>
-        )}
-
-        {!replaceMode && preview && (
-          <div className="material-detail-block">
-            <h3 className="t-display-3" style={{ fontSize: '18px', marginBottom: '0.75rem' }}>
-              Extracted content{processing ? ' (partial — still processing)' : ''}
-            </h3>
-            <p className="material-preview-text">{preview}</p>
-          </div>
-        )}
-
-        {!replaceMode && previewError && material.ingestionState !== 'failed' && (
-          <div className="banner attention" style={{ marginBottom: '1rem' }}>
-            <div className="banner-body">
-              <div className="banner-title">Content preview unavailable</div>
-              <div className="banner-desc">{previewError}</div>
-            </div>
           </div>
         )}
 

@@ -110,16 +110,6 @@ export interface MaterialReplaceInput {
   estimatedMinutes?: number | null
 }
 
-/** Partial extracted content surfaced by the service while processing. */
-export interface MaterialContentPreview {
-  materialId: string
-  state: IngestionState
-  previewText: string
-  chunkCount: number
-  ready: boolean
-  updatedAt: string
-}
-
 export type MaterialServiceErrorCode =
   | 'unauthorized'
   | 'not_found'
