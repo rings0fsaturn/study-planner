@@ -698,20 +698,50 @@
   width: 190px;
 }
 
-/* No padding or border on the measuring frame: clientWidth is then exactly the
-   space a page may occupy, which is what fit-to-width measures against. */
+.pdf-zoom {
+  display: flex;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.pdf-zoom .btn {
+  padding: 0.25rem 0.5rem;
+}
+
+/* One scroll container (P6): reading is vertical, and the frame is the single
+   height and width authority for every page slot. No padding or border, so
+   clientWidth is exactly the space a page may occupy at Fit. */
 .pdf-frame {
   margin-top: 0.75rem;
-  max-height: 78vh;
-  overflow: auto;
+  height: calc(100dvh - 15rem);
+  min-height: 22rem;
+  overflow-y: auto;
+  overflow-x: auto;
+  overscroll-behavior: contain;
   background: var(--surface-recessed, #ede3d2);
   border-radius: 8px;
 }
 
-.pdf-canvas {
-  display: block;
+/* A slot per page: its inline width is the display scale and its aspect ratio
+   comes from page 1, so the scroll height is stable before any ink is drawn. */
+.pdf-page {
   margin: 0 auto;
   background: #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 18%);
+}
+
+.pdf-canvas {
+  display: block;
+  background: #fff;
+}
+
+/* Belt and braces for the one frame between a resize and the re-render that
+   follows it: at Fit a page can never be wider than the frame. Zoom levels are
+   allowed to overflow (the frame scrolls horizontally), so the guard is
+   scoped to the fitted state only. */
+.pdf-fit .pdf-page,
+.pdf-fit .pdf-canvas {
+  max-width: 100%;
 }
 
 @media (max-width: 640px) {
@@ -724,8 +754,12 @@
     align-items: flex-start;
   }
 
+  .pdf-zoom {
+    margin-left: 0;
+  }
+
   .pdf-frame {
-    max-height: 62vh;
+    height: calc(100dvh - 20rem);
   }
 }
 

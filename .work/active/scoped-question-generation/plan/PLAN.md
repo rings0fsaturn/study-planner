@@ -1,7 +1,7 @@
 # Scoped Question Generation (#18) — Implementation Plan
 
 **Date written:** 2026-09-11 · **Ticket:** GitHub #62 (filed + claimed 2026-09-11) · **Parent:** spec #32 · map #4 · **Branch:** `phase2/issue-62-scoped-question-generation` (cut off `phase2/issue-40-41` at `237faf8`)
-**Plan status:** ✅ Done — P1–P5 implemented and verified 2026-09-11. Evidence measured and decisions locked with the user on 2026-09-11. P5 exit (wayfinder resolution) pending.
+**Plan status:** ✅ P1–P6 implemented and verified (P1–P5 2026-09-11, P6 2026-09-12). Evidence measured and decisions locked with the user on 2026-09-11; the viewer revision (P6/P7) was raised 2026-09-12 from a hands-on pass. P7 and the P5/P6 wayfinder resolution remain.
 **Trigger:** user report — "I dont like the questions being generated in the assessment"; 25/25 generated questions asked about the exam instead of the material's content.
 
 > Runbook convention inherited from the #38/#39/#40/#41 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -114,7 +114,9 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 | `apps/app/src/assessments/types.ts` | P4 — `AssessmentScope` on the recipe, outline types |
 | `apps/app/src/pages/assessments/AssessmentConfig.tsx` | P4 — scope picker replaces the free-text tag box |
 | `apps/app/src/materials/materialClient.ts` | P4/P5 — `getMaterialFileUrl` signed URL (`MaterialStorageLike.createSignedUrl`) |
-| `apps/app/src/materials/PdfViewer.tsx` (new) | P5 — pdf.js canvas viewer, page navigation, chapter jump, range select |
+| `apps/app/src/materials/PdfViewer.tsx` (new) | P5 — pdf.js canvas viewer; P6 — one windowed vertical scroll of page slots, ResizeObserver width, Fit + zoom, jump-only controls |
+| `apps/app/src/materials/pdfView.ts` (new) | P6 — the viewer's geometry as pure functions: fit/zoom scale, raster cap, window bounds, topmost page |
+| `apps/app/src/materials/pdfView.test.ts` (new) | P6 — the 18 unit cases that pin the geometry (written before the module) |
 | `apps/app/src/App.tsx` | P5 — `/materials/:materialId/view` route, lazily imported |
 | `apps/app/src/materials/testing/fakeMaterialClient.ts` | P5 — `getMaterialFileUrl` on the double |
 | `apps/app/src/pages/materials/MaterialDetail.tsx` | P5 — "Open in viewer" action for PDF materials |
@@ -222,3 +224,78 @@ Evidence file: `research/2026-09-11-evidence.md` (raw numbers behind every claim
 - **Measured cost: 22.9 MB per viewer open, 4.6-7.5 s to first paint, and the plan's range-fetch rationale does not hold.** pdf.js issues one plain GET with no `Range` header (`content-length 22919258`, no `Cache-Control`), on every open. Root cause is CORS exposure: from the browser the signed URL answers a `Range` request with 206 and 64 KiB, but `Accept-Ranges` is **not** in the exposed header set (only `cache-control`, `content-length`, `content-type`, `expires`, `last-modified` are readable), so pdf.js's `validateRangeRequestCapabilities` never enables ranges. An explicit `PDFDataRangeTransport` was implemented and measured, and it is **worse** — 123 requests, 30,807,072 bytes, 12.9 s, plus continued fetching while idle — because pdf.js walks the file backwards from the trailer and v6 does not pass `disableAutoFetch` into `PDFDataTransportStream`. Reverted and deleted rather than shipped slower; the fix belongs on the storage CORS (`Access-Control-Expose-Headers: Accept-Ranges`) or a same-origin range proxy. Full numbers and the three upgrade paths: `research/2026-09-11-p5-live-verification.md` §5.
 - **Dropped the client-side `pdf.getOutline()`.** Ingestion already runs the cascade server-side (bookmarks → contents page → LLM) and owns the printed→PDF conversion; a material whose outline could not be derived also has no `page_count` (both are written together), so no page range is offered and a client-side chapter list would have nothing to hand over. Recorded as a deliberate simplification rather than a gap.
 - **Verification (evidence: `research/2026-09-11-p5-live-verification.md`).** Contract: storage precheck under the service role (PDF present, 22,919,258 bytes, signed URL 200, range GET 206). Unit: `pnpm typecheck` clean, `pnpm lint` clean, `materialClient.test.ts` 30 passed (+4), `AssessmentConfig.test.tsx` 12 passed (+2), whole app suite 768 passed / 2 failed (the documented WSL TZ pair, 2/2 green under `--pool=forks`), `pnpm build` produces both apps. Live: the new `material-viewer-live.spec.ts` passes 2/2 at 1280 and 375 (`--workers=1`) — render with real ink, chapter jump to page 156, range `156–213` handed to the config, generation landing on a question with citations; the authenticated API gate for the same label-less scope returns `ready` with warnings `[]` and its citation on pages (202,202), inside the range; the P4 and material-library live specs re-run green after the `AssessmentConfig` and `MaterialDetail` changes.
+
+## Drift reconciliation (2026-09-12, before Phase 6)
+
+The plan above was written against `c803be5`; the branch has since moved.
+
+- **HEAD is now `ff3ab07`** (`fix(ingestion,app): #62 - tolerate a page tree that repeats a page object`), authored 2026-09-12, **unpushed** (branch is `ahead 1` of origin). `state.md` and the STATUS row still describe `c803be5` as the tip.
+- What it adds, and why the plan must respect it: a compressed-book PDF whose `/Pages /Kids` repeats a page object is legal but both engines treat it as a cycle (pypdf aborts the document, pdf.js truncates 322 pages to 10). `PypdfTextReader.normalize()` now returns a repaired PDF, `ExtractedContent.viewer_pdf` carries it, the worker uploads `material-raw/<uid>/<materialId>/view-<contentVersion>.pdf`, and `materialClient.getMaterialFileUrl` prefers that copy and falls back to the raw object.
+- So the viewer no longer necessarily loads the uploaded file: **Phase 7 must serve the derived object first**, and any caching keyed on a path must key on the copy the client actually requests.
+- Two measured facts from that commit feed this revision: the repaired copy is **larger** than its source (2,998,611 B → 3,420,085 B, pypdf re-serialization), and the raw response is **range-capable at the server** (`accept-ranges: bytes`, `content-length` on the 22,919,258 B corpus file) — the whole Phase 7 problem is header visibility through Storage CORS, not server support.
+- The #62 acceptance criteria (AC1–AC6) remain met and do not change; the revision below carries its own criteria (R1–R4) in `VERIFICATION.md`.
+
+### Phase 6 — Viewer revision: fit, vertical scroll, mobile zoom `✅ Done 2026-09-12`
+
+Raised from a hands-on pass at 375 px (2026-09-12): the page rendered at roughly 1.8x and was cut off at the right edge, "not readable in mobile screen format", and Prev/Next paging is the wrong interaction for reading a document.
+
+**Recorded root cause, not a guess.** `renderPage` measured `frameRef.current.clientWidth` once per render and never re-measured (`PdfViewer.tsx:106-113` in the pre-P6 file — the code moved in P6), and `.pdf-canvas` carried no `max-width` (`materials.css:711-715`). Any wider measure — a desktop-ish layout at load, a resize, an orientation change — leaves a bitmap wider than the frame forever, which is the reported crop. The same single source of width in step 2 is the fix for the class, not for the instance.
+
+1. One scroll container: `.pdf-frame` becomes `overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; height: calc(100dvh - 15rem); min-height: 22rem`; `.pdf-canvas { max-width: 100% }`.
+2. One width source: a `ResizeObserver` on the frame feeds a `containerWidth` state; every mounted page renders at `scale = containerWidth * zoom / base.width * devicePixelRatio`.
+3. Page slots + windowing: a `.pdf-page` slot per page with an `aspect-ratio` placeholder (page 1's viewport) so scroll height is stable before ink; an `IntersectionObserver` renders a slot within one viewport of the visible area and leaves it mounted. `ponytail:` canvases are never unmounted — the upgrade path, when a phone proves it needs it, is releasing bitmaps for slots more than two viewports away.
+4. Zoom: `Fit` (default) plus a stepper (`1.25 / 1.5 / 2 / 3`), which **re-renders the bitmap** rather than CSS-stretching it, so zoomed text is sharp. Fit-to-width of an A4 page at 375 px is scale ≈ 0.59, which is why the control exists at all.
+5. Prev/Next are deleted. The PAGE input and the CHAPTER `<select>` become jump controls (`scrollIntoView` on the target slot), and the current page is the topmost visible slot — which is what the PAGE field shows and what `Set first page` / `Set last page` capture. The handoff to the config is unchanged (`?from=&to=`, typed range, no `sectionLabel`).
+6. Spec: `e2e/material-viewer-live.spec.ts` gains a no-horizontal-overflow assertion (`frame.scrollWidth === frame.clientWidth`), ink sampling on the visible canvas rather than `querySelector` on the first one, a scroll-reveals-next-slot step, and — the assertion that fails on today's code — resize 1280 → 375 then `canvas.style.width <= frame.clientWidth`.
+
+**Verification:** `pnpm typecheck` + `pnpm lint` clean; app suite green apart from the two documented WSL TZ flakes (`--pool=forks` confirms); the live spec 2/2 at 1280 and 375 with `--workers=1`; then the user's own phone pass.
+
+**Notes (filled in during implementation):**
+
+- **The geometry moved to `src/materials/pdfView.ts`, pure and unit-tested first.** `fitScale`, `displayScale`, `rasterScale`, `clampPage`, `pagesInWindow`, `pageAtTop` — written as failing tests (`pdfView.test.ts`, 18 cases) before the module existed, because the viewer is lazily imported and pdf.js stays out of the jsdom graph, so an untested viewer would have been an untested layout claim. The component keeps only the DOM wiring.
+- **Windowing is computed from slot rects, not an `IntersectionObserver`** (a deliberate deviation from R-D-01, recorded in `research/2026-09-12-p6-live-verification.md` §2): one `requestAnimationFrame`-throttled scroll handler reads the slot rects, `pagesInWindow` returns the slots on screen plus one frame-height of margin, and `pageAtTop` names the page at the frame's top edge — which is what the PAGE field shows and what `Set first/last page` capture. Same observable behaviour, and the rule is a pure function rather than an observer callback.
+- **Renders are serialised through one promise chain and never cancelled.** The first cut cancelled in-flight `RenderTask`s in the effect cleanup and skipped any page whose `canvas.width` already matched; a render cancelled after the width was set never painted again, so page 2 stayed blank forever (found by the scroll step, not by inspection). A superseded run now finishes the page it is on and stops, and the "already drawn" marker is written only when a render resolves.
+- **The `max-width: 100%` guard is scoped to the fitted state.** `.pdf-fit` (zoom === 1) carries it on the slot and the canvas, so a stale measure cannot overflow during the frame between a resize and the re-render; a zoom level is allowed to be wider than the frame and the frame scrolls sideways, which is the whole point of zooming on a phone.
+- **`MAX_RASTER_SCALE = 2.5` caps the bitmap** (a `ponytail:` ceiling in the code, with its upgrade path): bitmap px per PDF unit stops there, so a 3x zoom on a wide desktop scales up a 2.5x raster instead of allocating a ~90 MB canvas per page. At 1280 Fit and 375 1.5x the raster is exactly the CSS size, which is the case the criteria care about.
+- **The P5 spec's "desktop" scenario never ran at 1280** — a file-level `test.use({ viewport: 375 })` applies to every test in the file, so both scenarios ran at 375x812. The viewport is now scoped to the mobile `describe`, and the desktop scenario asserts a fact that is only true at 1280 (`[data-page="2"] .pdf-canvas` count 0). The "2/2 at 1280 and 375" line in P5's transcript is therefore 375 twice; P6 restores the desktop arm. Found by the windowing assertion failing, not by reading the config.
+- **The scroll assertion samples the whole bitmap, the "in front of me" assertions sample the visible band.** Page 2 of the corpus is a near-empty divider (33,886 dark pixels in the bitmap, ~76 in the visible band), so "the next page's ink appears by scrolling" is asserted as "the revealed slot was rasterised" while pages 1 and 156 assert ink in the exact visible band.
+- **Measured live** (evidence: `research/2026-09-12-p6-live-verification.md`): 1280x720 Fit — canvas 1080 px in a 1080 px frame, bitmap 1080 px, `slots 572, rendered 1`; 375x812 Fit — canvas 351 px in a 351 px frame, median text line 8 px; 1.5x — canvas and bitmap 526 px, median text line 12 px; a 1280 → 375 viewport change re-fits the canvas to 351 px in the same run. Focused unit tests 18 passed; whole app suite 787 passed / 2 failed (the documented WSL TZ pair in `src/dev/seedTestData.test.ts`, green under `--pool=forks`); `pnpm typecheck` + `pnpm lint` clean; `pnpm build` emits both apps; the live spec 2/2 with `--workers=1` (desktop 27.1 s at 1280x720, mobile 11.4 s at 375x812); the neighbouring live specs (`assessment-generation-live`, `material-library-live`) re-run green 5/5.
+- **Not done in P6:** the user's own phone pass (the point of R3) and P7's streaming; the throwaway `e2e/tmp-viewer-timings.spec.ts` baseline probe stays untracked for P7 to re-run and delete.
+
+### Phase 7 — Streaming: same-origin ranges, prefetch, session cache `⏳ Planned`
+
+**Baseline measured 2026-09-12** with a throwaway probe (`e2e/tmp-viewer-timings.spec.ts`, currently untracked, CDP Network timeline on the live stack, desktop 1280):
+
+| Phase | ms |
+|---|---|
+| click → route painted | 26 |
+| material record in hand | 1,884 |
+| signed-URL POST (`storage/v1/object/sign`) | 278 |
+| PDF body GET — 22,922,615 B, one plain GET | 4,283 |
+| pdf.js parse + `numPages` | 6,749 |
+| first ink | 6,761 |
+
+63% of the wait is one un-ranged download; 28% is Supabase REST latency before it can even start. `accept-ranges: bytes` and `content-length` are present on the response, so this is CORS header visibility; and the source confirms the recorded dead end (`pdf.mjs:15534-15539` builds `PDFDataTransportStream` with only `pdfDataRangeTransport, disableRange, disableStream`, so `disableAutoFetch` never reaches it).
+
+1. Same-origin route `/material-file/<ownerId>/<materialId>/<view-…|source>`:
+   - `docker/nginx.conf` (already fronts both services): `location /material-file/` → `proxy_pass https://<proj>.supabase.co/storage/v1/object/authenticated/` with `proxy_set_header Authorization $http_authorization`, `proxy_set_header Range $http_range`, `proxy_set_header If-Range $http_if_range`, `proxy_http_version 1.1`, `proxy_buffering off`, `add_header Accept-Ranges bytes always`, and `proxy_hide_header Cache-Control` + `add_header Cache-Control "private, max-age=600" always`. **No `proxy_cache`** (R-D-04).
+   - dev parity: the same route as a `server.proxy` entry in `apps/app/vite.config.ts`, next to the existing `/supabase-fn` proxy.
+2. `materialClient.getMaterialFileUrl` keeps `ff3ab07`'s preference for `view-<contentVersion>.pdf` but returns the same-origin path; the caller passes the session access token (`supabase.auth.getSession()`, the pattern `previewClient.ts:20-21` already uses) to pdf.js as `httpHeaders`, so Storage RLS keeps enforcing the uid prefix (rule 35). Keep the direct signed-URL path behind a config flag as the fallback for a deployment without the route.
+3. Prefetch on intent: `pointerdown`/hover on `Open in viewer` starts the document load, and the viewer adopts the in-flight task, moving the 1.9 s of REST latency under the click.
+4. Session cache: a module-level `Map<materialId, PDFDocumentLoadingTask>` (cap 2, LRU destroy); the viewer stops destroying its task on unmount (`PdfViewer.tsx:93-97`), which is what makes a repeat open ~0.1 s.
+5. Re-run the probe as the before/after gate, write `research/2026-09-12-p6p7-live-verification.md`, then delete the throwaway probe in the same commit.
+
+**Verification:** the probe's phase table before/after (expect first ink ≈ 1.0-1.5 s and 50-200 KB per additional page); the live viewer spec green with the route on and with the fallback; a repeat-open byte count from the network log proving the browser cache is used.
+
+## Revision decisions (2026-09-12)
+
+- **R-D-01:** the viewer is a continuous vertical scroll of page slots, windowed by `IntersectionObserver`. Prev/Next are removed; the page input and chapter select become jump controls. A typing-friendly page field is not a paging control.
+- **R-D-02:** one width source (`ResizeObserver` → `containerWidth`) and a `max-width: 100%` guard on the canvas. The measure-once/no-guard pair is the recorded cause of the mobile crop.
+- **R-D-03:** zoom re-renders the bitmap; it is not a CSS `zoom`/`transform` stretch, so text stays sharp at 1.25x-3x.
+- **R-D-04:** the file route carries the **user's** access token to Storage's authenticated endpoint and `proxy_cache` is deliberately absent. nginx would serve a cached body without any Storage ownership check, and a uid-prefixed path is not an authorization; the cache tier is the browser's private HTTP cache (`private, max-age=600`) behind a stable URL. This replaces the earlier "disk cache in front of the bucket" sketch.
+- **R-D-05:** prefetch on intent plus a session-scoped document cache; the document is not destroyed on unmount, because re-downloading and re-parsing on every open is the waste the user actually hits.
+- **R-D-06:** the viewer loads the **derived** copy first when one exists (`ff3ab07`), so both the route and any future cache key must be built from the path the client requests, not from the uploaded object's name.
+
+## Sequencing
+
+Phase 6 and Phase 7 land on this branch, then the #62 wayfinder exit (push `ff3ab07` + P6 + P7, resolution comment, close #62, map #4 line, STATUS flip to Done, archive the folder). The document-processing work is a separate task (`active/document-pipeline/plan/PLAN.md`, ticket at its D0) whose serving phase consumes Phase 7.

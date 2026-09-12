@@ -1,28 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import * as pdfjs from 'pdfjs-dist'
-import type { PDFDocumentLoadingTask, PDFDocumentProxy, RenderTask } from 'pdfjs-dist'
+import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
 import { useMaterialsClient } from './MaterialsProvider'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from './types'
+import {
+  ZOOM_LEVELS,
+  clampPage,
+  displayScale,
+  pageAtTop,
+  pagesInWindow,
+  rasterScale,
+  type SlotRect,
+} from './pdfView'
 import './materials.css'
 
 // Without workerSrc pdf.js paints a blank canvas and only warns in the console.
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
 
-/** Never upscale past 2x: a 572-page book at DPR 2 needs only so many pixels. */
-const MAX_SCALE = 2
-
-function clampPage(value: number, numPages: number): number {
-  if (!Number.isFinite(value)) return 1
-  return Math.min(Math.max(1, Math.trunc(value)), Math.max(1, numPages))
-}
+const samePages = (a: number[], b: number[]): boolean =>
+  a.length === b.length && a.every((page, index) => page === b[index])
 
 /**
  * The material's own pages, rendered with pdf.js from a short-lived signed URL,
  * so the learner reads the page numbers they are about to scope a question to.
- * Selecting a range hands off to the assessment config (`?from=&to=`, PDF page
- * numbers, per D-05).
+ *
+ * Reading is one vertical scroll of page slots (P6): a `ResizeObserver` is the
+ * single source of the frame width, every slot is laid out from page 1's
+ * viewport so the scroll height is stable before any ink, and only the slots
+ * around the viewport are rasterised. The page/chapter controls jump the
+ * scroll rather than page through it. Selecting a range hands off to the
+ * assessment config (`?from=&to=`, PDF page numbers, per D-05).
  */
 export function PdfViewer() {
   const { materialId } = useParams<{ materialId: string }>()
@@ -31,13 +40,22 @@ export function PdfViewer() {
 
   const [material, setMaterial] = useState<MaterialRecord | null>(null)
   const [doc, setDoc] = useState<PDFDocumentProxy | null>(null)
+  const [base, setBase] = useState<{ width: number; height: number } | null>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+  const [zoom, setZoom] = useState(1)
+  const [rendered, setRendered] = useState<number[]>([])
   const [page, setPage] = useState(1)
   const [rangeStart, setRangeStart] = useState<number | null>(null)
   const [rangeEnd, setRangeEnd] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const frameRef = useRef<HTMLDivElement>(null)
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const slotRefs = useRef(new Map<number, HTMLDivElement>())
+  const canvasRefs = useRef(new Map<number, HTMLCanvasElement>())
+  /** page -> bitmap width of its last completed render. */
+  const drawnRef = useRef(new Map<number, number>())
+  /** Serialises rasterisation: pdf.js allows one render per canvas at a time. */
+  const chainRef = useRef<Promise<void>>(Promise.resolve())
 
   const numPages = doc?.numPages ?? 0
 
@@ -73,7 +91,8 @@ export function PdfViewer() {
       // PDFDataRangeTransport was tried and is worse (123 requests, 30.8 MB,
       // 12.9 s): pdf.js walks the file backwards from the trailer and v6 never
       // passes `disableAutoFetch` to the transport stream. Details:
-      // research/2026-09-11-p5-live-verification.md.
+      // research/2026-09-11-p5-live-verification.md; P7 serves ranges from a
+      // same-origin route instead.
       return pdfjs.getDocument({ url })
     }
     void open()
@@ -82,8 +101,14 @@ export function PdfViewer() {
         task = started
         return started.promise
       })
-      .then((loaded) => {
+      .then(async (loaded) => {
         if (cancelled || !loaded) return
+        // Page 1's viewport sizes every slot placeholder, so the scroll height
+        // is correct before a single page has been rasterised.
+        const first = await loaded.getPage(1)
+        if (cancelled) return
+        const viewport = first.getViewport({ scale: 1 })
+        setBase({ width: viewport.width, height: viewport.height })
         setDoc(loaded)
       })
       .catch((err) => {
@@ -97,54 +122,115 @@ export function PdfViewer() {
     }
   }, [client, material])
 
-  const renderPage = useCallback(
-    async (target: PDFDocumentProxy, pageNumber: number): Promise<RenderTask | undefined> => {
-      const canvas = canvasRef.current
-      if (!canvas) return undefined
-      const pdfPage = await target.getPage(pageNumber)
-      const base = pdfPage.getViewport({ scale: 1 })
-      const available = frameRef.current?.clientWidth ?? base.width
-      const scale = Math.min(MAX_SCALE, Math.max(0.25, available / base.width))
-      const viewport = pdfPage.getViewport({ scale })
-      const ratio = window.devicePixelRatio || 1
-      canvas.width = Math.floor(viewport.width * ratio)
-      canvas.height = Math.floor(viewport.height * ratio)
-      canvas.style.width = `${Math.floor(viewport.width)}px`
-      canvas.style.height = `${Math.floor(viewport.height)}px`
-      if (!canvas.getContext('2d')) return undefined
-      return pdfPage.render({
-        canvas,
-        viewport,
-        transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
-      })
-    },
-    [],
-  )
+  // One width source. The old viewer measured the frame once, so a resize or an
+  // orientation change left a bitmap wider than the frame forever (the reported
+  // mobile crop) - this is the fix for that class.
+  useEffect(() => {
+    const frame = frameRef.current
+    if (!frame) return
+    const measure = () => setContainerWidth(frame.clientWidth)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(frame)
+    return () => observer.disconnect()
+  }, [material])
+
+  const measureScroll = useCallback(() => {
+    const frame = frameRef.current
+    // No width yet means the slots are still at their natural size; measuring
+    // then would render the wrong window (page heights change with the width).
+    if (!frame || !numPages || !containerWidth) return
+    const frameTop = frame.getBoundingClientRect().top
+    const rects: SlotRect[] = []
+    for (const [pageNumber, slot] of slotRefs.current) {
+      const rect = slot.getBoundingClientRect()
+      rects.push({ page: pageNumber, top: rect.top - frameTop, bottom: rect.bottom - frameTop })
+    }
+    rects.sort((a, b) => a.page - b.page)
+    const inWindow = pagesInWindow(rects, 0, frame.clientHeight)
+    setRendered((previous) => (samePages(previous, inWindow) ? previous : inWindow))
+    setPage((previous) => {
+      const next = pageAtTop(rects, 0, numPages)
+      return next === previous ? previous : next
+    })
+  }, [containerWidth, numPages])
 
   useEffect(() => {
-    if (!doc) return
+    const frame = frameRef.current
+    if (!frame) return
+    let queued = false
+    const onScroll = () => {
+      if (queued) return
+      queued = true
+      window.requestAnimationFrame(() => {
+        queued = false
+        measureScroll()
+      })
+    }
+    frame.addEventListener('scroll', onScroll, { passive: true })
+    measureScroll()
+    return () => frame.removeEventListener('scroll', onScroll)
+  }, [measureScroll])
+
+  /** The page and chapter controls jump the scroll; they do not page the scroll. */
+  const goToPage = useCallback(
+    (target: number) => {
+      const frame = frameRef.current
+      const slot = slotRefs.current.get(target)
+      setPage(target)
+      if (!frame || !slot) return
+      frame.scrollTop += slot.getBoundingClientRect().top - frame.getBoundingClientRect().top
+      measureScroll()
+    },
+    [measureScroll],
+  )
+
+  // Rasterise the slots in the window, one render at a time.
+  //
+  // pdf.js refuses a second render on a canvas that is still drawing, and a
+  // render that is cancelled mid-flight can leave its canvas blank for good, so
+  // every render goes through one serial chain and is never cancelled: a
+  // superseded run finishes the page it is on and stops, and the run that
+  // replaced it re-renders at the new raster. The second run's body only starts
+  // once the first has returned, which is what makes the canvas hand-off safe.
+  useEffect(() => {
+    if (!doc || !base || !containerWidth) return
+    const scale = displayScale(containerWidth, base.width, zoom)
+    const ratio = rasterScale(scale, window.devicePixelRatio || 1) / scale
     let cancelled = false
-    let task: RenderTask | null = null
-    void renderPage(doc, page)
-      .then((started) => {
-        if (cancelled) {
-          started?.cancel()
-          return undefined
+    chainRef.current = chainRef.current
+      .then(async () => {
+        for (const pageNumber of rendered) {
+          if (cancelled) return
+          const canvas = canvasRefs.current.get(pageNumber)
+          if (!canvas) continue
+          const pdfPage = await doc.getPage(pageNumber)
+          if (cancelled) return
+          const viewport = pdfPage.getViewport({ scale })
+          const width = Math.floor(viewport.width * ratio)
+          if (drawnRef.current.get(pageNumber) === width) continue
+          canvas.width = width
+          canvas.height = Math.floor(viewport.height * ratio)
+          canvas.style.width = `${Math.floor(viewport.width)}px`
+          canvas.style.height = `${Math.floor(viewport.height)}px`
+          if (!canvas.getContext('2d')) continue
+          await pdfPage
+            .render({
+              canvas,
+              viewport,
+              transform: ratio === 1 ? undefined : [ratio, 0, 0, ratio, 0, 0],
+            })
+            .promise.then(
+              () => drawnRef.current.set(pageNumber, width),
+              () => undefined,
+            )
         }
-        task = started ?? null
-        return task?.promise
       })
-      .catch((err) => {
-        if (cancelled || (err instanceof Error && err.name === 'RenderingCancelledException')) {
-          return
-        }
-        setError(err instanceof Error ? err.message : 'Could not render this page')
-      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
-      task?.cancel()
     }
-  }, [doc, page, renderPage])
+  }, [base, containerWidth, doc, rendered, zoom])
 
   if (!materialId) return null
 
@@ -178,6 +264,9 @@ export function PdfViewer() {
   const selectable = rangeStart !== null && rangeEnd !== null
   const scopeStart = selectable ? Math.min(rangeStart, rangeEnd) : 0
   const scopeEnd = selectable ? Math.max(rangeStart, rangeEnd) : 0
+  const scale = base ? displayScale(containerWidth, base.width, zoom) : 0
+  const slotWidth = base ? Math.floor(base.width * scale) : 0
+  const pageNumbers = base ? Array.from({ length: numPages }, (_, index) => index + 1) : []
 
   return (
     <div className="materials-page">
@@ -196,22 +285,6 @@ export function PdfViewer() {
       </p>
 
       <div className="pdf-toolbar">
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => setPage((current) => clampPage(current - 1, numPages))}
-          disabled={!doc || page <= 1}
-        >
-          ← Previous
-        </button>
-        <button
-          type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={() => setPage((current) => clampPage(current + 1, numPages))}
-          disabled={!doc || page >= numPages}
-        >
-          Next →
-        </button>
         <label className="pdf-field">
           <span className="mono-caps">Page</span>
           <input
@@ -222,7 +295,7 @@ export function PdfViewer() {
             max={numPages || undefined}
             value={numPages ? page : ''}
             disabled={!doc}
-            onChange={(event) => setPage(clampPage(Number(event.target.value), numPages))}
+            onChange={(event) => goToPage(clampPage(Number(event.target.value), numPages))}
           />
         </label>
         <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
@@ -237,7 +310,7 @@ export function PdfViewer() {
               value=""
               onChange={(event) => {
                 const entry = outlineEntries[Number(event.target.value)]
-                if (entry) setPage(clampPage(entry.page, numPages))
+                if (entry) goToPage(clampPage(entry.page, numPages))
               }}
             >
               <option value="">Jump to…</option>
@@ -249,6 +322,20 @@ export function PdfViewer() {
             </select>
           </label>
         )}
+        <div className="pdf-zoom" role="group" aria-label="Zoom">
+          {ZOOM_LEVELS.map((level) => (
+            <button
+              key={level}
+              type="button"
+              className={`btn btn-sm ${level === zoom ? 'btn-secondary' : 'btn-ghost'}`}
+              aria-pressed={level === zoom}
+              disabled={!doc}
+              onClick={() => setZoom(level)}
+            >
+              {level === 1 ? 'Fit' : `${level}×`}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="pdf-scope-bar">
@@ -320,14 +407,36 @@ export function PdfViewer() {
             <div className="banner-title">Could not open the viewer</div>
             <div className="banner-desc">{error}</div>
           </div>
-          <Link className="banner-action-btn" to={`/materials/${material.id}`}>
-            Back to material
-          </Link>
         </div>
       )}
 
-      <div className="pdf-frame" ref={frameRef}>
-        <canvas ref={canvasRef} className="pdf-canvas" aria-label={`Rendered page ${page}`} />
+      <div className={`pdf-frame${zoom === 1 ? ' pdf-fit' : ''}`} ref={frameRef}>
+        {pageNumbers.map((pageNumber) => (
+          <div
+            key={pageNumber}
+            className="pdf-page"
+            data-page={pageNumber}
+            ref={(element) => {
+              if (element) slotRefs.current.set(pageNumber, element)
+              else slotRefs.current.delete(pageNumber)
+            }}
+            style={{
+              width: slotWidth ? `${slotWidth}px` : undefined,
+              aspectRatio: base ? `${base.width} / ${base.height}` : undefined,
+            }}
+          >
+            {rendered.includes(pageNumber) && (
+              <canvas
+                ref={(element) => {
+                  if (element) canvasRefs.current.set(pageNumber, element)
+                  else canvasRefs.current.delete(pageNumber)
+                }}
+                className="pdf-canvas"
+                aria-label={`Rendered page ${pageNumber}`}
+              />
+            )}
+          </div>
+        ))}
         {!doc && !error && (
           <p className="t-body-sm" style={{ color: 'var(--text-tertiary)', padding: '1rem' }}>
             Opening the document…
