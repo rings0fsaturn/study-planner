@@ -459,6 +459,10 @@ describe('MaterialClient', () => {
       from: vi.fn((bucket: string) => ({
         createSignedUrl: vi.fn(async (path: string, expiresIn: number) => {
           signs.push({ bucket, path, expiresIn })
+          // No ingestion viewer copy exists for this material.
+          if (path.includes('/view-')) {
+            return { data: null, error: { message: 'Object not found', code: '404' } }
+          }
           return { data: { signedUrl: 'https://example.test/storage/v1/object/sign/x' }, error: null }
         }),
       })),
@@ -470,16 +474,46 @@ describe('MaterialClient', () => {
       id: 'mat-1',
       ownerId: 'user-a',
       source: 'sample-textbook-572page.pdf',
+      contentVersion: 'cv-1',
     })
 
     expect(url).toBe('https://example.test/storage/v1/object/sign/x')
     expect(signs).toEqual([
       {
         bucket: 'material-raw',
+        path: 'user-a/mat-1/view-cv-1.pdf',
+        expiresIn: 600,
+      },
+      {
+        bucket: 'material-raw',
         path: 'user-a/mat-1/sample-textbook-572page.pdf',
         expiresIn: 600,
       },
     ])
+  })
+
+  it('prefers the ingestion viewer copy for a PDF the viewer could not open', async () => {
+    const { db } = fakeDb()
+    const signs: string[] = []
+    const storage = {
+      from: vi.fn(() => ({
+        createSignedUrl: vi.fn(async (path: string) => {
+          signs.push(path)
+          return { data: { signedUrl: `https://example.test/${path}` }, error: null }
+        }),
+      })),
+    } as unknown as MaterialStorageLike
+
+    const client = new MaterialClient(db, storage)
+    const url = await client.getMaterialFileUrl({
+      id: 'mat-1',
+      ownerId: 'user-a',
+      source: 'grokking-algorithms.pdf',
+      contentVersion: 'cv-2',
+    })
+
+    expect(url).toBe('https://example.test/user-a/mat-1/view-cv-2.pdf')
+    expect(signs).toEqual(['user-a/mat-1/view-cv-2.pdf'])
   })
 
   it('reports a missing stored file instead of handing over an empty URL', async () => {
@@ -492,7 +526,7 @@ describe('MaterialClient', () => {
 
     const client = new MaterialClient(db, storage)
     await expect(
-      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf' }),
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
     ).rejects.toMatchObject({ code: 'not_found' })
   })
 
@@ -500,7 +534,7 @@ describe('MaterialClient', () => {
     const { db } = fakeDb()
     const client = new MaterialClient(db)
     await expect(
-      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf' }),
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
     ).rejects.toMatchObject({ code: 'unknown' })
   })
 
@@ -517,7 +551,7 @@ describe('MaterialClient', () => {
 
     const client = new MaterialClient(db, storage)
     await expect(
-      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf' }),
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
     ).rejects.toMatchObject({ code: 'not_found' })
   })
 

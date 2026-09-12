@@ -356,6 +356,16 @@ class IngestionWorker:
         )
         fulltext_path = f"{material.owner_id}/{material.id}/fulltext.txt"
         self.storage.upload(fulltext_path, content.text.encode("utf-8"), "text/plain")
+        if content.viewer_pdf is not None:
+            # Only PDFs whose page tree repeats a page object get one: pdf.js
+            # refuses those the same way pypdf did, so the viewer needs a tree
+            # without the repeats. Keyed by content version, so replacing the
+            # file never leaves the viewer on the previous copy.
+            self.storage.upload(
+                f"{material.owner_id}/{material.id}/view-{material.content_version}.pdf",
+                content.viewer_pdf,
+                "application/pdf",
+            )
         self._emit_telemetry(
             [
                 TelemetryRecord(

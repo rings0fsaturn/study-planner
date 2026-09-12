@@ -385,12 +385,39 @@ def test_pypdf_reader_parses_minimal_pdf() -> None:
     assert "Hello from a minimal PDF." in text
 
 
-def make_pdf(body: bytes) -> bytes:
+def test_pypdf_reader_tolerates_a_repeated_page_reference() -> None:
+    # A /Kids array may list the same page object twice; pypdf reports that as
+    # a cyclic page reference and refuses the document. Deduping it reads the
+    # page once instead of failing the whole material.
+    data = make_pdf(b"Repeated page.", kids=b"[3 0 R 3 0 R 3 0 R]", count=3)
+    assert PypdfTextReader().extract(data) == ["Repeated page."]
+
+
+def test_pypdf_reader_writes_a_viewer_copy_only_when_the_tree_had_repeats() -> None:
+    # pdf.js refuses the same documents ("Pages tree contains circular
+    # reference.") and truncates them to the pages before the repeat, so a
+    # repaired copy has to exist for the viewer; a clean file needs none.
+    reader = PypdfTextReader()
+    assert reader.normalize(make_pdf(b"Clean page.")) is None
+
+    repaired = reader.normalize(make_pdf(b"Repeated page.", kids=b"[3 0 R 3 0 R 3 0 R]", count=3))
+    assert repaired is not None
+    assert reader.extract(repaired) == ["Repeated page."]
+
+
+def test_pypdf_reader_terminates_on_a_self_referencing_page_tree() -> None:
+    # A real cycle must not recurse forever: the self-reference is pruned and
+    # what remains has no pages, which is a terminal "no extractable text".
+    data = make_pdf(b"Cyclic.", kids=b"[2 0 R]", count=1)
+    assert PypdfTextReader().extract(data) == []
+
+
+def make_pdf(body: bytes, kids: bytes = b"[3 0 R]", count: int = 1) -> bytes:
     """Build a minimal single-page PDF with extractable text (valid xref)."""
     content = b"BT /F1 12 Tf 72 720 Td (" + body + b") Tj ET"
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Pages /Kids " + kids + b" /Count " + str(count).encode() + b" >>",
         (
             b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
             b"/Resources << /Font << /F1 5 0 R >> >> >>"

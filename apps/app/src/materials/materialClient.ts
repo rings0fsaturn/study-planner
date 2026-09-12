@@ -177,7 +177,9 @@ export interface MaterialClientLike {
   restoreMaterial(id: string): Promise<void>
   replaceMaterial(id: string, input: MaterialReplaceInput): Promise<void>
   retryIngestion(id: string): Promise<void>
-  getMaterialFileUrl(material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>): Promise<string>
+  getMaterialFileUrl(
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source' | 'contentVersion'>,
+  ): Promise<string>
   uploadMaterialFile(id: string, file: File): Promise<void>
   completeUpload(id: string): Promise<void>
   markUploadFailed(id: string, message: string): Promise<void>
@@ -328,18 +330,33 @@ export class MaterialClient implements MaterialClientLike {
    * file is private (`material-raw/<uid>/<materialId>/<fileName>`, owner-read
    * RLS), so the viewer range-fetches through this URL instead of pulling the
    * whole 22.9 MB book into the page.
+   *
+   * Ingestion also writes `view-<contentVersion>.pdf` next to it for the PDFs
+   * pdf.js cannot open (a page tree that repeats a page object). That copy is
+   * preferred when present; the content version in its name means replacing
+   * the file can never serve the previous revision's copy.
    */
   getMaterialFileUrl(
-    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>,
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source' | 'contentVersion'>,
   ): Promise<string> {
     return this.run(async () => {
       if (!this.storage) {
         throw new MaterialServiceError('unknown', 'material storage is not configured')
       }
-      const path = `${material.ownerId}/${material.id}/${material.source}`
-      const { data, error } = await this.storage
-        .from('material-raw')
-        .createSignedUrl(path, SIGNED_URL_TTL_SECONDS)
+      const bucket = this.storage.from('material-raw')
+      const base = `${material.ownerId}/${material.id}`
+      if (material.contentVersion) {
+        const viewer = await bucket.createSignedUrl(
+          `${base}/view-${material.contentVersion}.pdf`,
+          SIGNED_URL_TTL_SECONDS,
+        )
+        const viewerSigned = viewer.error ? null : viewer.data?.signedUrl
+        if (viewerSigned) return viewerSigned
+      }
+      const { data, error } = await bucket.createSignedUrl(
+        `${base}/${material.source}`,
+        SIGNED_URL_TTL_SECONDS,
+      )
       if (error) throw normalizeMaterialError(error)
       const signed = data?.signedUrl
       if (!signed) {

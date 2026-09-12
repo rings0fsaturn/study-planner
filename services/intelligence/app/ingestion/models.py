@@ -102,6 +102,9 @@ class ExtractedContent:
     # Top-level PDF bookmarks as (title, 1-based PDF page); empty when the
     # source is not a PDF or carries no bookmark tree.
     bookmarks: tuple[tuple[str, int], ...] = ()
+    # Rewritten PDF for the browser viewer, set only when the uploaded file
+    # needed repair for a viewer to open it (a page tree with repeated kids).
+    viewer_pdf: bytes | None = None
 
     def preview(self, limit: int = 4000) -> str:
         if len(self.text) <= limit:

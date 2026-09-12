@@ -105,7 +105,7 @@ export class FakeMaterialClient {
   fileUrl: string = 'https://example.test/signed.pdf'
 
   async getMaterialFileUrl(
-    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source'>,
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source' | 'contentVersion'>,
   ): Promise<string> {
     this.fileUrlCalls.push(`${material.ownerId}/${material.id}/${material.source}`)
     return this.fileUrl

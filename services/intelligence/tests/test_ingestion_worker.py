@@ -135,6 +135,43 @@ def test_text_material_reaches_ready_atomically() -> None:
     assert not queue.queues.get(PUBLISH_QUEUE)
 
 
+class ViewerPdfReader(FakePdfReader):
+    """Fake reader that can also hand back a repaired viewer copy."""
+
+    def __init__(self, viewer: bytes | None) -> None:
+        super().__init__(["page one"])
+        self.viewer = viewer
+
+    def normalize(self, data: bytes) -> bytes | None:
+        return self.viewer
+
+
+def test_stores_a_viewer_copy_only_when_the_pdf_needed_repair() -> None:
+    # pdf.js cannot open a page tree with a repeated kid, so a repaired copy is
+    # stored for the viewer; a PDF that needed no repair stores none.
+    storage = InMemoryStorage()
+    worker, repo, queue, storage = make_worker(
+        storage=storage, pdf_reader=ViewerPdfReader(b"%PDF-1.4 repaired")
+    )
+    material = make_material(kind="file", source="book.pdf")
+    storage.objects["user-1/mat-1/book.pdf"] = b"%PDF-1.4 uploaded"
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert storage.objects["user-1/mat-1/view-v1.pdf"] == b"%PDF-1.4 repaired"
+
+    storage = InMemoryStorage()
+    worker, repo, queue, storage = make_worker(
+        storage=storage, pdf_reader=ViewerPdfReader(None)
+    )
+    material = make_material(kind="file", source="book.pdf")
+    storage.objects["user-1/mat-1/book.pdf"] = b"%PDF-1.4 uploaded"
+    seed_and_enqueue(repo, queue, material)
+    run_pipeline(worker, queue)
+
+    assert "user-1/mat-1/view-v1.pdf" not in storage.objects
+
+
 def test_max_in_flight_bounds_messages_processed_per_cycle() -> None:
     worker, repo, queue, _ = make_worker(max_in_flight=1)
     job_ids = []

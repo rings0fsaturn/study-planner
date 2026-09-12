@@ -111,9 +111,34 @@ class PypdfTextReader:
 
         try:
             reader = PdfReader(io.BytesIO(data))
+            _prune_repeated_kids(reader)
             return [page.extract_text() or "" for page in reader.pages]
         except Exception as exc:
             raise IngestionError("validation_failed", "PDF could not be read") from exc
+
+    def normalize(self, data: bytes) -> bytes | None:
+        """Rewritten PDF for the browser viewer, or None when nothing needed it.
+
+        pdf.js aborts the very same repeated-`/Kids` documents ("Pages tree
+        contains circular reference.") and silently truncates them to the
+        pages before the repeat, so a PDF whose tree had repeats to prune needs
+        a clean copy for the viewer. Re-serializing the pruned tree gives both
+        engines the same page list, in the same order, as this reader.
+        """
+        import io
+
+        from pypdf import PdfReader, PdfWriter
+
+        try:
+            reader = PdfReader(io.BytesIO(data))
+            if _prune_repeated_kids(reader) == 0:
+                return None
+            out = io.BytesIO()
+            PdfWriter(clone_from=reader).write(out)
+            return out.getvalue()
+        except Exception:
+            logger.warning("PDF viewer copy could not be written", exc_info=True)
+            return None
 
     def bookmarks(self, data: bytes) -> tuple[tuple[str, int], ...]:
         """Top-level bookmark titles with their 1-based PDF page.
@@ -127,10 +152,67 @@ class PypdfTextReader:
 
         try:
             reader = PdfReader(io.BytesIO(data))
+            _prune_repeated_kids(reader)
             return _bookmark_entries(reader)
         except Exception:
             logger.warning("PDF bookmarks could not be read", exc_info=True)
             return ()
+
+
+def _prune_repeated_kids(reader) -> int:
+    """Drop page-tree `/Kids` entries that repeat an object already reached.
+
+    Returns how many entries were dropped (0 for a well-formed tree). A
+    `/Kids` array may legally list the same page object more than once, but
+    pypdf treats the second visit as a cyclic page reference and aborts the
+    whole document ("Detected cyclic page references"), failing a PDF that is
+    perfectly readable. Removing the repeats hands pypdf an acyclic tree (and
+    bounds its recursion, which is what that guard is for); well-formed files
+    are untouched because every object is already unique. A repeated page
+    carries no extra text, so deduping it loses nothing. `/Count` is resynced
+    from the surviving kids so the tree stays self-consistent for readers that
+    pre-validate it.
+    """
+    from pypdf.generic import NameObject, NumberObject
+
+    root = reader.trailer["/Root"]["/Pages"]
+    root_node = root.get_object() if hasattr(root, "get_object") else root
+    visited = {getattr(root, "idnum", None) or id(root_node)}
+    dropped = 0
+
+    def walk(node) -> int:
+        """Pages under `node`, after dropping repeated kids."""
+        nonlocal dropped
+        kids = node.get("/Kids")
+        if kids is None:
+            return 1
+        pages = 0
+        for kid in list(kids):
+            obj = kid.get_object() if hasattr(kid, "get_object") else kid
+            key = getattr(kid, "idnum", None) or id(kid)
+            if key in visited:
+                kids.remove(kid)
+                dropped += 1
+                continue
+            visited.add(key)
+            pages += walk(obj)
+        node[NameObject("/Count")] = NumberObject(pages)
+        return pages
+
+    walk(root_node)
+    return dropped
+
+
+def _viewer_pdf(pdf_reader: PdfTextReader, raw: bytes) -> bytes | None:
+    """Optional reader capability: a viewer-side copy when the file needs one."""
+    normalize = getattr(pdf_reader, "normalize", None)
+    if normalize is None:
+        return None
+    try:
+        return normalize(raw)
+    except Exception:
+        logger.warning("viewer copy write failed", exc_info=True)
+        return None
 
 
 def _bookmark_entries(reader) -> tuple[tuple[str, int], ...]:
@@ -250,6 +332,7 @@ def extract_material(
             segments=_page_segments(pages),
             pages=tuple(pages),
             bookmarks=_bookmarks(pdf_reader, raw),
+            viewer_pdf=_viewer_pdf(pdf_reader, raw),
         )
 
     if kind == "youtube":
