@@ -22,6 +22,12 @@ Gate one scenario with `test.skip()` only inside a `test.describe()` that owns t
 Check skip reasons in `--reporter=json` output (annotations) before assuming env variables were lost.
 Workers inherit the shell environment: if a spec skips with vars exported, the reason is in the annotations, not the env.
 
+## Viewport scoping
+
+`test.use({ viewport })` at file scope applies to every test in the file, including tests declared before it.
+Put the phone viewport inside the `test.describe()` that needs it, or the desktop scenarios run at mobile width without saying so.
+Make a desktop scenario assert one thing that is only true at desktop width, so a leaked viewport fails the run instead of passing quietly.
+
 ## Assert what the UI actually renders
 
 Ready material cards intentionally hide the status badge and show a `Practice this` button instead.
