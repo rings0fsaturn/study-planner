@@ -10,6 +10,8 @@ interface AddSessionSheetProps {
   capMinutes?: number
   onClose: () => void
   onCreate: (draft: { date: string; estimatedDuration: number; materialId?: string }) => void
+  /** Leave for the roadmap's attach picker when this roadmap has no materials yet. */
+  onRequestAddMaterial?: () => void
 }
 
 function formatMinutes(minutes: number): string {
@@ -34,6 +36,7 @@ export function AddSessionSheet({
   capMinutes,
   onClose,
   onCreate,
+  onRequestAddMaterial,
 }: AddSessionSheetProps) {
   const [duration, setDuration] = useState(60)
   const [materialId, setMaterialId] = useState<string | null>(null)
@@ -128,6 +131,7 @@ export function AddSessionSheet({
         materials={materials}
         selectedMaterialId={materialId}
         onCancel={() => setPickerOpen(false)}
+        onRequestAddMaterial={onRequestAddMaterial}
         onSelect={(nextMaterialId) => {
           setMaterialId(nextMaterialId)
           setPickerOpen(false)

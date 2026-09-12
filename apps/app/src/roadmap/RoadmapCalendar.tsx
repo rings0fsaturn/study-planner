@@ -429,6 +429,15 @@ export function RoadmapCalendar({
       materialId: material.materialId,
     })
   }
+  // The booking sheets only ever see the roadmap's own materials, so on an empty
+  // roadmap they hand the learner straight to the attach picker instead of a
+  // picker with nothing in it (D-10).
+  const handleRequestAddMaterial = () => {
+    if (!selectedRoadmap || readOnly) return
+    setSelectedBooking(null)
+    setAddSessionDate(null)
+    setAddMaterialOpen(true)
+  }
 
   return (
     <div className="roadmap-page">
@@ -716,6 +725,7 @@ export function RoadmapCalendar({
         onClose={() => setSelectedBooking(null)}
         onSave={(bubble, draft) => void handleSaveBooking(bubble, draft)}
         onRemove={(bubble) => void handleRemoveBooking(bubble)}
+        onRequestAddMaterial={handleRequestAddMaterial}
       />
       <AddSessionSheet
         date={addSessionDate}
@@ -723,6 +733,7 @@ export function RoadmapCalendar({
         capMinutes={todayCapMinutes}
         onClose={() => setAddSessionDate(null)}
         onCreate={(draft) => void handleCreateBooking(draft)}
+        onRequestAddMaterial={handleRequestAddMaterial}
       />
       <MaterialProgressSheet
         material={progressMaterial}

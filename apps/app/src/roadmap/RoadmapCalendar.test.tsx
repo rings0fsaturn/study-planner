@@ -517,4 +517,63 @@ describe('RoadmapCalendar booking interactions', () => {
       }),
     ).not.toBeInTheDocument()
   })
+
+  it('reaches the roadmap attach picker from the add-session sheet when the roadmap has no materials', async () => {
+    mockState.events = [
+      event('RoadmapCreated', roadmapPayload({ materialIds: [] }), '2026-05-01T09:00:00.000Z'),
+    ]
+    const client = new FakeMaterialClient([materialRecord({ id: 'mat-lib', title: 'Raft paper' })])
+    renderCalendar(false, client)
+
+    fireEvent.click(screen.getAllByRole('button', { name: '+ add session' })[0])
+    fireEvent.click(screen.getByRole('button', { name: /Attach/ }))
+
+    const picker = screen.getByRole('dialog', { name: 'Choose material' })
+    expect(within(picker).getByText('No material · pick at start')).toBeInTheDocument()
+
+    fireEvent.click(
+      within(picker).getByRole('button', { name: 'Add a material to this roadmap' }),
+    )
+
+    expect(screen.queryByRole('dialog', { name: 'Add session' })).not.toBeInTheDocument()
+    const attachPicker = await screen.findByRole('dialog', {
+      name: /Choose materials for planning/i,
+    })
+    expect(within(attachPicker).getByText('Raft paper')).toBeInTheDocument()
+  })
+
+  it('opens the attach picker from a booking that has no material', async () => {
+    mockState.events = [
+      event(
+        'RoadmapCreated',
+        roadmapPayload({ materialIds: [] }),
+        '2026-05-01T09:00:00.000Z',
+      ),
+      event(
+        'SessionBooked',
+        {
+          roadmapCreatedAt: '2026-05-01T09:00:00.000Z',
+          bookingId: 'booking-blank',
+          date: '2099-06-10',
+          estimatedDuration: 45,
+        },
+        '2026-05-01T09:01:00.000Z',
+      ),
+    ]
+    const client = new FakeMaterialClient([materialRecord({ id: 'mat-lib', title: 'Raft paper' })])
+    renderCalendar(false, client)
+
+    fireEvent.click(screen.getByRole('button', { name: /Session · pick at start/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Change material' }))
+    fireEvent.click(
+      within(screen.getByRole('dialog', { name: 'Choose material' })).getByRole('button', {
+        name: 'Add a material to this roadmap',
+      }),
+    )
+
+    expect(screen.queryByRole('dialog', { name: 'Edit booking' })).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole('dialog', { name: /Choose materials for planning/i }),
+    ).toBeInTheDocument()
+  })
 })

@@ -10,6 +10,12 @@ interface MaterialPickerSheetProps {
   onCancel: () => void
   /** null = detach ("No material · pick at start"). */
   onSelect: (materialId: string | null) => void
+  /**
+   * Supplied by the caller that owns the roadmap's attach flow. When the roadmap
+   * has no materials at all, a session cannot attach anything, so the sheet
+   * offers this way out instead of dead-ending (D-10).
+   */
+  onRequestAddMaterial?: () => void
 }
 
 /**
@@ -24,6 +30,7 @@ export function MaterialPickerSheet({
   selectedMaterialId,
   onCancel,
   onSelect,
+  onRequestAddMaterial,
 }: MaterialPickerSheetProps) {
   const [choice, setChoice] = useState<string | null>(selectedMaterialId)
 
@@ -49,6 +56,15 @@ export function MaterialPickerSheet({
         </div>
 
         <div className="chooser">
+          {materials.length === 0 && onRequestAddMaterial && (
+            <button type="button" className="chooser-row chooser-add" onClick={onRequestAddMaterial}>
+              <span className="chooser-icon" aria-hidden="true">+</span>
+              <span className="body">
+                <span className="ttl">Add a material to this roadmap</span>
+              </span>
+            </button>
+          )}
+
           <button
             type="button"
             className={`chooser-row${choice === null ? ' sel' : ''}`}

@@ -2,7 +2,7 @@
 
 **Date written:** 2026-09-12 · **Ticket:** [#63](https://github.com/rings0fsaturn/study-planner/issues/63) (filed and claimed 2026-09-12) · **Parent:** spec #32 · wayfinder map #4
 **Branch:** `phase2/issue-63-roadmap-material-attach` · **Worktree:** `/mnt/d/study/git/study-planner-web-issue-63` (cut off `2091d8e`, the post-#62 tip)
-**Plan status:** 🟡 P0–P3 done and live-verified at 1280 (P1's 375 attach and OQ-07's mobile check deferred). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
+**Plan status:** 🟡 P0–P4 done; P4's live E2E spec is green at 1280 and 375, which closes the P1 375 attach, OQ-07's phone check and AC6's booked-bubble leg. P5 (material-detail usage) remains. OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
 **Trigger:** user report (2026-09-12) — "within roadmap page, I don't see an option to add materials that are present within the materials [library]; also I don't see the materials of a roadmap listed under materials tab", followed by the concrete ask: a "+" in the roadmap's Materials panel that opens a material picker, and an Attach + in New session that lists this roadmap's materials.
 
 > Runbook convention inherited from the #38/#39/#40/#41/#62 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -540,7 +540,7 @@ Revert; existing `MaterialDetached` rows become inert (the reader falls back to 
 
 ## Phase 4: The session surfaces never dead-end, and the flow is live-verified
 
-**Status:** ☐ Not started
+**Status:** ✅ Done 2026-09-12 (unit + live E2E at 1280 and 375; closes the P1 375 attach, OQ-07 and AC6's booked-bubble leg)
 **Depends on:** Phase 1 (Phases 2–3 optional for the E2E's core path)
 **Estimated scope:** ~4 files, ~80 lines + 1 e2e spec
 
@@ -561,7 +561,21 @@ Plus a hands-on desktop (1280) + mobile (375) pass of the three surfaces, with t
 Revert; P1–P3 stand alone.
 
 ### Notes (filled in during implementation)
-*(empty)*
+
+**2026-09-12 — implemented, unit-verified and live-verified (1280 + 375).**
+
+- `MaterialPickerSheet` gained an optional `onRequestAddMaterial`; when the roadmap has no materials at all it renders a first-class `Add a material to this roadmap` row above `No material · pick at start` (`.chooser-row.chooser-add`, dashed border in `session.css`). `AddSessionSheet` and `BookingEditorSheet` pass the prop straight through; `RoadmapCalendar.handleRequestAddMaterial` closes whichever sheet is open and opens the "+" picker, so the two-step trip out of a dead-end sheet is one click.
+- `e2e/roadmap-material-attach-live.spec.ts` (new) runs the whole story twice on the real stack with `--workers=1`: desktop 1280 (attach at 90 minutes as `practice` -> directory row `0m of 1h 30m` -> New session -> Attach lists it -> book a session on it -> detach from the row badge -> the booked bubble keeps its title -> the throwaway booking is removed) and phone 375 (the same attach, measuring the per-row plan controls). Both scenarios undo their own writes; the account is left as found.
+
+**OQ-07 resolved — the per-row controls stay.** Measured at 375: the minutes field and the role select are 158 px each inside a 375 px sheet, with the longest role label (`Foundations`) fully visible, the labels legible, and no horizontal overflow (`sheet.scrollWidth === sheet.clientWidth`); at 1280 they are 196 px each. Screenshot evidence: `research/2026-09-12-p4-oq07-375.png`. D-06's batch-role fallback is not needed.
+
+**Deferrals closed:** the fresh 375 attach (P1) is now the phone scenario's real attach; AC6's booked-bubble leg is the desktop scenario's detach-after-booking step.
+
+**Deviation:** the plan's "book a session -> the directory's consumed minutes move" leg is not true and was replaced by an assertion on the attach-time budget (`of 1h 30m`). `buildMaterialLedger` counts **logged** sessions and progress marks only (`packages/progress/src/materialLedger.ts:49-90`); a booking moves nothing, so proving consume-through-booking would have needed a logged session, which means real study history on the shared account. The attach-time budget is the honest live equivalent.
+
+**Not exercised live:** the AC3 empty-state CTA itself. Every roadmap on the dev account already has materials, so reaching the CTA would mean seeding an empty roadmap and leaving an abandoned one behind; the CTA and its wiring are covered red-first in `MaterialPickerSheet.test.tsx` (three cases) and `RoadmapCalendar.test.tsx` ("reaches the roadmap attach picker from the add-session sheet when the roadmap has no materials", "opens the attach picker from a booking that has no material").
+
+**Verified:** `pnpm --filter app typecheck` clean · `pnpm --filter app lint` clean · app suite 818/820 (the two failures are the documented WSL TZ pair in `dev/seedTestData.test.ts`); `MaterialPickerSheet.test.tsx` 7/7 (+3) and `RoadmapCalendar.test.tsx` 18/18 (+2), all red-first · `pnpm exec playwright test -c e2e/playwright.config.ts e2e/roadmap-material-attach-live.spec.ts --project=app --workers=1` **2 passed** with zero page errors.
 
 ---
 
