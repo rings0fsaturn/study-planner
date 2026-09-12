@@ -1,18 +1,19 @@
 # State – roadmap-material-attach
 
-_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: P1 done (unit + live at 1280); P2 next · Updated: 2026-09-12_
+_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: P1 + P2 done; P3 next · Updated: 2026-09-12_
 
 ## Current state & next
 
 - **#63 filed + claimed 2026-09-12**; branch `phase2/issue-63-roadmap-material-attach` cut off `2091d8e` in a fresh worktree (`/mnt/d/study/git/study-planner-web-issue-63`). Phase 0 done.
 - **P1 done and live-verified.** One shared reader (`roadmapMaterialPayloads` + `materialTitleIndex` in `progress/mapEvents.ts`) replaces the three duplicated id→payload joins; a library material attaches to a roadmap through the directory "+" and then behaves like any other roadmap material. `typecheck`/`lint` clean, app suite 800/802 (the 2 = the documented WSL TZ pair). Live at 1280: header `1 MATERIALS` -> `2 MATERIALS`, directory row, New session -> Attach, session setup `Foundations`, zero page errors. AC1/AC3/AC4/AC7 ticked with their caveats.
 - **The dev stack now runs from this worktree** (the main checkout's stack was stopped first; its gitignored env files were copied over). `./full-app status full` in the worktree shows app 5173 + intelligence 8000 healthy.
-- **The shared dev account carries 3 attached library materials** from the live runs; nothing can remove them until P3. The fresh 375 attach is deferred for the same reason.
-- Five phases: P1 attach + shared reader (done), P2 minutes + role at attach time, P3 detach, P4 session surfaces + live E2E, P5 library usage.
-- Next: P2.
+- **The shared dev account carries 4 attached library materials and one plain-text material** (`E2E P2 attach ...`) from the live runs; nothing can remove an attach until P3. The fresh 375 attach is deferred for the same reason, so **OQ-07 (per-row controls vs one batch role at 375) is still unmeasured** and waits on the hands-on pass.
+- Five phases: P1 attach + shared reader (done), P2 minutes + role at attach time (done), P3 detach, P4 session surfaces + live E2E, P5 library usage.
+- Next: P3.
 
 ## Done so far
 
+- 2026-09-12 (session b, P2): **minutes + role are chosen at attach time.** `MaterialPicker` gained `withPlan`, seeding a minutes field (`estimatedMinutes ?? 60`) and a role select (`ROLE_TO_LABEL`) per selected row and handing the plan back keyed by selected ids; the controls sit in a `.checkbox-entry` wrapper beside the row label, because a control nested inside the label would also toggle the checkbox. `RoadmapCalendar` passes `withPlan`. Live at 1280: attached at 90 minutes as `practice` -> directory row `0m of 1h 30m` and session setup `Practice`. AC2 ticked. Deviation: the planned `defaultMinutes` prop was dropped (the caller has no library rows to build it from). **OQ-07 unmeasured** — the picker had no rows at 375.
 - 2026-09-12 (session b, live pass): **P1 live-verified at 1280** on a stack started from this worktree — the directory "+" attached a real library material and the header moved `1 MATERIALS` -> `2 MATERIALS`, the directory row appeared, New session -> Attach listed it and session setup showed it as `Foundations`, with no page errors. The 375 leg opened the picker and honoured `excludeIds` but had nothing left to attach; deferred until P3. Transcript + two reusable findings (the repo Playwright config's marketing webServer never comes up in a worktree; `app-mobile` is pinned to `roadmap.spec.ts`): `research/2026-09-12-p1-live-verification.md`.
 - 2026-09-12 (session b): **P0 + P1** — #63 filed/claimed, worktree + branch cut, then P1 implemented and unit-verified: shared `roadmapMaterialPayloads`/`materialTitleIndex` replacing the three duplicated joins; `MaterialAttachedPayload`/`MaterialDetachedPayload`; the directory "+" + `handleAttachMaterials`; `MaterialKind` `'file'` + `toMaterialKind`; `MaterialPicker` `excludeIds` + selection records (+ the three call sites). `typecheck`/`lint` clean, app suite 800/802 (2 = WSL TZ pair). Deviations and the AC4 grep result are in `plan/PLAN.md` Phase 1 Notes.
 - 2026-09-12: wrote `plan/PLAN.md` (Phase 0 + P1–P5; AC1–AC7; D-01…D-10) + `plan/VERIFICATION.md`; seeded `state.md`; added the STATUS row.

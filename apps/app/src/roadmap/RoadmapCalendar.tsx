@@ -702,6 +702,7 @@ export function RoadmapCalendar({
       <MaterialPicker
         open={addMaterialOpen}
         purpose="planning"
+        withPlan
         excludeIds={materialPayloads.map((material) => material.materialId)}
         onClose={() => setAddMaterialOpen(false)}
         onContinue={(selection, plan) => void handleAttachMaterials(selection, plan)}

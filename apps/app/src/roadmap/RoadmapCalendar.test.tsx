@@ -391,4 +391,35 @@ describe('RoadmapCalendar booking interactions', () => {
 
     expect(screen.getByRole('button', { name: 'Add material to this roadmap' })).toBeDisabled()
   })
+
+  it('logs the minutes and role chosen in the attach picker', async () => {
+    const client = new FakeMaterialClient([
+      materialRecord({ id: 'mat-lib', title: 'Raft paper', kind: 'url', estimatedMinutes: 30 }),
+    ])
+    renderCalendar(false, client)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add material to this roadmap' }))
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Raft paper/ }))
+    expect(within(dialog).getByLabelText('Minutes for Raft paper')).toHaveValue(30)
+    fireEvent.change(within(dialog).getByLabelText('Minutes for Raft paper'), {
+      target: { value: '90' },
+    })
+    fireEvent.change(within(dialog).getByLabelText('Role for Raft paper'), {
+      target: { value: 'practice' },
+    })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
+
+    await waitFor(() => {
+      expect(mockState.logEvent).toHaveBeenCalledWith('MaterialAttached', expect.objectContaining({
+        roadmapCreatedAt: '2026-05-01T09:00:00.000Z',
+        materialId: 'mat-lib',
+        title: 'Raft paper',
+        kind: 'article',
+        role: 'practice',
+        estimatedDuration: 90,
+      }))
+    })
+  })
 })

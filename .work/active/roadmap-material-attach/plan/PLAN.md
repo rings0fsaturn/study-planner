@@ -2,7 +2,7 @@
 
 **Date written:** 2026-09-12 · **Ticket:** [#63](https://github.com/rings0fsaturn/study-planner/issues/63) (filed and claimed 2026-09-12) · **Parent:** spec #32 · wayfinder map #4
 **Branch:** `phase2/issue-63-roadmap-material-attach` · **Worktree:** `/mnt/d/study/git/study-planner-web-issue-63` (cut off `2091d8e`, the post-#62 tip)
-**Plan status:** 🟡 P0 and P1 done and live-verified at 1280 (P1's 375 attach deferred until P3). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
+**Plan status:** 🟡 P0–P2 done and live-verified at 1280 (P1's 375 attach and OQ-07's mobile check deferred). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
 **Trigger:** user report (2026-09-12) — "within roadmap page, I don't see an option to add materials that are present within the materials [library]; also I don't see the materials of a roadmap listed under materials tab", followed by the concrete ask: a "+" in the roadmap's Materials panel that opens a material picker, and an Attach + in New session that lists this roadmap's materials.
 
 > Runbook convention inherited from the #38/#39/#40/#41/#62 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -432,7 +432,7 @@ Landed as planned, with three reality-corrections:
 
 ## Phase 2: Minutes and role are chosen at attach time
 
-**Status:** ☐ Not started
+**Status:** ✅ Done 2026-09-12 (unit + live at 1280; OQ-07's mobile crowding unmeasured)
 **Depends on:** Phase 1
 **Estimated scope:** ~2 files, ~80 lines
 
@@ -465,7 +465,18 @@ Live: attach a PDF as `foundation` at 90 minutes → the directory row reads "0m
 Revert; P1's defaults still work.
 
 ### Notes (filled in during implementation)
-*(empty)*
+
+**2026-09-12 — implemented, unit-verified and live-verified at 1280.**
+
+- `MaterialPicker` gained `withPlan`. A **selected** row shows a minutes `<input type="number" min={15} step={15} inputMode="numeric">` and a role `<select>` built from the engine's `ROLE_TO_LABEL`, both seeded per row (`estimatedMinutes ?? 60`, `foundation`), and `onContinue` hands back a plan keyed by the selected ids only.
+- The two controls live in a `.checkbox-entry` wrapper **next to** the row `<label>`, not inside it: a control nested in the label would also fire the label's click and toggle the selection.
+- `RoadmapCalendar` passes `withPlan`; its handler already read `plan?.[id]` from P1, so nothing else moved.
+
+**Deviation:** dropped the planned `defaultMinutes?: Record<string, number>` prop. The caller cannot build it - the calendar has no library rows and never sees `estimatedMinutes` - while the picker already holds each `MaterialRecord`. Seeding from the record is one expression instead of a prop plus a lookup the caller cannot fill. Add the prop back only if a caller ever needs to override the library estimate.
+
+**One decision left for the hands-on pass (OQ-07):** the two controls are a two-up flex row, each about half the sheet width. At 1280 they sit comfortably; at 375 that is roughly 160 px each and this pass did not measure it, because every library material was already attached to the active roadmap and the picker therefore had no rows to render. Per D-06 the fallback is one batch role for the whole selection; say which reads better on the phone.
+
+**Verified:** `pnpm --filter app typecheck` clean · `pnpm --filter app lint` clean · `MaterialPicker.test.tsx` 14/14 (+4) and `RoadmapCalendar.test.tsx` 13/13 (+1), all red-first. Live: a fresh plain-text library material attached at 90 minutes as `practice` moved the header `3 MATERIALS` -> `4 MATERIALS`, the directory row read **`0m of 1h 30m`**, and session setup's chooser showed **`Practice`**; zero page errors.
 
 ---
 

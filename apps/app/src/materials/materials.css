@@ -444,6 +444,37 @@
   background: var(--paper-deep);
 }
 
+/* Roadmap attach: minutes + role sit outside the row label so neither control
+   steals the click that toggles the checkbox. */
+.checkbox-entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.checkbox-plan {
+  display: flex;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+}
+
+.checkbox-plan-field {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.checkbox-plan-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
 /* ---- Empty states ---- */
 .materials-empty {
   text-align: center;
