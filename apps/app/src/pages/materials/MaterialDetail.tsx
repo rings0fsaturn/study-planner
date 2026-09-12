@@ -534,9 +534,9 @@ export function MaterialDetail() {
           open
           purpose="generation"
           onClose={() => setPickerOpen(false)}
-          onContinue={(ids) => {
+          onContinue={(selection) => {
             setPickerOpen(false)
-            setPickerResult(ids)
+            setPickerResult(selection.map((picked) => picked.materialId))
           }}
         />
       )}

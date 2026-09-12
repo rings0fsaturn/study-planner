@@ -1,22 +1,36 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import type { MaterialRole } from '@study-tracker/roadmap-engine'
 import { useMaterialsClient } from './MaterialsProvider'
 import {
   SOURCE_LABELS,
   isProcessing,
   isReady,
   type MaterialRecord,
+  type MaterialSourceKind,
 } from './types'
 
 export type MaterialPickerPurpose = 'generation' | 'planning'
+
+/** One picked library material, enough for the caller to write its own event. */
+export interface MaterialPickerSelection {
+  materialId: string
+  title: string
+  kind: MaterialSourceKind
+}
 
 export interface MaterialPickerProps {
   open: boolean
   purpose: MaterialPickerPurpose
   max?: number
   initialSelected?: string[]
+  /** Materials already attached to the target surface; hidden from the list. */
+  excludeIds?: string[]
   onClose: () => void
-  onContinue: (materialIds: string[]) => void
+  onContinue: (
+    selection: MaterialPickerSelection[],
+    plan?: Record<string, { minutes: number; role: MaterialRole }>,
+  ) => void
 }
 
 export function MaterialPicker({
@@ -24,6 +38,7 @@ export function MaterialPicker({
   purpose,
   max,
   initialSelected,
+  excludeIds,
   onClose,
   onContinue,
 }: MaterialPickerProps) {
@@ -74,6 +89,9 @@ export function MaterialPicker({
   )
 
   if (!open) return null
+
+  const excluded = new Set(excludeIds ?? [])
+  const visible = materials?.filter((material) => !excluded.has(material.id)) ?? []
 
   const toggle = (id: string) => {
     if (!selectableIds.has(id)) return
@@ -134,9 +152,16 @@ export function MaterialPicker({
                 Add a material
               </Link>
             </div>
+          ) : visible.length === 0 ? (
+            <div className="material-picker-empty">
+              <p className="t-body-sm">Every library material is already on this roadmap.</p>
+              <Link className="btn btn-secondary btn-sm" to="/materials/new" onClick={onClose}>
+                Add a material
+              </Link>
+            </div>
           ) : (
             <div className="material-picker-list">
-              {materials.map((material) => {
+              {visible.map((material) => {
                 const selectable = selectableIds.has(material.id)
                 const checked = selected.has(material.id)
                 return (
@@ -188,7 +213,17 @@ export function MaterialPicker({
               <button
                 className="btn btn-accent"
                 disabled={!canContinue}
-                onClick={() => onContinue(Array.from(selected))}
+                onClick={() =>
+                  onContinue(
+                    visible
+                      .filter((material) => selected.has(material.id))
+                      .map((material) => ({
+                        materialId: material.id,
+                        title: material.title,
+                        kind: material.kind,
+                      })),
+                  )
+                }
               >
                 Continue
               </button>

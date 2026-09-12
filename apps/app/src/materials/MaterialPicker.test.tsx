@@ -138,10 +138,10 @@ describe('MaterialPicker', () => {
     expect(within(dialog).queryByText('Old notes')).not.toBeInTheDocument()
   })
 
-  it('continues with the selected material ids', async () => {
+  it('continues with the selected material records', async () => {
     const client = new FakeMaterialClient([
       material({ id: 'mat-1', title: 'OSTEP' }),
-      material({ id: 'mat-2', title: 'Raft paper' }),
+      material({ id: 'mat-2', title: 'Raft paper', kind: 'url' }),
     ])
     const { onContinue } = renderPicker(client)
 
@@ -150,7 +150,33 @@ describe('MaterialPicker', () => {
     expect(within(dialog).getByText('1 selected · 2 ready')).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
 
-    expect(onContinue).toHaveBeenCalledWith(['mat-2'])
+    expect(onContinue).toHaveBeenCalledWith([
+      { materialId: 'mat-2', title: 'Raft paper', kind: 'url' },
+    ])
+  })
+
+  it('hides excluded materials', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP' }),
+      material({ id: 'mat-2', title: 'Raft paper' }),
+    ])
+
+    renderPicker(client, { purpose: 'planning', excludeIds: ['mat-1'] })
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    expect(within(dialog).queryByText('OSTEP')).not.toBeInTheDocument()
+    expect(within(dialog).getByText('Raft paper')).toBeInTheDocument()
+  })
+
+  it('says so when every library material is already attached', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+
+    renderPicker(client, { purpose: 'planning', excludeIds: ['mat-1'] })
+
+    expect(
+      await screen.findByText('Every library material is already on this roadmap.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Add a material' })).toBeInTheDocument()
   })
 
   it('disables Continue until a material is selected', async () => {

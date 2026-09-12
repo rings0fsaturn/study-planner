@@ -357,9 +357,9 @@ export function MaterialLibrary() {
           open
           purpose={picker}
           onClose={() => setPicker(null)}
-          onContinue={(ids) => {
+          onContinue={(selection) => {
             setPicker(null)
-            setPickerResult(ids)
+            setPickerResult(selection.map((picked) => picked.materialId))
           }}
         />
       )}

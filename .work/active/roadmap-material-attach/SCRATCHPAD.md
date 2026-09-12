@@ -1,0 +1,20 @@
+# Scratchpad – roadmap-material-attach · session 2026-09-12 (b)
+_state.md: active/roadmap-material-attach/state.md · Updated: 2026-09-12
+
+## Now / Next
+- Doing: P1 finished in the worktree — implementation + unit verification done, live pass pending.
+- Next: P1 live click-through on the dev stack (attach a library material from the roadmap "+", confirm it in the directory, the New session picker and session setup); then commit P1 and start P2.
+- Blocked: none.
+
+## Session log
+- P0 DONE  filed GitHub #63 "Roadmap material attachment (library material to roadmap set)" (labels `wayfinder:phase2` + `ready-for-agent`), claimed, branch `phase2/issue-63-roadmap-material-attach` cut off `2091d8e` in a fresh worktree `/mnt/d/study/git/study-planner-web-issue-63`; ticket number written into the plan header, VERIFICATION.md, state.md and the STATUS row. Untracked `.work/active/roadmap-material-attach/` copied into the worktree; `pnpm install` 733 pkgs.
+- P1 FOUND  the app `test` script is already `vitest run`, so `pnpm --filter app test -- --run <path>` (the form the plan and STATUS use) passes a literal `--` and vitest reads the path as a name filter, matching nothing and hanging on a whole-suite scan. Correct form: `pnpm --filter app test <path>`. Plan runbook corrected.
+- P1 DONE  `sync/types.ts`: `MaterialAttachedPayload extends MaterialAddedPayload {roadmapCreatedAt}` + `MaterialDetachedPayload`. `progress/mapEvents.ts`: exported `roadmapMaterialPayloads(events, payload, roadmapCreatedAt)` (declared union attached, masked by detach, array order = insertion order) + `materialTitleIndex(events)`; `mapMaterialsForRoadmap` delegates to it; `effectiveEstimatedDuration` now takes the payload. `roadmap/roadmapProgress.ts` and `roadmap/replan/mapToRegenerateRequest.ts` dropped their local joins onto the shared reader (the progress reader also gained the slot fallback it never had).
+- P1 DONE  `session/types.ts` `MaterialKind` gained `'file'`; `PreSessionSetup.iconFor/kindLabel` and `MaterialStrip.getIconLabel` got the `'file'` case (PDF / PDF file). The widening stayed inside those three files, so D-07's `file → article` fallback was **not** needed. `materials/types.ts` added `toMaterialKind`.
+- P1 DONE  `MaterialPicker`: `excludeIds`, `MaterialPickerSelection` callback, all-excluded empty state ("Every library material is already on this roadmap."), rows render from the filtered list.
+- P1 FOUND  the selection-record callback broke **three** call sites the plan had not indexed: `MaterialLibrary.tsx`, `MaterialDetail.tsx:537`, `PracticeThis.tsx:212`. `tsc` found them; all now map back to ids. Plan index updated.
+- P1 DONE  `RoadmapCalendar`: `addMaterialOpen` + `handleAttachMaterials` (one `MaterialAttached` per selection, `role: 'foundation'`, `estimatedDuration: Math.max(15, plan?.minutes ?? 60)`, `kind` via `toMaterialKind`), `materialsById` swapped to the global `materialTitleIndex` (bubble labels survive a detach), header count now `materialPayloads.length`, `dir-head` split into a row of `.dir-head-toggle` + `.dir-add` (no nested button), picker mounted. `roadmap.css` moved the header rules onto `.dir-head-toggle` and added `.dir-add`.
+- P1 DEVIATION  skipped the extra "Add a material" button in the empty directory body (D-05). The "+" is in the header, which renders in the empty state too, so it is already one click away; a second control is the same action twice. Recorded in the plan notes for the user to veto.
+- P1 VERIFIED  `typecheck` clean · `lint` clean · `pnpm --filter app test` **800/802** (the 2 = the documented WSL TZ pair in `dev/seedTestData.test.ts`, 2/2 green under `--pool=forks`) · AC4 grep: the `MaterialAdded` join now exists only in `progress/mapEvents.ts` (`Step4Confirm.tsx:31` is a single-material preview lookup, not the roadmap set).
+- P1 TESTS  mapEvents +5 (16) · roadmapProgress +1 (3) · mapToRegenerateRequest +1 (8) · materials/types.test.ts new (1) · MaterialPicker +2 (10) · RoadmapCalendar +3 (12). All written red-first.
+- P1 NEXT  live click-through on the dev stack, then commit, then P2.

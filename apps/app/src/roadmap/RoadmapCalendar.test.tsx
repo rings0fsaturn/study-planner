@@ -3,7 +3,14 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import { MemoryRouter } from 'react-router-dom'
 import type { Event } from '../events/EventStore'
 import type { RoadmapCreatedPayload } from '../sync/types'
+import { MaterialsProvider } from '../materials/MaterialsProvider'
+import { FakeMaterialClient } from '../materials/testing/fakeMaterialClient'
+import type { MaterialRecord } from '../materials/types'
 import { RoadmapCalendar } from './RoadmapCalendar'
+
+vi.mock('../lib/supabase', () => ({
+  supabase: { auth: { getSession: vi.fn() } },
+}))
 
 const mockState = vi.hoisted(() => ({
   events: [] as Event[],
@@ -111,10 +118,39 @@ function baseEvents(): Event[] {
   ]
 }
 
-function renderCalendar(readOnly = false) {
+function materialRecord(overrides: Partial<MaterialRecord>): MaterialRecord {
+  return {
+    id: 'mat-lib',
+    ownerId: 'user-a',
+    title: 'Raft paper',
+    kind: 'url',
+    source: 'https://example.test/raft',
+    ingestionState: 'ready',
+    ingestionProgress: 1,
+    ingestionError: null,
+    archived: false,
+    contentVersion: 'v1',
+    replacedAt: null,
+    estimatedMinutes: null,
+    uploadCompleteAt: null,
+    chunkCount: 0,
+    groundingVersion: null,
+    extractedTextPath: null,
+    createdAt: '2026-05-01T08:00:00.000Z',
+    updatedAt: '2026-05-01T08:00:00.000Z',
+    ...overrides,
+  }
+}
+
+function renderCalendar(
+  readOnly = false,
+  client = new FakeMaterialClient([]),
+) {
   return render(
     <MemoryRouter>
-      <RoadmapCalendar readOnly={readOnly} />
+      <MaterialsProvider client={client}>
+        <RoadmapCalendar readOnly={readOnly} />
+      </MaterialsProvider>
     </MemoryRouter>,
   )
 }
@@ -122,7 +158,9 @@ function renderCalendar(readOnly = false) {
 function renderHistoricalCalendar() {
   return render(
     <MemoryRouter>
-      <RoadmapCalendar roadmapCreatedAt="2026-05-01T09:00:00.000Z" readOnly />
+      <MaterialsProvider client={new FakeMaterialClient([])}>
+        <RoadmapCalendar roadmapCreatedAt="2026-05-01T09:00:00.000Z" readOnly />
+      </MaterialsProvider>
     </MemoryRouter>,
   )
 }
@@ -292,5 +330,65 @@ describe('RoadmapCalendar booking interactions', () => {
     expect(screen.getByText('View booking')).toBeInTheDocument()
     expect(screen.getAllByRole('button', { name: 'Mark progress' })[0]).toBeDisabled()
     expect(screen.getByRole('link', { name: /Roadmaps/ })).toHaveAttribute('href', '/roadmaps')
+  })
+
+  it('attaches a library material from the materials directory "+"', async () => {
+    const client = new FakeMaterialClient([
+      materialRecord({ id: 'mat-1', title: 'Distributed Systems', kind: 'manual' }),
+      materialRecord({ id: 'mat-lib', title: 'Raft paper', kind: 'url' }),
+    ])
+    renderCalendar(false, client)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add material to this roadmap' }))
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    expect(within(dialog).getByText('Raft paper')).toBeInTheDocument()
+    expect(within(dialog).queryByText('Distributed Systems')).not.toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Raft paper/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
+
+    await waitFor(() => {
+      expect(mockState.logEvent).toHaveBeenCalledWith('MaterialAttached', {
+        roadmapCreatedAt: '2026-05-01T09:00:00.000Z',
+        materialId: 'mat-lib',
+        title: 'Raft paper',
+        kind: 'article',
+        role: 'foundation',
+        estimatedDuration: 60,
+      })
+    })
+    expect(mockState.logEvent).toHaveBeenCalledTimes(1)
+  })
+
+  it('lists an attached material in the directory and counts it in the header', () => {
+    mockState.events = [
+      ...baseEvents(),
+      event(
+        'MaterialAttached',
+        {
+          roadmapCreatedAt: '2026-05-01T09:00:00.000Z',
+          materialId: 'mat-3',
+          title: 'OSTEP',
+          estimatedDuration: 90,
+          kind: 'file',
+          role: 'foundation',
+        },
+        '2026-05-01T09:03:00.000Z',
+      ),
+    ]
+
+    renderCalendar()
+
+    expect(screen.getByText(/Active roadmap · 3 materials · 4 weeks/)).toBeInTheDocument()
+    expect(
+      within(screen.getByLabelText('Materials directory')).getByText('OSTEP'),
+    ).toBeInTheDocument()
+  })
+
+  it('disables the add-material control in read-only history mode', () => {
+    renderHistoricalCalendar()
+
+    expect(screen.getByRole('button', { name: 'Add material to this roadmap' })).toBeDisabled()
   })
 })
