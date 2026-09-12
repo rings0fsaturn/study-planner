@@ -2,7 +2,7 @@
 
 **Date written:** 2026-09-12 · **Ticket:** [#63](https://github.com/rings0fsaturn/study-planner/issues/63) (filed and claimed 2026-09-12) · **Parent:** spec #32 · wayfinder map #4
 **Branch:** `phase2/issue-63-roadmap-material-attach` · **Worktree:** `/mnt/d/study/git/study-planner-web-issue-63` (cut off `2091d8e`, the post-#62 tip)
-**Plan status:** 🟡 P0 and P1 implemented and unit-verified; P1 live pass pending. OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
+**Plan status:** 🟡 P0 and P1 done and live-verified at 1280 (P1's 375 attach deferred until P3). OQ-01…OQ-05 were answered by the user on 2026-09-12 and are folded into D-03, D-06, D-09, D-10 and the phase list below.
 **Trigger:** user report (2026-09-12) — "within roadmap page, I don't see an option to add materials that are present within the materials [library]; also I don't see the materials of a roadmap listed under materials tab", followed by the concrete ask: a "+" in the roadmap's Materials panel that opens a material picker, and an Attach + in New session that lists this roadmap's materials.
 
 > Runbook convention inherited from the #38/#39/#40/#41/#62 plans: implement one phase per session, statuses updated in the same commit as the work, STOP on any reality-mismatch.
@@ -224,7 +224,7 @@ This plan builds that half: one new event kind (`MaterialAttached` — the thin 
 
 ## Phase 1: A library material can be attached to a roadmap and behaves like any other roadmap material
 
-**Status:** 🟡 Implementation complete + unit-verified 2026-09-12; live pass pending
+**Status:** ✅ Done 2026-09-12 (unit + live at 1280; the fresh 375 attach is deferred to after P3)
 **Depends on:** none (Phase 0 is bookkeeping)
 **Estimated scope:** ~10 files, ~200 lines
 
@@ -426,7 +426,7 @@ Landed as planned, with three reality-corrections:
 
 **Verified:** `pnpm --filter app typecheck` clean · `pnpm --filter app lint` clean · `pnpm --filter app test` = **800/802**, the two failures being the documented WSL TZ pair in `dev/seedTestData.test.ts` (2/2 green under `--pool=forks`). Test deltas: `mapEvents.test.ts` +5 (16 total), `roadmapProgress.test.ts` +1 (3), `mapToRegenerateRequest.test.ts` +1 (8), `materials/types.test.ts` new (1), `MaterialPicker.test.tsx` +2 (10), `RoadmapCalendar.test.tsx` +3 (12).
 
-**Live pass:** pending.
+**Live pass:** ✅ 1280 green 2026-09-12 (header `1 MATERIALS` -> `2 MATERIALS`, directory row, New session -> Attach, session setup `Foundations`, zero page errors). The 375 leg opened the picker and honoured `excludeIds` but found every library material already attached, so a fresh 375 attach is deferred until P3 can remove attaches. Transcript and two reusable findings (`e2e/playwright.config.ts`'s marketing webServer never becomes reachable in a worktree, and `app-mobile` is pinned to `roadmap.spec.ts`): `.work/active/roadmap-material-attach/research/2026-09-12-p1-live-verification.md`.
 
 ---
 

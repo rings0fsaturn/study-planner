@@ -1,17 +1,20 @@
 # State – roadmap-material-attach
 
-_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: in progress (P1 implemented + unit-verified; live pass pending) · Updated: 2026-09-12_
+_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: P1 done (unit + live at 1280); P2 next · Updated: 2026-09-12_
 
 ## Current state & next
 
 - **#63 filed + claimed 2026-09-12**; branch `phase2/issue-63-roadmap-material-attach` cut off `2091d8e` in a fresh worktree (`/mnt/d/study/git/study-planner-web-issue-63`). Phase 0 done.
-- **P1 implemented and unit-verified.** One shared reader (`roadmapMaterialPayloads` + `materialTitleIndex` in `progress/mapEvents.ts`) replaces the three duplicated id→payload joins; a library material can be attached to a roadmap through the directory "+" and then behaves like any other roadmap material. `typecheck`/`lint` clean, app suite 800/802 (the 2 = the documented WSL TZ pair). **Live click-through not yet run.**
-- Five phases: P1 attach + shared reader (implementation done), P2 minutes + role at attach time, P3 detach, P4 session surfaces + live E2E, P5 library usage.
-- Next: P1 live pass, commit, then P2.
+- **P1 done and live-verified.** One shared reader (`roadmapMaterialPayloads` + `materialTitleIndex` in `progress/mapEvents.ts`) replaces the three duplicated id→payload joins; a library material attaches to a roadmap through the directory "+" and then behaves like any other roadmap material. `typecheck`/`lint` clean, app suite 800/802 (the 2 = the documented WSL TZ pair). Live at 1280: header `1 MATERIALS` -> `2 MATERIALS`, directory row, New session -> Attach, session setup `Foundations`, zero page errors. AC1/AC3/AC4/AC7 ticked with their caveats.
+- **The dev stack now runs from this worktree** (the main checkout's stack was stopped first; its gitignored env files were copied over). `./full-app status full` in the worktree shows app 5173 + intelligence 8000 healthy.
+- **The shared dev account carries 3 attached library materials** from the live runs; nothing can remove them until P3. The fresh 375 attach is deferred for the same reason.
+- Five phases: P1 attach + shared reader (done), P2 minutes + role at attach time, P3 detach, P4 session surfaces + live E2E, P5 library usage.
+- Next: P2.
 
 ## Done so far
 
-- 2026-09-12 (session b): **P0 + P1** — #63 filed/claimed, worktree + branch cut, then P1 implemented and unit-verified: shared `roadmapMaterialPayloads`/`materialTitleIndex` replacing the three duplicated joins; `MaterialAttachedPayload`/`MaterialDetachedPayload`; the directory "+" + `handleAttachMaterials`; `MaterialKind` `'file'` + `toMaterialKind`; `MaterialPicker` `excludeIds` + selection records (+ the three call sites). `typecheck`/`lint` clean, app suite 800/802 (2 = WSL TZ pair). Live pass pending. Deviations and the AC4 grep result are in `plan/PLAN.md` Phase 1 Notes.
+- 2026-09-12 (session b, live pass): **P1 live-verified at 1280** on a stack started from this worktree — the directory "+" attached a real library material and the header moved `1 MATERIALS` -> `2 MATERIALS`, the directory row appeared, New session -> Attach listed it and session setup showed it as `Foundations`, with no page errors. The 375 leg opened the picker and honoured `excludeIds` but had nothing left to attach; deferred until P3. Transcript + two reusable findings (the repo Playwright config's marketing webServer never comes up in a worktree; `app-mobile` is pinned to `roadmap.spec.ts`): `research/2026-09-12-p1-live-verification.md`.
+- 2026-09-12 (session b): **P0 + P1** — #63 filed/claimed, worktree + branch cut, then P1 implemented and unit-verified: shared `roadmapMaterialPayloads`/`materialTitleIndex` replacing the three duplicated joins; `MaterialAttachedPayload`/`MaterialDetachedPayload`; the directory "+" + `handleAttachMaterials`; `MaterialKind` `'file'` + `toMaterialKind`; `MaterialPicker` `excludeIds` + selection records (+ the three call sites). `typecheck`/`lint` clean, app suite 800/802 (2 = WSL TZ pair). Deviations and the AC4 grep result are in `plan/PLAN.md` Phase 1 Notes.
 - 2026-09-12: wrote `plan/PLAN.md` (Phase 0 + P1–P5; AC1–AC7; D-01…D-10) + `plan/VERIFICATION.md`; seeded `state.md`; added the STATUS row.
 - 2026-09-12: OQ round answered by the user — 60-minute default, user-chosen role chip, empty library routes to the Materials create flow, P5 (library usage) in scope, detach in scope. Plan revised: **D-06 rewritten** (role is user-selected per material; the earlier fixed-`role: 'foundation'` simplification is superseded) and **D-09/D-10 added**; phases reordered to put detach (P3) next to the reader work and library usage last (P5).
 - 2026-09-12: established the two-worlds diagnosis against the code, not the notes: roadmap materials come from `MaterialAdded` + `roadmap.payload.materialIds` (`progress/mapEvents.ts:241`), the library is Supabase `materials` reached only from `/materials`, and the id→payload join is duplicated in three readers.
