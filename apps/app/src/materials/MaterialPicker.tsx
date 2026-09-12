@@ -1,22 +1,40 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ROLE_TO_LABEL, type MaterialRole } from '@study-tracker/roadmap-engine'
 import { useMaterialsClient } from './MaterialsProvider'
 import {
   SOURCE_LABELS,
   isProcessing,
   isReady,
   type MaterialRecord,
+  type MaterialSourceKind,
 } from './types'
 
 export type MaterialPickerPurpose = 'generation' | 'planning'
+
+const PLAN_ROLES: MaterialRole[] = ['anchor', 'foundation', 'practice']
+
+/** One picked library material, enough for the caller to write its own event. */
+export interface MaterialPickerSelection {
+  materialId: string
+  title: string
+  kind: MaterialSourceKind
+}
 
 export interface MaterialPickerProps {
   open: boolean
   purpose: MaterialPickerPurpose
   max?: number
   initialSelected?: string[]
+  /** Materials already attached to the target surface; hidden from the list. */
+  excludeIds?: string[]
+  /** Show a minutes budget and a role per selected row (roadmap attach). */
+  withPlan?: boolean
   onClose: () => void
-  onContinue: (materialIds: string[]) => void
+  onContinue: (
+    selection: MaterialPickerSelection[],
+    plan?: Record<string, { minutes: number; role: MaterialRole }>,
+  ) => void
 }
 
 export function MaterialPicker({
@@ -24,6 +42,8 @@ export function MaterialPicker({
   purpose,
   max,
   initialSelected,
+  excludeIds,
+  withPlan,
   onClose,
   onContinue,
 }: MaterialPickerProps) {
@@ -31,10 +51,14 @@ export function MaterialPicker({
   const [materials, setMaterials] = useState<MaterialRecord[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Set<string>>(new Set(initialSelected ?? []))
+  const [planEdits, setPlanEdits] = useState<
+    Record<string, { minutes?: number; role?: MaterialRole }>
+  >({})
 
   useEffect(() => {
     if (!open) return
     setSelected(new Set(initialSelected ?? []))
+    setPlanEdits({})
     setLoadError(null)
     let cancelled = false
     void client
@@ -75,6 +99,9 @@ export function MaterialPicker({
 
   if (!open) return null
 
+  const excluded = new Set(excludeIds ?? [])
+  const visible = materials?.filter((material) => !excluded.has(material.id)) ?? []
+
   const toggle = (id: string) => {
     if (!selectableIds.has(id)) return
     setSelected((current) => {
@@ -86,6 +113,38 @@ export function MaterialPicker({
   }
 
   const canContinue = selected.size > 0
+
+  const planFor = (material: MaterialRecord): { minutes: number; role: MaterialRole } => {
+    const edit = planEdits[material.id]
+    return {
+      minutes: edit?.minutes ?? material.estimatedMinutes ?? 60,
+      role: edit?.role ?? 'foundation',
+    }
+  }
+
+  const editPlan = (
+    materialId: string,
+    patch: { minutes?: number; role?: MaterialRole },
+  ) => {
+    setPlanEdits((current) => ({ ...current, [materialId]: { ...current[materialId], ...patch } }))
+  }
+
+  const handleContinue = () => {
+    const picked = visible.filter((material) => selected.has(material.id))
+    const selection = picked.map((material) => ({
+      materialId: material.id,
+      title: material.title,
+      kind: material.kind,
+    }))
+    if (!withPlan) {
+      onContinue(selection)
+      return
+    }
+    onContinue(
+      selection,
+      Object.fromEntries(picked.map((material) => [material.id, planFor(material)])),
+    )
+  }
 
   return (
     <div className="material-sheet-layer">
@@ -134,14 +193,22 @@ export function MaterialPicker({
                 Add a material
               </Link>
             </div>
+          ) : visible.length === 0 ? (
+            <div className="material-picker-empty">
+              <p className="t-body-sm">Every library material is already on this roadmap.</p>
+              <Link className="btn btn-secondary btn-sm" to="/materials/new" onClick={onClose}>
+                Add a material
+              </Link>
+            </div>
           ) : (
             <div className="material-picker-list">
-              {materials.map((material) => {
+              {visible.map((material) => {
                 const selectable = selectableIds.has(material.id)
                 const checked = selected.has(material.id)
+                const plan = planFor(material)
                 return (
+                  <div className="checkbox-entry" key={material.id}>
                   <label
-                    key={material.id}
                     className={`checkbox-row${checked ? ' checked' : ''}${!selectable ? ' is-disabled' : ''}`}
                   >
                     <input
@@ -172,6 +239,43 @@ export function MaterialPicker({
                     )}
                     {checked && <span className="tag tag-sm tag-moss">Selected</span>}
                   </label>
+                  {withPlan && checked && (
+                    <div className="checkbox-plan">
+                      <label className="checkbox-plan-field">
+                        <span className="checkbox-plan-label">Minutes</span>
+                        <input
+                          className="field"
+                          type="number"
+                          min={15}
+                          step={15}
+                          inputMode="numeric"
+                          aria-label={`Minutes for ${material.title}`}
+                          value={plan.minutes}
+                          onChange={(event) =>
+                            editPlan(material.id, { minutes: Number(event.target.value) })
+                          }
+                        />
+                      </label>
+                      <label className="checkbox-plan-field">
+                        <span className="checkbox-plan-label">Role</span>
+                        <select
+                          className="field"
+                          aria-label={`Role for ${material.title}`}
+                          value={plan.role}
+                          onChange={(event) =>
+                            editPlan(material.id, { role: event.target.value as MaterialRole })
+                          }
+                        >
+                          {PLAN_ROLES.map((role) => (
+                            <option key={role} value={role}>
+                              {ROLE_TO_LABEL[role]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  )}
+                  </div>
                 )
               })}
             </div>
@@ -188,7 +292,7 @@ export function MaterialPicker({
               <button
                 className="btn btn-accent"
                 disabled={!canContinue}
-                onClick={() => onContinue(Array.from(selected))}
+                onClick={handleContinue}
               >
                 Continue
               </button>

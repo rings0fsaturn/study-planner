@@ -1,4 +1,14 @@
+import type { MaterialKind } from '../session/types'
+
 export type MaterialSourceKind = 'manual' | 'url' | 'youtube' | 'file'
+
+/** Library kind → roadmap/session chip kind (D-07). */
+export function toMaterialKind(kind: MaterialSourceKind): MaterialKind {
+  if (kind === 'url') return 'article'
+  if (kind === 'youtube') return 'youtube'
+  if (kind === 'file') return 'file'
+  return 'manual'
+}
 
 export type IngestionState =
   | 'pending'

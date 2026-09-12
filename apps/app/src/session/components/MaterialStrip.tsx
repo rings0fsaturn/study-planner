@@ -11,6 +11,7 @@ function getIconLabel(kind?: MaterialKind): string {
   switch (kind) {
     case 'youtube': return 'YT';
     case 'article': return 'AR';
+    case 'file': return 'PDF';
     default: return 'NB';
   }
 }

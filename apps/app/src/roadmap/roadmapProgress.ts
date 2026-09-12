@@ -1,5 +1,6 @@
 import type { Event } from '../events/EventStore'
 import type { RoadmapLifecycleEntry } from './roadmapLifecycle'
+import { roadmapMaterialPayloads } from '../progress/mapEvents'
 import { buildMaterialLedger, type MaterialProgressMark, type SessionEvent } from '@study-tracker/progress'
 
 export interface RoadmapProgressSummary {
@@ -47,25 +48,13 @@ function sessionEvent(event: Event): SessionEvent {
 }
 
 function materialLedgerForEntry(entry: RoadmapLifecycleEntry, events: Event[]) {
-  const materialIds = entry.payload.materialIds ?? []
-  if (materialIds.length === 0) return []
-  const materialIdSet = new Set(materialIds)
-  const materials = events
-    .filter((event) => event.kind === 'MaterialAdded')
-    .map((event) => event.payload)
-    .filter((payload) =>
-      typeof payload.materialId === 'string' &&
-      materialIdSet.has(payload.materialId)
-    )
-    .map((payload) => ({
-      id: payload.materialId as string,
-      title: (payload.title as string | undefined) ?? payload.materialId as string,
-      estimatedMinutes: effectiveEstimatedMinutesForEntry(
-        entry,
-        payload.materialId as string,
-        (payload.estimatedDuration as number | undefined) ?? 0,
-      ),
+  const materials = roadmapMaterialPayloads(events, entry.payload, entry.roadmapCreatedAt)
+    .map((material) => ({
+      id: material.materialId,
+      title: material.title,
+      estimatedMinutes: material.estimatedDuration,
     }))
+  if (materials.length === 0) return []
   const sessions = events
     .filter((event) => event.kind === 'SessionLogged')
     .map(sessionEvent)
@@ -81,16 +70,6 @@ function materialLedgerForEntry(entry: RoadmapLifecycleEntry, events: Event[]) {
     }))
 
   return buildMaterialLedger(materials, sessions, marks)
-}
-
-function effectiveEstimatedMinutesForEntry(
-  entry: RoadmapLifecycleEntry,
-  materialId: string,
-  estimatedMinutes: number,
-): number {
-  const override = entry.payload.materialDurationOverrides?.[materialId]
-  if (typeof override !== 'number') return estimatedMinutes
-  return Math.max(0, Math.min(estimatedMinutes, override))
 }
 
 interface BookingSummary {

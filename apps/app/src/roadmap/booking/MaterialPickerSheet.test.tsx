@@ -86,4 +86,54 @@ describe('MaterialPickerSheet', () => {
     )
     expect(container).toBeEmptyDOMElement()
   })
+
+  it('offers to add a material when the roadmap has none', () => {
+    const onRequestAddMaterial = vi.fn()
+    render(
+      <MaterialPickerSheet
+        open
+        materials={[]}
+        selectedMaterialId={null}
+        onCancel={() => {}}
+        onSelect={() => {}}
+        onRequestAddMaterial={onRequestAddMaterial}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add a material to this roadmap' }))
+    expect(onRequestAddMaterial).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not offer to add a material while the roadmap still has some', () => {
+    render(
+      <MaterialPickerSheet
+        open
+        materials={materials}
+        selectedMaterialId={null}
+        onCancel={() => {}}
+        onSelect={() => {}}
+        onRequestAddMaterial={() => {}}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: 'Add a material to this roadmap' }),
+    ).not.toBeInTheDocument()
+  })
+
+  it('renders no add-material action when the caller supplies none', () => {
+    render(
+      <MaterialPickerSheet
+        open
+        materials={[]}
+        selectedMaterialId={null}
+        onCancel={() => {}}
+        onSelect={() => {}}
+      />,
+    )
+
+    expect(
+      screen.queryByRole('button', { name: 'Add a material to this roadmap' }),
+    ).not.toBeInTheDocument()
+  })
 })

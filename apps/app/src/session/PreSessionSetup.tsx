@@ -38,12 +38,14 @@ function compactDuration(minutes: number): string {
 function iconFor(kind: SessionMaterialOption['kind']): string {
   if (kind === 'youtube') return 'YT';
   if (kind === 'article') return 'AR';
+  if (kind === 'file') return 'PDF';
   return 'NB';
 }
 
 function kindLabel(kind: SessionMaterialOption['kind']): string {
   if (kind === 'youtube') return 'YouTube';
   if (kind === 'article') return 'Article';
+  if (kind === 'file') return 'PDF file';
   return 'Manual';
 }
 
