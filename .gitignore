@@ -1,4 +1,8 @@
 node_modules/
+# 9p/drvfs is ~100x slower to read; node_modules may be symlinked to the Linux
+# fs (see .work/STATUS.md gotchas). A trailing slash only matches directories,
+# so a symlinked node_modules would show as untracked and could be committed.
+node_modules
 dist/
 .env
 .env.local

@@ -52,7 +52,7 @@ Read each selected rule file completely.
 | [`50-pnpm-build-registry.agents.md`](50-pnpm-build-registry.agents.md) | Running a build when Corepack cannot reach the public npm registry. |
 | [`51-docker-runtime.agents.md`](51-docker-runtime.agents.md) | Running the containerized full stack with the `docker-app` launcher or Docker Compose. |
 | [`52-github-cli-and-token.agents.md`](52-github-cli-and-token.agents.md) | Running any `gh` command, using the gitignored token, or diagnosing transient `api.github.com` TLS/EOF failures. |
-| [`53-wsl-dev-runtime.agents.md`](53-wsl-dev-runtime.agents.md) | Handling stale Vite code on `/mnt/d`, env-file loading into dev processes, and background process or `pkill` safety. |
+| [`53-wsl-dev-runtime.agents.md`](53-wsl-dev-runtime.agents.md) | Handling stale Vite code on `/mnt/d`, the 9p `node_modules` tax and its symlink layout, env-file loading into dev processes, and background process or `pkill` safety. |
 | [`54-gpu-inference-sidecar.agents.md`](54-gpu-inference-sidecar.agents.md) | Running, building, configuring, or troubleshooting the standalone ROCm GPU inference sidecar on WSL2, which serves both Qwen3 embeddings and Qwen3 reranking from one container, including its demand-start/stop lifecycle because it burns about two CPU cores whenever it runs. |
 
 ## Reports and Papers

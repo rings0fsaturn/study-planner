@@ -1,9 +1,28 @@
 ---
 name: wsl-dev-runtime
-description: Handle WSL local-dev runtime quirks: stale Vite code, env loading, and background process safety.
+description: Handle WSL local-dev runtime quirks: stale Vite code, env loading, background process safety, and the 9p node_modules tax.
 ---
 
 # WSL Dev Runtime
+
+## node_modules belongs on the Linux filesystem, not drvfs
+
+This repo lives on `/mnt/d`, a 9p mount.
+Every `open`/`stat` over 9p is a hypervisor round-trip, so a dependency tree of thousands of small files costs wall time with almost no CPU.
+Measured 2026-09-15: `require('jsdom')` from `/mnt/d` took **~45 s at 12% CPU**; the same tree on the Linux fs took **0.4 s**.
+jsdom's dependency closure is 3,617 module files, and vitest loads it in every jsdom test file, so **every vitest invocation paid ~45 s before running a single test** (a 1 ms test file measured 56 s wall / 4 s CPU).
+
+The fix in place: `node_modules` at the root and in each workspace is a symlink to `$HOME/.study-planner-modules/<same relative path>`, with the real files on the Linux fs.
+That took the same single-test run from 56 s to 1.8 s and the full app suite to ~19 s.
+
+Two things that make or break this layout:
+
+- **Workspace-package links must point at the real repo.** pnpm installs `@study-tracker/*` as *relative* symlinks (`../../../../packages/progress`).
+  Moving `node_modules` out of the repo makes them resolve somewhere else entirely, and Vite then fails with `Failed to resolve import "@study-tracker/progress"`.
+  Repoint every link whose target contains `packages/` at the absolute repo path, and confirm with `find "$HOME/.study-planner-modules" -xtype l` returning nothing.
+- **`.gitignore` needs a slash-less `node_modules` entry.** A trailing slash matches directories only, so a symlinked `node_modules` is *not* ignored and shows as untracked, and a blanket `git add -A` would commit the links.
+
+`pnpm install` is a no-op on a warm tree and leaves the symlinks alone; do not run a cold `pnpm install` expecting it to keep them.
 
 ## Stale Vite code on drvfs
 
