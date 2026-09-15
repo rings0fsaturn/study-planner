@@ -1,14 +1,14 @@
 # State – issue-44-written-practice-runs
 
-_Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (copy: specs/phase2-tickets/12-written-practice-runs.md) · Plan: active/issue-44-written-practice-runs/plan/PLAN.md · STATUS row: issue-44-written-practice-runs · Status: active — P0, P1, P2 complete; P3 next · Updated: 2026-09-15_
+_Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (copy: specs/phase2-tickets/12-written-practice-runs.md) · Plan: active/issue-44-written-practice-runs/plan/PLAN.md · STATUS row: issue-44-written-practice-runs · Status: active — P0, P1, P2, P3 complete; P4 next · Updated: 2026-09-15_
 
 ## Current state & next
 
 - **P0 done** (`8f04d0d`, PR #64) — the merge carried #41, which the plan had not accounted for.
 - **P1 done 2026-09-15** — `Start practice run` issues real grounded written generations; live-verified.
 - **P2 done 2026-09-15** — step 0 (multi-material round-robin) in `a9ce527`, the run shell (steps 1–5) in `7aa209d`, sha correction in `40607d1`. Full Notes in the plan.
-- Next: **Phase 3** — `PracticeSummary.tsx`: `QuestionReviewCard` + `QuestionNavigator` + `buildReviewModel` over the run's flattened problems, practice copy, per-problem retry only (D-04). Land the learner there when `PracticeRunFinished{completed}` exists; a finished run re-opened shows the summary, not problem 1.
-- Then **Phase 4** (live spec + AC sweep + records); **Phase 5** only if Phase 4's numbers justify it.
+- **P3 done 2026-09-15** — Stage A: throwaway summary UX prototype at `/study/practice-summary-prototype` (DEV-only), user-judged → **Variant A (review rail) + inline retry**. Stage B: `PracticeSummary.tsx` (navigator + active panel, practice copy, honest failed state, inline retry slot) + `PracticeRun` wiring (`showSummary` landing/re-entry, round-trip, `AnswerSlot` inline retry, hydrate clears retry mode on the fresh grade). `problemStatus`/`isSummaryEligible` added to `practiceRunModel`. 44/44 focused, typecheck/lint clean, full suite 864/866 (2 WSL TZ flakes), build green, redaction clean. **Live-verified on the real stack**: finish lands on the summary, inline retry grades through the real `llm_rubric` arm with history preserved, round-trip + hard-reload re-entry work, 375×812 clean. Scoped cleanup done.
+- Next: **Phase 4** — `e2e/practice-run-live.spec.ts` (1280×720 + 375×812, `--workers=1`), AC sweep (AC1/AC2/AC4 ticked; AC3 deferred to #43), records; **Phase 5** only if Phase 4's numbers justify it.
 
 ## Done so far
 
@@ -51,8 +51,9 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - `apps/app/src/sync/types.ts` – `PracticeRunStartedPayload`, `PracticeRunFinishedPayload` (P1).
 - `apps/app/src/events/EventStore.ts` – `PRACTICE_RUN_STARTED` / `PRACTICE_RUN_FINISHED` (P1).
 - `apps/app/src/pages/materials/PracticeThis.tsx` (+ `.test.tsx`) – real generation, run pointer, multi-material round-robin (P1 + P2 step 0).
-- `apps/app/src/pages/practice/` – **new**: `practiceRunModel.ts` (+ `.test.ts`), `PracticeRun.tsx` (+ `.test.tsx`), `practice.css` (P2 steps 1–5).
-- `apps/app/src/App.tsx` – the nested run route (P2 step 5).
+- `apps/app/src/pages/practice/` – **new**: `practiceRunModel.ts` (+ `.test.ts`), `PracticeRun.tsx` (+ `.test.tsx`), `practice.css` (P2 steps 1–5), `PracticeSummary.tsx` (+ `.test.tsx`) (P3).
+- `apps/app/src/App.tsx` – the nested run route (P2 step 5); the DEV-only prototype route (P3 Stage A).
+- `apps/app/src/prototype/practice-summary/` – **new, throwaway** (P3 Stage A): fixtures through the real `practiceRunModel`, 3 variant components, `PrototypeTaker`, shared helpers, host, css.
 - `apps/app/src/pages/assessments/AssessmentDetail.tsx` – `AnswerSlot` exported for reuse (one line).
 
 ## Pitfalls & rules
@@ -74,6 +75,9 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - Vitest: use `pnpm --filter app test <path>` — an extra `--run` makes vitest treat the path as a name filter.
 
 ## Decisions in force
+
+- Decided (2026-09-15, P3 Stage A, user-judged) the run summary is **Variant A — the review rail** (`QuestionNavigator` + active panel over the run's terminal problems) with **inline retry** (the `AnswerSlot` taker replaces the card in the summary; a fresh attempt, history preserved). D-04 holds unamended; the prototype (B stacked report, C scoreboard) stays dev-gated in-tree as the primary source.
+- Decided the summary lists only problems with a terminal outcome (`problemStatus` `graded | failed | open` in `practiceRunModel`); ungradable attempts show honest copy + retry (the review model would call them `processing`); the header reports graded/failed/missing counts.
 
 - Decided this slice reuses the assessment generation + attempt + grading path and does **not** build `/v1/practice-runs` or a `practice_runs` table (2026-09-13, D-01 — recorded deviation from the contract pack, revisited when a server-side run is genuinely needed).
 - Decided the run rides thin local pointer events with a client-minted `runId` in the URL, `questionIds` deliberately absent and resolved lazily, local-only append with a documented same-device limit (2026-09-14, D-02).
