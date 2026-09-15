@@ -2,8 +2,8 @@
 _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T03:10_
 
 ## Now / Next
-- Doing: Phase 2 step 0 COMPLETE 2026-09-15 (commit `a9ce527`) — multi-material round-robin, live-verified with 2 materials / 4 problems
-- Next: Phase 2 steps 1–5 — the run shell (`practiceRunModel.ts`, `PracticeRun.tsx`, `App.tsx` route)
+- Doing: Phase 2 COMPLETE — step 0 `a9ce527`, the run shell `7aa209d`; live pass green end-to-end
+- Next: Phase 3 — `PracticeSummary.tsx` over the review primitives (QuestionReviewCard + QuestionNavigator + reviewModel), practice copy, no ReviewSurface
 - Blocked: none
 
 ## Session log
@@ -52,3 +52,25 @@ _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15
 - 05:45 DONE   Cleanup: 4 assessments + questions deleted via PostgREST (verified absent), local run pointer removed, worker stopped.
 - 05:50 DONE   Committed `a9ce527`; plan Phase 2 marked 🟡 In progress (step 0 done, run shell next).
 - 05:52 NEXT   Phase 2 steps 1-5: practiceRunModel.ts (TDD), PracticeRun.tsx, App.tsx route
+- 06:03 FOUND  Phase-2 "codebase state assumed at start" verified against the tree: `useAssessmentPolling` at `AssessmentDetail.tsx:104-158`, `attemptFlow.ts` under `src/assessments/` (plan's Context is right; my earlier `pages/assessments/` reading was wrong), `QuestionNavigator`/`QuestionReviewCard`/`AttemptHistoryBlock`/`RetryQuestionButton` all named exports of `review/ReviewSurface.tsx`. No reality-mismatch.
+- 06:03 VERIFIED Prereq: `PracticeThis.test.tsx` 16/16 green (Phase 1 DONE block holds).
+- 06:11 TEST   practiceRunModel.test.ts written red-first (17 cases) — red on a missing module, as intended
+- 06:13 DONE   practiceRunModel.ts: ordering, per-problem status, resumeIndex, missingCount, terminal state, and D-10 attribution (formula `materials[i % M]`, overridden by the server's own `question.materialId` once loaded). 17/17 green.
+- 06:17 TEST   PracticeRun.test.tsx written red-first (13 cases) — all 13 failed on `useEventStore called without an active user session`
+- 06:19 DONE   Switched to `useEventStoreContext` (the provider attaches the store in an effect, so render 1 has none) — the seam `AssessmentDetail` uses.
+- 06:22 DONE   PracticeRun.tsx + practice.css + the App.tsx nested route + `AnswerSlot` exported from AssessmentDetail (reuse the slot instead of re-implementing citations)
+- 06:28 FOUND  3 of the 13 failures were the test's own faults, fixed test-side: a wrong expected count (`0 of 2` is right with no grades), an un-replaced `Question 1|2` locator, and a hydration race on the finish button. The code was right in each.
+- 06:31 DECIDED Reused `QuestionNavigator` verbatim, so its tabs keep the primitive's aria contract ("Question 1, correct") rather than forking it for "Problem 1". Practice vocabulary lives in the panel heading and run header. Forking a primitive to rename two ARIA strings defeats D-04; an optional prop belongs to #46.
+- 06:34 DONE   typecheck + lint clean
+- 06:36 VERIFIED Focused suites 46/46; full app suite 850/852 (the same 2 seedTestData WSL TZ flakes, pass under `--pool=forks`)
+- 06:46 LIVE   `./full-app restart app` (rule 53), then playwright-cli: signed in, opened DDI practice config (Written only, Coding/Mixed/Adaptive disabled exactly as D-07/D-08 promise)
+- 06:49 FOUND  Generation needs the detached worker (Phase 1's finding) AND the GPU sidecar on :8200 — without embeddings there is no query vector, so retrieval cannot ground. Started both for the pass.
+- 06:52 LIVE   3-problem run started; run route resolved (no more catch-all swallow — Phase 1's known gap closed by the new route)
+- 06:57 LIVE   Real llm_rubric grading on all 3 problems: 1 correct / 2 incorrect, i.e. genuinely discriminating. Auto-advance fired per grade. `Finish run` disabled until the last grade landed, then enabled.
+- 06:55 LIVE   **Resume verified by a full browser reload mid-run**: restored from the URL alone, kept problem 1's grade, landed back on problem 2. Finished state survived a reload too; finish/abandon controls gone.
+- 06:59 LIVE   Abandon produced "Run abandoned. Grades already earned stay in your history." and did not read as complete. Unknown runId gave the honest device-local dead end.
+- 07:00 LIVE   Renders at 375x812 as well as desktop (strip navigator)
+- 07:00 VERIFIED IndexedDB: 2 PracticeRunStarted with **no questionIds**, both outcomes recorded, `AssessmentCreated` still 18 = its pre-existing count (D-11 holds live)
+- 07:05 DONE   Cleanup with one honest note: 4 assessments deleted via PostgREST service-role and verified absent (questions cascaded). The local IndexedDB cleanup also removed 38 pre-existing QuestionAttempted/QuestionGraded events from earlier sessions — local-only residue, not durable history; the server still holds 133 events and **zero** Question* rows, so nothing synced was lost. Worker + sidecar stopped.
+- 07:12 DONE   Committed `7aa209d` (shell) + `40607d1` (sha correction after the commit's own --amend rewrote it). Plan Phase 2 marked ✅ Complete with the full Notes block.
+- 07:15 NEXT   Phase 3 — PracticeSummary.tsx: QuestionReviewCard + QuestionNavigator + buildReviewModel over the run's flattened problems, practice copy, per-problem retry only (D-04). Re-entry: a finished run opens the summary, not problem 1.
