@@ -43,6 +43,7 @@ import { MaterialLibrary } from './pages/materials/MaterialLibrary';
 import { MaterialCreate } from './pages/materials/MaterialCreate';
 import { MaterialDetail } from './pages/materials/MaterialDetail';
 import { PracticeThis } from './pages/materials/PracticeThis';
+import { PracticeRun } from './pages/practice/PracticeRun';
 import { AssessmentConfig } from './pages/assessments/AssessmentConfig';
 import { AssessmentDetail } from './pages/assessments/AssessmentDetail';
 import { DevSeeder } from './dev/DevSeeder';
@@ -200,6 +201,7 @@ function AppRoutes() {
         <Route path="/materials/new" element={<MaterialCreate />} />
         <Route path="/materials/:materialId" element={<MaterialDetail />} />
         <Route path="/materials/:materialId/practice" element={<PracticeThis />} />
+        <Route path="/materials/:materialId/practice/:runId" element={<PracticeRun />} />
         <Route
           path="/materials/:materialId/view"
           element={

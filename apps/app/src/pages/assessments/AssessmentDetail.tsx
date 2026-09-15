@@ -66,7 +66,8 @@ function roundEntry(
  * controls + submit + honest in-flight phases; the citations block keeps the
  * pre-answer grounded-evidence view from the original ready card.
  */
-function AnswerSlot({
+/** Exported for PracticeRun (#44 D-04): the same taking slot, one question. */
+export function AnswerSlot({
   assessment,
   question,
   onAttemptRecorded,

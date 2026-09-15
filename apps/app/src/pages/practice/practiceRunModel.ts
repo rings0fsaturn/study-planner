@@ -1,0 +1,146 @@
+/**
+ * Practice run state (#44 Phase 2, D-02/D-10) — pure derivation.
+ *
+ * `(pointer event + loaded assessment envelopes + local attempt rows) ->` the
+ * run's ordered problems, their review groups, the resume point and the
+ * terminal state. No React, no Dexie, no clock: the run screen owns the I/O.
+ *
+ * `questionIds` are never stored on the pointer (D-02): the questions exist
+ * only inside the loaded assessments, so this module is where they enter.
+ */
+
+import type { Event } from '../../events/EventStore'
+import type { LocalAttemptRow } from '../../assessments/attemptFlow'
+import type { Assessment, AssessmentStatus } from '../../assessments/types'
+import { PRACTICE_RUN_FINISHED, PRACTICE_RUN_STARTED } from '../../events/EventStore'
+import type { PracticeRunFinishedPayload, PracticeRunStartedPayload } from '../../sync/types'
+import {
+  buildReviewModel,
+  type QuestionReviewGroup,
+} from '../assessments/review/reviewModel'
+
+export interface PracticeRunPointer {
+  started: PracticeRunStartedPayload
+  finished: PracticeRunFinishedPayload | null
+}
+
+export interface PracticeRunProblem {
+  /** 1-based position in the run. */
+  number: number
+  assessmentId: string
+  /** Null while the assessment is still loading or generating. */
+  group: QuestionReviewGroup | null
+  /** Null when the assessment could not be read at all. */
+  assessmentStatus: AssessmentStatus | null
+  /** The source material for this problem (D-10 attribution). */
+  materialId: string
+}
+
+export interface PracticeRunModel {
+  runId: string
+  materialIds: string[]
+  count: number
+  problems: PracticeRunProblem[]
+  /** Problems the run declared but never generated (partial start). */
+  missingCount: number
+  /** Index of the first problem without a grade — where resume lands. */
+  resumeIndex: number
+  completedCount: number
+  isFinished: boolean
+  outcome: 'completed' | 'abandoned' | null
+}
+
+function payloadOf<T>(event: Event): T {
+  return event.payload as unknown as T
+}
+
+/**
+ * Resolve a run's pointer from the log. Two linear scans over the event list:
+ * a runId is minted per run, so the latest match wins.
+ */
+export function findPracticeRun(events: Event[], runId: string): PracticeRunPointer | null {
+  let started: PracticeRunStartedPayload | null = null
+  let finished: PracticeRunFinishedPayload | null = null
+  for (const event of events) {
+    if (event.kind === PRACTICE_RUN_STARTED) {
+      const payload = payloadOf<PracticeRunStartedPayload>(event)
+      if (payload.runId === runId) started = payload
+    } else if (event.kind === PRACTICE_RUN_FINISHED) {
+      const payload = payloadOf<PracticeRunFinishedPayload>(event)
+      if (payload.runId === runId) finished = payload
+    }
+  }
+  return started ? { started, finished } : null
+}
+
+/**
+ * D-10 attribution: problem `i` was generated from `materialIds[i % M]`, so
+ * the formula is the run's own record of which source grounded which problem.
+ * Once the question itself is loaded, its `materialId` is the server's own
+ * answer and takes precedence — the formula is for problems that have not
+ * been read yet, not a replacement for what the server said.
+ */
+function attributeMaterial(
+  index: number,
+  materialIds: string[],
+  questions: Assessment['questions'] | undefined,
+): string {
+  const grounded = questions?.[0]?.materialId
+  if (grounded) return grounded
+  if (materialIds.length === 0) return ''
+  return materialIds[index % materialIds.length]
+}
+
+/**
+ * A problem counts as done once its latest attempt carries a grade. Queued
+ * and in-flight attempts are not done — a retry moves the problem back.
+ */
+function isGraded(problem: PracticeRunProblem): boolean {
+  const display = problem.group?.display
+  return display === 'correct' || display === 'partial' || display === 'incorrect'
+}
+
+/**
+ * Derive the run's state. `assessments` is positionally aligned with
+ * `started.assessmentIds`; a null entry means the envelope has not loaded.
+ */
+export function buildPracticeRunModel(input: {
+  started: PracticeRunStartedPayload
+  finished: PracticeRunFinishedPayload | null
+  assessments: Array<Assessment | null>
+  attemptsByAssessment: Record<string, LocalAttemptRow[]>
+}): PracticeRunModel {
+  const { started, finished, assessments, attemptsByAssessment } = input
+
+  const problems: PracticeRunProblem[] = started.assessmentIds.map((assessmentId, index) => {
+    const assessment = assessments[index] ?? null
+    const rows = attemptsByAssessment[assessmentId] ?? []
+    const group =
+      assessment != null && assessment.questions.length > 0
+        ? (buildReviewModel(assessment, rows).groups[0] ?? null)
+        : null
+    return {
+      number: index + 1,
+      assessmentId,
+      group,
+      assessmentStatus: assessment?.status ?? null,
+      materialId: attributeMaterial(index, started.materialIds, assessment?.questions),
+    }
+  })
+
+  const completedCount = problems.filter((problem) => isGraded(problem)).length
+  const firstOpen = problems.findIndex((problem) => !isGraded(problem))
+
+  return {
+    runId: started.runId,
+    materialIds: started.materialIds,
+    count: started.count,
+    problems,
+    missingCount: Math.max(0, started.count - problems.length),
+    // A fully graded run stays on its last problem rather than wrapping to 0.
+    resumeIndex: firstOpen === -1 ? Math.max(0, problems.length - 1) : firstOpen,
+    completedCount,
+    isFinished: finished != null,
+    outcome: finished?.outcome ?? null,
+  }
+}

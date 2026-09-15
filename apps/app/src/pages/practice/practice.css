@@ -1,0 +1,9 @@
+/* Practice run shell (#44 Phase 2) — layout only.
+   The rail/strip breakpoint and the panel chrome come from the shared review
+   stylesheet; this file owns only what is practice-specific. Reuses the
+   `.ar-variant-b` grid, so the 280 px rail ≥1024 px and the sticky strip below
+   that are the #40 pattern, not a copy. */
+
+.practice-run-actions {
+  align-items: center;
+}
