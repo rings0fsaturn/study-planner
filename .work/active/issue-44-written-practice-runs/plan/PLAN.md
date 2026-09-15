@@ -2,7 +2,7 @@
 
 **Date written:** 2026-09-13 · **Ticket:** [#44 Written Practice Runs](https://github.com/rings0fsaturn/study-planner/issues/44) (open, unclaimed — claimed in Phase 0) · **Parent:** implementation spec #32 · wayfinder map #4 · session model #16
 **Branch:** `phase2/issue-44-written-practice-runs` (cut off the merged `project/phase-2` in Phase 0)
-**Plan status:** 🟢 Amended 2026-09-14: review fixes folded in (single-material P1, deferred questionIds, pause = leave-and-return, Written/3 defaults, primitives-level review reuse, no AssessmentCreated for practice). **P0 done 2026-09-15** (PR #64 merged as `8f04d0d`; branch cut off the refreshed `project/phase-2`). No feature code written yet. Decisions D-01…D-11 are locked unless a reality-mismatch reopens them.
+**Plan status:** 🟢 Amended 2026-09-15: **D-10 reversed** (multi-material *distribution* now ships in Phase 2 as round-robin across per-problem calls — it crosses no server gate) and **D-12 added** (cross-material *synthesis* stays out of scope — that is what the single-material gate actually protects). Earlier amendment 2026-09-14: review fixes folded in (deferred questionIds, pause = leave-and-return, Written/3 defaults, primitives-level review reuse, no AssessmentCreated for practice). **P0 done 2026-09-15** (PR #64 merged as `8f04d0d`) and **P1 done 2026-09-15** (real generation wired, live-verified). Decisions D-01…D-09 and D-11 are locked unless a reality-mismatch reopens them; D-10 as amended governs.
 **Trigger:** user ask 2026-09-13 — "lets work on Practise `study/materials/<id>/practice`. Find out what prototype we had planned out for this, and how we can implement it."
 
 > Runbook convention inherited from the #38/#39/#40/#41/#62/#63 plans: **one phase per session**, records committed in the same commit as the work, STOP on any reality-mismatch and record it.
@@ -52,7 +52,7 @@ The prototype's engine (`useHintEngine.ts`) is the behavioural contract to inher
 
 - `submit()` at `:190-223` builds `GenerationRequest { clientId, materialIds, recipe: { formats: [family], questionCount, difficulty, scope? }, correlationId }`, calls `assessments.generateAssessment(request)`, appends the thin `AssessmentCreated` pointer event, and navigates to `/assessments/:id`.
 - `pages/assessments/AssessmentDetail.tsx` then owns the rest: `useAssessmentPolling(assessmentId)` polls `getAssessment` every 3 s while `status === 'generating'` and stops on a terminal status (`:104-158`); `flow.refreshAttempts(assessment)` hydrates local attempt rows and re-polls while any attempt is in flight (`:205-242`). Refresh-safe resume needs only the route param.
-- Server side gates (`services/intelligence/app/routers/assessments.py:38-43` + `:140-143`): `formats` must be `['objective']` or `['written']`, `questionCount` must be exactly 1, **and `materialIds` must be exactly 1**. So coding is #42's slice, multi-material generation 400s today (D-10), and an N-problem run means N single-material generation calls (D-06).
+- Server side gates (`services/intelligence/app/routers/assessments.py:38-43` + `:140-143`): `formats` must be `['objective']` or `['written']`, `questionCount` must be exactly 1, **and `materialIds` must be exactly 1 per call**. So coding is #42's slice, and an N-problem run means N single-material generation calls (D-06). **The `materialIds` gate is per call, not per run** — so it blocks cross-material *synthesis* (D-12) but not multi-material *distribution* across a run's N calls (D-10 as amended 2026-09-15).
 
 ### What attempt taking and grading already do
 
@@ -164,12 +164,36 @@ One story, three screens, all inside `/materials/:materialId/practice`:
 
 **Rationale:** #44 is blocked by #43 in the ticket graph; that blocker is real and cannot be waived by writing more client code.
 
-### D-10: Phase 1 is single-material only — the picker is neutered, not wired
-**Status:** ✅ Locked 2026-09-14 (review fix)
+### D-10: Multi-material runs distribute round-robin across per-problem calls
+**Status:** ⚠️ **Amended 2026-09-15 — the original lock is reversed.** The pre-amendment text is preserved below.
+
+**Decision (in force):** `Add another material` is live again. The config page collects up to 5 materials (the route's `materialId` is always first and always selected). Phase 2 restores the `MaterialPicker` mount and distributes the run's N problems across the M chosen materials **round-robin, one material per call**: problem `i` is grounded in `materials[i % M]`. `PracticeRunStarted.materialIds` carries the full ordered list.
+
+**Why the original lock was wrong:** it read the server's single-`materialId` gate (`assessments.py:140-143`) as blocking multi-material runs. It does not. The gate is **per call**, and D-06 already makes an N-problem run N calls — so round-robin keeps every call at exactly one material and crosses no gate. The gate only blocks the *other* feature: one question synthesized across several materials (now recorded as D-12/B, still out of scope). Conflating the two over-scoped the lock by a whole feature.
+
+**Rationale for round-robin over alternatives:** it is the only distribution that needs no server change at all. Fan-out (every material × every problem) is N×M calls nobody asked for; splitting the run into per-material blocks is a scheduling decision with no stated user need. `ponytail:` `materials[i % M]` is one expression and the run pointer already declared `materialIds: string[]`.
+
+**Honest limits:** each question is still grounded in exactly **one** material, so this buys *coverage* across sources, not synthesis. With N problems and M materials where `N < M`, round-robin deterministically uses only the first N materials — the UI should not imply every chosen material contributed. Cross-material synthesis is D-12/B.
+
+**Reversibility:** easy — the distribution is one expression in Phase 1's generation loop and one `materialIds` array on the pointer.
+
+---
+
+<details>
+<summary>Original D-10 lock (superseded 2026-09-15)</summary>
 
 **Decision:** Phase 1 sends `materialIds: [primary]` on every call and disables `Add another material` with honest copy ("multi-material runs arrive later"). The picker stays in the tree but unclickable; no round-robin, no split, no fan-out.
 
 **Rationale:** the server requires exactly one `materialId` (`assessments.py:140-143`), so wiring the picker today means either N×M calls nobody specified or a first-400 that reads like a backend bug. Multi-material distribution is its own decision for a later slice, not a silent default. `ponytail:` a disabled button plus one line of copy beats a distribution algorithm nobody asked for.
+
+</details>
+
+### D-12: Multi-material *synthesis* (one question grounded in several materials) stays out of scope
+**Status:** ✅ Recorded reality 2026-09-15
+
+**Decision:** a single question whose grounding spans two or more materials is **not** this slice and not P5's. It needs the single-material assumption removed from five layers: the retrieval RPC (`match_material_id TEXT`, `migrations/029_page_scoped_chunks.sql:49`), the assessment row (`material_id TEXT NOT NULL REFERENCES materials(id)`, `migrations/018_assessments_generation.sql:27`), the job payload (`generation/worker.py:148`), the context builder (`generation/context.py:40,59`), and citation binding (`generation/validation.py:128,163,188` — `blueprint.material_id` attributes every citation) — plus a per-question material decision in the questions table and the `assessments.py:140` gate itself.
+
+**Rationale:** this is the feature the single-material gate actually protects. It is a schema + RPC + worker + validation slice with its own contract amendment, and it earns its own ticket. Recorded here so the distinction between D-10 (distribution, shipped) and D-12 (synthesis, deferred) is not lost the next time someone reads that gate and concludes multi-material is impossible.
 
 ### D-11: No `AssessmentCreated` for practice-owned generations; no pause event
 **Status:** ✅ Locked 2026-09-14 (review fix)
@@ -182,14 +206,16 @@ One story, three screens, all inside `/materials/:materialId/practice`:
 
 ```
 PracticeThis (config, exists)
-  └─ Start ─► generateAssessment × N (bounded 2, single material) ──► server: assessments + questions rows (unchanged)
-             └─ append PracticeRunStarted {runId, materialIds, assessmentIds}  (no questionIds yet — D-02; no AssessmentCreated — D-11)
+  └─ Start ─► generateAssessment × N, bounded 2, one material per call
+              problem i grounded in materials[i % M]  ──► server: assessments + questions rows (unchanged)
+             └─ append PracticeRunStarted {runId, materialIds (all M), assessmentIds}  (no questionIds — D-02; no AssessmentCreated — D-11)
                 └─ navigate /materials/:id/practice/:runId
 
 PracticeRun (new)
-  ├─ read run from the event log (runId) → assessment ids
+  ├─ read run from the event log (runId) → assessment ids + the ordered material ids
   ├─ read questions via getAssessment(assessmentId) (existing, polled while generating)
   ├─ per problem: AttemptTaker  ──► POST .../attempts ──► worker ──► QuestionGraded (polled via GET .../attempts)
+  ├─ per-problem material attribution (problem i → materials[i % M]) from the pointer alone
   ├─ pause = leave and return via the runId URL (no event — D-11)
   └─ finish/abandon ─► PracticeRunFinished {outcome}
 
@@ -199,9 +225,9 @@ PracticeSummary (new, thin)
 
 ## Files touched (index — indicative, not a contract)
 
-- `apps/app/src/pages/materials/PracticeThis.tsx` (+ `.test.tsx`) — wire the config to real generation, run pointer, navigate.
+- `apps/app/src/pages/materials/PracticeThis.tsx` (+ `.test.tsx`) — wire the config to real generation, run pointer, navigate; multi-material selection + round-robin (D-10 amend).
 - `apps/app/src/pages/practice/PracticeRun.tsx` (+ `.test.tsx`) — **new**, the run shell.
-- `apps/app/src/pages/practice/practiceRunModel.ts` (+ `.test.tsx`) — **new**, derive run state from events + attempt rows (the only non-trivial logic; gets the TDD treatment).
+- `apps/app/src/pages/practice/practiceRunModel.ts` (+ `.test.tsx`) — **new**, derive run state from events + attempt rows, including per-problem material attribution `materials[i % M]` (the only non-trivial logic; gets the TDD treatment).
 - `apps/app/src/pages/practice/PracticeSummary.tsx` (+ `.test.tsx`) — **new**, thin composition of the review primitives (no `ReviewSurface` — D-04).
 - `apps/app/src/sync/types.ts` — `PracticeRunStartedPayload`, `PracticeRunFinishedPayload`.
 - `apps/app/src/events/EventStore.ts` — two new kind constants.
@@ -315,24 +341,27 @@ Revert the phase commit; the config page returns to the banner.
 
 **Status:** ⬜ Not started
 **Depends on:** Phase 1
-**Estimated scope:** 3 new files + `App.tsx` route, ~350 lines
+**Estimated scope:** 3 new files + `App.tsx` route + the D-10 multi-material amend, ~400 lines
 
 ### Codebase state assumed at start
 - `AttemptTaker` takes one question and owns answer/submit/grade states; `attemptFlow` owns the local rows.
 - `useAssessmentPolling` (`AssessmentDetail.tsx:104-158`) is the pattern for polling a generating assessment and stopping on a terminal status.
 - `reviewModel.ts` builds the attempt timeline the review surface renders.
+- Phase 1 committed the pointer with the full ordered `materialIds` list already — but today that list is always length 1, so Phase 2's first step restores the multi-material path that gives it something to carry (D-10 amend).
 
 ### Steps
 
-1. `practiceRunModel.ts`: pure functions over `(runEvent, assessments, attemptRowsByAssessment)` → `{ materialIds, assessmentIds, orderedProblems, perProblemStatus, resumeIndex, completedCount, isFinished }`. This is the logic that earns the tests; keep it free of React and Dexie-free (rule 32 stays out of the unit tests). `questionIds` enter here — resolved from the loaded assessments, never stored on the event (D-02).
-2. `PracticeRun.tsx`: load the run from the log by `runId`; read each question through the injected assessment client (`getAssessment`, polling while `generating` per `AssessmentDetail.tsx:104-158`); render the current problem with `AttemptTaker`; a problem navigator built on the existing `QuestionNavigator` pattern (reuse the #40 rail/strip pattern: 280 px rail ≥1024 px, sticky strip below). This component owns the reconnect drain: one `drainQueuedAttempts` caller across the run's assessments — the individual takers never drain (D-04).
+0. **Multi-material selection + round-robin (D-10 amend; reversed from the original Phase 1 lock).** In `PracticeThis.tsx`: restore the `MaterialPicker` mount (`purpose="generation"`, `max={5}`, `initialSelected={[material.id]}`), re-enable `Add another material`, and keep the chosen extras in state. The route's own material is always first and always included — the picker's `initialSelected` guarantees it, and the extras are appended after it, so `materials[0]` is the route material. Then in the generation loop, problem `i` sends `materialIds: [materials[i % materials.length]]` and the pointer appends the **full ordered list**. Copy note: with N problems and M materials where `N < M`, only the first N materials are used — say so in the hint rather than implying all M contributed.
+1. `practiceRunModel.ts`: pure functions over `(runEvent, assessments, attemptRowsByAssessment)` → `{ materialIds, assessmentIds, orderedProblems, perProblemStatus, resumeIndex, completedCount, isFinished }`. Also derives **per-problem material attribution** as `materials[i % M]` from the pointer alone — the questions are only guaranteed to know their own single `materialId`, so the run-level mapping must come from the run, not from guessing. This is the logic that earns the tests; keep it free of React and Dexie-free (rule 32 stays out of the unit tests). `questionIds` enter here — resolved from the loaded assessments, never stored on the event (D-02).
+2. `PracticeRun.tsx`: load the run from the log by `runId`; read each question through the injected assessment client (`getAssessment`, polling while `generating` per `AssessmentDetail.tsx:104-158`); render the current problem with `AttemptTaker`; a problem navigator built on the existing `QuestionNavigator` pattern (reuse the #40 rail/strip pattern: 280 px rail ≥1024 px, sticky strip below), plus a per-problem "from {material title}" label resolved through the materials client so a mixed-source run is legible. This component owns the reconnect drain: one `drainQueuedAttempts` caller across the run's assessments — the individual takers never drain (D-04).
 3. Resume = pause: the route param is the whole state — refresh restores the run, the current problem is the first without a grade, and in-flight/queued attempts re-poll exactly as `AssessmentDetail` does. Leaving and returning IS the pause; there is no pause control, no timer, no paused event (D-11).
 4. Finish (`PracticeRunFinished{outcome:'completed'}`) when every problem has a grade; abandon is an explicit control that writes `abandoned` — neither invents an observation, and already-graded problems keep theirs (per #16).
 5. Route registration in `App.tsx` next to the config route (no `/study` prefix — rule 12).
 
 ### Tests
-- `practiceRunModel.test.ts`: ordering, resume point, per-problem status from mixed graded/queued/ungraded rows, abandoned vs completed, unknown `runId` → not-found state.
-- `PracticeRun.test.tsx`: renders problem 1 of N, advancing after a grade, resume after remount, abandoned run does not show as complete, a `generating` problem shows honest processing copy.
+- `practiceRunModel.test.ts`: ordering, resume point, per-problem status from mixed graded/queued/ungraded rows, abandoned vs completed, unknown `runId` → not-found state, and **round-robin attribution** — `N=4, M=2` alternates, `N=2, M=3` uses only the first two materials, `M=1` is the degenerate case and must match Phase 1's behaviour.
+- `PracticeThis.test.tsx` (extend Phase 1's file): the picker re-opens and the extras are selected; with 2 materials and 4 problems, calls alternate `mat-1, mat-2, mat-1, mat-2`; the pointer carries both ids in order; picking an extra does not change the count of calls (still N, not N×M).
+- `PracticeRun.test.tsx`: renders problem 1 of N, advancing after a grade, resume after remount, abandoned run does not show as complete, a `generating` problem shows honest processing copy, and a 2-material run labels which material each problem came from.
 
 ### Verification (DONE)
 ```bash
@@ -399,7 +428,9 @@ The spec is additive; reverting it reverts nothing the product uses.
 **Status:** ⬜ Not started — only if Phase 4's numbers say so
 **Depends on:** Phase 4
 
-Lift `questionCount must be 1` (`services/intelligence/app/routers/assessments.py:42`) so the blueprint's existing per-slot fan-out produces N questions in one job, and have the practice config send the count it already collects. Gate: Phase 4 numbers on a 5-problem run — p95 run-start seconds or quota-error rate written into `plan/VERIFICATION.md`. Do **not** build it speculatively — the gate is a scaffold limit, not a bug. (`ponytail:` multi-material distribution, if ever wanted, rides this phase too — one server change, not a client fan-out.)
+Lift `questionCount must be 1` (`services/intelligence/app/routers/assessments.py:42`) so the blueprint's existing per-slot fan-out produces N questions in one job, and have the practice config send the count it already collects. Gate: Phase 4 numbers on a 5-problem run — p95 run-start seconds or quota-error rate written into `plan/VERIFICATION.md`. Do **not** build it speculatively — the gate is a scaffold limit, not a bug.
+
+**Note (2026-09-15):** the original text here suggested multi-material distribution might "ride this phase too." It did not wait — it ships in Phase 2 as a client round-robin (D-10 amend), because the per-call gate never blocked it. What P5 would change is the *call count* (N → 1), which also collapses the round-robin into a single recipe; revisit the distribution shape here if this phase ever lands.
 
 ## Open questions — answered 2026-09-14 (locked unless a reality-mismatch reopens)
 
@@ -417,7 +448,7 @@ Lift `questionCount must be 1` (`services/intelligence/app/routers/assessments.p
 - Mastery/adaptive difficulty (**#43**) — AC3 rides on it. No `masteryCache` in Dexie v6 today.
 - A top-level `/practice` hub (#5's IA) — the material-scoped route is what exists and what was asked for.
 - Chapter/page scope in the practice config (#62's picker exists on the assessment side; adding it here is a copy, not a decision — do it when someone wants it).
-- Multi-material runs (D-10) — the server takes one `materialId`; distribution rides P5 or its own slice, not a client fan-out.
+- Cross-material **synthesis** — one question grounded in several materials (D-12). This is the feature the single-material gate actually protects; it needs schema + RPC + worker + validation changes. Distinct from multi-material **distribution** (D-10), which ships in Phase 2 because it crosses no gate.
 - `PracticeRunPaused`, timers, timeout events (D-11) — pause is leave-and-return; timeouts stay inside AC3's deferral.
 - `/v1/practice-runs*` and `practice_runs` (D-01) — revisit when a server-side run is actually needed.
 - Monaco/CodeMirror (D-05).

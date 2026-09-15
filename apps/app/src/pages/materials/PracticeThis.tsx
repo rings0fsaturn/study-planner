@@ -9,6 +9,7 @@ import {
 import { PRACTICE_RUN_STARTED } from '../../events/EventStore'
 import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
+import { MaterialPicker } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
 import '../../materials/materials.css'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
@@ -22,6 +23,8 @@ const FORMAT: AssessmentFormat = 'written'
 /** D-06: one single-material call per problem, two in flight at a time. */
 const GENERATION_CONCURRENCY = 2
 const MAX_QUESTIONS = 20
+/** D-10: the primary material plus up to four more, distributed round-robin. */
+const MAX_MATERIALS = 5
 
 function formatMinutes(mins: number | null): string {
   if (!mins) return 'Unknown duration'
@@ -44,6 +47,8 @@ export function PracticeThis() {
   const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY_OPTIONS)[number]>('3')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<AssessmentServiceError | null>(null)
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [extraMaterials, setExtraMaterials] = useState<MaterialRecord[]>([])
 
   useEffect(() => {
     if (!materialId) return
@@ -122,11 +127,16 @@ export function PracticeThis() {
   }
 
   const materialIdForRequest = material.id
+  // The route's own material always leads, so problem `i` draws from
+  // `runMaterials[i % length]` and the primary is used first (D-10).
+  const runMaterials = [material, ...extraMaterials.filter((extra) => extra.id !== material.id)]
 
   /**
    * D-06: one single-material generation per problem, composed by assessment
-   * id. A problem keeps its own clientId/correlationId so a retried request is
-   * a fresh idempotency key rather than a replay.
+   * id. D-10: problem `i` draws its material round-robin, so every call still
+   * carries exactly one materialId (the server's per-call gate). A problem
+   * keeps its own clientId/correlationId so a retried request is a fresh
+   * idempotency key rather than a replay.
    */
   async function startRun() {
     if (generating) return
@@ -138,9 +148,10 @@ export function PracticeThis() {
     let firstError: AssessmentServiceError | null = null
 
     const generateOne = async (index: number) => {
+      const source = runMaterials[index % runMaterials.length]
       const request: GenerationRequest = {
         clientId: crypto.randomUUID(),
-        materialIds: [materialIdForRequest],
+        materialIds: [source.id],
         recipe: {
           formats: [FORMAT],
           // The slice gate accepts exactly one question per call, so an
@@ -187,7 +198,7 @@ export function PracticeThis() {
     try {
       await eventStore.append(PRACTICE_RUN_STARTED, {
         runId,
-        materialIds: [materialIdForRequest],
+        materialIds: runMaterials.map((entry) => entry.id),
         mode: 'written',
         assessmentIds,
         count: total,
@@ -221,6 +232,8 @@ export function PracticeThis() {
         </div>
         <div className="card-meta">
           <MaterialStatusBadge status={material.ingestionState} />
+          {extraMaterials.length > 0 &&
+            ` · +${extraMaterials.length} more material${extraMaterials.length !== 1 ? 's' : ''}`}
         </div>
         <div className="material-practice-options">
           <div className="field-group" style={{ maxWidth: '200px' }}>
@@ -280,8 +293,12 @@ export function PracticeThis() {
           >
             {generating ? 'Generating…' : 'Start practice run'}
           </button>
-          {/* D-10: single material per run until the server takes more than one. */}
-          <button type="button" className="btn btn-secondary" disabled>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={generating}
+            onClick={() => setPickerOpen(true)}
+          >
             Add another material
           </button>
         </div>
@@ -290,9 +307,13 @@ export function PracticeThis() {
             Generating {questionCount} questions…
           </p>
         )}
-        <p className="field-hint" style={{ marginTop: '0.75rem' }}>
-          Multi-material runs arrive later.
-        </p>
+        {!generating && extraMaterials.length > 0 && (
+          <p className="field-hint" style={{ marginTop: '0.75rem' }}>
+            {questionCount < runMaterials.length
+              ? `Questions are spread across your materials in turn — with ${questionCount} question${questionCount !== 1 ? 's' : ''}, only the first ${questionCount} material${questionCount !== 1 ? 's' : ''} will be used.`
+              : 'Questions are spread across your materials in turn.'}
+          </p>
+        )}
       </div>
 
       {error?.code === 'quota_exhausted' && (
@@ -318,6 +339,31 @@ export function PracticeThis() {
             </div>
           </div>
         </div>
+      )}
+
+      {pickerOpen && (
+        <MaterialPicker
+          open
+          purpose="generation"
+          max={MAX_MATERIALS}
+          initialSelected={runMaterials.map((entry) => entry.id)}
+          onClose={() => setPickerOpen(false)}
+          onContinue={async (selection) => {
+            setPickerOpen(false)
+            // The route's material is always in the run; the picker's
+            // selection contributes only the extras (D-10).
+            const records: MaterialRecord[] = []
+            for (const picked of selection) {
+              if (picked.materialId === materialIdForRequest) continue
+              try {
+                records.push(await client.getMaterial(picked.materialId))
+              } catch {
+                // Ignore individual failures; keep the confirmed set.
+              }
+            }
+            setExtraMaterials(records)
+          }}
+        />
       )}
     </div>
   )

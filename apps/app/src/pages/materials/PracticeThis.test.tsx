@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { PracticeThis } from './PracticeThis'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
@@ -88,6 +88,19 @@ async function startRun(count: number) {
   fireEvent.click(screen.getByRole('button', { name: 'Start practice run' }))
 }
 
+/** Open the material picker and add one extra ready material by title. */
+async function addMaterial(title: string) {
+  fireEvent.click(
+    await screen.findByRole('button', { name: 'Add another material' }),
+  )
+  const dialog = await screen.findByRole('dialog', { name: /Choose materials for assessment/i })
+  fireEvent.click(within(dialog).getByRole('checkbox', { name: new RegExp(title) }))
+  fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
+  await waitFor(() => {
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+}
+
 describe('PracticeThis', () => {
   afterEach(() => {
     mockAppend.mockClear()
@@ -120,14 +133,94 @@ describe('PracticeThis', () => {
     expect(screen.getByRole('button', { name: '5' })).toBeEnabled()
   })
 
-  it('disables the material picker with honest copy', async () => {
-    const client = new FakeMaterialClient([material({})])
+  it('distributes a run’s problems round-robin across the chosen materials', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2', 'a-3', 'a-4'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    await startRun(4)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(4)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    // N problems, N calls — never N x M — alternating primary-first.
+    expect(requests.map((request) => request.materialIds)).toEqual([
+      ['mat-1'],
+      ['mat-2'],
+      ['mat-1'],
+      ['mat-2'],
+    ])
+  })
+
+  it('carries the full ordered material list on the run pointer, primary first', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalled()
+    })
+    expect(mockAppend).toHaveBeenCalledWith(
+      'PracticeRunStarted',
+      expect.objectContaining({ materialIds: ['mat-1', 'mat-2'] }),
+    )
+  })
+
+  it('uses only the first N materials when there are more materials than problems', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+      material({ id: 'mat-3', title: 'Compiler Design', source: 'cc.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    await addMaterial('Compiler Design')
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.materialIds)).toEqual([['mat-1'], ['mat-2']])
+    // The pointer still names every chosen material, so the run can say so.
+    expect(mockAppend).toHaveBeenCalledWith(
+      'PracticeRunStarted',
+      expect.objectContaining({ materialIds: ['mat-1', 'mat-2', 'mat-3'] }),
+    )
+  })
+
+  it('warns when fewer problems than materials means some materials go unused', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+      material({ id: 'mat-3', title: 'Compiler Design', source: 'cc.pdf' }),
+    ])
 
     renderPractice(client)
+    await addMaterial('Database Internals')
+    await addMaterial('Compiler Design')
+    // 2 problems across 3 materials: the third material is never drawn from.
+    fireEvent.change(screen.getByLabelText('Number of questions'), { target: { value: '2' } })
 
-    await screen.findByText('Focus')
-    expect(screen.getByRole('button', { name: 'Add another material' })).toBeDisabled()
-    expect(screen.getByText(/multi-material runs arrive later/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/only the first 2 materials will be used/i),
+    ).toBeInTheDocument()
   })
 
   it('generates one single-material written question per problem', async () => {
