@@ -37,6 +37,7 @@ import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
 import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentReviewPrototype';
+import PracticeSummaryPrototype from './prototype/practice-summary/PracticeSummaryPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { MaterialLibrary } from './pages/materials/MaterialLibrary';
@@ -179,6 +180,12 @@ function AppRoutes() {
         <Route
           path="/assessment-review-prototype"
           element={<AssessmentReviewPrototype />}
+        />
+      )}
+      {import.meta.env.DEV && (
+        <Route
+          path="/practice-summary-prototype"
+          element={<PracticeSummaryPrototype />}
         />
       )}
       <Route path="/reset-password" element={<ResetPassword />} />
