@@ -2,8 +2,8 @@
 _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T03:10_
 
 ## Now / Next
-- Doing: Phase 1 — wire `Start practice run` to real generation (plan-implementor, TDD red-first)
-- Next: write the failing `PracticeThis.test.tsx` cases first, then the production change
+- Doing: Phase 1 COMPLETE 2026-09-15 (commit `a21ad34`) — real generation wired, live-verified
+- Next: Phase 2 — the run shell (`PracticeRun.tsx` + `practiceRunModel.ts` + `App.tsx` route); needs the user's go-ahead per plan-implementor per-phase cadence
 - Blocked: none
 
 ## Session log
