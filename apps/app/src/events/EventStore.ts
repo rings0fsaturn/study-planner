@@ -10,6 +10,12 @@ export const QUESTION_ATTEMPTED = 'QuestionAttempted' as const;
 /** Durable event kind: the server returned the authoritative grade. */
 export const QUESTION_GRADED = 'QuestionGraded' as const;
 
+/** Durable event kind: a practice run's thin local pointer was minted (D-02). */
+export const PRACTICE_RUN_STARTED = 'PracticeRunStarted' as const;
+
+/** Durable event kind: the run closed, completed or abandoned (D-11). */
+export const PRACTICE_RUN_FINISHED = 'PracticeRunFinished' as const;
+
 export interface Event {
   id?: number;
   kind: string;

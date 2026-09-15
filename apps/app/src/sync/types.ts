@@ -93,6 +93,25 @@ export interface AssessmentCreatedPayload {
 }
 
 /**
+ * Thin local-first pointer to a practice run (D-02). No `questionIds`: at
+ * Start time generation has only returned assessment ids, and the questions
+ * are resolved lazily by polling `getAssessment` while it is generating.
+ */
+export interface PracticeRunStartedPayload {
+  runId: string
+  materialIds: string[]
+  mode: 'written'
+  assessmentIds: string[]
+  count: number
+}
+
+/** Terminal half of the run pointer. Neither outcome invents an observation. */
+export interface PracticeRunFinishedPayload {
+  runId: string
+  outcome: 'completed' | 'abandoned'
+}
+
+/**
  * Per-question attempt submitted (durable-events `questionAttemptedPayload`).
  * additionalProperties:false and NO answer field: the answer lives in the
  * server attempts table and the local unsynced assessmentAttempts table,

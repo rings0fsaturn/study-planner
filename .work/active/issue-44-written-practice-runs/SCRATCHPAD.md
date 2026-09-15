@@ -1,10 +1,10 @@
 # Scratchpad – issue-44-written-practice-runs · session 2026-09-15
-_state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T00:00_
+_state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T03:10_
 
 ## Now / Next
-- Doing: P0 prereq verification (READ-ONLY) — found a plan/parent mismatch, held before any mutation
-- Next: get the user's call on which base to cut `phase2/issue-44-written-practice-runs` from, then run P0
-- Blocked: P0 merge step — the plan's parent branch cannot satisfy P1's own step ("replace the fake `started` banner")
+- Doing: Phase 1 — wire `Start practice run` to real generation (plan-implementor, TDD red-first)
+- Next: write the failing `PracticeThis.test.tsx` cases first, then the production change
+- Blocked: none
 
 ## Session log
 - 00:00 FOUND  62 branch is fully pushed; origin/62 == HEAD == 90d3066; 0 commits ahead. `90d3066`.
@@ -22,5 +22,21 @@ _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15
 - 00:00 FOUND  #41, #62, #63 all still OPEN with 0 ticked boxes despite the #62/#63 state docs claiming ACs ticked — the GitHub boxes were never set.
 - 00:00 FOUND  Untracked leftovers: `.claude/` (`.claude/rules` + `.claude/skills` are symlinks to `../.agents/rules|skills`; only `settings.local.json` is gitignored), `.cursor/`, `graphify-out/`, `e2e/tmp-viewer-timings.spec.ts`, `college/mydeliverables/phase2-review-3/`, `.work/active/document-pipeline/`. A blanket `git add -A` would commit all of it. `.work/active/issue-44-written-practice-runs/` is untracked and must be included.
 - 00:00 DECIDED  Held every P0 mutation (no push, no PR, no merge, no branch, no claim, no commit) pending the user's call, because the merge lands #41's completed work and P0 is the plan's explicitly user-owned step.
-- 00:00 EDIT   .work/active/issue-44-written-practice-runs/SCRATCHPAD.md – seeded with P0 findings – verified
-- 00:00 NEXT   surface the base-branch decision; do not run P0 branch operations until it is answered
+- 00:00 DECIDED  User chose "Merge 62 as written" — run P0 verbatim, accepting #41-complete + #62 P7-incomplete + #63 P5-incomplete on the integration branch, because #44 is unbuildable without the #41 commits that merge carries.
+- 02:14 DONE   P0 step 1: `git push -u origin phase2/issue-62-scoped-question-generation` — no-op, 0 unpushed.
+- 02:17 DONE   P0 step 2: PR #64 opened (title/body name #41, #62, #63) and merged as `8f04d0d` with `--merge --delete-branch=false`.
+- 02:20 DONE   P0 step 3: stashed the STATUS row, checked out `project/phase-2`, `pull --ff-only` a147f59→8f04d0d (39 commits), cut `phase2/issue-44-written-practice-runs`, popped the stash back. New branch tree `066ec4d` == 62 tip tree — identical, as predicted.
+- 02:22 DONE   P0 step 4: `gh issue edit 44 --add-assignee @me` → assignees=rings0fsaturn.
+- 02:25 DONE   P0 step 5-6: plan + `state.md` + `SCRATCHPAD.md` + STATUS row committed as `3787684`; only those 4 files staged, the unrelated untracked dirs left alone.
+- 02:26 FOUND  Two snags cleared: a stale 0-byte `.git/index.lock` (2026-09-13) blocked the first checkout — removed after `ps` showed no live git process; the uncommitted STATUS row blocked the branch switch — stashed and popped, not committed early.
+- 02:27 EDIT   plan/PLAN.md – Phase 0 marked ✅ Complete 2026-09-15, header status bumped, full Notes block added (the #41 finding + both snags) – verified
+- 02:28 NEXT   Phase 1 — flip defaults to Written/3, neuter the picker, N single-material generation calls bounded 2, append PracticeRunStarted, navigate
+- 02:33 FOUND  Phase-1 "codebase state assumed at start" verified against the tree: `AssessmentConfig.tsx:190-223` IS `submit()`, `normalizeAssessmentError` at `assessmentClient.ts:74`, `PracticeThis.tsx` 229 lines with no service call, server gates `SUPPORTED_FORMATS`/`questionCount != 1`/`len(material_ids) != 1`. No reality-mismatch; plan citations HEAD-accurate.
+- 02:34 EDIT   apps/app/src/sync/types.ts – added `PracticeRunStartedPayload` (no questionIds) + `PracticeRunFinishedPayload` – typechecked
+- 02:34 EDIT   apps/app/src/events/EventStore.ts – added `PRACTICE_RUN_STARTED` / `PRACTICE_RUN_FINISHED` kind constants – typechecked
+- 02:36 TEST   PracticeThis.test.tsx rewritten red-first (13 cases); red run = 7 failed / 6 passed as intended
+- 02:39 DONE   PracticeThis.tsx wired to real generation: Written/3 defaults, Coding/Mixed/Adaptive disabled, picker disabled, N single-material calls bounded 2, PracticeRunStarted append, navigate to the run URL. 13/13 green.
+- 02:41 DONE   `pnpm --filter app typecheck` clean; `pnpm --filter app lint` clean
+- 02:50 VERIFIED Full suite 817/819; the 2 failures are `src/dev/seedTestData.test.ts` and pass under `--pool=forks` — the documented WSL TZ flake, not this change.
+- 02:51 DECIDED Kept the disabled `Add another material` button but dropped the unmounted `MaterialPicker` + its `pickerOpen`/`extraMaterials` state (D-10's literal "picker stays in the tree"). The button can never open it, so the mount was unreachable dead code; the user-visible contract (disabled + honest copy) is intact. Flagged in the phase Notes.
+- 02:52 NEXT   Live check on the dev stack: Start must issue real generation calls, append the pointer, and navigate
