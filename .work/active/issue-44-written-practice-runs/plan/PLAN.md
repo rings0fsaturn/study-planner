@@ -339,7 +339,7 @@ Revert the phase commit; the config page returns to the banner.
 
 ## Phase 2: The run shell — take, pause, resume, finish, abandon
 
-**Status:** ⬜ Not started
+**Status:** 🟡 In progress — step 0 (multi-material distribution) complete 2026-09-15 in `a9ce527`; the run shell (steps 1–5) is next
 **Depends on:** Phase 1
 **Estimated scope:** 3 new files + `App.tsx` route + the D-10 multi-material amend, ~400 lines
 
@@ -374,6 +374,16 @@ Live: start a 3-problem run, answer one, reload mid-run, confirm you land back o
 Revert the phase commit; Phase 1's navigation target disappears with it (revert both together).
 
 ### Notes (filled in during implementation)
+
+**2026-09-15 — step 0 (multi-material distribution) executed.**
+
+- **The reversal was correct and cheap.** Live-verified on the dev stack with 2 materials and 4 problems: exactly **4** generation calls (not N×M=8), the assessments' `materialId` alternating `80c8b138 → b5f51eab → 80c8b138 → b5f51eab`, the pointer carrying `materialIds: [primary, second]` in order with `mode: 'written'` and no `questionIds`, and all four reaching `ready` as written questions at difficulty 3 with 2–3 citations each drawn from their own source. No server change.
+- **TDD:** 4 new cases red first (the picker test that asserted the *disabled* button was replaced, not deleted — it now asserts round-robin behaviour), then 16/16 green. The 4th case initially failed against my own implementation because the test never set the question count below the material count, so the warning correctly did not render — the test was wrong, not the code, and it was fixed to set `Number of questions = 2`.
+- **Ordering is normalized, not inherited.** `MaterialPicker.listMaterials` returns newest-first, so the picker's selection order is not user intent. `runMaterials` is built as `[routeMaterial, ...extras]` with the route material filtered out of the extras, which guarantees both `runMaterials[0] === primary` and no duplicate entry even if a caller hand-feeds an odd `initialSelected`.
+- **Honest limit surfaced in the UI:** when `questionCount < materials.length`, the config page says which materials go unused ("only the first N materials will be used"). Round-robin with N < M deterministically starves the tail, so staying silent would imply every choice contributed.
+- **Full app suite 820/822** — the same 2 `seedTestData` WSL TZ failures, unrelated.
+- **Environment finding for Phase 4:** the picker's checkboxes are `className="sr-only"`, so `playwright-cli click` by ref or by role target cannot hit them (the element is visually hidden and a coordinate click misses). The `MaterialPicker` in a live spec must be driven through its label row — `page.locator('label.checkbox-row', { hasText: ... }).click()` — not through the checkbox input. A live spec that copies the assessment-side picker interaction wholesale will silently fail to select and then fail on a stale selection count. Worth encoding in the Phase 4 spec directly.
+- **Shared-account hygiene:** the 4 generated assessments + their questions were deleted through PostgREST service-role and verified absent; the local run pointer was removed from the IndexedDB log; the detached worker was stopped. Nothing left behind.
 
 ## Phase 3: The run's summary
 

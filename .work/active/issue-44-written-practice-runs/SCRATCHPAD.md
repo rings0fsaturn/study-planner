@@ -2,8 +2,8 @@
 _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T03:10_
 
 ## Now / Next
-- Doing: Phase 1 COMPLETE 2026-09-15 (commit `a21ad34`) — real generation wired, live-verified
-- Next: Phase 2 — the run shell (`PracticeRun.tsx` + `practiceRunModel.ts` + `App.tsx` route); needs the user's go-ahead per plan-implementor per-phase cadence
+- Doing: Phase 2 step 0 COMPLETE 2026-09-15 (commit `a9ce527`) — multi-material round-robin, live-verified with 2 materials / 4 problems
+- Next: Phase 2 steps 1–5 — the run shell (`practiceRunModel.ts`, `PracticeRun.tsx`, `App.tsx` route)
 - Blocked: none
 
 ## Session log
@@ -40,3 +40,15 @@ _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15
 - 02:50 VERIFIED Full suite 817/819; the 2 failures are `src/dev/seedTestData.test.ts` and pass under `--pool=forks` — the documented WSL TZ flake, not this change.
 - 02:51 DECIDED Kept the disabled `Add another material` button but dropped the unmounted `MaterialPicker` + its `pickerOpen`/`extraMaterials` state (D-10's literal "picker stays in the tree"). The button can never open it, so the mount was unreachable dead code; the user-visible contract (disabled + honest copy) is intact. Flagged in the phase Notes.
 - 02:52 NEXT   Live check on the dev stack: Start must issue real generation calls, append the pointer, and navigate
+- 05:00 DECIDED User asked what it would take to bring back `Add another material`. Split the ask in two: (A) multi-material *distribution* across a run's problems — no server change, ~30 lines; (B) cross-material *synthesis* (one question grounded in several materials) — needs RPC + schema + worker + validation. User chose A.
+- 05:02 FOUND  D-10's original lock misread the server gate: `assessments.py:140` rejects `len(material_ids) != 1` **per call**, not per run, and D-06 already makes an N-problem run N calls. So round-robin crosses no gate. The gate only protects synthesis (now D-12). Conflated the two by a whole feature.
+- 05:05 EDIT   plan/PLAN.md – D-10 reversed (original lock preserved in a collapsed <details>), D-12 added for synthesis with the five-layer cost table, architecture + files index + out-of-scope + P5 note + Context line 55 all corrected – verified
+- 05:15 TEST   PracticeThis.test.tsx – 4 multi-material cases written red-first (round-robin, pointer carries full ordered list, N<M uses first N, unused-material warning); replaced the obsolete "picker disabled" case. Red: 4 failed / 12 passed.
+- 05:30 DONE   PracticeThis.tsx – picker restored (max 5), `runMaterials = [routeMaterial, ...extras]` primary-first, `materials[i % M]` round-robin, pointer carries the full list, unused-material hint. 16/16 green.
+- 05:33 DONE   typecheck + lint clean
+- 05:40 FOUND  Live picker trap for Phase 4: `MaterialPicker` checkboxes are `className="sr-only"`, so a role/ref click cannot select — drive it via `page.locator('label.checkbox-row', { hasText }).click()`. A live spec copying the assessment-side interaction will silently fail to select.
+- 05:41 VERIFIED Live 2 materials x 4 problems: exactly 4 generation calls (not 8), assessments alternating materialId, pointer `materialIds: [primary, second]` ordered, all 4 `ready` as written questions with 2-3 citations from their own source.
+- 05:43 VERIFIED Full suite 820/822 (the same 2 seedTestData WSL TZ failures).
+- 05:45 DONE   Cleanup: 4 assessments + questions deleted via PostgREST (verified absent), local run pointer removed, worker stopped.
+- 05:50 DONE   Committed `a9ce527`; plan Phase 2 marked 🟡 In progress (step 0 done, run shell next).
+- 05:52 NEXT   Phase 2 steps 1-5: practiceRunModel.ts (TDD), PracticeRun.tsx, App.tsx route
