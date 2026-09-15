@@ -349,7 +349,11 @@ describe('PracticeRun', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: 'Finish run' }))
 
-    expect(await screen.findByText(/Run complete · 1 of 1 graded/)).toBeInTheDocument()
+    // Completion lands on the summary (P3), not the old status line.
+    expect(await screen.findByRole('heading', { name: 'Run summary' })).toBeInTheDocument()
+    expect(
+      screen.getByText('1 of 1 problems graded · 1 correct · mean score 1.00'),
+    ).toBeInTheDocument()
     const store = createEventStore(USER)
     const finished = (await store.getAll()).filter(
       (event) => event.kind === PRACTICE_RUN_FINISHED,
@@ -357,6 +361,67 @@ describe('PracticeRun', () => {
     store.close()
     expect(finished).toHaveLength(1)
     expect(finished[0].payload).toEqual({ runId: 'run-1', outcome: 'completed' })
+  })
+
+  it('re-opens a finished run on the summary, not the first problem', async () => {
+    await seedRun({ assessmentIds: ['a-1'] }, { runId: 'run-1', outcome: 'completed' })
+    seedGrade('a-1', 'q1')
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+
+    renderRun(client)
+
+    expect(await screen.findByRole('heading', { name: 'Run summary' })).toBeInTheDocument()
+    // The summary hydrates its rows: the graded problem appears, not the taker.
+    expect(await screen.findByRole('button', { name: 'Retry question' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submit answer' })).not.toBeInTheDocument()
+    // The run header still states the outcome above the summary.
+    expect(screen.getByText('Run complete — every problem has a grade.')).toBeInTheDocument()
+  })
+
+  it('keeps the run screen reachable from the summary and back', async () => {
+    await seedRun({ assessmentIds: ['a-1'] }, { runId: 'run-1', outcome: 'completed' })
+    seedGrade('a-1', 'q1')
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+
+    renderRun(client)
+    await screen.findByRole('heading', { name: 'Run summary' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Back to problems' }))
+    expect(await screen.findByRole('button', { name: 'View summary' })).toBeInTheDocument()
+    expect(await screen.findByText('Good answer.')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'View summary' }))
+    expect(await screen.findByRole('heading', { name: 'Run summary' })).toBeInTheDocument()
+  })
+
+  it('retries a problem inline in the summary and preserves its history', async () => {
+    await seedRun({ assessmentIds: ['a-1'] }, { runId: 'run-1', outcome: 'completed' })
+    seedGrade('a-1', 'q1')
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+
+    renderRun(client)
+    await screen.findByRole('heading', { name: 'Run summary' })
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry question' }))
+    // The taking slot replaces the review card inside the summary.
+    fireEvent.change(await screen.findByLabelText('Your answer'), {
+      target: { value: 'A stronger second answer.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }))
+
+    // The fresh grade lands: retry mode ends and the preserved history shows.
+    expect(await screen.findByText('Attempt #2', undefined, { timeout: 6000 })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Run summary' })).toBeInTheDocument()
+    expect(screen.getByText('A stronger second answer.')).toBeInTheDocument()
   })
 
   it('does not offer to finish a run that still has ungraded problems', async () => {

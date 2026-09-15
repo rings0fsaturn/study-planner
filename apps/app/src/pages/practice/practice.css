@@ -1,4 +1,4 @@
-/* Practice run shell (#44 Phase 2) — layout only.
+/* Practice run shell + summary (#44 Phase 2/P3) — layout only.
    The rail/strip breakpoint and the panel chrome come from the shared review
    stylesheet; this file owns only what is practice-specific. Reuses the
    `.ar-variant-b` grid, so the 280 px rail ≥1024 px and the sticky strip below
@@ -6,4 +6,44 @@
 
 .practice-run-actions {
   align-items: center;
+}
+
+/* ---- run summary (P3, Variant A — review rail) ---- */
+.practice-summary-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.practice-summary-title-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.practice-summary-title-row h2 {
+  margin: 0;
+  font: 1.15rem var(--font-display);
+}
+
+.practice-summary-line {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+/* Honest state for an attempt that could not be graded (no grade to review). */
+.practice-failed-note {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--rust, var(--terracotta-d));
+  border-radius: var(--radius-sm);
 }

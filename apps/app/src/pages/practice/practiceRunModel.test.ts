@@ -8,7 +8,7 @@ import type {
   QuestionGradedResult,
 } from '../../assessments/types'
 import type { PracticeRunFinishedPayload, PracticeRunStartedPayload } from '../../sync/types'
-import { buildPracticeRunModel, findPracticeRun } from './practiceRunModel'
+import { buildPracticeRunModel, findPracticeRun, isSummaryEligible, problemStatus } from './practiceRunModel'
 
 /**
  * Pure run-state derivation (rule 32: no Dexie, no React, no clock). Every
@@ -294,6 +294,60 @@ describe('buildPracticeRunModel', () => {
     expect(abandoned.isFinished).toBe(true)
     expect(abandoned.outcome).toBe('abandoned')
     expect(abandoned.completedCount).toBe(0)
+  })
+
+  describe('problemStatus / isSummaryEligible (#44 Phase 3)', () => {
+    it('classifies a graded problem as graded', () => {
+      const result = model({
+        assessments: [assessmentRecord('a-1', 'mat-1', 'ready', [question('q1', 'mat-1')])],
+        attemptsByAssessment: { 'a-1': [row('q1', grade(1))] },
+      })
+
+      expect(problemStatus(result.problems[0])).toBe('graded')
+      expect(isSummaryEligible(result.problems[0])).toBe(true)
+    })
+
+    it('classifies an ungradable attempt as failed, not as the review model’s processing', () => {
+      const result = model({
+        assessments: [assessmentRecord('a-1', 'mat-1', 'ready', [question('q1', 'mat-1')])],
+        attemptsByAssessment: { 'a-1': [row('q1', null, 'failed')] },
+      })
+
+      expect(result.problems[0].group?.display).toBe('processing')
+      expect(problemStatus(result.problems[0])).toBe('failed')
+      expect(isSummaryEligible(result.problems[0])).toBe(true)
+    })
+
+    it('treats queued, submitted and never-attempted problems as open', () => {
+      const result = model({
+        started: { assessmentIds: ['a-1', 'a-2', 'a-3'], count: 3 },
+        assessments: [
+          assessmentRecord('a-1', 'mat-1', 'ready', [question('q1', 'mat-1')]),
+          assessmentRecord('a-2', 'mat-1', 'ready', [question('q2', 'mat-1')]),
+          assessmentRecord('a-3', 'mat-1', 'ready', [question('q3', 'mat-1')]),
+        ],
+        attemptsByAssessment: {
+          'a-1': [row('q1', null, 'queued')],
+          'a-2': [row('q2', null, 'submitted')],
+        },
+      })
+
+      expect(result.problems.map((problem) => problemStatus(problem))).toEqual([
+        'open',
+        'open',
+        'open',
+      ])
+      expect(result.problems.map((problem) => isSummaryEligible(problem))).toEqual([
+        false,
+        false,
+        false,
+      ])
+    })
+
+    it('treats a problem with no loaded assessment as open', () => {
+      const result = model({ assessments: [null] })
+      expect(problemStatus(result.problems[0])).toBe('open')
+    })
   })
 
   describe('per-problem material attribution (D-10)', () => {

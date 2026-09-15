@@ -50,6 +50,25 @@ export interface PracticeRunModel {
   outcome: 'completed' | 'abandoned' | null
 }
 
+/**
+ * Summary status of one problem (#44 Phase 3). The review model reports a
+ * failed attempt as `processing` (it has no grade yet), so the summary must
+ * classify terminal states itself: a grade, an ungradable attempt, or open.
+ */
+export type PracticeProblemStatus = 'graded' | 'failed' | 'open'
+
+export function problemStatus(problem: PracticeRunProblem): PracticeProblemStatus {
+  const latest = problem.group?.latest
+  if (latest?.grade) return 'graded'
+  if (latest?.status === 'failed') return 'failed'
+  return 'open'
+}
+
+/** Problems the summary lists: those that reached a terminal outcome. */
+export function isSummaryEligible(problem: PracticeRunProblem): boolean {
+  return problemStatus(problem) !== 'open'
+}
+
 function payloadOf<T>(event: Event): T {
   return event.payload as unknown as T
 }

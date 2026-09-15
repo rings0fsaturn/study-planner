@@ -16,7 +16,8 @@ import {
   QuestionReviewCard,
   RetryQuestionButton,
 } from '../assessments/review/ReviewSurface'
-import { buildPracticeRunModel, findPracticeRun } from './practiceRunModel'
+import { buildPracticeRunModel, findPracticeRun, isSummaryEligible } from './practiceRunModel'
+import { PracticeSummary } from './PracticeSummary'
 import { AnswerSlot } from '../assessments/AssessmentDetail'
 import './practice.css'
 
@@ -53,6 +54,9 @@ export function PracticeRun() {
   const [flow, setFlow] = useState<AttemptFlow | null>(null)
   const [closing, setClosing] = useState(false)
   const [materialTitles, setMaterialTitles] = useState<Record<string, string>>({})
+  /** The run summary replaces the problem view once the run is completed (P3). */
+  const [summaryDismissed, setSummaryDismissed] = useState(false)
+  const [summaryActive, setSummaryActive] = useState(0)
 
   // ---- Pointer ------------------------------------------------------------
   useEffect(() => {
@@ -127,6 +131,20 @@ export function PracticeRun() {
       next[id] = await flow.listLocalAttempts(id)
     }
     setRowsByAssessment(next)
+    // A retry's fresh grade has landed: leave retry mode so the review card
+    // (or its preserved history) returns, exactly as AssessmentDetail does.
+    setRetryingIds((previous) => {
+      if (previous.size === 0) return previous
+      const nextSet = new Set(previous)
+      for (const questionId of previous) {
+        const rows = Object.values(next)
+          .flat()
+          .filter((row) => row.questionId === questionId)
+          .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt))
+        if (rows[rows.length - 1]?.grade) nextSet.delete(questionId)
+      }
+      return nextSet.size === previous.size ? previous : nextSet
+    })
   }, [flow, assessmentIds, envelopes])
 
   useEffect(() => {
@@ -316,6 +334,25 @@ export function PracticeRun() {
     ((current.group?.attempts.length ?? 0) === 0 ||
       retryingIds.has(currentQuestion.id))
 
+  // ---- Summary (P3): terminal problems, inline retry -----------------------
+  const summaryProblems = model?.problems.filter(isSummaryEligible) ?? []
+  const summaryActiveIndex =
+    summaryProblems.length > 0 ? Math.min(summaryActive, summaryProblems.length - 1) : 0
+  const summaryProblem = summaryProblems[summaryActiveIndex]
+  const showSummary = model?.outcome === 'completed' && !summaryDismissed
+  // While the active summary problem is retrying, its panel hosts the same
+  // taking slot the run screen uses; the fresh grade returns it to the card.
+  const summarySlot =
+    summaryProblem?.group != null &&
+    retryingIds.has(summaryProblem.group.question.id) &&
+    envelopes[summaryProblem.assessmentId] != null ? (
+      <AnswerSlot
+        assessment={envelopes[summaryProblem.assessmentId]}
+        question={summaryProblem.group.question}
+        onAttemptRecorded={() => void handleAttemptRecorded()}
+      />
+    ) : undefined
+
   return (
     <div className="materials-page">
       <button
@@ -340,103 +377,125 @@ export function PracticeRun() {
               }`}
       </p>
 
-      <div className="ar-variant-shell ar-variant-b">
-        <QuestionNavigator groups={navigatorGroups} activeIndex={active} onSelect={setActiveIndex} />
-        <div className="ar-content-col">
-          {current == null && (
-            <section className="card card-large" role="status">
-              <p className="t-body-sm">
-                This run has no generated problems. Start a new run from the material&rsquo;s
-                practice page.
-              </p>
-            </section>
-          )}
-
-          {current != null && (
-            <section className="ar-panel" aria-label={`Problem ${current.number}`}>
-              <div className="ar-panel-meta">
-                <span className="tag tag-sm">Problem {current.number}</span>
-                {materialTitles[current.materialId] && (
-                  <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
-                    from {materialTitles[current.materialId]}
-                  </span>
-                )}
-              </div>
-
-              {current.assessmentStatus === 'generating' && (
-                <p className="t-body-sm" role="status" aria-busy="true">
-                  Generating problem {current.number}…
+      {model && showSummary ? (
+        <PracticeSummary
+          model={model}
+          problems={summaryProblems}
+          activeIndex={summaryActiveIndex}
+          onSelect={setSummaryActive}
+          materialTitles={materialTitles}
+          panelSlot={summarySlot}
+          onRetryQuestion={handleRetryQuestion}
+          onBackToProblems={() => setSummaryDismissed(true)}
+        />
+      ) : (
+        <div className="ar-variant-shell ar-variant-b">
+          <QuestionNavigator groups={navigatorGroups} activeIndex={active} onSelect={setActiveIndex} />
+          <div className="ar-content-col">
+            {current == null && (
+              <section className="card card-large" role="status">
+                <p className="t-body-sm">
+                  This run has no generated problems. Start a new run from the material&rsquo;s
+                  practice page.
                 </p>
-              )}
-              {current.assessmentStatus === 'failed' && (
-                <p className="t-body-sm" role="status">
-                  Problem {current.number} could not be generated.
-                </p>
-              )}
+              </section>
+            )}
 
-              {currentQuestion && (
-                <p className="ar-panel-prompt">{currentQuestion.prompt}</p>
-              )}
-
-              {showSlot && envelopes[current.assessmentId] && currentQuestion && (
-                <div className="ar-answer-slot">
-                  <AnswerSlot
-                    assessment={envelopes[current.assessmentId]}
-                    question={currentQuestion}
-                    onAttemptRecorded={() => void handleAttemptRecorded()}
-                  />
-                </div>
-              )}
-
-              {!showSlot && current.group && (
-                <>
-                  {current.group.attempts.length > 1 ? (
-                    <AttemptHistoryBlock group={current.group} />
-                  ) : (
-                    current.group.latest && (
-                      <QuestionReviewCard
-                        question={current.group.question}
-                        attempt={current.group.latest}
-                      />
-                    )
+            {current != null && (
+              <section className="ar-panel" aria-label={`Problem ${current.number}`}>
+                <div className="ar-panel-meta">
+                  <span className="tag tag-sm">Problem {current.number}</span>
+                  {materialTitles[current.materialId] && (
+                    <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
+                      from {materialTitles[current.materialId]}
+                    </span>
                   )}
-                  <RetryQuestionButton onRetry={() => handleRetryQuestion(current.group!.question.id)} />
-                </>
-              )}
-            </section>
-          )}
+                </div>
 
-          {model && !model.isFinished && (
-            <div className="material-practice-actions practice-run-actions">
-              <button
-                type="button"
-                className="btn btn-accent"
-                disabled={!allGraded || closing}
-                onClick={() => void closeRun('completed')}
-              >
-                {closing ? 'Finishing…' : 'Finish run'}
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                disabled={closing}
-                onClick={() => void closeRun('abandoned')}
-              >
-                Abandon run
-              </button>
-              <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
-                Leaving and coming back resumes this run where you left it.
-              </span>
-            </div>
-          )}
+                {current.assessmentStatus === 'generating' && (
+                  <p className="t-body-sm" role="status" aria-busy="true">
+                    Generating problem {current.number}…
+                  </p>
+                )}
+                {current.assessmentStatus === 'failed' && (
+                  <p className="t-body-sm" role="status">
+                    Problem {current.number} could not be generated.
+                  </p>
+                )}
 
-          {model?.isFinished && model.outcome === 'completed' && (
-            <p className="t-body" role="status">
-              Run complete · {model.completedCount} of {totalProblems} graded.
-            </p>
-          )}
+                {currentQuestion && (
+                  <p className="ar-panel-prompt">{currentQuestion.prompt}</p>
+                )}
+
+                {showSlot && envelopes[current.assessmentId] && currentQuestion && (
+                  <div className="ar-answer-slot">
+                    <AnswerSlot
+                      assessment={envelopes[current.assessmentId]}
+                      question={currentQuestion}
+                      onAttemptRecorded={() => void handleAttemptRecorded()}
+                    />
+                  </div>
+                )}
+
+                {!showSlot && current.group && (
+                  <>
+                    {current.group.attempts.length > 1 ? (
+                      <AttemptHistoryBlock group={current.group} />
+                    ) : (
+                      current.group.latest && (
+                        <QuestionReviewCard
+                          question={current.group.question}
+                          attempt={current.group.latest}
+                        />
+                      )
+                    )}
+                    <RetryQuestionButton onRetry={() => handleRetryQuestion(current.group!.question.id)} />
+                  </>
+                )}
+              </section>
+            )}
+
+            {model && !model.isFinished && (
+              <div className="material-practice-actions practice-run-actions">
+                <button
+                  type="button"
+                  className="btn btn-accent"
+                  disabled={!allGraded || closing}
+                  onClick={() => void closeRun('completed')}
+                >
+                  {closing ? 'Finishing…' : 'Finish run'}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={closing}
+                  onClick={() => void closeRun('abandoned')}
+                >
+                  Abandon run
+                </button>
+                <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
+                  Leaving and coming back resumes this run where you left it.
+                </span>
+              </div>
+            )}
+
+            {model?.outcome === 'completed' && (
+              <div className="material-practice-actions practice-run-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => setSummaryDismissed(false)}
+                >
+                  View summary
+                </button>
+                <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
+                  Every problem is graded — the summary reviews the run.
+                </span>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
