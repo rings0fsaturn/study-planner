@@ -7,15 +7,31 @@
  */
 
 export type AssessmentFormat = 'objective' | 'written' | 'coding'
+/** Authored written subtype (`Question.subtype`); absent for objective/coding. */
+export type WrittenSubtype = 'short_answer' | 'long_form'
+/** Contract budget for `WrittenAnswer.text` (mirrors the server gate). */
+export const WRITTEN_ANSWER_MAX_LENGTH = 20000
 export type AssessmentStatus = 'generating' | 'ready' | 'partial' | 'failed'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled'
 export type JobKind = 'ingestion' | 'generation' | 'grading' | 'roadmap_feedback'
+
+/** The learner's page scope for one generation request (openapi AssessmentScope). */
+export interface AssessmentScope {
+  /** First PDF page of the range, in the numbering the viewer shows. */
+  pageStart: number
+  /** Last PDF page of the range; the server bounds it by the material's page count. */
+  pageEnd: number
+  /** The outline row's title when a chapter was picked; it steers retrieval. */
+  sectionLabel?: string
+}
 
 export interface AssessmentRecipe {
   formats: AssessmentFormat[]
   questionCount: number
   difficulty?: number
   skillTags?: string[]
+  /** Chosen pages (P4/D-05). Absent means the whole material. */
+  scope?: AssessmentScope
 }
 
 export interface GenerationRequest {
@@ -43,6 +59,8 @@ export interface Question {
   assessmentId: string
   materialId: string
   format: AssessmentFormat
+  /** Written questions only: the authored subtype. Absent for objective/coding. */
+  subtype?: WrittenSubtype
   prompt: string
   options: string[]
   skillTags: string[]
@@ -56,6 +74,8 @@ export interface Assessment {
   materialIds: string[]
   status: AssessmentStatus
   questions: Question[]
+  /** Echoed by the read route; absent on rows stored before the retry fix (#41). */
+  recipe?: AssessmentRecipe
   warnings: Warning[]
   groundingStale: boolean
   createdAt: string
@@ -118,11 +138,19 @@ export interface ObjectiveAnswer {
   value?: string
 }
 
+/** Learner's free-text answer for a written question (#41 D-02). */
+export interface WrittenAnswer {
+  text: string
+}
+
+/** The learner's own answer: objective shapes (#39) or written free text (#41). */
+export type LearnerAnswer = ObjectiveAnswer | WrittenAnswer
+
 /** Body of POST /v1/assessments/{assessmentId}/questions/{questionId}/attempts. */
 export interface AttemptSubmitInput {
   clientAttemptId: string
   questionId: string
-  answer: ObjectiveAnswer
+  answer: LearnerAnswer
   submittedAt: string
   elapsedSeconds?: number
   correlationId: string
@@ -134,6 +162,16 @@ export interface AttemptCreated {
   questionId: string
   status: 'queued' | 'graded' | 'failed'
   jobId: string
+}
+
+/** One learner-facing rubric criterion outcome (`RubricCriterionResult`). */
+export interface RubricCriterionResult {
+  criterion: string
+  /** The criterion's share of the rubric total (contract-valid, sums to 1). */
+  weight: number
+  score: number
+  met: boolean
+  feedback?: string
 }
 
 /** Public grade block (openapi QuestionGraded) — no key material. */
@@ -154,6 +192,8 @@ export interface QuestionGradedResult {
   modelVersion?: string
   gradedAt: string
   publicFeedback?: string
+  /** Written grading only (`grader: llm_rubric`); the rubric itself stays server-side. */
+  rubricBreakdown?: RubricCriterionResult[]
 }
 
 /** One attempt in GET /v1/assessments/{assessmentId}/attempts (public record). */
@@ -166,6 +206,6 @@ export interface AttemptRecord {
   status: 'queued' | 'graded' | 'failed'
   elapsedSeconds?: number
   /** Learner's own answer, echoed on the owner-scoped read route (#40 D-01). */
-  answer?: ObjectiveAnswer
+  answer?: LearnerAnswer
   grade: QuestionGradedResult | null
 }

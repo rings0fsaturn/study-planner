@@ -138,10 +138,10 @@ describe('MaterialPicker', () => {
     expect(within(dialog).queryByText('Old notes')).not.toBeInTheDocument()
   })
 
-  it('continues with the selected material ids', async () => {
+  it('continues with the selected material records', async () => {
     const client = new FakeMaterialClient([
       material({ id: 'mat-1', title: 'OSTEP' }),
-      material({ id: 'mat-2', title: 'Raft paper' }),
+      material({ id: 'mat-2', title: 'Raft paper', kind: 'url' }),
     ])
     const { onContinue } = renderPicker(client)
 
@@ -150,7 +150,33 @@ describe('MaterialPicker', () => {
     expect(within(dialog).getByText('1 selected · 2 ready')).toBeInTheDocument()
     fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
 
-    expect(onContinue).toHaveBeenCalledWith(['mat-2'])
+    expect(onContinue).toHaveBeenCalledWith([
+      { materialId: 'mat-2', title: 'Raft paper', kind: 'url' },
+    ])
+  })
+
+  it('hides excluded materials', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP' }),
+      material({ id: 'mat-2', title: 'Raft paper' }),
+    ])
+
+    renderPicker(client, { purpose: 'planning', excludeIds: ['mat-1'] })
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    expect(within(dialog).queryByText('OSTEP')).not.toBeInTheDocument()
+    expect(within(dialog).getByText('Raft paper')).toBeInTheDocument()
+  })
+
+  it('says so when every library material is already attached', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+
+    renderPicker(client, { purpose: 'planning', excludeIds: ['mat-1'] })
+
+    expect(
+      await screen.findByText('Every library material is already on this roadmap.'),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Add a material' })).toBeInTheDocument()
   })
 
   it('disables Continue until a material is selected', async () => {
@@ -183,5 +209,72 @@ describe('MaterialPicker', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
 
     expect(onClose).toHaveBeenCalled()
+  })
+})
+
+describe('MaterialPicker plan controls', () => {
+  it('shows minutes and role once a row is selected, seeded from the library estimate', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP', estimatedMinutes: 420 }),
+    ])
+    renderPicker(client, { purpose: 'planning', withPlan: true })
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    expect(within(dialog).queryByLabelText('Minutes for OSTEP')).not.toBeInTheDocument()
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /OSTEP/ }))
+
+    expect(within(dialog).getByLabelText('Minutes for OSTEP')).toHaveValue(420)
+    expect(within(dialog).getByLabelText('Role for OSTEP')).toHaveValue('foundation')
+  })
+
+  it('sends the edited minutes and role with the selection', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP', estimatedMinutes: 420 }),
+    ])
+    const { onContinue } = renderPicker(client, { purpose: 'planning', withPlan: true })
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /OSTEP/ }))
+    fireEvent.change(within(dialog).getByLabelText('Minutes for OSTEP'), { target: { value: '90' } })
+    fireEvent.change(within(dialog).getByLabelText('Role for OSTEP'), { target: { value: 'practice' } })
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
+
+    expect(onContinue).toHaveBeenCalledWith(
+      [{ materialId: 'mat-1', title: 'OSTEP', kind: 'file' }],
+      { 'mat-1': { minutes: 90, role: 'practice' } },
+    )
+  })
+
+  it('defaults to 60 minutes and omits rows that were deselected again', async () => {
+    const client = new FakeMaterialClient([
+      material({ id: 'mat-1', title: 'OSTEP', estimatedMinutes: null }),
+      material({ id: 'mat-2', title: 'Raft paper' }),
+    ])
+    const { onContinue } = renderPicker(client, { purpose: 'planning', withPlan: true })
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for planning/i })
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /OSTEP/ }))
+    expect(within(dialog).getByLabelText('Minutes for OSTEP')).toHaveValue(60)
+
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Raft paper/ }))
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /Raft paper/ }))
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Continue' }))
+
+    expect(onContinue).toHaveBeenCalledWith(
+      [{ materialId: 'mat-1', title: 'OSTEP', kind: 'file' }],
+      { 'mat-1': { minutes: 60, role: 'foundation' } },
+    )
+  })
+
+  it('renders no plan controls when withPlan is not set', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+    renderPicker(client)
+
+    const dialog = await screen.findByRole('dialog', { name: /Choose materials for assessment/i })
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: /OSTEP/ }))
+
+    expect(within(dialog).queryByLabelText(/Minutes for/)).not.toBeInTheDocument()
+    expect(within(dialog).queryByLabelText(/Role for/)).not.toBeInTheDocument()
   })
 })

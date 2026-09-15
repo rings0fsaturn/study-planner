@@ -55,6 +55,30 @@ def test_blueprint_accepts_explicit_template_version() -> None:
     assert blueprint.prompt_template_version == "v2"
 
 
+def test_blueprint_defaults_question_format_to_objective() -> None:
+    blueprint = GenerationBlueprint(
+        assessment_id="a1",
+        job_id="j1",
+        owner_id="u1",
+        material_id="m1",
+        difficulty=3,
+        skill_tags=("core",),
+        correlation_id="c1",
+    )
+    assert blueprint.question_format == "objective"
+    written = GenerationBlueprint(
+        assessment_id="a1",
+        job_id="j1",
+        owner_id="u1",
+        material_id="m1",
+        difficulty=3,
+        skill_tags=("core",),
+        correlation_id="c1",
+        question_format="written",
+    )
+    assert written.question_format == "written"
+
+
 def test_retrieved_chunk_fields() -> None:
     chunk = RetrievedChunk(chunk_id="c1", material_id="m1", text="body", ordinal=3)
     assert chunk.ordinal == 3

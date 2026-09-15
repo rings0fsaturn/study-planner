@@ -5,7 +5,10 @@ import type {
   MaterialReplaceInput,
   MaterialServiceErrorCode,
 } from './types'
-import { MaterialServiceError } from './types'
+import { MaterialServiceError, outlineFromRow } from './types'
+
+/** Signed-URL lifetime for the viewer's range-fetched source PDF. */
+const SIGNED_URL_TTL_SECONDS = 600
 
 interface DbRow {
   id: string
@@ -66,7 +69,7 @@ export interface MaterialTableLike {
   }
 }
 
-/** Narrow Storage surface for private material uploads. */
+/** Narrow Storage surface for private material uploads and signed reads. */
 export interface MaterialStorageLike {
   from: (bucket: 'material-raw') => {
     upload: (
@@ -74,6 +77,10 @@ export interface MaterialStorageLike {
       file: Blob,
       options?: { upsert?: boolean },
     ) => PromiseLike<{ error: DbError | null }>
+    createSignedUrl: (
+      path: string,
+      expiresIn: number,
+    ) => PromiseLike<{ data: { signedUrl: string } | null; error: DbError | null }>
   }
 }
 
@@ -146,6 +153,9 @@ export function materialRowToRecord(row: Record<string, unknown>): MaterialRecor
     chunkCount: Number(row.chunk_count ?? 0),
     groundingVersion: row.grounding_version == null ? null : String(row.grounding_version),
     extractedTextPath: row.extracted_text_path == null ? null : String(row.extracted_text_path),
+    outline: outlineFromRow(row.outline),
+    pageCount: row.page_count == null ? null : Number(row.page_count),
+    pageOffset: row.page_offset == null ? null : Number(row.page_offset),
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   }
@@ -167,6 +177,9 @@ export interface MaterialClientLike {
   restoreMaterial(id: string): Promise<void>
   replaceMaterial(id: string, input: MaterialReplaceInput): Promise<void>
   retryIngestion(id: string): Promise<void>
+  getMaterialFileUrl(
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source' | 'contentVersion'>,
+  ): Promise<string>
   uploadMaterialFile(id: string, file: File): Promise<void>
   completeUpload(id: string): Promise<void>
   markUploadFailed(id: string, message: string): Promise<void>
@@ -309,6 +322,47 @@ export class MaterialClient implements MaterialClientLike {
       }
       const { error } = await this.rpc.rpc('retry_material_ingestion', { p_material_id: id })
       if (error) throw normalizeMaterialError(error)
+    })
+  }
+
+  /**
+   * A short-lived signed URL for the material's stored source file. The raw
+   * file is private (`material-raw/<uid>/<materialId>/<fileName>`, owner-read
+   * RLS), so the viewer range-fetches through this URL instead of pulling the
+   * whole 22.9 MB book into the page.
+   *
+   * Ingestion also writes `view-<contentVersion>.pdf` next to it for the PDFs
+   * pdf.js cannot open (a page tree that repeats a page object). That copy is
+   * preferred when present; the content version in its name means replacing
+   * the file can never serve the previous revision's copy.
+   */
+  getMaterialFileUrl(
+    material: Pick<MaterialRecord, 'id' | 'ownerId' | 'source' | 'contentVersion'>,
+  ): Promise<string> {
+    return this.run(async () => {
+      if (!this.storage) {
+        throw new MaterialServiceError('unknown', 'material storage is not configured')
+      }
+      const bucket = this.storage.from('material-raw')
+      const base = `${material.ownerId}/${material.id}`
+      if (material.contentVersion) {
+        const viewer = await bucket.createSignedUrl(
+          `${base}/view-${material.contentVersion}.pdf`,
+          SIGNED_URL_TTL_SECONDS,
+        )
+        const viewerSigned = viewer.error ? null : viewer.data?.signedUrl
+        if (viewerSigned) return viewerSigned
+      }
+      const { data, error } = await bucket.createSignedUrl(
+        `${base}/${material.source}`,
+        SIGNED_URL_TTL_SECONDS,
+      )
+      if (error) throw normalizeMaterialError(error)
+      const signed = data?.signedUrl
+      if (!signed) {
+        throw new MaterialServiceError('not_found', 'the material file is missing from storage')
+      }
+      return signed
     })
   }
 

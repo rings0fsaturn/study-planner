@@ -36,6 +36,9 @@ class IngestionRepo(Protocol):
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
         embedding_provider: str | None = None,
+        outline: dict | None = None,
+        page_count: int | None = None,
+        page_offset: int | None = None,
     ) -> None: ...
     def get_job(self, job_id: str) -> IngestionJob: ...
     def set_job_running(self, job_id: str) -> None: ...
@@ -194,6 +197,9 @@ class SupabaseIngestionRepo:
         grounding_version: str | None = None,
         extracted_text_path: str | None = None,
         embedding_provider: str | None = None,
+        outline: dict | None = None,
+        page_count: int | None = None,
+        page_offset: int | None = None,
     ) -> None:
         payload: dict[str, object] = {
             "ingestion_state": state,
@@ -208,6 +214,12 @@ class SupabaseIngestionRepo:
             payload["extracted_text_path"] = extracted_text_path
         if embedding_provider is not None:
             payload["embedding_provider"] = embedding_provider
+        if outline is not None:
+            payload["outline"] = outline
+        if page_count is not None:
+            payload["page_count"] = page_count
+        if page_offset is not None:
+            payload["page_offset"] = page_offset
         self._patch(
             f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}",
             payload,
@@ -390,6 +402,8 @@ class SupabaseIngestionRepo:
                 "ordinal": chunk.ordinal,
                 "text": chunk.text,
                 "start_seconds": chunk.start_seconds,
+                "page_start": chunk.page_start,
+                "page_end": chunk.page_end,
             }
             for chunk in chunks
         ]
@@ -418,7 +432,8 @@ class SupabaseIngestionRepo:
     def list_chunks(self, material_id: str, limit: int = 10000) -> list[ContentChunk]:
         rows = self._get(
             f"{self._base}/rest/v1/{CHUNKS_TABLE}?material_id=eq.{material_id}"
-            f"&order=ordinal.asc&limit={limit}&select=id,ordinal,text,start_seconds",
+            f"&order=ordinal.asc&limit={limit}"
+            f"&select=id,ordinal,text,start_seconds,page_start,page_end",
             self._headers(),
         )
         return [
@@ -428,6 +443,8 @@ class SupabaseIngestionRepo:
                 text=row.get("text") or "",
                 ordinal=int(row.get("ordinal") or 0),
                 start_seconds=row.get("start_seconds"),
+                page_start=row.get("page_start"),
+                page_end=row.get("page_end"),
             )
             for row in rows
         ]

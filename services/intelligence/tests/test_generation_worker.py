@@ -1,6 +1,13 @@
 from __future__ import annotations
 
-from app.generation.models import NormalizedGenerationResponse, RetrievedChunk
+from app.generation.models import (
+    AssessmentScope,
+    NormalizedGenerationResponse,
+    RetrievedChunk,
+)
+from app.generation.prompts import (
+    WRITTEN_PROMPT_TEMPLATE_VERSION,
+)
 from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 from app.ingestion.models import IngestionError, Material
 from tests.ingestion_doubles import FakeQueue
@@ -83,7 +90,12 @@ class FakeAdapter:
         self, messages, response_schema, *, repair=False, request_id="", correlation_id=""
     ):
         self.calls.append(
-            {"messages": messages, "repair": repair, "correlation_id": correlation_id}
+            {
+                "messages": messages,
+                "schema": response_schema,
+                "repair": repair,
+                "correlation_id": correlation_id,
+            }
         )
         return self._responses.pop(0)
 
@@ -190,7 +202,7 @@ def make_worker(repo, queue, adapter, telemetry, **config_overrides: object):
         adapter=adapter,
         telemetry=telemetry,
         config=config,
-        context_builder=lambda material_id, skill_tags, title: chunks(),
+        context_builder=lambda material_id, skill_tags, scope: chunks(),
     )
 
 
@@ -223,6 +235,12 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     assert question_row["answer_block"] == {"correctIndex": 0}
     assert repo.questions == [question_row]
     assert telemetry.records[0].outcome == "ok"
+    # The response schema is bound to this generation's retrieved chunk ids, so
+    # the provider cannot return a chunk id outside the context (#41).
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "correctIndex" in adapter.calls[0]["schema"]["required"]
     assert telemetry.records[0].questions_requested == 1
     assert telemetry.records[0].questions_accepted == 1
     assert telemetry.records[0].reasoning_tokens == 0
@@ -499,7 +517,7 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def failing_context(material_id, skill_tags, title):
+    def failing_context(material_id, skill_tags, scope):
         raise IngestionError("provider_unavailable", "query embedding failed", retryable=True)
 
     worker = GenerationWorker(
@@ -538,6 +556,42 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     assert not queue.queues["assessment_generate"]
 
 
+def test_non_retryable_context_error_fails_the_assessment() -> None:
+    """No topic steer cannot be retried into success, so fail instead of spin."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+
+    def unsteered_context(material_id, skill_tags, scope):
+        raise IngestionError("validation_failed", "no topic steer", retryable=False)
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=unsteered_context,
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    worker.run_once()
+
+    assert adapter.calls == []
+    assert repo.assessment_updates == [
+        ("a1", "failed", [{"code": "validation_failed", "message": "no topic steer"}])
+    ]
+    assert repo.job_updates[-1]["status"] == "failed"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert [record.outcome for record in telemetry.records] == ["partial"]
+    assert not queue.queues["assessment_generate"]
+
+
 def test_unexpected_exception_redelivers_message() -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
@@ -545,7 +599,7 @@ def test_unexpected_exception_redelivers_message() -> None:
     adapter = FakeAdapter([])
     telemetry = FakeTelemetry()
 
-    def broken_context(material_id, skill_tags, title):
+    def broken_context(material_id, skill_tags, scope):
         raise RuntimeError("boom")
 
     worker = GenerationWorker(
@@ -564,3 +618,344 @@ def test_unexpected_exception_redelivers_message() -> None:
     worker.run_once()
 
     assert queue.redelivered == [("assessment_generate", 1)]
+
+
+# --- #41 written generation ---
+
+VALID_WRITTEN = {
+    "stem": "Explain how bias correction changes the first update steps in Adam.",
+    "subtype": "long_form",
+    "expectedLengthWords": 150,
+    "difficulty": 3,
+    "skillTags": ["Strategic Planning"],
+    "citations": [{"chunkId": "c1", "quote": "the shortfall between forecast and target"}],
+    "rubric": [
+        {"criterion": "Names both running moment estimates", "weight": 0.4, "maxPoints": 4},
+        {"criterion": "States the correction divisor", "weight": 0.6, "maxPoints": 6},
+    ],
+    "referenceAnswer": "Adam divides each estimate by one minus beta to the step count.",
+    "rubricVersion": "rubric-v1",
+}
+
+# A single criterion cannot sum its weights to 1 with a second one absent; the
+# gate reads the total, so this shape is repairable-but-invalid.
+UNNORMALIZED_WRITTEN = {
+    **VALID_WRITTEN,
+    "rubric": [{"criterion": "Names both running moment estimates", "weight": 0.4, "maxPoints": 4}],
+}
+
+
+def written_assessment() -> dict:
+    seeded = assessment()
+    seeded["recipe"] = {**seeded["recipe"], "formats": ["written"]}
+    return seeded
+
+
+def test_written_recipe_uses_written_schema_and_accepts_written_row() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response(structured_output=VALID_WRITTEN)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    # Written arm: the schema carries the rubric and is id-bound, so a written
+    # generation cannot cite a chunk outside the retrieved context.
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "rubric" in adapter.calls[0]["schema"]["required"]
+    assert adapter.calls[0]["messages"][0]["content"].startswith(
+        "You author one written exam question"
+    )
+    assert len(repo.completed) == 1
+    question_row, job_id, status, warnings = repo.completed[0]
+    assert job_id == "j1"
+    assert status == "ready"
+    assert warnings == []
+    assert question_row["format"] == "written"
+    assert question_row["subtype"] == "long_form"
+    assert question_row["prompt"] == VALID_WRITTEN["stem"]
+    assert question_row["options"] == []
+    assert question_row["skill_tags"] == ["Strategic Planning"]
+    assert question_row["authored_difficulty"] == 3
+    assert question_row["answer_block"] == {
+        "rubricVersion": "rubric-v1",
+        "referenceAnswer": VALID_WRITTEN["referenceAnswer"],
+        "rubric": VALID_WRITTEN["rubric"],
+    }
+    assert telemetry.records[0].outcome == "ok"
+    assert telemetry.records[0].questions_accepted == 1
+    assert telemetry.records[0].prompt_template_version == WRITTEN_PROMPT_TEMPLATE_VERSION
+    assert not queue.queues["assessment_generate"]
+
+
+def test_written_answer_block_drops_unexpected_provider_keys() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    smuggled = {
+        **VALID_WRITTEN,
+        "rubric": [
+            {
+                "criterion": "Names both running moment estimates",
+                "weight": 0.4,
+                "maxPoints": 4,
+                "answerKey": "leak",
+            },
+            {"criterion": "States the correction divisor", "weight": 0.6, "maxPoints": 6},
+        ],
+    }
+    adapter = FakeAdapter([ok_response(structured_output=smuggled)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.completed[0][0]["answer_block"]["rubric"][0] == {
+        "criterion": "Names both running moment estimates",
+        "weight": 0.4,
+        "maxPoints": 4,
+    }
+
+
+def test_written_format_failure_repairs_with_written_schema() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=VALID_WRITTEN),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(repo.questions) == 1
+    assert repo.questions[0]["format"] == "written"
+    assert adapter.calls[1]["repair"] is True
+    # The repair call carries the same id-bound written schema as the first.
+    assert adapter.calls[1]["schema"]["properties"]["citations"]["items"]["properties"][
+        "chunkId"
+    ]["enum"] == ["c1"]
+    assert "rubric" in adapter.calls[1]["schema"]["required"]
+    assert "rubric_weights_not_normalized" in adapter.calls[1]["messages"][-1]["content"]
+    assert telemetry.records[0].repair_attempted is True
+    assert telemetry.records[0].questions_accepted == 1
+
+
+def test_written_repair_exhausted_fails_assessment_malformed() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.questions == []
+    assert repo.assessment_updates[0][1] == "failed"
+    assert repo.assessment_updates[0][2][0]["code"] == "malformed_output"
+    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].outcome == "malformed_output"
+    assert telemetry.records[0].questions_accepted == 0
+
+
+def test_written_citation_drop_fails_without_repair() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    out_of_context = {**VALID_WRITTEN, "citations": [{"chunkId": "nope", "quote": "x"}]}
+    adapter = FakeAdapter([ok_response(structured_output=out_of_context)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(adapter.calls) == 1
+    assert repo.questions == []
+    assert repo.assessment_updates[0][2][0]["code"] == "citation_missing"
+
+
+def test_written_quota_failure_keeps_assessment_generating() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([failure_response("quota_failure", "quota_exhausted", retry_after=60)])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert repo.questions == []
+    assert repo.assessment_updates[0][1] == "generating"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert repo.job_updates[-1]["retry_after"] == 60
+    assert telemetry.records[0].outcome == "quota_failure"
+
+
+# --- #62 P4: the learner's page scope (D-05, D-06) ---
+
+
+def scoped_assessment(page_start: int = 156, page_end: int = 213) -> dict:
+    base = assessment()
+    base["recipe"] = {
+        **base["recipe"],
+        "scope": {
+            "pageStart": page_start,
+            "pageEnd": page_end,
+            "sectionLabel": "Chapter 5 Budgeting and control",
+        },
+    }
+    return base
+
+
+def scoped_chunks(count: int) -> list[RetrievedChunk]:
+    return [
+        RetrievedChunk(
+            chunk_id=f"c{index}",
+            material_id="m1",
+            text="The planning gap is the shortfall between forecast and target.",
+            ordinal=index,
+        )
+        for index in range(count)
+    ]
+
+
+def scoped_worker(repo, queue, adapter, telemetry, context_builder) -> GenerationWorker:
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    return GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+    )
+
+
+def test_scope_from_the_recipe_reaches_the_context_builder() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    seen: list[tuple] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        seen.append((material_id, skill_tags, scope))
+        return scoped_chunks(5)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert seen == [
+        (
+            "m1",
+            ("Strategic Planning",),
+            AssessmentScope(156, 213, "Chapter 5 Budgeting and control"),
+        )
+    ]
+    # A scope with a full context needs no warning.
+    assert repo.completed[0][3] == []
+    assert repo.questions[0]["citations"][0]["chunkId"] == "c1"
+
+
+def test_thin_scoped_context_widens_to_neighbouring_pages_and_warns() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    calls: list[object] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        calls.append(scope)
+        return scoped_chunks(2) if len(calls) == 1 else scoped_chunks(5)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    # The pad is 5 pages per round (WIDEN_MIN_PAD), so 156-213 -> 151-218.
+    assert calls == [
+        AssessmentScope(156, 213, "Chapter 5 Budgeting and control"),
+        AssessmentScope(151, 218, "Chapter 5 Budgeting and control"),
+    ]
+    warnings = repo.completed[0][3]
+    assert [warning["code"] for warning in warnings] == ["scope_widened"]
+    assert "pages 156-213 held only 2" in warnings[0]["message"]
+    assert "widened to pages 151-218" in warnings[0]["message"]
+
+
+def test_unscoped_thin_context_is_not_widened() -> None:
+    """D-06 widens a chosen range; an unscoped request has no neighbouring pages."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    calls: list[object] = []
+
+    def context_builder(material_id, skill_tags, scope):
+        calls.append(scope)
+        return scoped_chunks(2)
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert calls == [None]
+    assert repo.completed[0][3] == []
+
+
+def test_a_scope_with_no_chunks_fails_the_assessment() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(scoped_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+
+    def context_builder(material_id, skill_tags, scope):
+        return []
+
+    scoped_worker(repo, queue, adapter, telemetry, context_builder).run_once()
+
+    assert adapter.calls == []
+    assert repo.assessment_updates == [
+        (
+            "a1",
+            "failed",
+            [{"code": "validation_failed", "message": "pages 156-213 contain no content"}],
+        )
+    ]
+    assert repo.job_updates[-1]["status"] == "failed"
+    assert repo.job_updates[-1]["retryable"] is False

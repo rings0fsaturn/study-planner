@@ -30,7 +30,7 @@
 /** UUID linking all lifecycle events for a single session */
 export type SessionId = string;
 
-export type MaterialKind = 'youtube' | 'article' | 'manual';
+export type MaterialKind = 'youtube' | 'article' | 'manual' | 'file';
 
 export interface MaterialPosition {
   kind: 'percent' | 'videos' | 'position';

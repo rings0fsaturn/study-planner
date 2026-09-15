@@ -8,6 +8,15 @@ fail the job retryable, keep the assessment `generating`, and surface the
 failure as an assessment warning so the UI can offer retry/resume.
 `partial` is reserved for multi-question slices and is never produced here.
 
+Two question families ride this arm (#41): an objective recipe authors one
+MCQ (`mcq_schema(context_ids)`, answer block = correct index) and a written
+recipe authors one written question plus its server-only rubric block
+(`written_schema(context_ids)`, migration 027 stores `format`/`subtype`).
+Both schemas are built per message and bind `citations[].chunkId` to the
+retrieved ids by enum, so a hallucinated chunk id cannot reach the citation
+gate. Everything else in the pipeline is shared: same context, same adapter,
+same one-repair policy, same completion RPC.
+
 Note on drop codes: a candidate dropped purely for the citation gate carries
 `Warning(code=citation_missing)`, while the job error_code and telemetry
 outcome record `malformed_output` (the closest public ServiceError /
@@ -22,20 +31,61 @@ import uuid
 from collections.abc import Callable
 from dataclasses import dataclass
 
-from app.generation.context import build_context
-from app.generation.models import GenerationBlueprint, RetrievedChunk
+from app.generation.context import CONTEXT_TOP_K
+from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
 from app.generation.openrouter_client import OpenRouterGenerationClient
-from app.generation.prompts import MCQ_SCHEMA, build_messages, prompt_template_version
+from app.generation.prompts import (
+    WRITTEN_PROMPT_TEMPLATE_VERSION,
+    build_messages,
+    build_written_messages,
+    mcq_schema,
+    prompt_template_version,
+    written_schema,
+)
 from app.generation.repo import GenerationRepo
-from app.generation.validation import validate_question
+from app.generation.validation import validate_question, validate_written
 from app.ingestion.models import IngestionError, QueueMessage
 from app.ingestion.queue import WorkQueue
-from app.ingestion.telemetry import TelemetryRecord, TelemetrySink
+from app.ingestion.telemetry import TelemetryRecord, TelemetrySink, outcome_for_error_code
 
 logger = logging.getLogger("generation.worker")
 
 GENERATION_QUEUE = "assessment_generate"
 DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731"
+OBJECTIVE_FORMAT = "objective"
+WRITTEN_FORMAT = "written"
+
+
+def _recipe_format(recipe: dict) -> str:
+    """Question family this assessment generates (one family per assessment).
+
+    The recipe gate (`routers/assessments.py`) admits `['objective']` or
+    `['written']` only; anything else is treated as objective so a stored
+    recipe cannot select an unvalidated path.
+    """
+    if list(recipe.get("formats") or []) == [WRITTEN_FORMAT]:
+        return WRITTEN_FORMAT
+    return OBJECTIVE_FORMAT
+
+
+def _written_answer_block(accepted: dict) -> dict:
+    """Server-only grading material written to `questions.answer_block`.
+
+    Only the three authored rubric keys are copied, so a key the provider
+    smuggled into its output can never ride into the hidden block.
+    """
+    return {
+        "rubricVersion": str(accepted["rubricVersion"]),
+        "referenceAnswer": str(accepted["referenceAnswer"]),
+        "rubric": [
+            {
+                "criterion": str(item["criterion"]),
+                "weight": float(item["weight"]),
+                "maxPoints": int(item["maxPoints"]),
+            }
+            for item in accepted["rubric"]
+        ],
+    }
 
 
 @dataclass(frozen=True)
@@ -46,7 +96,15 @@ class GenerationWorkerConfig:
     model: str = DEFAULT_MODEL
 
 
-ContextBuilder = Callable[[str, tuple[str, ...], str], list[RetrievedChunk]]
+# The context builder is keyed on the steer parts and the learner's scope: the
+# material title is document context for the prompt, never the retrieval query
+# (D-01), and the scope's page bounds decide which part of the material is
+# eligible (D-05).
+ContextBuilder = Callable[[str, tuple[str, ...], AssessmentScope | None], list[RetrievedChunk]]
+
+# D-06: a scoped context thinner than this widens to neighbouring pages.
+WIDEN_STEPS = 2
+WIDEN_MIN_PAD = 5
 
 
 class GenerationWorker:
@@ -60,14 +118,14 @@ class GenerationWorker:
         adapter: OpenRouterGenerationClient,
         telemetry: TelemetrySink,
         config: GenerationWorkerConfig,
-        context_builder: ContextBuilder | None = None,
+        context_builder: ContextBuilder,
     ) -> None:
         self._repo = repo
         self._queue = queue
         self._adapter = adapter
         self._telemetry = telemetry
         self.config = config
-        self._context_builder = context_builder or build_context
+        self._context_builder = context_builder
 
     def run_once(self) -> int:
         messages = self._queue.poll(
@@ -106,7 +164,16 @@ class GenerationWorker:
         material = self._repo.get_material(material_id)
         recipe = assessment.get("recipe") or {}
         difficulty = int(recipe.get("difficulty") or 3)
-        skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or ["core"]))
+        # No ["core"] default (D-01): a meaningless tag would ride into the
+        # steer and the prompt. No tags and no scope means no steer, which the
+        # context builder rejects rather than grounding on noise.
+        skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or []))
+        # The learner's page range, when one was requested (P4/D-05). The
+        # router already rejected a malformed or out-of-range scope; an
+        # unparseable one is treated as absent rather than crashing the job.
+        scope = AssessmentScope.from_recipe(recipe)
+        question_format = _recipe_format(recipe)
+        written = question_format == WRITTEN_FORMAT
         blueprint = GenerationBlueprint(
             assessment_id=assessment_id,
             job_id=job_id,
@@ -115,6 +182,11 @@ class GenerationWorker:
             difficulty=difficulty,
             skill_tags=skill_tags,
             correlation_id=correlation_id,
+            question_format=question_format,
+            prompt_template_version=(
+                WRITTEN_PROMPT_TEMPLATE_VERSION if written else prompt_template_version
+            ),
+            scope=scope,
         )
         if not blueprint.owner_id:
             self._fail_assessment(
@@ -131,29 +203,65 @@ class GenerationWorker:
             return
 
         try:
-            chunks = self._context_builder(material_id, skill_tags, material.title)
-        except IngestionError as exc:
-            self._mark_job_retryable(job_id, exc)
-            self._repo.update_assessment_status(
-                assessment_id,
-                "generating",
-                [{"code": exc.code, "message": exc.message}],
+            chunks = self._context_builder(material_id, skill_tags, scope)
+            if not chunks:
+                # D-06's only rejection: a scope (or a material) with no chunk
+                # to ground on cannot produce a grounded question.
+                raise IngestionError(
+                    "validation_failed",
+                    (
+                        f"pages {scope.page_start}-{scope.page_end} contain no content"
+                        if scope is not None
+                        else "this material has no content chunks"
+                    ),
+                    retryable=False,
+                )
+            chunks, scope_warnings = self._widen_thin_context(
+                material_id, skill_tags, scope, chunks
             )
-            self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+        except IngestionError as exc:
+            if exc.retryable:
+                self._mark_job_retryable(job_id, exc)
+                self._repo.update_assessment_status(
+                    assessment_id,
+                    "generating",
+                    [{"code": exc.code, "message": exc.message}],
+                )
+                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                return
+            # A non-retryable context fault (no topic steer to ground on)
+            # cannot succeed on a retry, so fail the assessment outright
+            # instead of leaving it spinning with a warning.
+            self._fail_assessment(
+                blueprint,
+                warnings=[{"code": exc.code, "message": exc.message}],
+                error_code=exc.code,
+                error_message=exc.message,
+                retryable=False,
+                outcome=outcome_for_error_code(exc.code),
+                latency_ms=0.0,
+                repair_attempted=False,
+                message_id=message.msg_id,
+            )
             return
 
         context_ids = {chunk.chunk_id for chunk in chunks}
         chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
-        messages = build_messages(blueprint, chunks, title=material.title)
-        response = self._adapter.generate(messages, MCQ_SCHEMA, correlation_id=correlation_id)
+        build = build_written_messages if written else build_messages
+        validate = validate_written if written else validate_question
+        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
+        messages = build(blueprint, chunks, title=material.title)
+        response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
         repair_attempted = False
         accepted = None
-        warnings: list[dict] = []
+        warnings: list[dict] = list(scope_warnings)
 
         if response.outcome == "ok" and response.structured_output is not None:
-            accepted, warnings = validate_question(
+            accepted, warnings = validate(
                 response.structured_output, blueprint, context_ids, chunk_texts
             )
+            # The scope's own warnings (D-06's widen) travel with the question.
+            warnings = [*scope_warnings, *warnings]
             if accepted is None and any(w["code"] == "malformed_output" for w in warnings):
                 repair_feedback = "; ".join(str(w["message"]) for w in warnings)
                 accepted, warnings = self._repair_once(
@@ -164,7 +272,9 @@ class GenerationWorker:
                     context_ids,
                     chunk_texts,
                     repair_feedback=repair_feedback,
+                    written=written,
                 )
+                warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
         elif response.outcome == "malformed_output":
             repair_feedback = str(
@@ -178,11 +288,15 @@ class GenerationWorker:
                 context_ids,
                 chunk_texts,
                 repair_feedback=repair_feedback,
+                written=written,
             )
+            warnings = [*scope_warnings, *warnings]
             repair_attempted = True
 
         if accepted is not None:
-            self._accept_question(blueprint, accepted, warnings, response, repair_attempted)
+            self._accept_question(
+                blueprint, accepted, warnings, response, repair_attempted, written=written
+            )
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
 
@@ -240,6 +354,41 @@ class GenerationWorker:
             message_id=message.msg_id,
         )
 
+    def _widen_thin_context(
+        self,
+        material_id: str,
+        skill_tags: tuple[str, ...],
+        scope: AssessmentScope | None,
+        chunks: list[RetrievedChunk],
+    ) -> tuple[list[RetrievedChunk], list[dict]]:
+        """D-06: a thin scoped context widens to neighbouring pages and warns.
+
+        A scoped query can legitimately return fewer than CONTEXT_TOP_K chunks
+        (a three-page range), and grounding a question on almost nothing is how
+        the original front-matter defect hid. The widened range is a superset
+        of the requested one, so the result can only grow; when it does not, the
+        learner still gets the honest count in the warning.
+        """
+        if scope is None or len(chunks) >= CONTEXT_TOP_K:
+            return chunks, []
+        found = len(chunks)
+        widened = scope
+        for _ in range(WIDEN_STEPS):
+            widened = widened.widened(WIDEN_MIN_PAD)
+            chunks = self._context_builder(material_id, skill_tags, widened)
+            if len(chunks) >= CONTEXT_TOP_K:
+                break
+        return chunks, [
+            {
+                "code": "scope_widened",
+                "message": (
+                    f"pages {scope.page_start}-{scope.page_end} held only {found} "
+                    f"chunk(s); the search widened to pages "
+                    f"{widened.page_start}-{widened.page_end}"
+                ),
+            }
+        ]
+
     def _repair_once(
         self,
         blueprint: GenerationBlueprint,
@@ -250,8 +399,12 @@ class GenerationWorker:
         chunk_texts: dict[str, str],
         *,
         repair_feedback: str,
+        written: bool,
     ) -> tuple[dict | None, list[dict]]:
-        messages = build_messages(
+        build = build_written_messages if written else build_messages
+        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
+        validate = validate_written if written else validate_question
+        messages = build(
             blueprint,
             chunks,
             title=title,
@@ -259,12 +412,10 @@ class GenerationWorker:
             assistant_content=response.content,
         )
         repaired = self._adapter.generate(
-            messages, MCQ_SCHEMA, repair=True, correlation_id=blueprint.correlation_id
+            messages, schema, repair=True, correlation_id=blueprint.correlation_id
         )
         if repaired.outcome == "ok" and repaired.structured_output is not None:
-            return validate_question(
-                repaired.structured_output, blueprint, context_ids, chunk_texts
-            )
+            return validate(repaired.structured_output, blueprint, context_ids, chunk_texts)
         return None, [{"code": "malformed_output", "message": "repair validation failed"}]
 
     def _accept_question(
@@ -274,22 +425,40 @@ class GenerationWorker:
         warnings: list[dict],
         response,
         repair_attempted: bool,
+        *,
+        written: bool,
     ) -> None:
-        question_row = {
-            "id": str(uuid.uuid4()),
-            "assessment_id": blueprint.assessment_id,
-            "user_id": blueprint.owner_id,
-            "material_id": blueprint.material_id,
-            "format": "objective",
-            "prompt": str(accepted["stem"]),
-            # Real JSON values, not dumps() strings: PostgREST stores a
-            # JSON string literally in jsonb, which breaks clients.
-            "options": list(accepted["options"]),
-            "skill_tags": list(accepted["skillTags"]),
-            "authored_difficulty": int(accepted["difficulty"]),
-            "citations": list(accepted["citations"]),
-            "answer_block": {"correctIndex": accepted["correctIndex"]},
-        }
+        if written:
+            question_row = {
+                "id": str(uuid.uuid4()),
+                "assessment_id": blueprint.assessment_id,
+                "user_id": blueprint.owner_id,
+                "material_id": blueprint.material_id,
+                "format": WRITTEN_FORMAT,
+                "subtype": str(accepted["subtype"]),
+                "prompt": str(accepted["stem"]),
+                "options": [],
+                "skill_tags": list(accepted["skillTags"]),
+                "authored_difficulty": int(accepted["difficulty"]),
+                "citations": list(accepted["citations"]),
+                "answer_block": _written_answer_block(accepted),
+            }
+        else:
+            question_row = {
+                "id": str(uuid.uuid4()),
+                "assessment_id": blueprint.assessment_id,
+                "user_id": blueprint.owner_id,
+                "material_id": blueprint.material_id,
+                "format": OBJECTIVE_FORMAT,
+                "prompt": str(accepted["stem"]),
+                # Real JSON values, not dumps() strings: PostgREST stores a
+                # JSON string literally in jsonb, which breaks clients.
+                "options": list(accepted["options"]),
+                "skill_tags": list(accepted["skillTags"]),
+                "authored_difficulty": int(accepted["difficulty"]),
+                "citations": list(accepted["citations"]),
+                "answer_block": {"correctIndex": accepted["correctIndex"]},
+            }
         # One DB transaction (migration 023): question insert + assessment
         # ready + job succeeded. The RPC refuses to run when the assessment
         # is not `generating`, so a redelivered message cannot duplicate.
@@ -344,7 +513,7 @@ class GenerationWorker:
             owner_id=blueprint.owner_id,
             task="assessment_generation",
             model=self.config.model,
-            prompt_template_version=prompt_template_version,
+            prompt_template_version=blueprint.prompt_template_version,
             outcome=outcome,
             latency_ms=response.latency_ms if response is not None else 0.0,
             input_tokens=int(usage.get("prompt_tokens", 0)),

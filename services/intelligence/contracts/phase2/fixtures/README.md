@@ -28,7 +28,7 @@ a 429 quota response may still carry provider-reported usage.
 | `generation-quota-failure.json` | OpenRouter generation response | quota normalization, synthesized (429 branch) |
 | `generation-timeout.json` | OpenRouter generation response | deadline normalization, synthesized (no provider usage) |
 | `generation-partial.json` | OpenRouter generation response | truncated output normalized to partial |
-| `written-grading.json` | written grading response | score and per-skill observation |
+| `written-grading.json` | written grading response | normalized written score and per-skill observation |
 | `embedding-batch.json` | embedding request | batch input and 768-dimension configuration |
 | `coding-answer.json` | coding answer | public source and sandbox configuration |
 | `execution-pass.json` | execution result | passing run |
@@ -38,3 +38,15 @@ a 429 quota response may still carry provider-reported usage.
 | `provider-timeout.json` | provider error | normalized retryable provider failure |
 | `async-job-ingestion.json` | async job | ingestion job with attempt identity |
 | `gated-reveal.json` | gated reveal | acknowledgement with no hidden content |
+
+## OpenAPI-validated fixtures
+
+These fixtures target schemas declared inline in `openapi.yaml`, which the JSON-only manifest loader cannot reference, so `tests/test_contracts.py` validates each one directly against the named component schema instead of through `manifest.json`.
+
+| Fixture | Contract | Purpose |
+|---|---|---|
+| `attempt-submit.json`, `attempt-created.json`, `attempt-record-queued.json`, `attempt-record-graded.json` | `AttemptSubmit`, `AttemptCreated`, `AttemptRecord` | objective attempt submission, queueing, and the public graded record |
+| `written-question.json` | `Question` | a written question as the client sees it, with subtype and no key material |
+| `written-attempt-submit.json` | `AttemptSubmit` with `WrittenAnswer` | a learner's free-text written submission |
+| `written-attempt-record.json` | `AttemptRecord` with `WrittenAnswer` and `QuestionGraded` | a graded written attempt with the per-criterion `rubricBreakdown` |
+| `assessment-recipe-scoped.json` | `AssessmentRecipe` with `AssessmentScope` | a chapter-scoped generation request (PDF pages plus the section label that steers retrieval) |

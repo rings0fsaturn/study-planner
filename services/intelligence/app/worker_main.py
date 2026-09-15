@@ -69,32 +69,45 @@ def _build_embedder(shared_client: httpx.Client):
     raise SystemExit(f"unknown EMBEDDING_PROVIDER: {provider}")
 
 
-def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry):
-    """Construct the generation arm from GENERATION_* env (D-08 defaults)."""
-    from app.generation.context import build_context
+def _build_openrouter_adapter(prefix: str, schema_name: str):
+    """One shared OpenRouter adapter, configured by `<prefix>_*` env vars.
+
+    The generation arm and the written-grading arm use the same provider and
+    client; each passes the schema name the provider must answer with
+    (`grounded_mcq` for generation, `written_rubric` for grading).
+    """
     from app.generation.openrouter_client import OpenRouterGenerationClient
-    from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 
     api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         logger.warning(
-            "OPENROUTER_API_KEY is not set: generation jobs will fail with provider_credentials"
+            "OPENROUTER_API_KEY is not set: %s jobs will fail with provider_credentials",
+            prefix.lower(),
         )
-    adapter = OpenRouterGenerationClient(
+    return OpenRouterGenerationClient(
         api_key=api_key,
         base_url=os.getenv("GENERATION_BASE_URL", "https://openrouter.ai/api/v1"),
-        model=os.getenv("GENERATION_MODEL", "deepseek/deepseek-v4-flash-0731"),
-        timeout_ms=int(os.getenv("GENERATION_TIMEOUT_MS", "30000")),
-        max_output_tokens=int(os.getenv("GENERATION_MAX_OUTPUT_TOKENS", "4096")),
-        temperature=float(os.getenv("GENERATION_TEMPERATURE", "0.3")),
-        reasoning_effort=os.getenv("GENERATION_REASONING_EFFORT", "off"),
+        model=os.getenv(f"{prefix}_MODEL", "deepseek/deepseek-v4-flash-0731"),
+        timeout_ms=int(os.getenv(f"{prefix}_TIMEOUT_MS", "30000")),
+        max_output_tokens=int(os.getenv(f"{prefix}_MAX_OUTPUT_TOKENS", "4096")),
+        temperature=float(os.getenv(f"{prefix}_TEMPERATURE", "0.3")),
+        reasoning_effort=os.getenv(f"{prefix}_REASONING_EFFORT", "off"),
+        schema_name=schema_name,
     )
+
+
+def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry):
+    """Construct the generation arm from GENERATION_* env (D-08 defaults)."""
+    from app.generation.context import build_context
+    from app.generation.worker import GenerationWorker, GenerationWorkerConfig
+
+    adapter = _build_openrouter_adapter("GENERATION", "grounded_mcq")
     supabase_url = os.getenv("SUPABASE_URL", "").strip()
     service_key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
 
-    def context_builder(material_id, skill_tags, title):
+    def context_builder(material_id, skill_tags, scope):
         return build_context(
-            material_id, skill_tags, title, supabase_url, service_key, shared_client
+            material_id, skill_tags, scope, supabase_url, service_key, shared_client
         )
 
     return GenerationWorker(
@@ -112,17 +125,23 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
     )
 
 
-def _build_grading_worker(repo, queue):
-    """Construct the grading arm (#39). Deterministic grading needs no env."""
+def _build_grading_worker(repo, queue, adapter):
+    """Construct the grading arm (#39/#41).
+
+    Objective grading is deterministic and needs no provider; written grading
+    rides the shared OpenRouter adapter with the rubric schema name.
+    """
     from app.grading.worker import GradingWorker, GradingWorkerConfig
 
     return GradingWorker(
         repo=repo,
         queue=queue,
+        adapter=adapter,
         config=GradingWorkerConfig(
             poll_interval_seconds=float(os.getenv("GRADING_POLL_INTERVAL_SECONDS", "1")),
             visibility_seconds=int(os.getenv("GRADING_VISIBILITY_SECONDS", "30")),
             max_in_flight=int(os.getenv("GRADING_MAX_IN_FLIGHT", "1")),
+            model=os.getenv("GRADING_MODEL", "deepseek/deepseek-v4-flash-0731"),
         ),
     )
 
@@ -180,7 +199,9 @@ def main() -> None:
         queue,
         SupabaseTelemetrySink(supabase_url, service_role_key, client=shared_client),
     )
-    grading_worker = _build_grading_worker(repo, queue)
+    grading_worker = _build_grading_worker(
+        repo, queue, _build_openrouter_adapter("GRADING", "written_rubric")
+    )
 
     logger.info("ingestion worker starting against %s", supabase_url)
     stop = threading.Event()

@@ -12,6 +12,8 @@ interface BookingEditorSheetProps {
   onClose: () => void
   onSave: (bubble: CalendarBubble, draft: BookingEditDraft) => void
   onRemove: (bubble: CalendarBubble) => void
+  /** Leave for the roadmap's attach picker when this roadmap has no materials yet. */
+  onRequestAddMaterial?: () => void
 }
 
 function formatMinutes(minutes: number): string {
@@ -37,6 +39,7 @@ export function BookingEditorSheet({
   onClose,
   onSave,
   onRemove,
+  onRequestAddMaterial,
 }: BookingEditorSheetProps) {
   const [date, setDate] = useState('')
   const [duration, setDuration] = useState(60)
@@ -165,6 +168,7 @@ export function BookingEditorSheet({
         materials={materials}
         selectedMaterialId={materialId}
         onCancel={() => setPickerOpen(false)}
+        onRequestAddMaterial={onRequestAddMaterial}
         onSelect={(nextMaterialId) => {
           setMaterialId(nextMaterialId)
           setPickerOpen(false)

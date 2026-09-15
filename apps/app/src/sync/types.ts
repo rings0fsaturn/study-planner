@@ -67,6 +67,22 @@ export interface MaterialAddedPayload {
 }
 
 /**
+ * Thin roadmap-attach pointer: an existing library material added to one
+ * roadmap with its own time budget and role. Mirrors MaterialAddedPayload so
+ * every reader that consumes MaterialAddedPayload keeps working; the roadmap
+ * scope is this event's own roadmapCreatedAt.
+ */
+export interface MaterialAttachedPayload extends MaterialAddedPayload {
+  roadmapCreatedAt: string
+}
+
+/** Removal half of the attach pointer; masked by event order, never cascades. */
+export interface MaterialDetachedPayload {
+  roadmapCreatedAt: string
+  materialId: string
+}
+
+/**
  * Thin local-first pointer to a server-owned assessment (durable-events
  * `assessmentCreatedPayload`). Carries ids only; hidden grading content never
  * reaches the event log.

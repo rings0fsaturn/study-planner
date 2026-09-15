@@ -10,14 +10,6 @@ vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
 }))
 
-vi.mock('../../materials/previewClient', () => ({
-  fetchMaterialContentPreview: vi.fn(),
-}))
-
-import { fetchMaterialContentPreview } from '../../materials/previewClient'
-
-const mockedPreview = fetchMaterialContentPreview as ReturnType<typeof vi.fn>
-
 function material(overrides: Partial<MaterialRecord>): MaterialRecord {
   return {
     id: 'mat-1',
@@ -61,9 +53,6 @@ describe('MaterialDetail', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
-  })
-  beforeEach(() => {
-    mockedPreview.mockReset()
   })
 
   it('renders a ready material with Practice this and attach actions', async () => {
@@ -284,7 +273,7 @@ describe('MaterialDetail', () => {
     expect(await screen.findByRole('dialog', { name: 'Delete material' })).toBeInTheDocument()
   })
 
-  it('shows partial extracted content while processing', async () => {
+  it('renders no extracted content and asks the service for none', async () => {
     const client = new FakeMaterialClient([
       material({
         ingestionState: 'chunking',
@@ -292,44 +281,11 @@ describe('MaterialDetail', () => {
         extractedTextPath: 'user-a/mat-1/fulltext.txt',
       }),
     ])
-    mockedPreview.mockResolvedValue({
-      materialId: 'mat-1',
-      state: 'chunking',
-      previewText: 'Chapter one of the book…',
-      chunkCount: 3,
-      ready: false,
-      updatedAt: '2026-07-15T10:00:00.000Z',
-    })
 
     renderDetail(client)
 
-    expect(await screen.findByText('Extracted content (partial — still processing)')).toBeInTheDocument()
-    expect(screen.getByText('Chapter one of the book…')).toBeInTheDocument()
-    expect(mockedPreview).toHaveBeenCalledWith('mat-1')
-  })
-
-  it('tolerates a preview failure without hiding the material', async () => {
-    const client = new FakeMaterialClient([
-      material({
-        ingestionState: 'embedding',
-        ingestionProgress: 0.7,
-        extractedTextPath: 'user-a/mat-1/fulltext.txt',
-      }),
-    ])
-    mockedPreview.mockRejectedValue(new Error('service offline'))
-
-    renderDetail(client)
-
-    expect(await screen.findByText('Content preview unavailable')).toBeInTheDocument()
-    expect(screen.getByText('Operating Systems — Three Easy Pieces')).toBeInTheDocument()
-  })
-
-  it('does not fetch a preview before extraction begins', async () => {
-    const client = new FakeMaterialClient([material({ ingestionState: 'pending' })])
-
-    renderDetail(client)
-
-    await screen.findByText('Operating Systems — Three Easy Pieces')
-    expect(mockedPreview).not.toHaveBeenCalled()
+    expect(await screen.findByText('Operating Systems — Three Easy Pieces')).toBeInTheDocument()
+    expect(screen.queryByText(/Extracted content/)).not.toBeInTheDocument()
+    expect(document.querySelector('.material-preview-text')).toBeNull()
   })
 })

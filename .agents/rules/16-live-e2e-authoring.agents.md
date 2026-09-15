@@ -8,12 +8,25 @@ description: Author live E2E specs that survive real-stack runs against the shar
 Model live specs on `e2e/material-library-live.spec.ts` and `e2e/material-ingestion-live.spec.ts`.
 Gate the whole suite on `E2E_LIVE_EMAIL` / `E2E_LIVE_PASSWORD` and keep credentials out of source.
 
+## Test credentials
+
+`.work/specs/test-login-cred.txt` holds the shared dev account's `email` and `password` lines, each value wrapped in backticks.
+Strip the backticks before use, together with any surrounding quotes.
+A Supabase password grant sent the raw wrapped value answers `invalid_credentials` for an account that is perfectly valid, which reads exactly like a stale credential and sends you hunting for the wrong problem.
+The same backtick rule applies to any script or probe that signs in with that file.
+
 ## Skip scoping
 
 A module-level `test.skip()` skips every test in the file, no matter where it appears.
 Gate one scenario with `test.skip()` only inside a `test.describe()` that owns that scenario.
 Check skip reasons in `--reporter=json` output (annotations) before assuming env variables were lost.
 Workers inherit the shell environment: if a spec skips with vars exported, the reason is in the annotations, not the env.
+
+## Viewport scoping
+
+`test.use({ viewport })` at file scope applies to every test in the file, including tests declared before it.
+Put the phone viewport inside the `test.describe()` that needs it, or the desktop scenarios run at mobile width without saying so.
+Make a desktop scenario assert one thing that is only true at desktop width, so a leaked viewport fails the run instead of passing quietly.
 
 ## Assert what the UI actually renders
 

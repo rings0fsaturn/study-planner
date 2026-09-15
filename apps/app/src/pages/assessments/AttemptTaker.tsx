@@ -4,12 +4,19 @@ import {
   QUESTION_GRADED,
 } from '../../events/EventStore'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
-import { createAttemptFlow, type AttemptFlow, type LocalAttemptRow } from '../../assessments/attemptFlow'
+import {
+  createAttemptFlow,
+  writtenAnswerProblem,
+  type AttemptFlow,
+  type LocalAttemptRow,
+} from '../../assessments/attemptFlow'
+import { WRITTEN_ANSWER_MAX_LENGTH } from '../../assessments/types'
 import type { Assessment, ObjectiveAnswer, Question } from '../../assessments/types'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
 
 /**
- * Attempt taking for one objective question (#39, PLAN D-06).
+ * Attempt taking for one question — objective (#39 D-06) or written (#41
+ * D-04: textarea sized by the authored subtype, same verified phases).
  *
  * Lean honest states only — the #34 split-pane review surface is #40's scope.
  * The answer lives in the local unsynced row and the server attempts table;
@@ -28,8 +35,11 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
   const { eventStore } = useEventStoreContext()
   const [phase, setPhase] = useState<TakingPhase>('answering')
   const [answer, setAnswer] = useState<ObjectiveAnswer>({})
+  const [text, setText] = useState('')
   const [attempts, setAttempts] = useState<LocalAttemptRow[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const isWritten = question.format === 'written'
+  const writtenProblem = isWritten ? writtenAnswerProblem(text) : null
 
   // Local flow bound to this render's event store (per-user Dexie).
   const [flow, setFlow] = useState<AttemptFlow | null>(null)
@@ -65,12 +75,9 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
     if (!flow) return
     setPhase('submitting')
     setSubmitError(null)
-    const result = await flow.submitObjectiveAttempt(
-      assessment,
-      question,
-      answer,
-      undefined,
-    )
+    const result = isWritten
+      ? await flow.submitWrittenAttempt(assessment, question, text, undefined)
+      : await flow.submitObjectiveAttempt(assessment, question, answer, undefined)
     setAttempts(await flow.listLocalAttempts(assessment.id))
     if (!result.online) {
       setPhase('queued-offline')
@@ -79,7 +86,11 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
     }
     setPhase('grading')
     // The grade normally lands within a second (deterministic queue arm).
-    const graded = await flow.pollGrade(result.local.clientAttemptId, assessment.id)
+    const graded = await flow.pollGrade(
+      result.local.clientAttemptId,
+      assessment.id,
+      isWritten ? 'llm_rubric' : 'objective',
+    )
     setAttempts(await flow.listLocalAttempts(assessment.id))
     setPhase(graded.status === 'graded' ? 'graded' : graded.status === 'failed' ? 'failed' : 'grading')
     onAttemptRecorded?.()
@@ -88,6 +99,7 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
   async function retry() {
     setPhase('answering')
     setAnswer({})
+    setText('')
   }
 
   function optionSelected(index: number): boolean {
@@ -102,8 +114,28 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
 
   return (
     <div className="attempt-taker" aria-label="Answer this question">
-      {/* Answer controls per objective subtype (D-06). */}
-      {question.options.length > 0 ? (
+      {/* Answer controls: written textarea (#41 D-04) or the objective shapes (D-06). */}
+      {isWritten ? (
+        <div className="field-group" style={{ marginTop: '0.75rem' }}>
+          <label className="field-label" htmlFor={`${question.id}-written-answer`}>
+            Your answer{question.subtype === 'long_form' ? ' (long form)' : question.subtype === 'short_answer' ? ' (short answer)' : ''}
+          </label>
+          <textarea
+            id={`${question.id}-written-answer`}
+            aria-label="Your answer"
+            className="field"
+            rows={question.subtype === 'long_form' ? 8 : 3}
+            value={text}
+            disabled={phase !== 'answering'}
+            onChange={(event) => setText(event.target.value)}
+            style={{ width: '100%', resize: 'vertical' }}
+          />
+          <p className="field-hint">
+            {WRITTEN_ANSWER_MAX_LENGTH - text.length} characters left · graded against the
+            question&rsquo;s criteria, with the same source evidence you can open below.
+          </p>
+        </div>
+      ) : question.options.length > 0 ? (
         <div role="radiogroup" aria-label="Answer options" style={{ display: 'grid', gap: '0.5rem', marginTop: '0.75rem' }}>
           {question.options.map((option, index) => (
             <label
@@ -147,11 +179,16 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
           <button
             type="button"
             className="btn btn-accent"
-            disabled={answer.index === undefined && !answer.value}
+            disabled={isWritten ? writtenProblem != null : answer.index === undefined && !answer.value}
             onClick={() => void submit()}
           >
             Submit answer
           </button>
+          {isWritten && writtenProblem && text.length > 0 && (
+            <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
+              {writtenProblem}
+            </span>
+          )}
         </div>
       )}
 
@@ -194,9 +231,14 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
               ))}
             </ul>
           )}
-          {latest.grade.publicFeedback && (
+          {(latest.grade.publicFeedback ?? latest.grade.explanation) && (
             <p className="t-body-sm" style={{ marginTop: '0.5rem', color: 'var(--text-secondary)' }}>
-              {latest.grade.publicFeedback}
+              {latest.grade.publicFeedback ?? latest.grade.explanation}
+            </p>
+          )}
+          {isWritten && (latest.grade.rubricBreakdown?.length ?? 0) > 0 && (
+            <p className="t-body-sm" style={{ marginTop: '0.5rem', color: 'var(--text-tertiary)' }}>
+              The full criterion breakdown is in the review panel for this question.
             </p>
           )}
         </div>

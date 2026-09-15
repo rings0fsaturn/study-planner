@@ -1,0 +1,49 @@
+{
+  "attemptId": "att-written-001",
+  "clientAttemptId": "ca-written-001",
+  "questionId": "q-written-001",
+  "assessmentId": "asmt-written-001",
+  "submittedAt": "2026-09-10T10:15:00Z",
+  "status": "graded",
+  "elapsedSeconds": 412,
+  "answer": {
+    "text": "Adam keeps a running average of the gradient and of the squared gradient, and both start at zero, so the early estimates are pulled toward zero. Bias correction divides each estimate by one minus beta raised to the step count, which cancels that initialisation pull and makes the first steps roughly the size they would have been with an unbiased warm start."
+  },
+  "grade": {
+    "attemptId": "att-written-001",
+    "questionId": "q-written-001",
+    "materialId": "mat-acc-001",
+    "score": 0.75,
+    "correct": true,
+    "perSkill": [
+      { "skillTag": "optimization", "score": 0.75, "correct": true }
+    ],
+    "explanation": "You named both running estimates and the correction term. The reason early steps are affected most is implied rather than stated.",
+    "grader": "llm_rubric",
+    "modelVersion": "deepseek/deepseek-v4-flash-0731",
+    "gradedAt": "2026-09-10T10:16:04Z",
+    "rubricBreakdown": [
+      {
+        "criterion": "Names both running moment estimates",
+        "weight": 0.3,
+        "score": 1.0,
+        "met": true,
+        "feedback": "Both the gradient average and the squared-gradient average are identified."
+      },
+      {
+        "criterion": "States the correction term and its effect",
+        "weight": 0.4,
+        "score": 1.0,
+        "met": true,
+        "feedback": "The one-minus-beta-to-the-power-t divisor is stated correctly."
+      },
+      {
+        "criterion": "Explains why early steps are affected most",
+        "weight": 0.3,
+        "score": 0.1667,
+        "met": false,
+        "feedback": "Early-step magnitude is asserted but the mechanism is not explained."
+      }
+    ]
+  }
+}

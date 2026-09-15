@@ -4,6 +4,14 @@ Mirrors the generation arm's shape (D-04 two-arm pattern, now three-arm):
 narrow repo protocol, WorkQueue via the generic pgmq wrappers, one message
 per poll, re-queue on transient faults, and job transitions through
 `ingestion_jobs` (kind='grading', pre-reserved in the 005 CHECK enum).
+
+Two question families ride this arm (#41): objective answers grade
+deterministically against the stored key, and written answers grade through the
+rubric arm — the provider judges each authored criterion, `rubric_grader`
+composes the public grade. Provider failures are classified by policy: a
+transient one returns the message for redelivery and leaves the attempt in
+flight, a terminal one (or unusable input) fails the attempt closed rather
+than looping the queue.
 """
 
 from __future__ import annotations
@@ -14,12 +22,29 @@ from dataclasses import dataclass
 from typing import Protocol
 
 from app.grading.grader import GraderInputError, grade_objective
+from app.grading.rubric_grader import (
+    GRADER_NAME as RUBRIC_GRADER_NAME,
+)
+from app.grading.rubric_grader import (
+    RUBRIC_GRADING_SCHEMA,
+    RubricAdapter,
+    RubricProviderError,
+    RubricResponseError,
+    build_rubric_messages,
+    classify_provider_failure,
+    grade_written,
+    rubric_criteria,
+    written_answer_text,
+)
 from app.ingestion.models import IngestionError, QueueMessage
 from app.ingestion.queue import WorkQueue
 
 logger = logging.getLogger("grading.worker")
 
 GRADING_QUEUE = "assessment_grade"
+OBJECTIVE_FORMAT = "objective"
+WRITTEN_FORMAT = "written"
+DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731"
 
 
 @dataclass(frozen=True)
@@ -27,6 +52,7 @@ class GradingWorkerConfig:
     poll_interval_seconds: float = 1.0
     visibility_seconds: int = 30
     max_in_flight: int = 1
+    model: str = DEFAULT_MODEL
 
 
 class GradingRepo(Protocol):
@@ -34,7 +60,9 @@ class GradingRepo(Protocol):
 
     def get_attempt(self, attempt_id: str) -> dict: ...
     def get_question(self, question_id: str) -> dict: ...
-    def update_job_status(self, job_id: str, status: str) -> None: ...
+
+    def update_job_status(self, job_id: str, status: str, **meta) -> None: ...
+
     def complete_attempt(
         self, attempt_id: str, job_id: str, status: str, grade: dict | None
     ) -> None: ...
@@ -48,7 +76,14 @@ def _now_iso() -> str:
     )
 
 
-def _ungradable(attempt_id: str, question_id: str, reason: str, graded_at: str) -> dict:
+def _ungradable(
+    attempt_id: str,
+    question_id: str,
+    reason: str,
+    graded_at: str,
+    *,
+    grader: str = OBJECTIVE_FORMAT,
+) -> dict:
     """A deterministic fail-closed result for unusable input: score 0, no key."""
     return {
         "attemptId": attempt_id,
@@ -58,10 +93,14 @@ def _ungradable(attempt_id: str, question_id: str, reason: str, graded_at: str) 
         "correct": False,
         "perSkill": [],
         "explanation": None,
-        "grader": "objective",
+        "grader": grader,
         "gradedAt": graded_at,
         "publicFeedback": f"Attempt ungradable: {reason}.",
     }
+
+
+def _is_written(question: dict) -> bool:
+    return str(question.get("format") or "") == WRITTEN_FORMAT
 
 
 class GradingWorker:
@@ -73,9 +112,11 @@ class GradingWorker:
         repo: GradingRepo,
         queue: WorkQueue,
         config: GradingWorkerConfig,
+        adapter: RubricAdapter | None = None,
     ) -> None:
         self._repo = repo
         self._queue = queue
+        self._adapter = adapter
         self.config = config
 
     def run_once(self) -> int:
@@ -111,26 +152,121 @@ class GradingWorker:
 
         attempt = self._repo.get_attempt(attempt_id)
         question = self._repo.get_question(str(attempt.get("question_id") or ""))
+        question_id = str(question.get("id") or "")
         graded_at = _now_iso()
+        written = _is_written(question)
 
         try:
-            grade = grade_objective(
-                question_id=str(question.get("id") or ""),
-                material_id=str(question.get("material_id") or ""),
-                skill_tags=list(question.get("skill_tags") or []),
-                answer_block=dict(question.get("answer_block") or {}),
-                answer=dict(attempt.get("answer") or {}),
-                graded_at=graded_at,
-                attempt_id=attempt_id,
-            )
+            if written:
+                grade = self._grade_written(
+                    attempt=attempt,
+                    question=question,
+                    attempt_id=attempt_id,
+                    graded_at=graded_at,
+                )
+            else:
+                grade = grade_objective(
+                    question_id=question_id,
+                    material_id=str(question.get("material_id") or ""),
+                    skill_tags=list(question.get("skill_tags") or []),
+                    answer_block=dict(question.get("answer_block") or {}),
+                    answer=dict(attempt.get("answer") or {}),
+                    graded_at=graded_at,
+                    attempt_id=attempt_id,
+                )
             status = "graded"
+        except RubricResponseError as exc:
+            # The provider is nondeterministic, so a payload that cannot be
+            # mapped onto the rubric is retryable rather than a dead end
+            # (PLAN D-03); the attempt stays in flight for the redelivery.
+            logger.warning("written grading for attempt %s malformed: %s", attempt_id, exc)
+            self._repo.update_job_status(
+                job_id,
+                "failed",
+                error_code="malformed_output",
+                error_message=str(exc)[:300],
+                retryable=True,
+            )
+            self._queue.complete(GRADING_QUEUE, message.msg_id, False)
+            return
+        except RubricProviderError as exc:
+            failure = exc.failure
+            self._repo.update_job_status(
+                job_id,
+                "failed",
+                error_code=failure.code,
+                error_message=failure.message,
+                retryable=failure.retryable,
+                retry_after=failure.retry_after,
+            )
+            if failure.retryable:
+                logger.warning(
+                    "written grading for attempt %s deferred (%s)", attempt_id, failure.code
+                )
+                self._queue.complete(GRADING_QUEUE, message.msg_id, False)
+                return
+            # Terminal provider failure (safety block, credentials, unusable
+            # capability): fail the attempt closed so the learner sees an
+            # honest outcome instead of a queue entry that never completes.
+            logger.error(
+                "written grading for attempt %s failed closed: %s", attempt_id, failure.code
+            )
+            grade = _ungradable(
+                attempt_id,
+                question_id,
+                failure.message,
+                graded_at,
+                grader=RUBRIC_GRADER_NAME,
+            )
+            status = "failed"
         except GraderInputError as exc:
             # Malformed/unusable input is a deterministic fail-closed outcome,
             # not a retryable fault: the job succeeds with a failed attempt.
             logger.warning("attempt %s ungradable: %s", attempt_id, exc)
-            grade = _ungradable(attempt_id, str(question.get("id") or ""), str(exc), graded_at)
+            grade = _ungradable(
+                attempt_id,
+                question_id,
+                str(exc),
+                graded_at,
+                grader=RUBRIC_GRADER_NAME if written else OBJECTIVE_FORMAT,
+            )
             status = "failed"
 
         self._repo.complete_attempt(attempt_id, job_id, status, grade)
         self._repo.update_job_status(job_id, "succeeded")
         self._queue.complete(GRADING_QUEUE, message.msg_id, True)
+
+    def _grade_written(
+        self,
+        *,
+        attempt: dict,
+        question: dict,
+        attempt_id: str,
+        graded_at: str,
+    ) -> dict:
+        """One provider call plus deterministic composition into the grade."""
+        if self._adapter is None:
+            raise GraderInputError("written grading requires a provider adapter")
+        # Both the answer and the rubric are validated before the call, so an
+        # unusable submission or an unusable question costs no provider budget.
+        answer_text = written_answer_text(attempt.get("answer"))
+        rubric_criteria(question.get("answer_block"))
+        messages = build_rubric_messages(question, answer_text)
+        response = self._adapter.generate(
+            messages,
+            RUBRIC_GRADING_SCHEMA,
+            correlation_id=str(attempt.get("correlation_id") or ""),
+        )
+        if response.outcome != "ok" or response.structured_output is None:
+            raise RubricProviderError(classify_provider_failure(response))
+        return grade_written(
+            question_id=str(question.get("id") or ""),
+            material_id=str(question.get("material_id") or ""),
+            skill_tags=list(question.get("skill_tags") or []),
+            answer_block=dict(question.get("answer_block") or {}),
+            answer=dict(attempt.get("answer") or {}),
+            provider_payload=response.structured_output,
+            graded_at=graded_at,
+            attempt_id=attempt_id,
+            model_version=self.config.model,
+        )

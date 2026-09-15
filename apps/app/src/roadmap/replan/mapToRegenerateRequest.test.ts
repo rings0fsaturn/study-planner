@@ -257,4 +257,30 @@ describe('mapToRegenerateRequest', () => {
 
     expect(request.input.materials.map((material) => material.id)).toEqual(['mat-1', 'mat-2'])
   })
+
+  it('includes an attached library material after the declared ones', () => {
+    const request = mapToRegenerateRequest([
+      ...baseEvents(),
+      event(
+        'MaterialAttached',
+        {
+          roadmapCreatedAt: '2026-05-31T10:00:00.000Z',
+          materialId: 'mat-3',
+          title: 'OSTEP',
+          estimatedDuration: 120,
+          kind: 'file',
+          role: 'foundation',
+        },
+        '2026-06-01T09:00:00.000Z',
+      ),
+    ], '2026-06-02')
+
+    expect(request.input.materials).toContainEqual({
+      id: 'mat-3',
+      title: 'OSTEP',
+      totalMinutes: 120,
+      role: 'foundation',
+      additionOrder: 2,
+    })
+  })
 })

@@ -29,7 +29,12 @@ class GraderInputError(ValueError):
     """The submitted answer or the stored key is unusable; fail closed."""
 
 
-def _per_skill(skill_tags: list[str], score: float) -> list[dict[str, Any]]:
+def per_skill_observations(skill_tags: list[str], score: float) -> list[dict[str, Any]]:
+    """One public observation per skill tag, judged at the map-#6 threshold.
+
+    Shared by both grading arms (#39 objective, #41 written) so a written
+    observation and an objective observation mean the same thing.
+    """
     correct = score >= CORRECT_THRESHOLD
     return [
         {"skillTag": tag, "score": score, "correct": correct}
@@ -127,7 +132,7 @@ def grade_objective(
         "materialId": material_id,
         "score": score,
         "correct": correct,
-        "perSkill": _per_skill(skill_tags, score),
+        "perSkill": per_skill_observations(skill_tags, score),
         "explanation": None,
         "grader": "objective",
         "gradedAt": graded_at,

@@ -681,3 +681,58 @@ button.ar-attempt-toggle:focus-visible {
 .ar-retry-hint {
   color: var(--text-tertiary);
 }
+
+/* ---- Phase 4 (#41): written rubric breakdown table ---- */
+.ar-rubric-table {
+  width: 100%;
+  margin-top: var(--space-4);
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.ar-rubric-table th {
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.ar-rubric-table td {
+  padding: var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: baseline;
+}
+
+.ar-rubric-criterion {
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.ar-rubric-share,
+.ar-rubric-points {
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.ar-rubric-outcome {
+  white-space: nowrap;
+}
+
+.ar-rubric-table tr.is-miss .ar-rubric-criterion {
+  color: var(--text-secondary);
+}
+
+.ar-rubric-feedback-row td {
+  border-bottom: none;
+  padding-top: 0;
+}
+
+.ar-rubric-feedback {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}

@@ -12,11 +12,9 @@ import {
   mapMaterialProgressMarks,
   mapMaterialsForRoadmap,
   mapSessions,
+  materialTitleIndex,
 } from '../progress/mapEvents'
-import type {
-  MaterialAddedPayload,
-  RoadmapCreatedPayload,
-} from '../sync/types'
+import type { RoadmapCreatedPayload } from '../sync/types'
 import { useSync } from '../sync/useSync'
 import { ServiceStatusBanner } from '../components/ServiceStatusBanner'
 import { useMatchMedia } from '../lib/useMatchMedia'
@@ -31,7 +29,6 @@ import {
   shiftMonth,
   type BoundCalendarDay,
   type CalendarBubble,
-  type CalendarMaterial,
 } from './calendarModel'
 import { CalendarCell } from './CalendarCell'
 import { DaySheet } from './DaySheet'
@@ -51,6 +48,9 @@ import {
   type BookingMaterialOption,
 } from './booking'
 import type { MaterialKind } from '../session/types'
+import { MaterialPicker, type MaterialPickerSelection } from '../materials/MaterialPicker'
+import { toMaterialKind } from '../materials/types'
+import type { MaterialRole } from '@study-tracker/roadmap-engine'
 import './roadmap.css'
 
 const WEEKDAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -70,17 +70,6 @@ function formatMinutes(totalMinutes: number): string {
   if (hours === 0) return `${rest}m`
   if (rest === 0) return `${hours}h`
   return `${hours}h ${rest}m`
-}
-
-function collectMaterialsById(materials: MaterialAddedPayload[]): Map<string, CalendarMaterial> {
-  const byId = new Map<string, CalendarMaterial>()
-  for (const material of materials) {
-    byId.set(material.materialId, {
-      title: material.title,
-      url: material.url,
-    })
-  }
-  return byId
 }
 
 function roadmapInputFromPayload(payload: RoadmapCreatedPayload): RoadmapInput {
@@ -134,6 +123,7 @@ export function RoadmapCalendar({
   const [selectedSheetDay, setSelectedSheetDay] = useState<BoundCalendarDay | null>(null)
   const [addSessionDate, setAddSessionDate] = useState<string | null>(null)
   const [directoryCollapsed, setDirectoryCollapsed] = useState(false)
+  const [addMaterialOpen, setAddMaterialOpen] = useState(false)
   const [progressMaterial, setProgressMaterial] = useState<MaterialLedgerEntry | null>(null)
   const touchStartX = useRef<number | null>(null)
   const isMobileCalendar = useMatchMedia('(max-width: 560px)')
@@ -173,8 +163,8 @@ export function RoadmapCalendar({
     [loadedEvents, selectedRoadmap],
   )
   const materialsById = useMemo(
-    () => collectMaterialsById(materialPayloads),
-    [materialPayloads],
+    () => materialTitleIndex(loadedEvents),
+    [loadedEvents],
   )
   const materialKindById = useMemo(() => {
     const byId = new Map<string, MaterialKind>()
@@ -403,6 +393,51 @@ export function RoadmapCalendar({
     })
     setProgressMaterial(null)
   }
+  const handleAttachMaterials = async (
+    selection: MaterialPickerSelection[],
+    plan?: Record<string, { minutes: number; role: MaterialRole }>,
+  ) => {
+    if (!selectedRoadmap || readOnly) return
+
+    for (const picked of selection) {
+      const entry = plan?.[picked.materialId]
+      await logEvent('MaterialAttached', {
+        roadmapCreatedAt: selectedRoadmap.roadmapCreatedAt,
+        materialId: picked.materialId,
+        title: picked.title,
+        kind: toMaterialKind(picked.kind),
+        role: entry?.role ?? 'foundation',
+        estimatedDuration: Math.max(15, entry?.minutes ?? 60),
+      })
+    }
+    setAddMaterialOpen(false)
+  }
+  // Disclosure for the detach control: removal never touches history, so the
+  // only thing to warn about is what stays behind on the calendar.
+  const detachTooltip = (material: MaterialLedgerEntry): string => {
+    const upcoming = bookings.filter(
+      (booking) => booking.materialId === material.materialId && booking.date >= today,
+    ).length
+    if (upcoming === 0) return 'Detach material from roadmap?'
+    return `Detach material from roadmap? ${upcoming} upcoming session${upcoming === 1 ? ' keeps its' : 's keep their'} label and logged time.`
+  }
+  const handleDetachMaterial = async (material: MaterialLedgerEntry) => {
+    if (!selectedRoadmap || readOnly) return
+
+    await logEvent('MaterialDetached', {
+      roadmapCreatedAt: selectedRoadmap.roadmapCreatedAt,
+      materialId: material.materialId,
+    })
+  }
+  // The booking sheets only ever see the roadmap's own materials, so on an empty
+  // roadmap they hand the learner straight to the attach picker instead of a
+  // picker with nothing in it (D-10).
+  const handleRequestAddMaterial = () => {
+    if (!selectedRoadmap || readOnly) return
+    setSelectedBooking(null)
+    setAddSessionDate(null)
+    setAddMaterialOpen(true)
+  }
 
   return (
     <div className="roadmap-page">
@@ -425,7 +460,7 @@ export function RoadmapCalendar({
       <header className="roadmap-header">
         <div>
           <div className="mono-caps">
-            {readOnly ? 'Roadmap history' : 'Active roadmap'} · {materialsById.size} materials · {roadmap.weeks} weeks
+            {readOnly ? 'Roadmap history' : 'Active roadmap'} · {materialPayloads.length} materials · {roadmap.weeks} weeks
           </div>
           <h1 className="roadmap-title">{title}</h1>
           <p className="roadmap-subtitle">{dateRange}</p>
@@ -552,18 +587,29 @@ export function RoadmapCalendar({
       </section>
 
       <section className={`dir-panel${directoryCollapsed ? ' collapsed' : ''}`} aria-label="Materials directory">
-        <button
-          type="button"
-          className="dir-head"
-          aria-expanded={!directoryCollapsed}
-          onClick={() => setDirectoryCollapsed((collapsed) => !collapsed)}
-        >
-          <span className="ttl">Materials</span>
-          <span className="count-pill">{materialLedger.length} · {Math.round(materialPercent)}% done</span>
-          <svg className="icon icon-sm chev" viewBox="0 0 24 24" aria-hidden="true">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </button>
+        <div className="dir-head">
+          <button
+            type="button"
+            className="dir-head-toggle"
+            aria-expanded={!directoryCollapsed}
+            onClick={() => setDirectoryCollapsed((collapsed) => !collapsed)}
+          >
+            <span className="ttl">Materials</span>
+            <span className="count-pill">{materialLedger.length} · {Math.round(materialPercent)}% done</span>
+            <svg className="icon icon-sm chev" viewBox="0 0 24 24" aria-hidden="true">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </button>
+          <button
+            type="button"
+            className="dir-add"
+            aria-label="Add material to this roadmap"
+            disabled={readOnly}
+            onClick={() => setAddMaterialOpen(true)}
+          >
+            +
+          </button>
+        </div>
         {!directoryCollapsed && (
           <div className="dir-body">
             {materialLedger.length === 0 ? (
@@ -575,8 +621,21 @@ export function RoadmapCalendar({
                   : 0
                 return (
                   <div className="dir-row" key={material.materialId}>
-                    <div className="material-icon art" aria-hidden="true">
-                      {material.title.slice(0, 2).toUpperCase()}
+                    <div className="dir-icon">
+                      <div className="material-icon art" aria-hidden="true">
+                        {material.title.slice(0, 2).toUpperCase()}
+                      </div>
+                      {!readOnly && (
+                        <button
+                          type="button"
+                          className="dir-detach"
+                          aria-label={`Detach ${material.title} from this roadmap`}
+                          title={detachTooltip(material)}
+                          onClick={() => void handleDetachMaterial(material)}
+                        >
+                          &times;
+                        </button>
+                      )}
                     </div>
                     <div className="dir-prog">
                       <div className="dir-title">{material.title}</div>
@@ -666,6 +725,7 @@ export function RoadmapCalendar({
         onClose={() => setSelectedBooking(null)}
         onSave={(bubble, draft) => void handleSaveBooking(bubble, draft)}
         onRemove={(bubble) => void handleRemoveBooking(bubble)}
+        onRequestAddMaterial={handleRequestAddMaterial}
       />
       <AddSessionSheet
         date={addSessionDate}
@@ -673,11 +733,20 @@ export function RoadmapCalendar({
         capMinutes={todayCapMinutes}
         onClose={() => setAddSessionDate(null)}
         onCreate={(draft) => void handleCreateBooking(draft)}
+        onRequestAddMaterial={handleRequestAddMaterial}
       />
       <MaterialProgressSheet
         material={progressMaterial}
         onClose={() => setProgressMaterial(null)}
         onSave={(material, percentDone) => void handleMarkMaterialProgress(material, percentDone)}
+      />
+      <MaterialPicker
+        open={addMaterialOpen}
+        purpose="planning"
+        withPlan
+        excludeIds={materialPayloads.map((material) => material.materialId)}
+        onClose={() => setAddMaterialOpen(false)}
+        onContinue={(selection, plan) => void handleAttachMaterials(selection, plan)}
       />
     </div>
   )

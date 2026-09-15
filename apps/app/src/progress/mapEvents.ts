@@ -11,6 +11,7 @@ import type {
   BookingClearedPayload,
   BookingEditedPayload,
   MaterialAddedPayload,
+  MaterialAttachedPayload,
   MaterialProgressMarkedPayload,
   RoadmapCreatedPayload,
   SessionBookedPayload,
@@ -149,9 +150,9 @@ function roadmapIdentity(event: Event): string {
 
 function effectiveEstimatedDuration(
   material: MaterialAddedPayload,
-  roadmapEntry: RoadmapLifecycleEntry,
+  payload: RoadmapCreatedPayload,
 ): number {
-  const override = roadmapEntry.payload.materialDurationOverrides?.[material.materialId]
+  const override = payload.materialDurationOverrides?.[material.materialId]
   if (typeof override !== 'number') return material.estimatedDuration
   return Math.max(0, Math.min(material.estimatedDuration, override))
 }
@@ -238,29 +239,76 @@ export function mapMaterialProgressMarks(
     }))
 }
 
+export function roadmapMaterialPayloads(
+  events: Event[],
+  payload: RoadmapCreatedPayload,
+  roadmapCreatedAt: string,
+): MaterialAddedPayload[] {
+  const byId = new Map<string, MaterialAddedPayload>()
+  const state = new Map<string, 'attached' | 'detached'>()
+  for (const event of events) {
+    // Array order is insertion order (EventStore.getAll); same-millisecond
+    // appends make createdAt an unreliable tie-break.
+    if (event.kind === 'MaterialAdded') {
+      byId.set(
+        (event.payload as unknown as MaterialAddedPayload).materialId,
+        event.payload as unknown as MaterialAddedPayload,
+      )
+      continue
+    }
+    if (event.kind !== 'MaterialAttached' && event.kind !== 'MaterialDetached') continue
+    const entry = event.payload as unknown as MaterialAttachedPayload
+    if (entry.roadmapCreatedAt !== roadmapCreatedAt) continue
+    if (event.kind === 'MaterialAttached') {
+      byId.set(entry.materialId, entry)
+      state.set(entry.materialId, 'attached')
+    } else {
+      state.set(entry.materialId, 'detached')
+    }
+  }
+
+  const declared = payload.materialIds ??
+    [...new Set((payload.slots ?? [])
+      .flatMap((slot) => slot.candidateMaterialIds)
+      .filter((id) => id !== '__rest__'))]
+  const declaredSet = new Set(declared)
+  const attached = [...state.entries()]
+    .filter(([, value]) => value === 'attached')
+    .map(([materialId]) => materialId)
+    .filter((materialId) => !declaredSet.has(materialId))
+
+  return [...declared, ...attached]
+    .filter((materialId) => state.get(materialId) !== 'detached')
+    .flatMap((materialId) => {
+      const material = byId.get(materialId)
+      return material
+        ? [{ ...material, estimatedDuration: effectiveEstimatedDuration(material, payload) }]
+        : []
+    })
+}
+
 export function mapMaterialsForRoadmap(
   events: Event[],
   roadmapEntry: RoadmapLifecycleEntry,
 ): MaterialAddedPayload[] {
-  const materialIds = roadmapEntry.payload.materialIds ??
-    [...new Set((roadmapEntry.payload.slots ?? [])
-      .flatMap((slot) => slot.candidateMaterialIds)
-      .filter((id) => id !== '__rest__'))]
-  const byId = new Map<string, MaterialAddedPayload>()
+  return roadmapMaterialPayloads(events, roadmapEntry.payload, roadmapEntry.roadmapCreatedAt)
+}
+
+/**
+ * Global materialId → title/url index for calendar bubble labels. A material's
+ * title belongs to the material, not the roadmap, so this stays global: a
+ * booking keeps its label after the material leaves the roadmap's set.
+ */
+export function materialTitleIndex(
+  events: Event[],
+): Map<string, { title: string; url?: string }> {
+  const byId = new Map<string, { title: string; url?: string }>()
   for (const event of events) {
-    if (event.kind !== 'MaterialAdded') continue
-    const payload = event.payload as unknown as MaterialAddedPayload
-    byId.set(payload.materialId, payload)
+    if (event.kind !== 'MaterialAdded' && event.kind !== 'MaterialAttached') continue
+    const entry = event.payload as unknown as MaterialAddedPayload
+    byId.set(entry.materialId, { title: entry.title, ...(entry.url ? { url: entry.url } : {}) })
   }
-  return materialIds.flatMap((materialId) => {
-    const material = byId.get(materialId)
-    return material
-      ? [{
-          ...material,
-          estimatedDuration: effectiveEstimatedDuration(material, roadmapEntry),
-        }]
-      : []
-  })
+  return byId
 }
 
 export function capacityWeeklyTarget(payload: RoadmapCreatedPayload, weekStartDate: string): number {

@@ -83,10 +83,11 @@ class Material:
 
 @dataclass(frozen=True)
 class TextSegment:
-    """A piece of extracted text, optionally anchored to a source timestamp."""
+    """A piece of extracted text, optionally anchored to a source timestamp/page."""
 
     text: str
     start_seconds: float | None = None
+    page: int | None = None
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,15 @@ class ExtractedContent:
 
     text: str
     segments: tuple[TextSegment, ...] = ()
+    # Raw per-page text for page-bearing sources (PDF) so the outline can be
+    # derived from the document's own contents page; empty for other kinds.
+    pages: tuple[str, ...] = ()
+    # Top-level PDF bookmarks as (title, 1-based PDF page); empty when the
+    # source is not a PDF or carries no bookmark tree.
+    bookmarks: tuple[tuple[str, int], ...] = ()
+    # Rewritten PDF for the browser viewer, set only when the uploaded file
+    # needed repair for a viewer to open it (a page tree with repeated kids).
+    viewer_pdf: bytes | None = None
 
     def preview(self, limit: int = 4000) -> str:
         if len(self.text) <= limit:
@@ -111,6 +121,12 @@ class ContentChunk:
     ordinal: int
     start_seconds: float | None = None
     chunk_id: str | None = None
+    # 1-based source page bounds; a chunk that straddles a page boundary has
+    # page_start != page_end. Both NULL for sources without pages (url/manual/
+    # youtube). Retrieval filters on the range, so the values are never part of
+    # the visible chunk contract (`to_schema_dict`).
+    page_start: int | None = None
+    page_end: int | None = None
 
     def to_schema_dict(self) -> dict[str, object]:
         payload: dict[str, object] = {

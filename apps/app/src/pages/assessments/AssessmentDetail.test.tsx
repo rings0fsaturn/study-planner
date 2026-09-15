@@ -10,8 +10,10 @@ import {
   readyAssessment,
   queuedJob,
   attemptRecord,
+  writtenGrade,
+  writtenQuestion,
 } from '../../assessments/testing/fakeAssessmentClient'
-import type { Assessment, AttemptRecord } from '../../assessments/types'
+import type { Assessment, AttemptRecord, Question } from '../../assessments/types'
 
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
@@ -122,6 +124,38 @@ describe('AssessmentDetail', () => {
     expect(input.materialIds).toEqual(['mat-1'])
     expect(input.clientId).not.toBe('')
     expect(input.correlationId).not.toBe('')
+  })
+
+  it('retries a failed written assessment with its own recipe, never objective (#41)', async () => {
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetAssessment({
+      ...generatingAssessment(),
+      status: 'failed',
+      warnings: [
+        { code: 'citation_missing', message: 'citation chunk deadbeef is outside the retrieval context' },
+      ],
+      recipe: {
+        formats: ['written'],
+        questionCount: 1,
+        difficulty: 4,
+        skillTags: ['multi-part comparison'],
+      },
+    })
+    assessments.scriptGenerate(queuedJob({ jobId: 'job-written', resultId: 'assessment-written' }))
+    renderDetail(assessments)
+
+    expect(await screen.findByText('Generation did not complete')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    // The failed row has no questions to read a family from, so the retry must
+    // take it (and the learner's band and tags) from the stored recipe.
+    const input = assessments.generateAssessment.mock.calls[0][0]
+    expect(input.recipe.formats).toEqual(['written'])
+    expect(input.recipe.difficulty).toBe(4)
+    expect(input.recipe.skillTags).toEqual(['multi-part comparison'])
   })
 
   it('stops polling on a terminal status and clears the timer on unmount', async () => {
@@ -404,5 +438,89 @@ describe('AssessmentDetail review surface (P4)', () => {
     ).toBeInTheDocument()
     expect(screen.getByLabelText('Grading attempt')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Retry question' })).not.toBeInTheDocument()
+  })
+})
+
+// #41 P4: the written family through the same wired page — heading, textarea
+// taking branch, and the rubric breakdown inside the #40 review shell.
+describe('AssessmentDetail written assessment (#41)', () => {
+  const WRITTEN_TEXT =
+    'Adam keeps running averages of the gradient and of the squared gradient, so the early estimates are pulled toward zero.'
+
+  const writtenQuestionRow: Question = writtenQuestion({
+    assessmentId: 'assessment-1',
+    subtype: 'long_form',
+  })
+  const writtenAssessment = readyAssessment({ questions: [writtenQuestionRow] })
+
+  let client: FakeAssessmentClient
+
+  beforeEach(async () => {
+    await Dexie.delete(DB_NAME)
+    client = new FakeAssessmentClient()
+    client.scriptGetAssessment(writtenAssessment)
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await Dexie.delete(DB_NAME)
+  })
+
+  it('heads the page by family and grades a written answer into the rubric table', async () => {
+    const recorded: AttemptRecord[] = []
+    client.submitAssessmentAttempt.mockImplementation(
+      async (_assessmentId, questionId, input) => {
+        const attemptId = `att-${input.clientAttemptId}`
+        recorded.push({
+          attemptId,
+          clientAttemptId: input.clientAttemptId,
+          questionId,
+          assessmentId: writtenAssessment.id,
+          submittedAt: '2026-09-10T10:00:00Z',
+          status: 'graded',
+          answer: input.answer,
+          grade: writtenGrade({ attemptId, questionId }),
+        })
+        return { attemptId, questionId, status: 'queued', jobId: 'job-written-1' }
+      },
+    )
+    client.listAssessmentAttempts.mockImplementation(async () => recorded)
+
+    const view = renderDetail(client, 'written-user')
+
+    // Family-aware heading, not the objective copy.
+    expect(await screen.findByText('Written assessment')).toBeInTheDocument()
+    const textarea = await screen.findByLabelText('Your answer')
+    expect(textarea.tagName).toBe('TEXTAREA')
+    expect(textarea).toHaveAttribute('rows', '8')
+    expect(screen.getByRole('button', { name: 'Submit answer' })).toBeDisabled()
+
+    fireEvent.change(textarea, { target: { value: WRITTEN_TEXT } })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }))
+    })
+
+    // The written answer shape rides the wire once the flow's Dexie writes settle.
+    await waitFor(
+      () => expect(client.submitAssessmentAttempt).toHaveBeenCalledTimes(1),
+      { timeout: 8000 },
+    )
+    expect(client.submitAssessmentAttempt.mock.calls[0][2].answer).toEqual({ text: WRITTEN_TEXT })
+
+    // Graded → the review card replaces the taking UI with the rubric table.
+    const table = await screen.findByRole('table', { name: 'Rubric breakdown' }, { timeout: 8000 })
+    expect(table).toBeInTheDocument()
+    expect(screen.getByText(/Your answer:/)).toBeInTheDocument()
+    expect(
+      screen.getByText('You named both running estimates; the early-step mechanism is implied.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('Names both running estimates')).toBeInTheDocument()
+    expect(screen.getByText('40%')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Submit answer' })).not.toBeInTheDocument()
+
+    const html = view.container.innerHTML
+    expect(html).not.toMatch(
+      /answerBlock|answer_block|correctIndex|correct_index|referenceSolution|hiddenTest|referenceAnswer|rubricVersion|maxPoints/i,
+    )
   })
 })

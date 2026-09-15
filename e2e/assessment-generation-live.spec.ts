@@ -36,6 +36,35 @@ async function openCorpusDetail(page: Page): Promise<void> {
   await expect(page.getByRole('link', { name: 'Generate assessment' })).toBeVisible();
 }
 
+/**
+ * The detail page polls until the question lands. The citation gate is strict
+ * (probe citation validity 83-100%), so a failed attempt is possible; each
+ * Retry creates a fresh observation. Bound the loop so the test stays
+ * deterministic without masking a real bug.
+ */
+async function waitForQuestion(page: Page): Promise<void> {
+  await page.waitForURL(/\/study\/assessments\/[^/]+$/, { timeout: 15000 });
+  await expect(page.getByText('Generating your question')).toBeVisible({ timeout: 5000 });
+
+  let questionReady = false;
+  for (let attempt = 0; attempt < 4 && !questionReady; attempt++) {
+    const failed = page.getByRole('button', { name: 'Retry generation' });
+    // The ready signal is the review surface itself (the detail page renders
+    // "Difficulty 3" + a Citations heading; "Difficulty band" is the *config*
+    // page's label).
+    await expect(page.getByRole('heading', { name: 'Citations' }).or(failed)).toBeVisible({
+      timeout: 120_000,
+    });
+    if ((await failed.count()) > 0 && (await failed.isVisible())) {
+      await failed.click();
+      await expect(page.getByText('Generating your question')).toBeVisible({ timeout: 5000 });
+    } else {
+      questionReady = true;
+    }
+  }
+  expect(questionReady, 'assessment did not reach ready after retries').toBe(true);
+}
+
 test.describe('assessment generation (live)', () => {
   test.skip(!EMAIL || !PASSWORD, 'E2E_LIVE_EMAIL / E2E_LIVE_PASSWORD not set');
 
@@ -57,31 +86,11 @@ test.describe('assessment generation (live)', () => {
       await expect(page.getByRole('button', { name: '3', exact: true })).toHaveClass(/selected/);
       await page.getByRole('button', { name: 'Generate question' }).click();
 
-      // 3. The detail page polls until the question lands. The citation gate
-      //    is strict (probe citation validity 83-100%), so a failed attempt
-      //    is possible; each Retry creates a fresh observation. Bound the
-      //    loop so the test stays deterministic without masking a real bug.
-      await page.waitForURL(/\/study\/assessments\/[^/]+$/, { timeout: 15000 });
-      await expect(page.getByText('Generating your question')).toBeVisible({ timeout: 5000 });
-
-      let questionReady = false;
-      for (let attempt = 0; attempt < 4 && !questionReady; attempt++) {
-        const failed = page.getByRole('button', { name: 'Retry generation' });
-        await expect(page.getByText(/Difficulty band/).or(failed)).toBeVisible({
-          timeout: 120_000,
-        });
-        if ((await failed.count()) > 0 && (await failed.isVisible())) {
-          await failed.click();
-          await expect(page.getByText('Generating your question')).toBeVisible({ timeout: 5000 });
-        } else {
-          questionReady = true;
-        }
-      }
-      expect(questionReady, 'assessment did not reach ready after retries').toBe(true);
+      // 3. The detail page polls until the question lands.
+      await waitForQuestion(page);
 
       // 4. The question renders with at least one citation; no answer content.
-      const questionBlock = page.locator('.card-large');
-      await expect(questionBlock.getByText(/chunk [0-9a-f]+/)).toBeVisible();
+      await expect(page.getByText(/chunk [0-9a-f]+/).first()).toBeVisible();
       const bodyText = await page.locator('body').innerText();
       expect(bodyText).not.toMatch(/correct index|correctIndex|answer key|correct answer/i);
     } finally {
@@ -90,14 +99,45 @@ test.describe('assessment generation (live)', () => {
 
     expect(pageErrors).toEqual([]);
   });
+
+  test('a chapter chip fills the page range and the scoped question lands (AC4)', async ({ page }) => {
+    test.setTimeout(300_000);
+    const pageErrors: string[] = [];
+    page.on('pageerror', (error) => pageErrors.push(error.message));
+
+    try {
+      await signIn(page);
+      await openCorpusDetail(page);
+      await page.getByRole('link', { name: 'Generate assessment' }).click();
+      await expect(page.getByRole('heading', { name: 'Generate assessment' })).toBeVisible();
+
+      // The outline entry resolves to its own page and the next chapter's minus
+      // one: Chapter 5 is pdf 156-213 on this corpus (printed 123 -> pdf 156).
+      const chapterChips = page.getByRole('group', { name: 'Chapter scope' });
+      await chapterChips.getByRole('button', { name: 'Chapter 5 Budgeting and control' }).click();
+      await expect(page.getByLabel('From page')).toHaveValue('156');
+      await expect(page.getByLabel('To page')).toHaveValue('213');
+
+      await page.getByRole('button', { name: 'Generate question' }).click();
+      await waitForQuestion(page);
+
+      await expect(page.getByText(/chunk [0-9a-f]+/).first()).toBeVisible();
+      const bodyText = await page.locator('body').innerText();
+      expect(bodyText).not.toMatch(/examination|syllabus|correct index|answer key/i);
+    } finally {
+      // The corpus material is the frozen retrieval baseline: never delete it.
+    }
+
+    expect(pageErrors).toEqual([]);
+  });
 });
 
-test.use({ viewport: { width: 390, height: 844 } });
+test.use({ viewport: { width: 375, height: 812 } });
 
 test.describe('assessment generation (live, mobile)', () => {
   test.skip(!EMAIL || !PASSWORD, 'E2E_LIVE_EMAIL / E2E_LIVE_PASSWORD not set');
 
-  test('mobile: config page renders and submits at 390px', async ({ page }) => {
+  test('mobile: config page renders and the chapter chip fills the range at 375px', async ({ page }) => {
     test.setTimeout(300_000);
     const pageErrors: string[] = [];
     page.on('pageerror', (error) => pageErrors.push(error.message));
@@ -109,9 +149,19 @@ test.describe('assessment generation (live, mobile)', () => {
       await page.getByRole('link', { name: 'Generate assessment' }).click();
       await expect(page.getByRole('heading', { name: 'Generate assessment' })).toBeVisible();
 
-      // Difficulty default (3) is selected; the submit button is visible at 390px.
+      // Difficulty default (3) is selected; the submit button is visible at 375px.
       await expect(page.getByRole('button', { name: '3', exact: true })).toHaveClass(/selected/);
       await expect(page.getByRole('button', { name: 'Generate question' })).toBeVisible();
+
+      // The chapter picker is usable on a phone: a chip fills both inputs and
+      // "Whole material" clears them again.
+      const chapterChips = page.getByRole('group', { name: 'Chapter scope' });
+      await chapterChips.getByRole('button', { name: 'Chapter 5 Budgeting and control' }).click();
+      await expect(page.getByLabel('From page')).toHaveValue('156');
+      await expect(page.getByLabel('To page')).toHaveValue('213');
+      await chapterChips.getByRole('button', { name: 'Whole material' }).click();
+      await expect(page.getByLabel('From page')).toHaveValue('');
+      await expect(page.getByLabel('To page')).toHaveValue('');
     } finally {
       // The corpus material is the frozen retrieval baseline: never delete it.
     }

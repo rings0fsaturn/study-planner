@@ -68,6 +68,12 @@ def _overlap_tail(text: str, counter: TokenCounter, overlap_tokens: int) -> str:
     return " ".join(reversed(taken))
 
 
+def _page_bounds(parts: Sequence[TextSegment]) -> tuple[int | None, int | None]:
+    """First and last source page among a chunk's parts, either side NULL-able."""
+    pages = [part.page for part in parts if part.page is not None]
+    return (pages[0], pages[-1]) if pages else (None, None)
+
+
 def chunk_segments(
     segments: Sequence[TextSegment],
     counter: TokenCounter,
@@ -98,6 +104,7 @@ def chunk_segments(
         first_start = next(
             (part.start_seconds for part in parts if part.start_seconds is not None), None
         )
+        page_start, page_end = _page_bounds(parts)
         if counter(text) > target_tokens:
             # Separator tokens (e.g. "\n\n" between segments) can push the
             # joined text over budget even when every part fit alone; re-split
@@ -112,6 +119,8 @@ def chunk_segments(
                         text=piece,
                         ordinal=len(chunks),
                         start_seconds=first_start if first else None,
+                        page_start=page_start,
+                        page_end=page_end,
                     )
                 )
                 first = False
@@ -122,11 +131,16 @@ def chunk_segments(
                     text=text,
                     ordinal=len(chunks),
                     start_seconds=first_start,
+                    page_start=page_start,
+                    page_end=page_end,
                 )
             )
         tail = _overlap_tail(text, counter, overlap_tokens)
         if tail:
-            carry = [TextSegment(tail)]
+            # The tail opens the next chunk, so it carries this chunk's last
+            # page: without that, most chunks (which begin with a tail) would
+            # have no page at all.
+            carry = [TextSegment(tail, page=page_end)]
             carry_tokens = counter(tail)
 
     def feed(segment: TextSegment) -> None:
@@ -151,7 +165,7 @@ def chunk_segments(
                 current_tokens += tokens
                 return
             for piece in pieces:
-                feed(TextSegment(piece, segment.start_seconds))
+                feed(TextSegment(piece, segment.start_seconds, segment.page))
             return
         current.append(segment)
         current_tokens += tokens

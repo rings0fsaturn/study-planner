@@ -25,6 +25,7 @@ from .extractors import (
     extract_material,
 )
 from .models import PROGRESS_BY_STAGE, ContentChunk, IngestionError, Material
+from .outline import build_outline
 from .queue import (
     DEFAULT_VISIBILITY_SECONDS,
     EMBED_QUEUE,
@@ -344,8 +345,27 @@ class IngestionWorker:
         )
 
         started = time.perf_counter()
+        # The outline (chapters -> PDF pages) comes from the same parse as the
+        # page-tagged segments, so it is derived here instead of in its own
+        # stage (D-04). Best-effort: a document without a usable outline is
+        # still a readable material, and the learner keeps the typed page range.
+        outline = build_outline(
+            content.pages,
+            bookmarks=content.bookmarks,
+            page_count=len(content.pages),
+        )
         fulltext_path = f"{material.owner_id}/{material.id}/fulltext.txt"
         self.storage.upload(fulltext_path, content.text.encode("utf-8"), "text/plain")
+        if content.viewer_pdf is not None:
+            # Only PDFs whose page tree repeats a page object get one: pdf.js
+            # refuses those the same way pypdf did, so the viewer needs a tree
+            # without the repeats. Keyed by content version, so replacing the
+            # file never leaves the viewer on the previous copy.
+            self.storage.upload(
+                f"{material.owner_id}/{material.id}/view-{material.content_version}.pdf",
+                content.viewer_pdf,
+                "application/pdf",
+            )
         self._emit_telemetry(
             [
                 TelemetryRecord(
@@ -393,7 +413,15 @@ class IngestionWorker:
         # only pays for the missing vectors instead of the whole book again.
         # Chunks are still replaced (not merged) whenever the text differs.
         existing_chunks = self.repo.list_chunks(material.id)
-        if [chunk.text for chunk in existing_chunks] == [chunk.text for chunk in chunks]:
+        # Page provenance is part of the reuse key: rows written before the
+        # page columns existed have identical text but NULL pages, and reusing
+        # them would silently publish a material that cannot be scoped.
+        def reuse_key(chunk: ContentChunk) -> tuple[str, int | None, int | None]:
+            return (chunk.text, chunk.page_start, chunk.page_end)
+
+        if [reuse_key(chunk) for chunk in existing_chunks] == [
+            reuse_key(chunk) for chunk in chunks
+        ]:
             chunks = existing_chunks
         else:
             # Prior chunks (from a replaced or earlier attempt) are cleared
@@ -405,6 +433,9 @@ class IngestionWorker:
             PROGRESS_BY_STAGE["chunking"],
             chunk_count=len(chunks),
             extracted_text_path=fulltext_path,
+            outline=outline.to_json() if outline else None,
+            page_count=outline.page_count if outline else None,
+            page_offset=outline.page_offset if outline else None,
         )
         self.queue.send(
             EMBED_QUEUE,

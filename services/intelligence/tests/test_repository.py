@@ -79,6 +79,8 @@ def test_replace_chunks_posts_bare_array_with_owner_id() -> None:
         text="some text",
         ordinal=3,
         start_seconds=None,
+        page_start=4,
+        page_end=5,
     )
     repo.replace_chunks("mat-1", [chunk], "user-1")
 
@@ -94,6 +96,8 @@ def test_replace_chunks_posts_bare_array_with_owner_id() -> None:
             "ordinal": 3,
             "text": "some text",
             "start_seconds": None,
+            "page_start": 4,
+            "page_end": 5,
         }
     ]
 

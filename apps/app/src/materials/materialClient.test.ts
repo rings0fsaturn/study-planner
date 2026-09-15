@@ -26,6 +26,15 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     chunk_count: 0,
     grounding_version: null,
     extracted_text_path: null,
+    outline: {
+      entries: [
+        { title: 'Chapter 1 Introduction', page: 34 },
+        { title: 'Chapter 2 Performance', page: 60 },
+      ],
+      source: 'contents',
+    },
+    page_count: 572,
+    page_offset: -33,
     created_at: '2026-07-15T10:00:00.000Z',
     updated_at: '2026-07-15T10:00:00.000Z',
     ...overrides,
@@ -116,6 +125,31 @@ describe('MaterialClient', () => {
       contentVersion: 'v1',
       estimatedMinutes: 420,
     })
+  })
+
+  it('maps the outline, page count and page offset, and reads a junk outline as none', async () => {
+    const fake = fakeDb()
+    fake.rows.push(
+      row(),
+      row({ id: 'mat-2', outline: { entries: 'not a list' }, page_count: null, page_offset: null }),
+    )
+    const client = new MaterialClient(fake.db)
+
+    const [mapped, junk] = await client.listMaterials()
+
+    expect(mapped).toMatchObject({
+      outline: {
+        entries: [
+          { title: 'Chapter 1 Introduction', page: 34 },
+          { title: 'Chapter 2 Performance', page: 60 },
+        ],
+      },
+      pageCount: 572,
+      pageOffset: -33,
+    })
+    expect(junk.outline).toBeNull()
+    expect(junk.pageCount).toBeNull()
+    expect(junk.pageOffset).toBeNull()
   })
 
   it('applies status, search, archived, and ordering options to the query', async () => {
@@ -416,6 +450,109 @@ describe('MaterialClient', () => {
     await expect(
       client.uploadMaterialFile('mat-1', new File(['x'], 'a.pdf')),
     ).rejects.toMatchObject({ code: 'unauthorized' })
+  })
+
+  it('signs the owner-scoped private path for the viewer', async () => {
+    const { db } = fakeDb()
+    const signs: Array<{ bucket: string; path: string; expiresIn: number }> = []
+    const storage = {
+      from: vi.fn((bucket: string) => ({
+        createSignedUrl: vi.fn(async (path: string, expiresIn: number) => {
+          signs.push({ bucket, path, expiresIn })
+          // No ingestion viewer copy exists for this material.
+          if (path.includes('/view-')) {
+            return { data: null, error: { message: 'Object not found', code: '404' } }
+          }
+          return { data: { signedUrl: 'https://example.test/storage/v1/object/sign/x' }, error: null }
+        }),
+      })),
+    } as unknown as MaterialStorageLike
+
+    const client = new MaterialClient(db, storage)
+
+    const url = await client.getMaterialFileUrl({
+      id: 'mat-1',
+      ownerId: 'user-a',
+      source: 'sample-textbook-572page.pdf',
+      contentVersion: 'cv-1',
+    })
+
+    expect(url).toBe('https://example.test/storage/v1/object/sign/x')
+    expect(signs).toEqual([
+      {
+        bucket: 'material-raw',
+        path: 'user-a/mat-1/view-cv-1.pdf',
+        expiresIn: 600,
+      },
+      {
+        bucket: 'material-raw',
+        path: 'user-a/mat-1/sample-textbook-572page.pdf',
+        expiresIn: 600,
+      },
+    ])
+  })
+
+  it('prefers the ingestion viewer copy for a PDF the viewer could not open', async () => {
+    const { db } = fakeDb()
+    const signs: string[] = []
+    const storage = {
+      from: vi.fn(() => ({
+        createSignedUrl: vi.fn(async (path: string) => {
+          signs.push(path)
+          return { data: { signedUrl: `https://example.test/${path}` }, error: null }
+        }),
+      })),
+    } as unknown as MaterialStorageLike
+
+    const client = new MaterialClient(db, storage)
+    const url = await client.getMaterialFileUrl({
+      id: 'mat-1',
+      ownerId: 'user-a',
+      source: 'grokking-algorithms.pdf',
+      contentVersion: 'cv-2',
+    })
+
+    expect(url).toBe('https://example.test/user-a/mat-1/view-cv-2.pdf')
+    expect(signs).toEqual(['user-a/mat-1/view-cv-2.pdf'])
+  })
+
+  it('reports a missing stored file instead of handing over an empty URL', async () => {
+    const { db } = fakeDb()
+    const storage = {
+      from: vi.fn(() => ({
+        createSignedUrl: vi.fn(async () => ({ data: null, error: null })),
+      })),
+    } as unknown as MaterialStorageLike
+
+    const client = new MaterialClient(db, storage)
+    await expect(
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
+    ).rejects.toMatchObject({ code: 'not_found' })
+  })
+
+  it('rejects a file URL when storage is not configured', async () => {
+    const { db } = fakeDb()
+    const client = new MaterialClient(db)
+    await expect(
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
+    ).rejects.toMatchObject({ code: 'unknown' })
+  })
+
+  it('normalizes a storage signing failure', async () => {
+    const { db } = fakeDb()
+    const storage = {
+      from: vi.fn(() => ({
+        createSignedUrl: vi.fn(async () => ({
+          data: null,
+          error: { message: 'object not found', code: 'PGRST116' },
+        })),
+      })),
+    } as unknown as MaterialStorageLike
+
+    const client = new MaterialClient(db, storage)
+    await expect(
+      client.getMaterialFileUrl({ id: 'mat-1', ownerId: 'user-a', source: 'a.pdf', contentVersion: '' }),
+    ).rejects.toMatchObject({ code: 'not_found' })
   })
 
   it('marks a failed upload so the detail page can offer retry', async () => {

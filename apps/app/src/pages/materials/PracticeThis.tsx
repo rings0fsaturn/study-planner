@@ -209,13 +209,13 @@ export function PracticeThis() {
           max={5}
           initialSelected={[material.id]}
           onClose={() => setPickerOpen(false)}
-          onContinue={async (ids) => {
+          onContinue={async (selection) => {
             setPickerOpen(false)
             const records: MaterialRecord[] = []
-            for (const id of ids) {
-              if (id === material.id) continue
+            for (const picked of selection) {
+              if (picked.materialId === material.id) continue
               try {
-                records.push(await client.getMaterial(id))
+                records.push(await client.getMaterial(picked.materialId))
               } catch {
                 // Ignore individual failures; keep the confirmed set.
               }

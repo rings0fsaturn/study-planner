@@ -1,0 +1,18 @@
+{
+  "id": "q-written-001",
+  "assessmentId": "asmt-written-001",
+  "materialId": "mat-acc-001",
+  "format": "written",
+  "subtype": "long_form",
+  "prompt": "Explain how bias correction changes the first few update steps in Adam, and why the uncorrected moment estimate is misleading early in training.",
+  "options": [],
+  "skillTags": ["optimization"],
+  "authoredDifficulty": 4,
+  "citations": [
+    {
+      "chunkId": "chunk-acc-014",
+      "materialId": "mat-acc-001",
+      "quote": "Without bias correction the first updates are far too large."
+    }
+  ]
+}

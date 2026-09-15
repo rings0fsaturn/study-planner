@@ -26,30 +26,90 @@ router = APIRouter()
 
 DIFFICULTY_MIN = 1
 DIFFICULTY_MAX = 5
-DEFAULT_SKILL_TAGS = ["core"]
+# One question family per assessment in this slice (#41, D-01); mixed-family
+# generation is out of scope.
+SUPPORTED_FORMATS = (["objective"], ["written"])
+# Contract bound for WrittenAnswer.text (openapi, Phase 2 #41).
+WRITTEN_TEXT_MAX_LENGTH = 20000
 
 
 def _validate_recipe(recipe: dict) -> list[str]:
     failures: list[str] = []
     formats = recipe.get("formats")
-    if formats != ["objective"]:
-        failures.append("formats must be ['objective'] for this slice")
+    if formats not in SUPPORTED_FORMATS:
+        failures.append("formats must be ['objective'] or ['written'] for this slice")
     question_count = recipe.get("questionCount")
     if question_count != 1:
         failures.append("questionCount must be 1 for this slice")
     difficulty = recipe.get("difficulty")
     if not isinstance(difficulty, int) or not DIFFICULTY_MIN <= difficulty <= DIFFICULTY_MAX:
         failures.append(f"difficulty must be an integer from {DIFFICULTY_MIN} to {DIFFICULTY_MAX}")
-    skill_tags = recipe.get("skillTags", DEFAULT_SKILL_TAGS)
-    if not isinstance(skill_tags, list) or not all(
-        isinstance(tag, str) and tag.strip() for tag in skill_tags
+    # skillTags is optional in the contract (openapi AssessmentRecipe). A
+    # missing key stays missing: every tag rides into the retrieval steer and
+    # the prompt, so a placeholder ("core") only drags retrieval off topic.
+    skill_tags = recipe.get("skillTags")
+    if skill_tags is not None and (
+        not isinstance(skill_tags, list)
+        or not all(isinstance(tag, str) and tag.strip() for tag in skill_tags)
     ):
         failures.append("skillTags must be a list of non-empty strings")
+    failures.extend(_validate_scope(recipe.get("scope")))
     return failures
 
 
+def _validate_scope(scope: object) -> list[str]:
+    """Shape check for `recipe.scope` (D-05); the page range is checked later."""
+    if scope is None:
+        return []
+    if not isinstance(scope, dict):
+        failures = ["scope must be an object with pageStart and pageEnd"]
+    else:
+        failures = []
+        start, end = scope.get("pageStart"), scope.get("pageEnd")
+        if not _is_page(start) or not _is_page(end):
+            failures.append("scope.pageStart and scope.pageEnd must be integers of at least 1")
+        elif start > end:
+            failures.append("scope.pageStart must not be greater than scope.pageEnd")
+        label = scope.get("sectionLabel")
+        if label is not None and (not isinstance(label, str) or not label.strip()):
+            failures.append("scope.sectionLabel must be a non-empty string when present")
+        unknown = sorted(set(scope) - {"pageStart", "pageEnd", "sectionLabel"})
+        if unknown:
+            failures.append(f"scope has unsupported keys: {', '.join(unknown)}")
+    return failures
+
+
+def _is_page(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _scope_range_failure(recipe: dict, material: dict) -> str:
+    """The scope must fit the material's own page count (D-05).
+
+    `materials.page_count` is written by the ingestion worker from the parsed
+    PDF, so a material without page numbering cannot be scoped by page at all.
+    """
+    scope = recipe.get("scope")
+    if not isinstance(scope, dict):
+        return ""
+    page_count = _material_page_count(material)
+    if page_count == 0:
+        return "this material has no page numbering to scope by"
+    if int(scope["pageEnd"]) > page_count:
+        return f"scope.pageEnd must not exceed the material's {page_count} pages"
+    return ""
+
+
+def _material_page_count(material: dict) -> int:
+    """The stored page count, or 0 when the material has no page numbering."""
+    value = material.get("page_count")
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+        return 0
+    return value
+
+
 def _question(row: dict) -> dict:
-    return {
+    question = {
         "id": row["id"],
         "assessmentId": row["assessment_id"],
         "materialId": row["material_id"],
@@ -60,6 +120,12 @@ def _question(row: dict) -> dict:
         "authoredDifficulty": int(row.get("authored_difficulty") or 1),
         "citations": row.get("citations") or [],
     }
+    # Optional by contract: written questions carry the authored subtype, and
+    # objective rows omit the key entirely rather than sending a null.
+    subtype = row.get("subtype")
+    if subtype:
+        question["subtype"] = subtype
+    return question
 
 
 @router.post("/assessments/generate")
@@ -87,6 +153,9 @@ def generate_assessment(
             return service_error(
                 request, IngestionError("validation_failed", "material is not ready")
             )
+        scope_failure = _scope_range_failure(recipe, material)
+        if scope_failure:
+            return service_error(request, IngestionError("validation_failed", scope_failure))
     except IngestionError as exc:
         return service_error(request, exc)
 
@@ -121,7 +190,7 @@ def get_assessment(
     try:
         assessment = client.get_assessment(assessmentId)
         questions = client.list_questions(assessmentId)
-        return {
+        payload = {
             "id": assessment["id"],
             "ownerId": str(assessment.get("user_id") or ""),
             "materialIds": [assessment["material_id"]],
@@ -131,6 +200,14 @@ def get_assessment(
             "groundingStale": False,
             "createdAt": assessment.get("created_at") or "",
         }
+        # The stored recipe is echoed so the client can re-request the same
+        # shape after a failed generation. The retry path used to infer the
+        # family from questions[0] — which does not exist when generation
+        # failed, so a written retry silently became objective (#41).
+        recipe = assessment.get("recipe")
+        if isinstance(recipe, dict) and recipe:
+            payload["recipe"] = recipe
+        return payload
     except IngestionError as exc:
         return service_error(request, exc)
 
@@ -160,6 +237,24 @@ def submit_assessment_attempt(
         return service_error(
             request, IngestionError("invalid_request", "answer must be an object")
         )
+    # Written answers (#41, D-02): `{ text }` is the only accepted shape, and an
+    # empty or oversized submission never reaches the queue. Objective answers
+    # carry no `text` key, so this gate cannot touch them.
+    text = body["answer"].get("text")
+    if text is not None:
+        if not isinstance(text, str) or not text.strip():
+            return service_error(
+                request,
+                IngestionError("invalid_request", "written answer text must be a non-empty string"),
+            )
+        if len(text) > WRITTEN_TEXT_MAX_LENGTH:
+            return service_error(
+                request,
+                IngestionError(
+                    "invalid_request",
+                    f"written answer text exceeds {WRITTEN_TEXT_MAX_LENGTH} characters",
+                ),
+            )
 
     attempt_id = str(uuid.uuid4())
     job_id = str(uuid.uuid4())

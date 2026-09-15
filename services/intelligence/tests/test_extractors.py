@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import pytest
 
+from app.ingestion.cleaning import clean_text
 from app.ingestion.extractors import (
     HttpxFetcher,
     PypdfTextReader,
@@ -35,13 +36,13 @@ class FakeFetcher:
 
 
 class FakePdfReader:
-    def __init__(self, text: str = "pdf text") -> None:
-        self.text = text
+    def __init__(self, pages: list[str] | str = "pdf text") -> None:
+        self.pages = [pages] if isinstance(pages, str) else pages
 
-    def extract(self, data: bytes) -> str:
+    def extract(self, data: bytes) -> list[str]:
         if not data:
             raise IngestionError("validation_failed", "PDF could not be read")
-        return self.text
+        return self.pages
 
 
 class FakeTranscripts:
@@ -124,6 +125,24 @@ def test_file_material_extracts_pdf_text() -> None:
     assert content.text == "PDF body text"
 
 
+def test_file_material_exposes_pages_and_bookmarks_for_the_outline() -> None:
+    class ReaderWithBookmarks(FakePdfReader):
+        def bookmarks(self, data: bytes) -> tuple[tuple[str, int], ...]:
+            return (("Chapter 1", 3),)
+
+    content = extract(
+        make_material("file", "paper.pdf"),
+        pdf=ReaderWithBookmarks(["page one", "page two", "page three"]),
+    )
+    assert content.pages == ("page one", "page two", "page three")
+    assert content.bookmarks == (("Chapter 1", 3),)
+
+
+def test_reader_without_a_bookmark_capability_is_not_an_error() -> None:
+    content = extract(make_material("file", "paper.pdf"), pdf=FakePdfReader(["page one"]))
+    assert content.bookmarks == ()
+
+
 def test_file_material_missing_object_is_validation_failure() -> None:
     with pytest.raises(IngestionError) as exc_info:
         extract(
@@ -201,6 +220,26 @@ def test_file_material_cleans_pdf_output() -> None:
         pdf=FakePdfReader("  Page   one\n\n\n\n   Page two   "),
     )
     assert content.text == "Page one\n\nPage two"
+
+
+def test_file_material_tags_each_paragraph_with_its_page() -> None:
+    content = extract(
+        make_material("file", "paper.pdf"),
+        pdf=FakePdfReader(["Page one\n\nSecond para", "Page two"]),
+    )
+    assert content.text == "Page one\n\nSecond para\n\nPage two"
+    assert [(segment.text, segment.page) for segment in content.segments] == [
+        ("Page one", 1),
+        ("Second para", 1),
+        ("Page two", 2),
+    ]
+
+
+def test_file_material_text_keeps_the_single_clean_over_joined_pages() -> None:
+    """`text` is fulltext.txt and the reuse key: it must not become per-page."""
+    pages = ["  Page   one\n\n\n\n   tail   ", "Page two  \n\n\n"]
+    content = extract(make_material("file", "paper.pdf"), pdf=FakePdfReader(pages))
+    assert content.text == clean_text("\n\n".join(pages))
 
 
 def test_youtube_transcript_client_converts_snippet_objects(monkeypatch) -> None:
@@ -346,12 +385,39 @@ def test_pypdf_reader_parses_minimal_pdf() -> None:
     assert "Hello from a minimal PDF." in text
 
 
-def make_pdf(body: bytes) -> bytes:
+def test_pypdf_reader_tolerates_a_repeated_page_reference() -> None:
+    # A /Kids array may list the same page object twice; pypdf reports that as
+    # a cyclic page reference and refuses the document. Deduping it reads the
+    # page once instead of failing the whole material.
+    data = make_pdf(b"Repeated page.", kids=b"[3 0 R 3 0 R 3 0 R]", count=3)
+    assert PypdfTextReader().extract(data) == ["Repeated page."]
+
+
+def test_pypdf_reader_writes_a_viewer_copy_only_when_the_tree_had_repeats() -> None:
+    # pdf.js refuses the same documents ("Pages tree contains circular
+    # reference.") and truncates them to the pages before the repeat, so a
+    # repaired copy has to exist for the viewer; a clean file needs none.
+    reader = PypdfTextReader()
+    assert reader.normalize(make_pdf(b"Clean page.")) is None
+
+    repaired = reader.normalize(make_pdf(b"Repeated page.", kids=b"[3 0 R 3 0 R 3 0 R]", count=3))
+    assert repaired is not None
+    assert reader.extract(repaired) == ["Repeated page."]
+
+
+def test_pypdf_reader_terminates_on_a_self_referencing_page_tree() -> None:
+    # A real cycle must not recurse forever: the self-reference is pruned and
+    # what remains has no pages, which is a terminal "no extractable text".
+    data = make_pdf(b"Cyclic.", kids=b"[2 0 R]", count=1)
+    assert PypdfTextReader().extract(data) == []
+
+
+def make_pdf(body: bytes, kids: bytes = b"[3 0 R]", count: int = 1) -> bytes:
     """Build a minimal single-page PDF with extractable text (valid xref)."""
     content = b"BT /F1 12 Tf 72 720 Td (" + body + b") Tj ET"
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
-        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Pages /Kids " + kids + b" /Count " + str(count).encode() + b" >>",
         (
             b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R "
             b"/Resources << /Font << /F1 5 0 R >> >> >>"

@@ -12,12 +12,13 @@ import type Dexie from 'dexie'
 import { QUESTION_ATTEMPTED, QUESTION_GRADED } from '../events/EventStore'
 import type { EventStore } from '../events/EventStore'
 import type { QuestionAttemptedPayload, QuestionGradedPayload } from '../sync/types'
-import { AssessmentServiceError } from './types'
+import { AssessmentServiceError, WRITTEN_ANSWER_MAX_LENGTH } from './types'
 import type {
   Assessment,
   AttemptCreated,
   AttemptRecord,
   AttemptSubmitInput,
+  LearnerAnswer,
   ObjectiveAnswer,
   Question,
   QuestionGradedResult,
@@ -31,7 +32,7 @@ export interface LocalAttemptRow {
   questionId: string
   assessmentId: string
   /** Local answer, or the server-echoed answer on restored rows (#40 D-01). */
-  answer?: ObjectiveAnswer
+  answer?: LearnerAnswer
   status: 'queued' | 'submitted' | 'graded' | 'failed'
   submittedAt: string
   elapsedSeconds?: number
@@ -87,6 +88,19 @@ function wait(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+/**
+ * Client mirror of the server written-answer gate (P2 deviation e): blank or
+ * whitespace-only text and text over the contract budget never leave the
+ * browser. Returns the honest reason, or null when the text is submittable.
+ */
+export function writtenAnswerProblem(text: string): string | null {
+  if (text.trim().length === 0) return 'Write an answer before submitting.'
+  if (text.length > WRITTEN_ANSWER_MAX_LENGTH) {
+    return `Written answers are limited to ${WRITTEN_ANSWER_MAX_LENGTH} characters.`
+  }
+  return null
+}
+
 export function createAttemptFlow(deps: AttemptFlowDeps) {
   const {
     db,
@@ -112,13 +126,13 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
   }
 
   /**
-   * Take one objective question: local row → QuestionAttempted (no answer) →
-   * server submit (idempotent on clientAttemptId) → patch server ids.
+   * Take one question: local row → QuestionAttempted (no answer) → server
+   * submit (idempotent on clientAttemptId) → patch server ids.
    */
-  async function submitObjectiveAttempt(
+  async function recordAndSubmit(
     assessment: Assessment,
     question: Question,
-    answer: ObjectiveAnswer,
+    answer: LearnerAnswer,
     elapsedSeconds?: number,
   ): Promise<SubmitResult> {
     const clientAttemptId = uuid('ca')
@@ -193,8 +207,13 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
    * Poll the attempts read route until this attempt's grade lands, then
    * record it locally (row + QuestionGraded event). Best-effort: a timeout
    * leaves the row 'submitted' and refreshAttempts picks the grade up later.
+   * `grader` names the arm the failed-closed fallback grade belongs to.
    */
-  async function pollGrade(clientAttemptId: string, assessmentId: string): Promise<LocalAttemptRow> {
+  async function pollGrade(
+    clientAttemptId: string,
+    assessmentId: string,
+    grader: QuestionGradedResult['grader'] = 'objective',
+  ): Promise<LocalAttemptRow> {
     for (let attempt = 0; attempt < GRADE_POLL_ATTEMPTS; attempt++) {
       try {
         const records = await listAssessmentAttempts(assessmentId)
@@ -213,7 +232,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
               score: 0,
               correct: false,
               perSkill: [],
-              grader: 'objective',
+              grader,
               gradedAt: now(),
               publicFeedback: 'Attempt ungradable.',
             } satisfies QuestionGradedResult,
@@ -391,8 +410,35 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       .toArray()) as LocalAttemptRow[]
   }
 
+  /** Objective taking (#39): the answer is one of the indexed objective shapes. */
+  async function submitObjectiveAttempt(
+    assessment: Assessment,
+    question: Question,
+    answer: ObjectiveAnswer,
+    elapsedSeconds?: number,
+  ): Promise<SubmitResult> {
+    return recordAndSubmit(assessment, question, answer, elapsedSeconds)
+  }
+
+  /**
+   * Written taking (#41 D-02): the answer is `{ text }` and the client gate
+   * rejects blank/oversized text before a row or a request exists. The throw is
+   * defensive — the taker disables submit on the same predicate.
+   */
+  async function submitWrittenAttempt(
+    assessment: Assessment,
+    question: Question,
+    text: string,
+    elapsedSeconds?: number,
+  ): Promise<SubmitResult> {
+    const problem = writtenAnswerProblem(text)
+    if (problem) throw new Error(problem)
+    return recordAndSubmit(assessment, question, { text }, elapsedSeconds)
+  }
+
   return {
     submitObjectiveAttempt,
+    submitWrittenAttempt,
     pollGrade,
     drainQueuedAttempts,
     refreshAttempts,

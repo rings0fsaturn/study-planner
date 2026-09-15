@@ -74,9 +74,11 @@ class OpenRouterGenerationClient:
         max_output_tokens: int = 4096,
         temperature: float = 0.3,
         reasoning_effort: str = "off",
+        schema_name: str = "grounded_mcq",
     ) -> None:
         self._client = OpenAI(base_url=base_url, api_key=api_key, max_retries=0)
         self._model = model
+        self._schema_name = schema_name
         self._timeout_s = timeout_ms / 1000.0
         self._max_output_tokens = max_output_tokens
         self._temperature = temperature
@@ -94,7 +96,11 @@ class OpenRouterGenerationClient:
             "timeout": self._timeout_s,
             "response_format": {
                 "type": "json_schema",
-                "json_schema": {"name": "grounded_mcq", "strict": True, "schema": response_schema},
+                "json_schema": {
+                    "name": self._schema_name,
+                    "strict": True,
+                    "schema": response_schema,
+                },
             },
             "extra_body": {
                 "provider": {"require_parameters": True},
