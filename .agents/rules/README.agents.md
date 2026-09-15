@@ -22,6 +22,7 @@ Read each selected rule file completely.
 | [`14-design-token-package-exports.agents.md`](14-design-token-package-exports.agents.md) | Changing shared CSS exports or imports from the design-token package. |
 | [`15-playwright-cli.agents.md`](15-playwright-cli.agents.md) | Using playwright-cli for interactive browser automation, E2E debugging, and test generation or healing. |
 | [`16-live-e2e-authoring.agents.md`](16-live-e2e-authoring.agents.md) | Writing live E2E specs against the real stack: skip scoping, ready-state assertions, locator scope, and shared-account cleanup. |
+| [`17-logging-and-tracing.agents.md`](17-logging-and-tracing.agents.md) | Changing any code that can fail, retry, or emit diagnostics: logger updates, request-id propagation, and silent-error bans. |
 
 ## Auth, Storage, and Sync
 

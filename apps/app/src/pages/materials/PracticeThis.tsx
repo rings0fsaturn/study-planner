@@ -11,6 +11,7 @@ import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
+import { logger } from '../../lib/logger'
 import '../../materials/materials.css'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
 
@@ -206,7 +207,7 @@ export function PracticeThis() {
     } catch (appendError) {
       // The pointer is what a resumed run reads, so a failed append is loud;
       // the server rows still stand and the run screen reports what it finds.
-      console.warn('[practice] PracticeRunStarted append failed', appendError)
+      logger.warn('[practice] PracticeRunStarted append failed', appendError)
     }
     navigate(`/materials/${materialIdForRequest}/practice/${runId}`)
   }

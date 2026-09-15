@@ -7,6 +7,7 @@ from typing import Any
 import jwt
 from fastapi.testclient import TestClient
 
+from app.logging_config import JsonFormatter, configure_logging
 from app.main import app
 from py_progress import PRODUCTION_PRIOR_STRATEGY
 
@@ -90,14 +91,16 @@ def test_request_id_model_version_and_structured_log(monkeypatch, caplog) -> Non
     assert response.headers["X-Request-ID"] == "req-hardening-1"
     assert response.headers["X-Model-Version"] == PRODUCTION_PRIOR_STRATEGY
 
-    log_lines = [json.loads(record.getMessage()) for record in caplog.records]
+    request_records = [r for r in caplog.records if r.name == "app.middleware"]
+    assert request_records, "expected a middleware request log line"
+    logged = request_records[-1].__dict__
     assert {
         "request_id": "req-hardening-1",
         "method": "POST",
         "path": "/v1/calibration",
         "status": 200,
-    }.items() <= log_lines[-1].items()
-    assert isinstance(log_lines[-1]["latency_ms"], (int, float))
+    }.items() <= logged.items()
+    assert isinstance(logged["latency_ms"], (int, float))
 
 
 def test_readiness_is_open_and_reports_model() -> None:
@@ -144,6 +147,65 @@ def test_unhandled_errors_return_envelope(monkeypatch) -> None:
     }
     assert "exploded" not in response.text
     assert response.headers["X-Request-ID"] == "req-boom"
+
+
+def test_json_formatter_emits_parseable_line_with_extras() -> None:
+    import logging
+
+    record = logging.LogRecord(
+        name="app.test",
+        level=logging.WARNING,
+        pathname=__file__,
+        lineno=1,
+        msg="service error",
+        args=(),
+        exc_info=None,
+    )
+    record.request_id = "req-1"
+    record.code = "validation_failed"
+    line = JsonFormatter().format(record)
+    parsed = json.loads(line)
+    assert parsed["level"] == "WARNING"
+    assert parsed["logger"] == "app.test"
+    assert parsed["msg"] == "service error"
+    assert parsed["request_id"] == "req-1"
+    assert parsed["code"] == "validation_failed"
+    assert "ts" in parsed
+
+
+def test_service_error_logs_request_id(monkeypatch, caplog) -> None:
+    from fastapi import Request
+
+    from app.ingestion.models import IngestionError
+    from app.routers.serialization import service_error
+
+    configure_logging()
+
+    async def _receive() -> dict:
+        return {"type": "http.request", "body": b""}
+
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/v1/test",
+            "headers": [(b"x-request-id", b"req-log-1")],
+            "server": ("test", 80),
+            "scheme": "http",
+            "query_string": b"",
+            "client": ("test", 50000),
+            "receive": _receive,
+        }
+    )
+    request.state.request_id = "req-log-1"
+
+    with caplog.at_level("WARNING", logger="app.routers"):
+        service_error(request, IngestionError("validation_failed", "bad input"))
+
+    logged = [r for r in caplog.records if r.name == "app.routers"]
+    assert logged, "expected service_error to log"
+    assert logged[-1].__dict__["request_id"] == "req-log-1"
+    assert logged[-1].__dict__["code"] == "validation_failed"
 
 
 def test_rate_limit_stub_returns_429_past_threshold(monkeypatch) -> None:

@@ -11,6 +11,7 @@ import { ASSESSMENT_CREATED } from '../../events/EventStore'
 import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { isReady, type MaterialRecord } from '../../materials/types'
+import { logger } from '../../lib/logger'
 import '../../materials/materials.css'
 
 const DIFFICULTY_OPTIONS = ['1', '2', '3', '4', '5'] as const
@@ -213,7 +214,7 @@ export function AssessmentConfig() {
       } catch (appendError) {
         // The event is a local pointer, not the source of truth: the
         // generation already stands server-side, so log and continue.
-        console.warn('[assessments] AssessmentCreated append failed', appendError)
+        logger.warn('[assessments] AssessmentCreated append failed', appendError)
       }
       navigate(`/assessments/${assessmentId}`)
     } catch (err) {

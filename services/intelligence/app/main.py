@@ -1,9 +1,11 @@
+import logging
 import os
 
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from app.logging_config import configure_logging
 from app.middleware import request_context_middleware, request_id_from_request
 from app.routers import assessments, calibration, jobs, materials, progress, retrieval, roadmap
 from app.security import rate_limit_user, require_user
@@ -19,6 +21,8 @@ def parse_cors_origins(value: str | None) -> list[str]:
     origins = [origin.strip() for origin in value.split(",") if origin.strip()]
     return origins or DEFAULT_CORS_ORIGINS
 
+
+configure_logging()
 
 app = FastAPI(
     title="Study Tracker Intelligence Service",
@@ -37,9 +41,16 @@ app.add_middleware(
 app.middleware("http")(request_context_middleware)
 
 
+logger = logging.getLogger("app.main")
+
+
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     request_id = request_id_from_request(request)
+    logger.exception(
+        "unhandled error",
+        extra={"request_id": request_id, "path": request.url.path},
+    )
     return JSONResponse(
         status_code=500,
         content={

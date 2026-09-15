@@ -16,6 +16,7 @@ import {
   QuestionReviewCard,
   RetryQuestionButton,
 } from '../assessments/review/ReviewSurface'
+import { logger } from '../../lib/logger'
 import { buildPracticeRunModel, findPracticeRun, isSummaryEligible } from './practiceRunModel'
 import { PracticeSummary } from './PracticeSummary'
 import { AnswerSlot } from '../assessments/AssessmentDetail'
@@ -272,7 +273,7 @@ export function PracticeRun() {
       await eventStore.append(PRACTICE_RUN_FINISHED, { runId: pointer.started.runId, outcome })
       setEvents(await eventStore.getAll())
     } catch (error) {
-      console.warn('[practice] PracticeRunFinished append failed', error)
+      logger.warn('[practice] PracticeRunFinished append failed', error)
     }
     setClosing(false)
   }

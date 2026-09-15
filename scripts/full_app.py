@@ -434,15 +434,39 @@ def run_status(service_names: list[str]) -> int:
     return 0
 
 
+def run_logs(service_name: str, grep: str | None, tail: int, follow: bool) -> int:
+    log_file = log_path(service_name)
+    if not log_file.exists():
+        print(f"{service_name}: no log at {log_file}", file=sys.stderr)
+        return 1
+    if follow:
+        os.execvp("tail", ["tail", "-F", f"-n{tail}", str(log_file)])
+        return 0  # unreachable; exec replaces the process
+    with log_file.open("rb") as fh:
+        fh.seek(0, os.SEEK_END)
+        size = fh.tell()
+        # Last ~256 KB is plenty for a grep or tail; avoids loading GB logs.
+        fh.seek(max(0, size - 262144))
+        lines = fh.read().decode("utf-8", errors="replace").splitlines()
+    lines = lines[-tail:]
+    if grep:
+        lines = [line for line in lines if grep in line]
+    print("\n".join(lines))
+    return 0
+
+
 def parse_args(argv: list[str]) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Manage the StudyTracker full app dev stack.")
-    parser.add_argument("command", choices=["start", "stop", "restart", "status"])
+    parser.add_argument("command", choices=["start", "stop", "restart", "status", "logs"])
     parser.add_argument(
         "profile",
         nargs="?",
         default="full",
         help="Profile or service: full, all, app, intelligence, marketing",
     )
+    parser.add_argument("--grep", default=None, help="Only show log lines containing this text (e.g. a request id)")
+    parser.add_argument("--tail", type=int, default=100, help="Lines of log tail to inspect")
+    parser.add_argument("--follow", action="store_true", help="Follow the log (tail -F)")
     return parser.parse_args(argv)
 
 
@@ -465,6 +489,11 @@ def main(argv: list[str] | None = None) -> int:
         return run_start(service_names)
     if args.command == "status":
         return run_status(service_names)
+    if args.command == "logs":
+        if len(service_names) != 1 or args.profile in ("full", "all"):
+            print("logs needs one service: ./full-app logs <app|intelligence|marketing> [--grep X]", file=sys.stderr)
+            return 2
+        return run_logs(service_names[0], args.grep, args.tail, args.follow)
     return 2
 
 

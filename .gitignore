@@ -16,6 +16,7 @@ services/intelligence/.env
 .output/
 .dev/
 test-results/
+playwright-report/
 .claude/settings.local.json
 # code-memory: agent-only index, do not commit
 .claude/memory/

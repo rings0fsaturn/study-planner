@@ -221,7 +221,11 @@ class IngestionWorker:
         try:
             self.telemetry.emit(records)
         except Exception:
-            logger.warning("telemetry emission failed", exc_info=True)
+            logger.warning(
+                "telemetry emission failed",
+                exc_info=True,
+                extra={"trace_id": records[0].trace_id if records else ""},
+            )
 
     def _emit_stage_failure(
         self, queue_name: str, payload: dict, error: IngestionError, latency_ms: float

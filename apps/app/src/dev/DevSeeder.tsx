@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useEventStoreContext } from '../events/EventStoreProvider'
+import { logger } from '../lib/logger'
 import { seedTestData, wipeTestData } from './seedTestData'
 
 declare global {
@@ -22,7 +23,7 @@ export function DevSeeder() {
       await wipeTestData(eventStore)
     }
 
-    console.log(
+    logger.info(
       '[dev] Seed commands available:\n' +
         '  __seed()  - generate demo data (2 past + 1 active roadmap)\n' +
         '  __wipe()  - clear all events',

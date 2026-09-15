@@ -27,6 +27,11 @@ Keep `webServer` at the top level of `e2e/playwright.config.ts`.
 Use `pnpm dev:full` for the app web server so service-dependent flows do not run against Vite alone.
 Use `test.use({ baseURL })` for suite-level overrides instead of moving `webServer` into a project.
 
+## Log Tracing
+
+Copy the `X-Request-ID` from devtools/network or the typed error's `requestId` and join it to backend lines with `./full-app logs intelligence --grep <request-id>`.
+Frontend mints one id per logical call and reuses it across retries; the backend echoes it and logs every request and error with it.
+
 ## Process Safety
 
 The lifecycle manager owns `.dev/full-app/state.json` and its managed process groups.

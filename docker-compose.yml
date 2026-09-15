@@ -28,6 +28,7 @@ services:
         UV_IMAGE: ${UV_IMAGE:-ghcr.io/astral-sh/uv:0.11.19}
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173,http://localhost:8080}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
       SUPABASE_URL: ${SUPABASE_URL:-}
       SUPABASE_JWT_SECRET: ${SUPABASE_JWT_SECRET:-}
       SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY:-}
