@@ -339,7 +339,7 @@ Revert the phase commit; the config page returns to the banner.
 
 ## Phase 2: The run shell — take, pause, resume, finish, abandon
 
-**Status:** ✅ Complete 2026-09-15 — step 0 in `a9ce527`, steps 1–5 in `d2d9aac`
+**Status:** ✅ Complete 2026-09-15 — step 0 in `a9ce527`, steps 1–5 in `7aa209d`
 **Depends on:** Phase 1
 **Estimated scope:** 3 new files + `App.tsx` route + the D-10 multi-material amend, ~400 lines
 
