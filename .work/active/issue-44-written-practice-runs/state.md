@@ -1,6 +1,6 @@
 # State – issue-44-written-practice-runs
 
-_Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (copy: specs/phase2-tickets/12-written-practice-runs.md) · Plan: active/issue-44-written-practice-runs/plan/PLAN.md · STATUS row: issue-44-written-practice-runs · Status: active — P0, P1, P2, P3 complete; P4 next · Updated: 2026-09-15_
+_Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (copy: specs/phase2-tickets/12-written-practice-runs.md) · Plan: active/issue-44-written-practice-runs/plan/PLAN.md · STATUS row: issue-44-written-practice-runs · Status: active — P0–P4 complete; AC1/AC2/AC4 ticked, AC3 deferred to #43; P5 optional (gated, unstarted) · Updated: 2026-09-15_
 
 ## Current state & next
 
@@ -8,7 +8,8 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - **P1 done 2026-09-15** — `Start practice run` issues real grounded written generations; live-verified.
 - **P2 done 2026-09-15** — step 0 (multi-material round-robin) in `a9ce527`, the run shell (steps 1–5) in `7aa209d`, sha correction in `40607d1`. Full Notes in the plan.
 - **P3 done 2026-09-15** — Stage A: throwaway summary UX prototype at `/study/practice-summary-prototype` (DEV-only), user-judged → **Variant A (review rail) + inline retry**. Stage B: `PracticeSummary.tsx` (navigator + active panel, practice copy, honest failed state, inline retry slot) + `PracticeRun` wiring (`showSummary` landing/re-entry, round-trip, `AnswerSlot` inline retry, hydrate clears retry mode on the fresh grade). `problemStatus`/`isSummaryEligible` added to `practiceRunModel`. 44/44 focused, typecheck/lint clean, full suite 864/866 (2 WSL TZ flakes), build green, redaction clean. **Live-verified on the real stack**: finish lands on the summary, inline retry grades through the real `llm_rubric` arm with history preserved, round-trip + hard-reload re-entry work, 375×812 clean. Scoped cleanup done.
-- Next: **Phase 4** — `e2e/practice-run-live.spec.ts` (1280×720 + 375×812, `--workers=1`), AC sweep (AC1/AC2/AC4 ticked; AC3 deferred to #43), records; **Phase 5** only if Phase 4's numbers justify it.
+- **P4 done 2026-09-15** — `e2e/practice-run-live.spec.ts` green: **2 passed in 3.4 min** (`--project=app --workers=1`), one scenario per viewport (1280×720 + 375×812), each grading a full 2-problem run (`Finish run` is gated on every grade), reload-mid-run resume, summary, redaction + evidence screenshots. Cleanup hardened to a **window-scoped** service-role delete after run 1 left a stuck `generating` row (500-after-insert, no 202); verified zero today-created assessments/attempts. **AC sweep done**: #44 body ticked AC1/AC2/AC4, AC3 annotated as deferred to #43 (D-09), verification comment posted. Timings (2-problem runs): start→run screen ~3.2 s; start→first problem 63.3 s desktop / 26.1 s mobile — recorded in `plan/VERIFICATION.md`; **P5's 5-problem p95 gate stays unmet**.
+- Next: wrap decision (PR into `project/phase-2` / archive) or a 5-problem timed measurement if P5 is wanted. AC3 stays on #43.
 
 ## Done so far
 
@@ -18,6 +19,7 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - 2026-09-15: P1 — `PracticeThis.tsx` wired to real generation (N single-material written calls, bounded 2, `PracticeRunStarted` pointer with no `questionIds`, no `AssessmentCreated`); 16 focused tests.
 - 2026-09-15: P2 step 0 — **D-10 reversed**: the server's `len(material_ids) != 1` gate is per *call*, and an N-problem run is already N calls, so round-robin crosses no gate. D-12 records that cross-material *synthesis* is what the gate actually protects and stays out of scope.
 - 2026-09-15: P2 steps 1–5 — the run shell. New `src/pages/practice/`: `practiceRunModel.ts` (17 pure cases) + `PracticeRun.tsx` (13 cases) + `practice.css`; `App.tsx` nested route; `AnswerSlot` exported from `AssessmentDetail` for reuse.
+- 2026-09-15: P4 — `e2e/practice-run-live.spec.ts` green (2 passed, 3.4 min; desktop 1280×720 + phone 375×812, each grading a 2-problem run, reload-resume, finish, summary, redaction, evidence); AC1/AC2/AC4 ticked on #44 with AC3 annotated as deferred to #43; cleanup hardened to window-scoped service-role delete (run 1 left a stuck `generating` row from a 500-after-insert; run 2 verified zero today-created rows); `plan/VERIFICATION.md` written.
 
 ## Reusable findings (live, 2026-09-15)
 
@@ -28,6 +30,9 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - `AnswerSlot` (in `AssessmentDetail.tsx`) is `AttemptTaker` + the grounded citations block — reuse it for any one-question taking surface rather than mounting `AttemptTaker` bare.
 - A **live generation run needs two processes beyond `./full-app start full`**: the detached worker (`scripts/run-detached-ingestion-worker.sh` — `PROFILES["full"]` has no worker, so generations sit at `generating` forever) and the GPU sidecar on `:8200` (no embeddings → no query vector → retrieval cannot ground). Start both, stop both (rule 54).
 - The `MaterialPicker`'s checkboxes are `className="sr-only"`: a live spec must click the label row (`page.locator('label.checkbox-row', { hasText })`), not the checkbox.
+- A live spec's server cleanup must be **window-scoped** (`material_id` + `created_at >= test start`), not response-log-scoped: a transient failure can insert an assessment row without returning the 202 whose `resultId` the client sees (observed live 2026-09-15 — a stuck `generating` row).
+- The frozen ACCA material carries pre-existing 2026-09-12 `ready` assessments + `question_attempts` (leftover #41 live-spec evidence). They are the account's history; clean only your own window.
+- The practice live spec needs `--project=app --workers=1` and no `--` separator; without `--project=app` it also runs under the `marketing` project and fails at sign-in.
 
 ## Flow trace
 
@@ -55,6 +60,8 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 - `apps/app/src/App.tsx` – the nested run route (P2 step 5); the DEV-only prototype route (P3 Stage A).
 - `apps/app/src/prototype/practice-summary/` – **new, throwaway** (P3 Stage A): fixtures through the real `practiceRunModel`, 3 variant components, `PrototypeTaker`, shared helpers, host, css.
 - `apps/app/src/pages/assessments/AssessmentDetail.tsx` – `AnswerSlot` exported for reuse (one line).
+- `e2e/practice-run-live.spec.ts` – **new** (P4): one scenario per viewport (1280×720 + 375×812), full 2-problem run + reload-resume + finish + summary, window-scoped service-role cleanup, evidence screenshots.
+- `.work/active/issue-44-written-practice-runs/plan/VERIFICATION.md` + `plan/evidence/practice-run-{desktop,mobile}.png` – **new** (P4).
 
 ## Pitfalls & rules
 
@@ -93,7 +100,9 @@ _Spec: GitHub [#44](https://github.com/rings0fsaturn/study-planner/issues/44) (c
 
 ## Open
 
-- **#44 is not ready to close.** AC3 stays deferred to #43 (D-09); the ticket's boxes were never ticked (they are Phase 4's job); the ticket is still assigned but needs its AC sweep at the end of Phase 4.
+- **#44 is not ready to close.** AC3 stays deferred to #43 (D-09) — recorded on the issue; the ticket's AC1/AC2/AC4 boxes are ticked (2026-09-15), the verification comment is posted.
+- **P5 (one generation call for N problems) stays gated and unstarted** — its gate is p95 run-start on a 5-problem run; Phase 4 measured 2-problem runs (63.3 s / 26.1 s start→first problem). A timed 5-problem run is the only way to settle it.
+- **Wrap decision pending**: the branch `phase2/issue-44-written-practice-runs` has no PR into `project/phase-2` yet; archive/wrap is the work-journal step after records.
 - **#62 P7 (streaming, R4) and #63 P5 (material-detail usage)** landed incomplete on `project/phase-2` via the P0 merge, approved by the user on 2026-09-15. Both branches survive on origin.
 - Open questions 1–6 answered 2026-09-14 in the plan; locked unless a reality-mismatch reopens them.
 - AC3 (mastery on valid grades) · on #43 Mastery and Adaptive Difficulty · unblocks when #43 lands `/v1/mastery` + the `masteryCache` Dexie v7 table.

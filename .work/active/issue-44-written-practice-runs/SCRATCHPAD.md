@@ -1,9 +1,9 @@
 # Scratchpad – issue-44-written-practice-runs · session 2026-09-15
-_state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T12:30_
+_state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15T14:30_
 
 ## Now / Next
-- Doing: Phase 3 COMPLETE — Stage A prototype user-judged (**Variant A + inline retry**), Stage B implemented + live-verified
-- Next: Phase 4 — `e2e/practice-run-live.spec.ts` (1280×720 + 375×812), AC sweep, records
+- Doing: Phase 4 COMPLETE — `e2e/practice-run-live.spec.ts` green (2 passed, 3.4 min), AC sweep done, records landing
+- Next: commit spec + evidence, then docs records; wrap decision (PR into project/phase-2 / archive)
 - Blocked: none
 
 ## Session log
@@ -91,3 +91,15 @@ _state.md: active/issue-44-written-practice-runs/state.md · Updated: 2026-09-15
 - 12:16 LIVE   Finish run → **summary landed automatically**: "1 of 1 problems graded · mean score 0.00 · 1 problem were not generated" (missingCount line works live). **Inline retry**: Retry question → taker inside the summary panel → submit → real grade → `AttemptHistoryBlock` (#1/#2) returned, retry mode ended. Back to problems → run screen (history + "View summary") → back to summary. **Hard reload → re-entry on the summary with history preserved.** 375×812: no horizontal overflow, sticky strip. Zero console errors after the transient reload noise.
 - 12:22 DONE   Cleanup (scoped — the Phase 2 lesson): both assessments (incl. the stuck `generating` one from the 500) deleted via PostgREST service-role 204 and verified absent; `question_attempts` cascade-verified empty; local IndexedDB cleaned by exact keys only (6 events: 2 practice pointers + 4 question events; 2 attempt rows) — nothing pre-existing touched. Worker + sidecar stopped; browser closed.
 - 12:30 NEXT   Phase 4 — live spec + AC sweep + records.
+- 12:35 FOUND  Preflight: branch `phase2/issue-44-written-practice-runs` clean of unrelated work; `./full-app status full` healthy (intelligence + app); sidecar stopped; worker stopped. Credentials file now `email=`/`password=` (still backtick-wrapped); `apps/app/.env.local` carries `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (playwright config preloads them).
+- 12:40 FOUND  Plan's P4 verification command omits `--project=app` (would run the marketing project too); `Finish run` gated on every grade means a 2-problem run must grade both; `Number of questions` defaults to 5, so the spec sets 2 explicitly.
+- 13:00 DONE   `e2e/practice-run-live.spec.ts` written: one scenario per viewport (desktop 1280×720 + phone 375×812 via `test.use` in the owning describe), credentials gate with backtick stripping, response-captured assessment ids for cleanup, reload-resume, finish, summary, redaction, evidence, pageerror assertions. Desktop-only rail assertion (gridTemplateColumns 280px) + phone-only sticky strip + zero overflow.
+- 13:10 DONE   Runtime prereqs up (rule 54): `./full-app restart full` (rule 53), detached worker, GPU sidecar (health: cuda:0, RX 9070 XT, both models loaded).
+- 13:20 RUN    Spec run 1: **2 passed in 4.2 min**; desktop took the bounded restart once (partial generation — the transient 500/409 path). Timings: start→run screen ~3.2 s; start→first problem 96.3 s desktop / 66.3 s mobile (run 1) — run 2: 63.3 s / 26.1 s.
+- 13:25 FOUND  Post-run account check found **one leftover `generating` assessment** (created 14:07:25) + pre-existing 2026-09-12 ready assessments/attempts (leftover #41 live-spec evidence, never cleaned). The leftover was a **500-after-insert**: the server created the row but never returned the 202 whose resultId the response listener would capture. Deleted it (204), verified no other today rows.
+- 13:30 EDIT   Spec cleanup hardened: response-log capture replaced by **window-scoped** delete (`material_id` + `created_at >= test start`), verified cascade empties `question_attempts`. Docstring updated with the observed miss.
+- 13:50 RUN    Spec run 2: **2 passed in 3.4 min**, no restart needed. Verified after: zero assessments / zero question_attempts created today.
+- 14:00 DONE   Worker + sidecar stopped (rule 54).
+- 14:05 DONE   AC sweep: #44 body edited — AC1/AC2/AC4 ticked, AC3 annotated as deferred to #43 (D-09); verification comment posted (issuecomment-5681819870).
+- 14:20 DONE   Records: `plan/VERIFICATION.md` (AC tick-down, gates, evidence, hygiene, P5 gate), PLAN.md Phase 4 ✅ + Notes (command correction, cleanup hardening), state.md, STATUS row.
+- 14:30 NEXT   Commit 1: spec + evidence. Commit 2: docs records. Then wrap decision.

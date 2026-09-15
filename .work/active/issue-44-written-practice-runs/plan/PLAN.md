@@ -439,7 +439,7 @@ Revert the commit; a finished run falls back to the run screen.
 
 ## Phase 4: Live verification, AC sweep, records
 
-**Status:** ⬜ Not started
+**Status:** ✅ Complete 2026-09-15 — `e2e/practice-run-live.spec.ts` green (2 passed in 3.4 min, `--project=app --workers=1`), AC1/AC2/AC4 ticked on #44, AC3 deferred to #43 (D-09), records landed.
 **Depends on:** Phase 3
 
 ### Steps
@@ -451,13 +451,23 @@ Revert the commit; a finished run falls back to the run screen.
 ### Verification (DONE)
 ```bash
 pnpm --filter app test && pnpm --filter app typecheck && pnpm --filter app lint
-pnpm exec playwright test -c e2e/playwright.config.ts e2e/practice-run-live.spec.ts --workers=1
+pnpm exec playwright test -c e2e/playwright.config.ts e2e/practice-run-live.spec.ts --project=app --workers=1
 ```
+(The `--project=app` is required: without it the spec also runs under the `marketing` project and fails at sign-in. No `--` separator — options after it are read as test-file filters, the written-41 trap.)
 
 ### Rollback
 The spec is additive; reverting it reverts nothing the product uses.
 
 ### Notes (filled in during implementation)
+
+**2026-09-15 — Phase 4 executed. The spec went green on the second run; the first run's cleanup gap became the spec's hardening, and the plan's own command was corrected.**
+
+- **The spec landed as planned** (`e2e/practice-run-live.spec.ts`): one scenario per viewport (desktop 1280×720, phone 375×812 via `test.use` inside the owning describe), credentials gate with backtick-stripping (rule 16), `getByRole` locators, `Finish run` gated on every problem graded (so both problems of the 2-problem run are answered by design), reload-mid-run resume, summary assertions, redaction grep, evidence screenshots, `pageerror` asserted empty. **Run 1: 2 passed in 4.2 min** (desktop took the bounded restart once — a partial generation, the transient 500/409 path P1/P3 recorded); **run 2 (after cleanup hardening): 2 passed in 3.4 min**. Timings logged per scenario: start→run screen ~3.2–3.3 s; start→first problem answerable 63.3 s desktop / 26.1 s mobile (2-problem runs — these are the P5-gate numbers, not a 5-problem p95; recorded in `plan/VERIFICATION.md`).
+- **Cleanup hardening (deviation from the plan's step 2 wording, in the plan's favour):** the plan says "service-role delete of created materials and graded attempts". The first run's response-log cleanup left **one stuck `generating` assessment** on the frozen material: a transient server failure inserted the row without returning the 202 whose `resultId` the client (and the spec's response listener) would see. The spec now cleans by **window** — `material_id` + `created_at >= test start`, service-role PostgREST — which catches exactly what the run created and cannot be fooled by a missing 202; it verifies the cascade emptied `question_attempts` too. Verified after the run: zero assessments / zero attempts created today on the shared account.
+- **Pre-existing shared-account data was identified and left alone:** the frozen ACCA material carries 2026-09-12 `ready` assessments and `question_attempts` rows — leftover evidence from the #41 live specs, which never cleaned up. They are the account's own history, outside this run's window, and were not touched.
+- **The plan's Verification command was corrected in-place:** it omitted `--project=app`, which would have run the spec against the `marketing` project too. The written-41 trap (no `--` separator) is noted beside the command.
+- **AC sweep:** #44 body edited — AC1/AC2/AC4 boxes ticked, AC3 annotated as deferred to #43 (D-09) and left unticked; verification comment posted (issuecomment-5681819870).
+- **Environment:** runtime restarted first (rule 53); the detached worker and the GPU sidecar were started for the run (the `full` profile has no worker) and stopped immediately after (rule 54). The 500-after-insert row was deleted through PostgREST service-role and verified absent before the re-run.
 
 ## Phase 5 (optional, gated on measurement): one generation call for N problems
 
