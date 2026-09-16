@@ -1,0 +1,34 @@
+{
+  "attemptId": "att-coding-001",
+  "clientAttemptId": "ca-coding-001",
+  "questionId": "q-coding-001",
+  "assessmentId": "asmt-coding-001",
+  "submittedAt": "2026-09-16T10:15:00Z",
+  "status": "graded",
+  "elapsedSeconds": 213,
+  "answer": {
+    "language": "python",
+    "source": "def fib(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n",
+    "config": { "stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128 }
+  },
+  "grade": {
+    "attemptId": "att-coding-001",
+    "questionId": "q-coding-001",
+    "materialId": "mat-code-001",
+    "score": 0.7,
+    "correct": true,
+    "perSkill": [
+      { "skillTag": "algorithms", "score": 0.7, "correct": true }
+    ],
+    "explanation": "Passed 7/10 hidden tests. Failed: large-n timeout.",
+    "grader": "judge0",
+    "gradedAt": "2026-09-16T10:16:02Z",
+    "testCases": [
+      { "name": "Visible test 1", "passed": true, "visible": true },
+      { "name": "Visible test 2", "passed": true, "visible": true },
+      { "name": "Hidden test 1", "passed": true, "visible": false },
+      { "name": "Hidden test 2", "passed": true, "visible": false },
+      { "name": "Hidden test 3", "passed": false, "visible": false }
+    ]
+  }
+}

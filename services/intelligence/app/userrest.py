@@ -23,7 +23,8 @@ STORAGE_BUCKET = "material-raw"
 
 QUESTION_PUBLIC_COLUMNS = (
     "id,assessment_id,user_id,material_id,format,subtype,prompt,options,"
-    "skill_tags,authored_difficulty,citations,created_at"
+    "skill_tags,authored_difficulty,citations,created_at,"
+    "language,starter_code,visible_tests"
 )
 
 TIMEOUT_SECONDS = 10.0

@@ -27,17 +27,23 @@ router = APIRouter()
 DIFFICULTY_MIN = 1
 DIFFICULTY_MAX = 5
 # One question family per assessment in this slice (#41, D-01); mixed-family
-# generation is out of scope.
-SUPPORTED_FORMATS = (["objective"], ["written"])
+# generation is out of scope. #42 adds the coding family; the grading arm
+# that drains coding attempts lands in P2.
+SUPPORTED_FORMATS = (["objective"], ["written"], ["coding"])
 # Contract bound for WrittenAnswer.text (openapi, Phase 2 #41).
 WRITTEN_TEXT_MAX_LENGTH = 20000
+# Contract caps for CodingAnswer (openapi, Phase 2 #42); the grading arm that
+# enforces them server-side lands in P2, so the P1 gate only recognises shape.
+CODING_SOURCE_MAX_LENGTH = 100000
 
 
 def _validate_recipe(recipe: dict) -> list[str]:
     failures: list[str] = []
     formats = recipe.get("formats")
     if formats not in SUPPORTED_FORMATS:
-        failures.append("formats must be ['objective'] or ['written'] for this slice")
+        failures.append(
+            "formats must be ['objective'], ['written'], or ['coding'] for this slice"
+        )
     question_count = recipe.get("questionCount")
     if question_count != 1:
         failures.append("questionCount must be 1 for this slice")
@@ -125,6 +131,17 @@ def _question(row: dict) -> dict:
     subtype = row.get("subtype")
     if subtype:
         question["subtype"] = subtype
+    # #42: coding questions carry the visible coding payload; pre-coding rows
+    # omit all three keys rather than sending nulls.
+    if (row.get("format") or "") == "coding":
+        for key, column in (
+            ("language", "language"),
+            ("starterCode", "starter_code"),
+            ("visibleTests", "visible_tests"),
+        ):
+            value = row.get(column)
+            if value is not None:
+                question[key] = value
     return question
 
 
@@ -271,16 +288,43 @@ def submit_assessment_attempt(
     client_attempt_id = str(body.get("clientAttemptId") or "")
     if not client_attempt_id or body.get("questionId") != questionId:
         return service_error(
-            request, IngestionError("invalid_request", "clientAttemptId and questionId must match the route")
+            request,
+            IngestionError(
+                "invalid_request", "clientAttemptId and questionId must match the route"
+            ),
         )
     if not isinstance(body.get("answer"), dict):
         return service_error(
             request, IngestionError("invalid_request", "answer must be an object")
         )
+    # Coding answers (#42, P1): the grading arm lands in P2, so a coding-shaped
+    # submission fails closed here with an honest message instead of queuing
+    # for an arm that does not exist yet. The shape key is `source` - written
+    # and objective answers never carry it.
+    answer = body["answer"]
+    if isinstance(answer.get("source"), str):
+        if not answer.get("language") or not isinstance(answer.get("config"), dict):
+            return service_error(
+                request,
+                IngestionError(
+                    "invalid_request", "coding answer needs language, source and config"
+                ),
+            )
+        if len(answer["source"]) > CODING_SOURCE_MAX_LENGTH:
+            return service_error(
+                request,
+                IngestionError(
+                    "invalid_request",
+                    f"coding source exceeds {CODING_SOURCE_MAX_LENGTH} characters",
+                ),
+            )
+        return service_error(
+            request, IngestionError("validation_failed", "coding grading lands in P2")
+        )
     # Written answers (#41, D-02): `{ text }` is the only accepted shape, and an
     # empty or oversized submission never reaches the queue. Objective answers
     # carry no `text` key, so this gate cannot touch them.
-    text = body["answer"].get("text")
+    text = answer.get("text")
     if text is not None:
         if not isinstance(text, str) or not text.strip():
             return service_error(

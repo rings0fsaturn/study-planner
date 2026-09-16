@@ -346,11 +346,13 @@ def test_attempt_schemas_exclude_hidden_content() -> None:
         "grade",
     }
     assert record["properties"]["status"]["enum"] == ["queued", "graded", "failed"]
-    # #41 widens the echoed answer to objective + written; both are learner input.
+    # #41 widens the echoed answer to objective + written; #42 adds coding.
+    # All three are learner input, never key material.
     answer_branches = record["properties"]["answer"]["oneOf"]
     assert {branch.get("$ref") for branch in answer_branches} == {
         "#/components/schemas/ObjectiveAnswer",
         "#/components/schemas/WrittenAnswer",
+        "#/components/schemas/CodingAnswer",
     }
     # The record carries the public grade only; the answer key stays in questions.answer_block.
     grade_schema = record["properties"]["grade"]
@@ -440,7 +442,10 @@ def test_question_subtype_is_optional_and_written_scoped() -> None:
     question = document["components"]["schemas"]["Question"]
     assert "subtype" in question["properties"]
     assert "subtype" not in question["required"]
-    assert question["properties"]["subtype"]["enum"] == ["short_answer", "long_form"]
+    # #42 widens the enum with the four coding subtypes; written members stay.
+    subtypes = question["properties"]["subtype"]["enum"]
+    assert {"short_answer", "long_form"} <= set(subtypes)
+    assert {"implement_fn", "debug", "output_prediction", "complete_code"} <= set(subtypes)
 
 
 def test_question_graded_breakdown_is_criterion_typed() -> None:
@@ -499,6 +504,119 @@ def test_written_contract_shapes_carry_no_server_only_vocabulary() -> None:
     # The learner's own written answer fixture carries no key material either.
     assert_no_secret_fields(load_json(ROOT / "fixtures/written-attempt-record.json"))
     assert_no_secret_fields(load_json(ROOT / "fixtures/written-question.json"))
+
+
+# --- #42 coding assessment: visible payload, coding answers, judge0 testCases ---
+
+
+def test_coding_answer_schema_is_python_only_and_bounded() -> None:
+    document = _openapi()
+    coding = document["components"]["schemas"]["CodingAnswer"]
+    assert coding["additionalProperties"] is False
+    assert coding["required"] == ["language", "source", "config"]
+    assert coding["properties"]["language"]["enum"] == ["python"]
+    source = coding["properties"]["source"]
+    assert source["minLength"] == 1
+    assert source["maxLength"] == 100000
+    config = coding["properties"]["config"]
+    assert set(config["required"]) == {"stdin", "timeLimitMs", "memoryLimitMb"}
+    assert config["properties"]["timeLimitMs"]["maximum"] == 30000
+    assert config["properties"]["memoryLimitMb"]["maximum"] == 1024
+
+
+def test_coding_answer_fixtures_validate_against_openapi() -> None:
+    document = _openapi()
+    fixture = load_json(ROOT / "fixtures/coding-answer.json")
+    _validate_against_openapi(document, "CodingAnswer", fixture)
+    submit = load_json(ROOT / "fixtures/coding-attempt-submit.json")
+    _validate_against_openapi(document, "AttemptSubmit", submit)
+    _validate_against_openapi(document, "CodingAnswer", submit["answer"])
+
+
+def test_question_coding_fields_are_optional_and_typed() -> None:
+    document = _openapi()
+    question = document["components"]["schemas"]["Question"]
+    for name in ("language", "starterCode", "visibleTests"):
+        assert name in question["properties"], name
+        assert name not in question["required"], name
+    assert question["properties"]["language"]["enum"] == ["python"]
+    assert question["properties"]["starterCode"]["maxLength"] == 100000
+    visible = question["properties"]["visibleTests"]
+    assert visible["items"]["$ref"].endswith("VisibleTestCase")
+    test_case = document["components"]["schemas"]["VisibleTestCase"]
+    assert set(test_case["required"]) == {"name", "stdin", "expectedOutput"}
+    # The subtype enum now carries both families; objective stays subtype-free.
+    assert question["properties"]["subtype"]["enum"] == [
+        "short_answer",
+        "long_form",
+        "implement_fn",
+        "debug",
+        "output_prediction",
+        "complete_code",
+    ]
+
+
+def test_question_graded_test_cases_shape_is_veiled() -> None:
+    document = _openapi()
+    graded = document["components"]["schemas"]["QuestionGraded"]
+    cases = graded["properties"]["testCases"]
+    assert cases["items"]["$ref"].endswith("TestCaseResult")
+    result = document["components"]["schemas"]["TestCaseResult"]
+    assert set(result["required"]) == {"name", "passed", "visible"}
+    assert set(result["properties"]) == {"name", "passed", "visible"}
+    # The veil is in the contract: hidden tests are named, never shown.
+    description = cases.get("description", "")
+    assert "Hidden test" in description
+
+
+def test_coding_fixtures_validate_against_openapi() -> None:
+    document = _openapi()
+
+    question = load_json(ROOT / "fixtures/coding-question.json")
+    _validate_against_openapi(document, "Question", question)
+    assert question["format"] == "coding"
+    assert question["subtype"] == "implement_fn"
+    assert question["language"] == "python"
+    assert question["visibleTests"]
+
+    record = load_json(ROOT / "fixtures/coding-attempt-record.json")
+    _validate_against_openapi(document, "AttemptRecord", record)
+    _validate_against_openapi(document, "CodingAnswer", record["answer"])
+    _validate_against_openapi(document, "QuestionGraded", record["grade"])
+    assert record["grade"]["grader"] == "judge0"
+    assert record["grade"]["testCases"]
+    hidden = [case for case in record["grade"]["testCases"] if not case["visible"]]
+    assert hidden and all(case["name"].startswith("Hidden test ") for case in hidden)
+
+
+def test_coding_contract_shapes_carry_no_server_only_vocabulary() -> None:
+    document = _openapi()
+    schemas = document["components"]["schemas"]
+
+    client_visible = set()
+    for name in (
+        "WrittenAnswer",
+        "RubricCriterionResult",
+        "AttemptRecord",
+        "Question",
+        "CodingAnswer",
+        "VisibleTestCase",
+        "TestCaseResult",
+        "QuestionGraded",
+    ):
+        client_visible |= _property_names(schemas[name])
+    offenders = {
+        name for name in client_visible if name.lower() in WRITTEN_SERVER_ONLY_NAMES
+    }
+    assert not offenders, offenders
+
+    coding_fixtures = (
+        "coding-question.json",
+        "coding-attempt-record.json",
+        "coding-attempt-submit.json",
+    )
+    for name in coding_fixtures:
+        assert_no_secret_fields(load_json(ROOT / "fixtures" / name))
 
 
 # --- #62 scoped question generation: recipe.scope ---
