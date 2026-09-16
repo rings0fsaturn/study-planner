@@ -29,8 +29,8 @@ HEALTH_POLL_SECONDS = 0.5
 class Service:
     name: str
     command: list[str]
-    port: int
-    health_url: str
+    port: int | None = None
+    health_url: str | None = None
     env: dict[str, str] = field(default_factory=dict)
     startup_timeout: float = START_TIMEOUT_SECONDS
 
@@ -61,11 +61,17 @@ SERVICES: dict[str, Service] = {
         port=4321,
         health_url="http://localhost:4321/",
     ),
+    # The ingestion + generation + grading worker has no HTTP health; it is
+    # "healthy" once the process stays alive (the worker logs its own start).
+    "worker": Service(
+        name="worker",
+        command=["pnpm", "dev:ingestion-worker"],
+    ),
 }
 
 PROFILES: dict[str, list[str]] = {
-    "full": ["intelligence", "app"],
-    "all": ["intelligence", "app", "marketing"],
+    "full": ["intelligence", "app", "worker"],
+    "all": ["intelligence", "app", "marketing", "worker"],
 }
 
 
@@ -191,6 +197,8 @@ def managed_pgids(state: dict[str, Any]) -> set[int]:
 
 
 def foreign_port_blocker(service: Service, state: dict[str, Any]) -> Listener | None:
+    if service.port is None:
+        return None
     listener = find_port_listener(service.port)
     if listener is None:
         return None
@@ -248,16 +256,16 @@ def start_service(name: str, state: dict[str, Any]) -> int:
     entry = services.get(name)
 
     if entry and pid_alive(entry.get("pid")):
-        if wait_for_health(service, timeout=10.0):
-            print(f"{name}: already running pid={entry.get('pid')} port={service.port}")
-            return 0
-        print(
-            f"{name}: managed pid {entry.get('pid')} is alive but health check failed: "
-            f"{service.health_url}",
-            file=sys.stderr,
-        )
-        print(f"{name}: see log {entry.get('log')}", file=sys.stderr)
-        return 1
+        if service.health_url and not wait_for_health(service, timeout=10.0):
+            print(
+                f"{name}: managed pid {entry.get('pid')} is alive but health check failed: "
+                f"{service.health_url}",
+                file=sys.stderr,
+            )
+            print(f"{name}: see log {entry.get('log')}", file=sys.stderr)
+            return 1
+        print(f"{name}: already running pid={entry.get('pid')} log={entry.get('log')}")
+        return 0
 
     if entry:
         print(f"{name}: removing stale pid={entry.get('pid')}")
@@ -310,11 +318,22 @@ def start_service(name: str, state: dict[str, Any]) -> int:
     }
     save_state(state)
 
-    if wait_for_health(service):
-        print(f"{name}: started pid={proc.pid} port={service.port} log={log_file}")
+    if service.health_url:
+        started = wait_for_health(service)
+    else:
+        # Portless services (worker) get a short liveness window instead of
+        # an HTTP poll; a process that survives the grace period is up.
+        time.sleep(1.0)
+        started = pid_alive(proc.pid)
+    if started:
+        port = f" port={service.port}" if service.port is not None else ""
+        print(f"{name}: started pid={proc.pid}{port} log={log_file}")
         return 0
 
-    print(f"{name}: failed health check after start: {service.health_url}", file=sys.stderr)
+    if service.health_url:
+        print(f"{name}: failed health check after start: {service.health_url}", file=sys.stderr)
+    else:
+        print(f"{name}: process exited shortly after start", file=sys.stderr)
     print(f"{name}: see log {log_file}", file=sys.stderr)
     return 1
 
@@ -390,17 +409,22 @@ def status_service(name: str, state: dict[str, Any]) -> str:
     if entry:
         pid = entry.get("pid")
         if pid_alive(pid):
-            health = "healthy" if health_ok(service) else "unhealthy"
+            if service.health_url:
+                health = "healthy" if health_ok(service) else "unhealthy"
+            else:
+                health = "running"
+            port = f" port={service.port}" if service.port is not None else ""
             return (
-                f"{name}: running pid={pid} port={service.port} health={health} "
+                f"{name}: running pid={pid}{port} health={health} "
                 f"log={entry.get('log')}"
             )
-        return f"{name}: stale pid={pid} port={service.port} log={entry.get('log')}"
+        port = f" port={service.port}" if service.port is not None else ""
+        return f"{name}: stale pid={pid}{port} log={entry.get('log')}"
 
     blocker = foreign_port_blocker(service, state)
     if blocker is not None:
         return f"{name}: blocked port={service.port} by {describe_listener(blocker)}"
-    return f"{name}: stopped port={service.port}"
+    return f"{name}: stopped"
 
 
 def run_start(service_names: list[str]) -> int:
@@ -462,7 +486,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "profile",
         nargs="?",
         default="full",
-        help="Profile or service: full, all, app, intelligence, marketing",
+        help="Profile or service: full, all, app, intelligence, marketing, worker",
     )
     parser.add_argument("--grep", default=None, help="Only show log lines containing this text (e.g. a request id)")
     parser.add_argument("--tail", type=int, default=100, help="Lines of log tail to inspect")
@@ -491,7 +515,11 @@ def main(argv: list[str] | None = None) -> int:
         return run_status(service_names)
     if args.command == "logs":
         if len(service_names) != 1 or args.profile in ("full", "all"):
-            print("logs needs one service: ./full-app logs <app|intelligence|marketing> [--grep X]", file=sys.stderr)
+            print(
+                "logs needs one service: ./full-app logs <app|intelligence|marketing|worker> "
+                "[--grep X]",
+                file=sys.stderr,
+            )
             return 2
         return run_logs(service_names[0], args.grep, args.tail, args.follow)
     return 2

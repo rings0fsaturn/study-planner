@@ -17,7 +17,12 @@ import {
   RetryQuestionButton,
 } from '../assessments/review/ReviewSurface'
 import { logger } from '../../lib/logger'
-import { buildPracticeRunModel, findPracticeRun, isSummaryEligible } from './practiceRunModel'
+import {
+  buildPracticeRunModel,
+  findPracticeRun,
+  isSummaryEligible,
+  mergeEnvelopes,
+} from './practiceRunModel'
 import { PracticeSummary } from './PracticeSummary'
 import { AnswerSlot } from '../assessments/AssessmentDetail'
 import './practice.css'
@@ -58,6 +63,9 @@ export function PracticeRun() {
   /** The run summary replaces the problem view once the run is completed (P3). */
   const [summaryDismissed, setSummaryDismissed] = useState(false)
   const [summaryActive, setSummaryActive] = useState(0)
+  /** In-flight generation retry for a stuck problem (warnings present). */
+  const [regenerating, setRegenerating] = useState(false)
+  const [regenerateError, setRegenerateError] = useState<string | null>(null)
 
   // ---- Pointer ------------------------------------------------------------
   useEffect(() => {
@@ -108,7 +116,7 @@ export function PracticeRun() {
         }
       }
       if (cancelled) return
-      setEnvelopes((previous) => ({ ...previous, ...loaded }))
+      setEnvelopes((previous) => mergeEnvelopes(previous, loaded))
     }
     void load()
     return () => {
@@ -176,6 +184,23 @@ export function PracticeRun() {
   }, [activeIndex, model, totalProblems])
 
   const current = problems[active]
+  const currentEnvelope = current ? envelopes[current.assessmentId] : undefined
+
+  /** Re-enqueue the SAME assessment (the run pointer is immutable) and resume polling. */
+  async function handleRegenerateGeneration() {
+    const envelope = currentEnvelope
+    if (!envelope || regenerating) return
+    setRegenerating(true)
+    setRegenerateError(null)
+    try {
+      await assessments.regenerateAssessment(envelope.id)
+      setReloadTick((value) => value + 1)
+    } catch (err) {
+      setRegenerateError(err instanceof Error ? err.message : 'Could not restart generation.')
+    } finally {
+      setRegenerating(false)
+    }
+  }
 
   // The shared navigator is driven by review groups, so a problem that has not
   // loaded yet carries a placeholder group: same position, honestly pending.
@@ -418,10 +443,46 @@ export function PracticeRun() {
                     Generating problem {current.number}…
                   </p>
                 )}
+                {current.assessmentStatus === 'generating' &&
+                  currentEnvelope != null &&
+                  currentEnvelope.warnings.length > 0 && (
+                    <div className="banner attention" style={{ marginTop: '0.75rem' }}>
+                      <div className="banner-body">
+                        <div className="banner-title">Generation was interrupted</div>
+                        <div className="banner-desc">
+                          {currentEnvelope.warnings.map((warning) => warning.message).join(' ')}
+                        </div>
+                        {regenerateError && (
+                          <div className="banner-desc" role="status">
+                            {regenerateError}
+                          </div>
+                        )}
+                        <button
+                          type="button"
+                          className="banner-action-btn"
+                          onClick={() => void handleRegenerateGeneration()}
+                          disabled={regenerating}
+                        >
+                          {regenerating ? 'Requesting…' : 'Retry generation'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 {current.assessmentStatus === 'failed' && (
-                  <p className="t-body-sm" role="status">
-                    Problem {current.number} could not be generated.
-                  </p>
+                  <>
+                    <p className="t-body-sm" role="status">
+                      Problem {current.number} could not be generated.
+                    </p>
+                    {currentEnvelope != null && currentEnvelope.warnings.length > 0 && (
+                      <ul className="material-ref-list" style={{ marginTop: '0.5rem' }}>
+                        {currentEnvelope.warnings.map((warning, index) => (
+                          <li key={`${warning.code}-${index}`}>
+                            <strong>{warning.code}</strong>: {warning.message}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
                 )}
 
                 {currentQuestion && (

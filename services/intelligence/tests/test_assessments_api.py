@@ -538,6 +538,82 @@ def test_generate_assessment_requires_auth() -> None:
     assert response.status_code in (401, 403)
 
 
+def _seed_generating_assessment(client: FakeUserClient, assessment_id: str = "a1") -> None:
+    client.seed(_material())
+    client.assessments[assessment_id] = {
+        "id": assessment_id,
+        "user_id": "fixture-user",
+        "client_id": "client-1",
+        "material_id": "mat-1",
+        "recipe": {"formats": ["written"], "questionCount": 1, "difficulty": 3},
+        "status": "generating",
+        "warnings": [{"code": "provider_error", "message": "generation interrupted"}],
+        "correlation_id": "corr-1",
+        "created_at": "2026-08-14T00:00:00Z",
+    }
+
+
+def test_regenerate_assessment_returns_202_async_job(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/regenerate"))
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert body["kind"] == "generation"
+    assert body["status"] == "queued"
+    assert body["ownerId"] == "fixture-user"
+    assert body["resultId"] == "a1"
+    assert body["jobId"]
+    assert _override_client.jobs[body["jobId"]]["result_id"] == "a1"
+
+
+def test_regenerate_assessment_ready_is_409(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    _override_client.assessments["a1"]["status"] = "ready"
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/regenerate"))
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+
+
+def test_regenerate_assessment_failed_is_409(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    _override_client.assessments["a1"]["status"] = "failed"
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/regenerate"))
+    assert response.status_code == 409
+    assert response.json()["code"] == "conflict"
+
+
+def test_regenerate_assessment_missing_material_is_404(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    _override_client.materials.clear()
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/regenerate"))
+    assert response.status_code == 404
+
+
+def test_regenerate_assessment_material_not_ready_is_409(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    _override_client.materials["mat-1"]["ingestion_state"] = "embedding"
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/regenerate"))
+    assert response.status_code == 409
+    assert response.json()["code"] == "validation_failed"
+
+
+def test_regenerate_assessment_unknown_is_404(_override_client: FakeUserClient) -> None:
+    response = asyncio.run(_request("POST", "/v1/assessments/nope/regenerate"))
+    assert response.status_code == 404
+
+
+def test_regenerate_assessment_requires_auth() -> None:
+    os.environ["SUPABASE_JWT_SECRET"] = TEST_AUTH_SECRET
+    transport = httpx.ASGITransport(app=app)
+
+    async def run() -> httpx.Response:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.post("/v1/assessments/a1/regenerate")
+
+    response = asyncio.run(run())
+    assert response.status_code in (401, 403)
+
+
 def test_get_assessment_returns_redacted_shape(_override_client: FakeUserClient) -> None:
     _override_client.seed(_material())
     _override_client.assessments["a1"] = {

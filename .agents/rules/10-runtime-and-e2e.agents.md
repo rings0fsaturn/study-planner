@@ -5,8 +5,10 @@ description: Use the managed full-app lifecycle and the repository Playwright co
 
 # Runtime and E2E
 
-Use `./full-app` for runtime work that touches the React app, authenticated routes, or the Intelligence Service.
-The `full` profile starts the service and React app, while `all` also starts the marketing site.
+Use `./full-app` for runtime work that touches the React app, authenticated routes, the Intelligence Service, or generation/ingestion jobs.
+The `full` profile starts the service, the React app, and the ingestion/generation/grading worker, while `all` also starts the marketing site.
+The worker is portless: `./full-app status full` reports it as `health=running` and its log is `.dev/full-app/logs/worker.log`.
+The GPU inference sidecar stays a separate demand-started service (rule 54); generation/embedding work still needs it started on `:8200` before the worker can complete embedding-dependent stages.
 
 ## Required Workflow
 

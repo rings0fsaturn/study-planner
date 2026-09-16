@@ -101,6 +101,21 @@ describe('AssessmentClient', () => {
     await expect(client.getJob('job-1')).resolves.toEqual(job)
   })
 
+  it('regenerateAssessment posts to the assessment and returns the AsyncJob', async () => {
+    const job = asyncJob({ resultId: 'assessment-1' })
+    const fetchLike = new FakeFetch(async () => job)
+    const client = new AssessmentClient(fetchLike)
+
+    await expect(client.regenerateAssessment('assessment-1')).resolves.toEqual(job)
+    expect(fetchLike.calls[0].path).toBe('/v1/assessments/assessment-1/regenerate')
+    const init = fetchLike.calls[0].init!
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers['Idempotency-Key']).toBeDefined()
+    expect(headers['X-Request-ID']).toBeDefined()
+    expect(init.body).toBeUndefined()
+  })
+
   it('normalizes a 401 into unauthorized', async () => {
     const client = new AssessmentClient(
       new FakeFetch(async () => {

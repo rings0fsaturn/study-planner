@@ -51,6 +51,36 @@ export interface PracticeRunModel {
 }
 
 /**
+ * Merge freshly loaded assessment envelopes without churning object identity
+ * when nothing changed. The practice screen polls `getAssessment` while a
+ * problem generates; a new envelope object every poll re-triggers hydration
+ * (and its `GET /attempts`), so an unchanged poll must keep the previous
+ * reference. Content equality is scoped to the fields the screen reads:
+ * status, warnings, and questions.
+ */
+export function mergeEnvelopes(
+  previous: Record<string, Assessment>,
+  loaded: Record<string, Assessment>,
+): Record<string, Assessment> {
+  let next: Record<string, Assessment> | null = null
+  for (const [id, record] of Object.entries(loaded)) {
+    const before = previous[id]
+    if (before === record || (before != null && sameEnvelope(before, record))) continue
+    next = next ?? { ...previous }
+    next[id] = record
+  }
+  return next ?? previous
+}
+
+function sameEnvelope(a: Assessment, b: Assessment): boolean {
+  return (
+    a.status === b.status &&
+    JSON.stringify(a.warnings) === JSON.stringify(b.warnings) &&
+    JSON.stringify(a.questions) === JSON.stringify(b.questions)
+  )
+}
+
+/**
  * Summary status of one problem (#44 Phase 3). The review model reports a
  * failed attempt as `processing` (it has no grade yet), so the summary must
  * classify terminal states itself: a grade, an ungradable attempt, or open.

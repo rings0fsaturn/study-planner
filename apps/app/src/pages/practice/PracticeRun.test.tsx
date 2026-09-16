@@ -10,6 +10,7 @@ import { PRACTICE_RUN_FINISHED, PRACTICE_RUN_STARTED } from '../../events/EventS
 import {
   FakeAssessmentClient,
   attemptRecord,
+  queuedJob,
 } from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
@@ -71,6 +72,7 @@ function assessment(
   materialId: string,
   questions: Question[],
   status: Assessment['status'] = 'ready',
+  warnings: Assessment['warnings'] = [],
 ): Assessment {
   return {
     id,
@@ -78,7 +80,7 @@ function assessment(
     materialIds: [materialId],
     status,
     questions,
-    warnings: [],
+    warnings,
     groundingStale: false,
     createdAt: '2026-09-15T10:00:00Z',
   }
@@ -286,6 +288,25 @@ describe('PracticeRun', () => {
 
     expect(await screen.findByText(/Generating problem 1/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Submit answer' })).not.toBeInTheDocument()
+  })
+
+  it('surfaces generation warnings and retries the same assessment', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    client.scriptRegenerate(queuedJob({ resultId: 'a-1' }))
+    client.getAssessment.mockImplementation(async () =>
+      assessment('a-1', 'mat-1', [], 'generating', [
+        { code: 'provider_error', message: 'generation interrupted' },
+      ]),
+    )
+    client.listAssessmentAttempts.mockImplementation(async () => [])
+
+    renderRun(client)
+
+    expect(await screen.findByText('Generation was interrupted')).toBeInTheDocument()
+    expect(screen.getByText('generation interrupted')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }))
+    expect(client.regenerateAssessment).toHaveBeenCalledWith('a-1')
   })
 
   it('reports a problem the run declared but never generated', async () => {

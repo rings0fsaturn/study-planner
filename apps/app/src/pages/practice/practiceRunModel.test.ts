@@ -8,7 +8,13 @@ import type {
   QuestionGradedResult,
 } from '../../assessments/types'
 import type { PracticeRunFinishedPayload, PracticeRunStartedPayload } from '../../sync/types'
-import { buildPracticeRunModel, findPracticeRun, isSummaryEligible, problemStatus } from './practiceRunModel'
+import {
+  buildPracticeRunModel,
+  findPracticeRun,
+  isSummaryEligible,
+  mergeEnvelopes,
+  problemStatus,
+} from './practiceRunModel'
 
 /**
  * Pure run-state derivation (rule 32: no Dexie, no React, no clock). Every
@@ -124,6 +130,45 @@ function model(input: {
     attemptsByAssessment: input.attemptsByAssessment ?? {},
   })
 }
+
+describe('mergeEnvelopes', () => {
+  const loaded = assessmentRecord('a-1', 'mat-1', 'ready', [question('q1', 'mat-1')])
+
+  it('returns the same reference when nothing changed', () => {
+    const previous = { 'a-1': loaded }
+    expect(mergeEnvelopes(previous, { 'a-1': { ...loaded } })).toBe(previous)
+  })
+
+  it('adopts a new id and keeps existing entries unchanged', () => {
+    const previous = { 'a-1': loaded }
+    const next = { 'a-1': loaded, 'a-2': assessmentRecord('a-2', 'mat-1', 'generating') }
+    const merged = mergeEnvelopes(previous, next)
+    expect(merged).not.toBe(previous)
+    expect(merged['a-1']).toBe(previous['a-1'])
+    expect(merged['a-2']).toBe(next['a-2'])
+  })
+
+  it('replaces the record when the status changes', () => {
+    const previous = { 'a-1': assessmentRecord('a-1', 'mat-1', 'generating') }
+    const fresh = assessmentRecord('a-1', 'mat-1', 'ready', [question('q1', 'mat-1')])
+    const merged = mergeEnvelopes(previous, { 'a-1': fresh })
+    expect(merged).not.toBe(previous)
+    expect(merged['a-1']).toBe(fresh)
+  })
+
+  it('replaces the record when warnings change', () => {
+    const previous = { 'a-1': assessmentRecord('a-1', 'mat-1', 'generating') }
+    const fresh = assessmentRecord('a-1', 'mat-1', 'generating')
+    fresh.warnings = [{ code: 'provider_error', message: 'interrupted' }]
+    const merged = mergeEnvelopes(previous, { 'a-1': fresh })
+    expect(merged['a-1']).toBe(fresh)
+  })
+
+  it('returns an empty previous unchanged', () => {
+    const previous = {}
+    expect(mergeEnvelopes(previous, { 'a-1': loaded })).not.toBe(previous)
+  })
+})
 
 describe('findPracticeRun', () => {
   it('resolves the pointer and its terminal event by runId', () => {

@@ -6,9 +6,17 @@ from scripts import full_app
 
 
 def test_expand_profile_uses_dependency_order() -> None:
-    assert full_app.expand_profile("full") == ["intelligence", "app"]
-    assert full_app.expand_profile("all") == ["intelligence", "app", "marketing"]
+    assert full_app.expand_profile("full") == ["intelligence", "app", "worker"]
+    assert full_app.expand_profile("all") == ["intelligence", "app", "marketing", "worker"]
     assert full_app.expand_profile("app") == ["app"]
+
+
+def test_worker_service_is_portless() -> None:
+    service = full_app.SERVICES["worker"]
+    assert service.port is None
+    assert service.health_url is None
+    state = {"version": 1, "services": {}}
+    assert full_app.foreign_port_blocker(service, state) is None
 
 
 def test_expand_profile_rejects_unknown_profile() -> None:

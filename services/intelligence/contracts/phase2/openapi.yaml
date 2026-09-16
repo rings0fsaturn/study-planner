@@ -39,6 +39,12 @@ paths:
       security: [{ bearerAuth: [] }]
       parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/AssessmentId' }]
       responses: { '200': { description: Redacted assessment, content: { application/json: { schema: { $ref: '#/components/schemas/Assessment' } } } }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' } }
+  /v1/assessments/{assessmentId}/regenerate:
+    post:
+      operationId: regenerateAssessment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: '#/components/parameters/RequestId' }, { $ref: '#/components/parameters/AssessmentId' }]
+      responses: { '202': { description: Accepted, content: { application/json: { schema: { $ref: '#/components/schemas/AsyncJob' } } } }, '400': { $ref: '#/components/responses/BadRequest' }, '401': { $ref: '#/components/responses/Unauthorized' }, '404': { $ref: '#/components/responses/NotFound' }, '409': { $ref: '#/components/responses/Conflict' } }
   /v1/practice-runs:
     post:
       operationId: createPracticeRun

@@ -25,6 +25,7 @@ export interface AssessmentClientLike {
   generateAssessment(input: GenerationRequest): Promise<AsyncJob>
   getAssessment(assessmentId: string): Promise<Assessment>
   getJob(jobId: string): Promise<AsyncJob>
+  regenerateAssessment(assessmentId: string): Promise<AsyncJob>
   submitAssessmentAttempt(
     assessmentId: string,
     questionId: string,
@@ -234,6 +235,27 @@ export class AssessmentClient implements AssessmentClientLike {
   getJob(jobId: string): Promise<AsyncJob> {
     return this.run(async () => {
       const payload = await this.fetchLike.fetchJson(`/v1/jobs/${jobId}`)
+      return payload as AsyncJob
+    })
+  }
+
+  /**
+   * Re-enqueue generation for an assessment stuck `generating` (practice-run
+   * retry: the run pointer keeps the assessment id, so the same id re-queues).
+   */
+  regenerateAssessment(assessmentId: string): Promise<AsyncJob> {
+    return this.run(async () => {
+      const payload = await this.fetchLike.fetchJson(
+        `/v1/assessments/${assessmentId}/regenerate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': crypto.randomUUID(),
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+        },
+      )
       return payload as AsyncJob
     })
   }
