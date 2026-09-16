@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { logger } from '../lib/logger'
 import type { MetadataFetcher, MetadataResult } from './metadata-fetcher'
 
 export class DevMetadataFetcher implements MetadataFetcher {
@@ -28,7 +29,7 @@ export class DevMetadataFetcher implements MetadataFetcher {
       }
       return await resp.json() as MetadataResult
     } catch (err) {
-      console.warn('[DevMetadataFetcher] Fetch failed, edge function may not be deployed:', err)
+      logger.warn('[DevMetadataFetcher] Fetch failed, edge function may not be deployed:', err)
       return {
         type: 'error',
         message: 'Metadata fetch unavailable in dev mode. Deploy the edge function or use `supabase functions serve`.',

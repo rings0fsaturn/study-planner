@@ -5,6 +5,7 @@ import type {
   RoadmapCreatedPayload,
   SessionBookedPayload,
 } from '../sync/types'
+import { logger } from '../lib/logger'
 import type { SessionLoggedPayload } from '../session/types'
 
 type OmitId = Omit<Event, 'id'>
@@ -400,7 +401,7 @@ export function buildSeedDemoEvents(now = new Date()): SeedBuildResult {
 export async function seedTestData(eventStore: EventStore): Promise<void> {
   const existing = await eventStore.getAll()
   if (existing.length > 0) {
-    console.warn(`[seed] EventStore already has ${existing.length} events. Wiping first...`)
+    logger.warn(`[seed] EventStore already has ${existing.length} events. Wiping first...`)
     await eventStore.wipe()
   }
 
@@ -408,7 +409,7 @@ export async function seedTestData(eventStore: EventStore): Promise<void> {
 
   await eventStore.bulkAppend(events)
 
-  console.log(
+  logger.info(
     `[seed] Done - active roadmap ${activeStartDate} to ${activeDeadlineDate}; ` +
       `${activeBookings.length} active bookings, ${loggedCount} logged sessions; ` +
       '2 past roadmaps (1 completed, 1 abandoned); ' +
@@ -418,5 +419,5 @@ export async function seedTestData(eventStore: EventStore): Promise<void> {
 
 export async function wipeTestData(eventStore: EventStore): Promise<void> {
   await eventStore.wipe()
-  console.log('[seed] Wiped all events from EventStore')
+  logger.info('[seed] Wiped all events from EventStore')
 }

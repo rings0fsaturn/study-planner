@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import type { User, Session } from '@supabase/supabase-js';
 import { AuthGate, type AuthGateDeps, type SignUpResult, type SignInResult } from './AuthGate';
+import { logger } from '../lib/logger';
 import { supabase } from '../lib/supabase';
 
 interface AuthContextValue {
@@ -43,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(currentUser);
         }
       } catch (err) {
-        console.warn('Auth initialization failed:', err);
+        logger.warn('Auth initialization failed:', err);
       } finally {
         if (mounted) {
           setLoading(false);

@@ -1,0 +1,119 @@
+/* PROTOTYPE — throwaway. Practice run summary prototype chrome (#44 Phase 3).
+   The review surfaces themselves reuse the shared review.css (.ar-*) and
+   materials.css (.materials-page) classes; this file owns only the prototype
+   frame: page head, toolbar, state line, and the three variant layouts.
+   The floating switcher styles are copied from practice-guide/prototype.css
+   (.pgp-switcher) because PrototypeSwitcher hard-codes that class. */
+
+.psp { max-width: 980px; margin: 0 auto; padding: var(--space-4) var(--space-3) 120px; }
+
+.psp-eyebrow { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-tertiary); margin-bottom: var(--space-1); }
+.psp-title { font: 2.2rem var(--font-display); line-height: 1.1; margin: 0 0 var(--space-2); }
+.psp-sub { color: var(--text-secondary); line-height: 1.55; margin: 0 0 var(--space-4); max-width: 72ch; }
+
+/* ---- toolbar ---- */
+.psp-toolbar {
+  display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: center;
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface-recessed); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); margin-bottom: var(--space-2);
+}
+.psp-tool-group { display: flex; gap: var(--space-1); align-items: center; flex-wrap: wrap; }
+.psp-tool-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-right: var(--space-1); }
+.psp-tool-btn {
+  font: inherit; font-size: 0.82rem; cursor: pointer;
+  background: transparent; color: var(--text-secondary);
+  border: 1px solid var(--border-subtle); border-radius: var(--radius-pill);
+  padding: 4px 10px;
+}
+.psp-tool-btn:hover { border-color: var(--text-tertiary); }
+.psp-tool-btn.is-active { background: var(--surface-inverted); color: var(--text-on-inverted); border-color: var(--surface-inverted); }
+.psp-blurb { color: var(--text-tertiary); margin: 0 0 var(--space-4); }
+.psp-state-line { color: var(--text-tertiary); margin: -0.75rem 0 1rem; }
+
+/* ---- summary head (shared by A and B) ---- */
+.psp-summary-head {
+  display: flex; flex-direction: column; gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+.psp-summary-title-row { display: flex; align-items: center; gap: var(--space-2); }
+.psp-summary-title-row h2 { margin: 0; font: 1.15rem var(--font-display); }
+.psp-summary-line { margin: 0; color: var(--text-secondary); }
+
+/* ---- failed-attempt honesty (used by all variants) ---- */
+.ar-failed-note {
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle); border-left: 3px solid var(--rust, var(--terracotta-d));
+  border-radius: var(--radius-sm); background: var(--surface-recessed);
+  display: flex; flex-direction: column; gap: var(--space-2); align-items: flex-start;
+}
+
+/* ---- Variant B: stacked report ---- */
+.psp-stack { display: flex; flex-direction: column; gap: var(--space-3); margin-top: var(--space-3); }
+.psp-stack-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-3); }
+.psp-stack-item { padding: var(--space-3) var(--space-4); }
+
+/* ---- Variant C: scoreboard + rows ---- */
+.psp-board { margin-top: var(--space-3); }
+.psp-board-head {
+  display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed); border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md); margin-bottom: var(--space-3);
+}
+.psp-board-score { display: flex; flex-direction: column; align-items: baseline; }
+.psp-board-score-value { font-size: 2rem; line-height: 1; }
+.psp-board-score-label { color: var(--text-tertiary); }
+.psp-board-meta { display: flex; flex-direction: column; gap: 2px; }
+.psp-board-materials { display: flex; gap: var(--space-1); flex-wrap: wrap; margin-left: auto; }
+.psp-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.psp-row { border: 1px solid var(--border-subtle); border-radius: var(--radius-md); overflow: hidden; background: var(--surface-raised, var(--surface)); }
+.psp-row.is-correct { border-left: 3px solid var(--moss, var(--text-tertiary)); }
+.psp-row.is-incorrect, .psp-row.is-failed { border-left: 3px solid var(--rust, var(--terracotta-d)); }
+.psp-row.is-partial { border-left: 3px solid var(--terracotta); }
+.psp-row-head {
+  width: 100%; display: flex; align-items: center; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3); cursor: pointer;
+  background: transparent; border: none; font: inherit; text-align: left; color: inherit;
+}
+.psp-row-head:hover { background: var(--surface-recessed); }
+.psp-row-num { font-size: 0.78rem; color: var(--text-tertiary); white-space: nowrap; }
+.psp-row-prompt {
+  flex: 1; min-width: 0; font-size: 0.92rem; color: var(--text-secondary);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.psp-row-body { padding: var(--space-3) var(--space-4); border-top: 1px solid var(--border-subtle); }
+
+/* ---- drive-it note (mirrors .pgp-note) ---- */
+.psp-note {
+  margin-top: var(--space-5); padding: var(--space-4);
+  border-left: 3px solid var(--terracotta);
+  background: var(--surface-recessed); border-radius: var(--radius-sm);
+  font-size: 0.82rem; color: var(--text-secondary); line-height: 1.55;
+}
+.psp-note code { font-family: var(--font-mono); font-size: 0.78rem; }
+
+/* ---- floating variant switcher (copied from practice-guide/prototype.css) ---- */
+.pgp-switcher {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%);
+  display: flex; align-items: center; gap: var(--space-1);
+  background: var(--surface-inverted); color: var(--text-on-inverted);
+  border-radius: var(--radius-pill);
+  padding: 6px 6px; box-shadow: var(--shadow-modal);
+  z-index: var(--z-toast, 70); font-family: var(--font-mono);
+}
+.pgp-switcher button {
+  background: transparent; border: none; color: var(--text-on-inverted);
+  cursor: pointer; padding: 6px 10px; border-radius: var(--radius-pill); font-size: 1rem;
+}
+.pgp-switcher button:hover { background: rgba(245, 239, 228, 0.15); }
+.pgp-switcher .label { font-size: 0.78rem; padding: 0 var(--space-2); min-width: 210px; text-align: center; }
+.pgp-switcher .label b { color: var(--clay); }
+
+/* ---- small screens: the stack/report and board flow single column ---- */
+@media (max-width: 1023px) {
+  .psp-board-head { align-items: flex-start; }
+  .psp-board-materials { margin-left: 0; }
+}

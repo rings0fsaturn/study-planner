@@ -160,7 +160,10 @@ def _arm_loop(worker, stop: threading.Event, poll_interval: float) -> None:
 
 
 def main() -> None:
-    logging.basicConfig(level=os.getenv("INGESTION_LOG_LEVEL", "INFO"))
+    os.environ.setdefault("LOG_LEVEL", os.getenv("INGESTION_LOG_LEVEL", "INFO"))
+    from app.logging_config import configure_logging
+
+    configure_logging()
     supabase_url = _env("SUPABASE_URL").rstrip("/")
     service_role_key = _env("SUPABASE_SERVICE_ROLE_KEY")
 

@@ -2,14 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 import os
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app.middleware import request_id_from_request
 from app.query_embedder import embed_queries
 from app.rerank import RerankerClient
 from app.security import require_user
+
+logger = logging.getLogger("app.routers")
 
 router = APIRouter()
 
@@ -27,6 +31,7 @@ def _supabase_rest() -> tuple[str, str]:
 @router.post("/retrieval/search")
 def search(
     body: dict,
+    request: Request,
     user_id: str = Depends(require_user),
 ) -> dict:
     if os.getenv("RETRIEVAL_ENABLED", "true").lower() not in ("1", "true", "yes"):
@@ -37,6 +42,10 @@ def search(
     try:
         top_k = int(body.get("topK", body.get("top_k", 10)))
     except Exception:
+        logger.debug(
+            "bad topK, using default",
+            extra={"request_id": request_id_from_request(request)},
+        )
         top_k = 10
     hybrid = bool(body.get("hybrid", True))
     rerank = bool(body.get("rerank", False))
@@ -44,6 +53,10 @@ def search(
     try:
         rerank_top = int(rerank_top) if rerank_top is not None else top_k
     except Exception:
+        logger.debug(
+            "bad rerankTopK, using top_k",
+            extra={"request_id": request_id_from_request(request)},
+        )
         rerank_top = top_k
 
     if not material_id or not query:
@@ -111,6 +124,10 @@ def search(
             try:
                 reranked_indices = rc.rerank(query, passages, top_k=rerank_top)
             except Exception as exc:
+                logger.warning(
+                    "rerank failed",
+                    extra={"request_id": request_id_from_request(request)},
+                )
                 raise HTTPException(status_code=500, detail=str(exc)) from exc
 
     if not rerank or not reranked_indices:

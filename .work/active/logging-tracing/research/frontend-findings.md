@@ -1,0 +1,12 @@
+# Logging/tracing — frontend findings (2026-09-15)
+
+Source: Explore subagent sweep of `apps/app/src/` + `apps/marketing/`.
+
+- No logger utility, no tracing infra. No `lib/logger*`, `*telemetry*`, `*sentry*`, `*trace*` files. `find -iname "*log*"` hits are domain code only (`pages/Log.tsx`, `roadmap/edit/logRoadmapEdit.ts` writes a `RoadmapEdited` domain event).
+- No `pino/winston/sentry/otel/posthog/datadog` in any `package.json` (app/marketing/root). Deps are supabase, dexie, visx, framer-motion, pdfjs, astro only.
+- `console.*`: 15 prod calls in app, 0 in marketing, 4 test assertions. All `warn` except 1 `error` (boundary) + dev-only `log`. Prefixed tags `[seed]`, `[intelligence]`, `[assessments]`, `[practice]`, `[SyncEngine]`, `[app]`, `[DevMetadataFetcher]`. No level abstraction, no prod stripping. Files: `auth/AuthProvider.tsx:46`, `components/ErrorBoundary.tsx:19`, `dev/DevSeeder.tsx:25`, `dev/seedTestData.ts:403,411,421`, `lib/intelligenceClient.ts:93,106,135,148` (only service client that logs), `onboarding/dev-metadata-fetcher.ts:31`, `pages/assessments/AssessmentConfig.tsx:216`, `pages/materials/PracticeThis.tsx:209`, `pages/practice/PracticeRun.tsx:275`, `sync/SyncEngine.ts:532`. Tests: `lib/intelligenceClient.test.ts:113,129,215,231` assert `console.warn` directly.
+- Error boundary: one app-wide (`components/ErrorBoundary.tsx:11-50`, wired `App.tsx:270-272`). `componentDidCatch` only `console.error`, no reporting, no reset/retry. Marketing (static Astro): none.
+- Rule 22 normalization centralized but mostly silent: `assessments/assessmentClient.ts` (`normalizeAssessmentError`, `HttpAssessmentFetch` 1x retry on 5xx/network/timeout, `250*2^attempt` backoff), `materials/materialClient.ts:120` + ~10 call sites, `lib/intelligenceClient.ts:42-66` (MAX_RETRIES=2, 8 s timeout). Never log; throw typed errors (`AssessmentServiceError` carries `requestId`, payload `correlationId` fields only).
+- Correlation to backend: only assessment POSTs send `'X-Request-ID': crypto.randomUUID()` + `'Idempotency-Key'` (`assessmentClient.ts:190-191,225-226`) — fresh UUID per call, not joined with backend logs. GETs, intelligenceClient, Supabase/material/SyncEngine send nothing. Client-side ids (`attemptFlow.ts:167,315` `uuid('corr')`, `PracticeThis.tsx:162`) stay in payloads.
+- Sourcemaps: app `vite.config` has `build.sourcemap: true`, no Sentry plugin, no console stripping. Marketing: static, default off.
+- Analytics: none wired. `privacy.astro:18` claims Plausible but no script exists in `BaseLayout.astro`.

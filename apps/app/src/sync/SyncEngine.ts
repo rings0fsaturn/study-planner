@@ -1,3 +1,4 @@
+import { logger } from '../lib/logger';
 import type { EventStore } from '../events/EventStore';
 import type {
   SupabaseClientLike,
@@ -529,7 +530,7 @@ export class SyncEngine {
         snapshot.schemaVersion === checkpoint.schema_version;
 
       if (!snapshotIsValid) {
-        console.warn(
+        logger.warn(
           '[SyncEngine] Snapshot failed checkpoint validation — falling back to full pull.',
           {
             checkpointRemoteId: checkpoint.as_of_remote_id,

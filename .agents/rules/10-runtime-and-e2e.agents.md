@@ -5,8 +5,10 @@ description: Use the managed full-app lifecycle and the repository Playwright co
 
 # Runtime and E2E
 
-Use `./full-app` for runtime work that touches the React app, authenticated routes, or the Intelligence Service.
-The `full` profile starts the service and React app, while `all` also starts the marketing site.
+Use `./full-app` for runtime work that touches the React app, authenticated routes, the Intelligence Service, or generation/ingestion jobs.
+The `full` profile starts the service, the React app, and the ingestion/generation/grading worker, while `all` also starts the marketing site.
+The worker is portless: `./full-app status full` reports it as `health=running` and its log is `.dev/full-app/logs/worker.log`.
+The GPU inference sidecar stays a separate demand-started service (rule 54); generation/embedding work still needs it started on `:8200` before the worker can complete embedding-dependent stages.
 
 ## Required Workflow
 
@@ -26,6 +28,11 @@ pnpm exec playwright test -c e2e/playwright.config.ts --project=app --reporter=l
 Keep `webServer` at the top level of `e2e/playwright.config.ts`.
 Use `pnpm dev:full` for the app web server so service-dependent flows do not run against Vite alone.
 Use `test.use({ baseURL })` for suite-level overrides instead of moving `webServer` into a project.
+
+## Log Tracing
+
+Copy the `X-Request-ID` from devtools/network or the typed error's `requestId` and join it to backend lines with `./full-app logs intelligence --grep <request-id>`.
+Frontend mints one id per logical call and reuses it across retries; the backend echoes it and logs every request and error with it.
 
 ## Process Safety
 

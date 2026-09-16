@@ -120,6 +120,8 @@ export class AssessmentServiceError extends Error {
     message: string,
     readonly retryable: boolean,
     readonly retryAfterSeconds?: number,
+    /** Echo of the X-Request-ID sent with the call, for log joins. */
+    readonly requestId?: string,
   ) {
     super(message)
     this.name = 'AssessmentServiceError'

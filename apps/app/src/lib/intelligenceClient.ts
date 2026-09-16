@@ -1,3 +1,4 @@
+import { logger } from './logger'
 import { supabase } from './supabase'
 
 const BASE = import.meta.env.VITE_INTELLIGENCE_URL ?? 'http://localhost:8000'
@@ -67,6 +68,7 @@ function normalizedRoadmapError(err: unknown): Error {
 
 export async function postCalibration(body: unknown): Promise<unknown> {
   let lastError: unknown
+  const requestId = crypto.randomUUID()
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController()
@@ -75,22 +77,22 @@ export async function postCalibration(body: unknown): Promise<unknown> {
     try {
       const resp = await fetch(`${BASE}/v1/calibration`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId, ...(await authHeaders()) },
         body: JSON.stringify(body),
         signal: controller.signal,
       })
 
       if (resp.status === 401) throw new CalibrationAuthError('unauthorized')
       if (resp.status >= 500) {
-        throw new CalibrationServiceError(`calibration ${resp.status}`, true)
+        throw new CalibrationServiceError(`calibration ${resp.status} (request ${requestId})`, true)
       }
-      if (!resp.ok) throw new CalibrationServiceError(`calibration ${resp.status}`)
+      if (!resp.ok) throw new CalibrationServiceError(`calibration ${resp.status} (request ${requestId})`)
       return await resp.json()
     } catch (err) {
       lastError = err
       if (!shouldRetry(err)) {
         if (!(err instanceof CalibrationAuthError)) {
-          console.warn('[intelligence] calibration failed after retries', lastError)
+          logger.warn('[intelligence] calibration failed after retries', requestId, lastError)
         }
         throw normalizedError(err)
       }
@@ -103,12 +105,13 @@ export async function postCalibration(body: unknown): Promise<unknown> {
     }
   }
 
-  console.warn('[intelligence] calibration failed after retries', lastError)
+  logger.warn('[intelligence] calibration failed after retries', requestId, lastError)
   throw normalizedError(lastError)
 }
 
 export async function postRoadmapRegenerate(body: unknown): Promise<unknown> {
   let lastError: unknown
+  const requestId = crypto.randomUUID()
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const controller = new AbortController()
@@ -117,22 +120,22 @@ export async function postRoadmapRegenerate(body: unknown): Promise<unknown> {
     try {
       const resp = await fetch(`${BASE}/v1/roadmap/regenerate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...(await authHeaders()) },
+        headers: { 'Content-Type': 'application/json', 'X-Request-ID': requestId, ...(await authHeaders()) },
         body: JSON.stringify(body),
         signal: controller.signal,
       })
 
       if (resp.status === 401) throw new CalibrationAuthError('unauthorized')
       if (resp.status >= 500) {
-        throw new RoadmapServiceError(`roadmap regenerate ${resp.status}`, true)
+        throw new RoadmapServiceError(`roadmap regenerate ${resp.status} (request ${requestId})`, true)
       }
-      if (!resp.ok) throw new RoadmapServiceError(`roadmap regenerate ${resp.status}`)
+      if (!resp.ok) throw new RoadmapServiceError(`roadmap regenerate ${resp.status} (request ${requestId})`)
       return await resp.json()
     } catch (err) {
       lastError = err
       if (!shouldRetryRoadmap(err)) {
         if (!(err instanceof CalibrationAuthError)) {
-          console.warn('[intelligence] roadmap regenerate failed after retries', lastError)
+          logger.warn('[intelligence] roadmap regenerate failed after retries', requestId, lastError)
         }
         throw normalizedRoadmapError(err)
       }
@@ -145,6 +148,6 @@ export async function postRoadmapRegenerate(body: unknown): Promise<unknown> {
     }
   }
 
-  console.warn('[intelligence] roadmap regenerate failed after retries', lastError)
+  logger.warn('[intelligence] roadmap regenerate failed after retries', requestId, lastError)
   throw normalizedRoadmapError(lastError)
 }

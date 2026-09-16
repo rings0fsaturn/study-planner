@@ -25,6 +25,7 @@ export interface AssessmentClientLike {
   generateAssessment(input: GenerationRequest): Promise<AsyncJob>
   getAssessment(assessmentId: string): Promise<Assessment>
   getJob(jobId: string): Promise<AsyncJob>
+  regenerateAssessment(assessmentId: string): Promise<AsyncJob>
   submitAssessmentAttempt(
     assessmentId: string,
     questionId: string,
@@ -71,18 +72,31 @@ async function errorCode(response: Response): Promise<string | undefined> {
   }
 }
 
-export function normalizeAssessmentError(err: unknown): AssessmentServiceError {
-  if (err instanceof AssessmentServiceError) return err
+export function normalizeAssessmentError(
+  err: unknown,
+  requestId?: string,
+): AssessmentServiceError {
+  if (err instanceof AssessmentServiceError) {
+    return err.requestId || !requestId
+      ? err
+      : new AssessmentServiceError(
+          err.code,
+          err.message,
+          err.retryable,
+          err.retryAfterSeconds,
+          requestId,
+        )
+  }
   if (err instanceof TypeError) {
-    return new AssessmentServiceError('network', 'assessment request failed', true)
+    return new AssessmentServiceError('network', 'assessment request failed', true, undefined, requestId)
   }
   if (isAbortError(err)) {
-    return new AssessmentServiceError('timeout', 'assessment request timed out', true)
+    return new AssessmentServiceError('timeout', 'assessment request timed out', true, undefined, requestId)
   }
   if (err instanceof Error) {
-    return new AssessmentServiceError('unknown', err.message || 'assessment request failed', false)
+    return new AssessmentServiceError('unknown', err.message || 'assessment request failed', false, undefined, requestId)
   }
-  return new AssessmentServiceError('unknown', 'assessment request failed', false)
+  return new AssessmentServiceError('unknown', 'assessment request failed', false, undefined, requestId)
 }
 
 /**
@@ -97,6 +111,13 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
   ) {}
 
   async fetchJson(path: string, init: RequestInit = {}): Promise<unknown> {
+    // One id per logical call (POST callers mint it; GETs get one here),
+    // reused across retry attempts so backend lines join.
+    const requestId =
+      (init.headers as Record<string, string> | undefined)?.['X-Request-ID'] ??
+      crypto.randomUUID()
+    // ponytail: POST callers pass their own X-Request-ID + Idempotency-Key;
+    // fetchJson only fills the header for callers that did not (GETs).
     let lastError: unknown
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       const controller = new AbortController()
@@ -105,6 +126,7 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
         const token = await this.tokenProvider()
         const headers: Record<string, string> = {
           ...(init.headers as Record<string, string> | undefined),
+          'X-Request-ID': requestId,
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         }
         const response = await fetch(`${this.baseUrl}${path}`, {
@@ -113,7 +135,7 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
           signal: controller.signal,
         })
         if (response.status === 401) {
-          throw new AssessmentServiceError('unauthorized', 'not signed in', false)
+          throw new AssessmentServiceError('unauthorized', 'not signed in', false, undefined, requestId)
         }
         if (response.status === 409) {
           // serialization maps validation_failed to 409 too; distinguish the
@@ -124,9 +146,11 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
               'validation',
               'material is not ready for generation',
               false,
+              undefined,
+              requestId,
             )
           }
-          throw new AssessmentServiceError('conflict', 'assessment already exists', false)
+          throw new AssessmentServiceError('conflict', 'assessment already exists', false, undefined, requestId)
         }
         if (response.status === 429) {
           throw new AssessmentServiceError(
@@ -134,6 +158,7 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
             'generation quota exhausted',
             false,
             retryAfterSeconds(response),
+            requestId,
           )
         }
         if (response.status >= 500) {
@@ -141,6 +166,8 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
             'service',
             `intelligence service failed (${response.status})`,
             true,
+            undefined,
+            requestId,
           )
         }
         if (!response.ok) {
@@ -148,6 +175,8 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
             'service',
             `assessment request failed (${response.status})`,
             false,
+            undefined,
+            requestId,
           )
         }
         return await response.json()
@@ -156,7 +185,7 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
         if (err instanceof AssessmentServiceError) {
           if (!err.retryable || attempt >= MAX_RETRIES) throw err
         } else if (!isAbortError(err) && !(err instanceof TypeError)) {
-          throw normalizeAssessmentError(err)
+          throw normalizeAssessmentError(err, requestId)
         }
         if (attempt < MAX_RETRIES) {
           await wait(250 * 2 ** attempt)
@@ -166,7 +195,7 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
         clearTimeout(timer)
       }
     }
-    throw normalizeAssessmentError(lastError)
+    throw normalizeAssessmentError(lastError, requestId)
   }
 }
 
@@ -206,6 +235,27 @@ export class AssessmentClient implements AssessmentClientLike {
   getJob(jobId: string): Promise<AsyncJob> {
     return this.run(async () => {
       const payload = await this.fetchLike.fetchJson(`/v1/jobs/${jobId}`)
+      return payload as AsyncJob
+    })
+  }
+
+  /**
+   * Re-enqueue generation for an assessment stuck `generating` (practice-run
+   * retry: the run pointer keeps the assessment id, so the same id re-queues).
+   */
+  regenerateAssessment(assessmentId: string): Promise<AsyncJob> {
+    return this.run(async () => {
+      const payload = await this.fetchLike.fetchJson(
+        `/v1/assessments/${assessmentId}/regenerate`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Request-ID': crypto.randomUUID(),
+            'Idempotency-Key': crypto.randomUUID(),
+          },
+        },
+      )
       return payload as AsyncJob
     })
   }

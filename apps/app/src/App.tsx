@@ -37,12 +37,14 @@ import BurnUpChartTest from './components/BurnUpChartTest';
 import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuidePrototype';
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
 import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentReviewPrototype';
+import PracticeSummaryPrototype from './prototype/practice-summary/PracticeSummaryPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { MaterialLibrary } from './pages/materials/MaterialLibrary';
 import { MaterialCreate } from './pages/materials/MaterialCreate';
 import { MaterialDetail } from './pages/materials/MaterialDetail';
 import { PracticeThis } from './pages/materials/PracticeThis';
+import { PracticeRun } from './pages/practice/PracticeRun';
 import { AssessmentConfig } from './pages/assessments/AssessmentConfig';
 import { AssessmentDetail } from './pages/assessments/AssessmentDetail';
 import { DevSeeder } from './dev/DevSeeder';
@@ -180,6 +182,12 @@ function AppRoutes() {
           element={<AssessmentReviewPrototype />}
         />
       )}
+      {import.meta.env.DEV && (
+        <Route
+          path="/practice-summary-prototype"
+          element={<PracticeSummaryPrototype />}
+        />
+      )}
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
@@ -200,6 +208,7 @@ function AppRoutes() {
         <Route path="/materials/new" element={<MaterialCreate />} />
         <Route path="/materials/:materialId" element={<MaterialDetail />} />
         <Route path="/materials/:materialId/practice" element={<PracticeThis />} />
+        <Route path="/materials/:materialId/practice/:runId" element={<PracticeRun />} />
         <Route
           path="/materials/:materialId/view"
           element={

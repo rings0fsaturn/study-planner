@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 import logging
 import time
 import uuid
@@ -37,16 +36,14 @@ async def request_context_middleware(request: Request, call_next) -> Response:
     finally:
         latency_ms = round((time.perf_counter() - started) * 1000, 3)
         logger.info(
-            json.dumps(
-                {
-                    "request_id": request_id,
-                    "method": request.method,
-                    "path": request.url.path,
-                    "status": status,
-                    "latency_ms": latency_ms,
-                },
-                separators=(",", ":"),
-            )
+            "request",
+            extra={
+                "request_id": request_id,
+                "method": request.method,
+                "path": request.url.path,
+                "status": status,
+                "latency_ms": latency_ms,
+            },
         )
 
     response.headers["X-Request-ID"] = request_id

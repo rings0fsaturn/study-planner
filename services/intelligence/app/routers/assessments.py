@@ -181,6 +181,46 @@ def generate_assessment(
     return JSONResponse(status_code=202, content=async_job_from_row(job_row))
 
 
+@router.post("/assessments/{assessmentId}/regenerate")
+def regenerate_assessment(
+    assessmentId: str,
+    request: Request,
+    client: Annotated[UserScopedClient, Depends(get_user_client)],
+    user_id: str = Depends(require_user),  # noqa: ARG001
+) -> JSONResponse:
+    """Re-enqueue generation for an assessment stuck `generating`.
+
+    A practice-run pointer holds assessment ids immutably, so retrying a stuck
+    problem must re-queue the SAME assessment rather than mint a new one (the
+    `AssessmentDetail` navigate-away path cannot join a run). Reuses the
+    owner-checked `enqueue_assessment_generation` RPC; `failed` assessments are
+    terminal by contract (the worker's re-entry guard drops messages for
+    non-`generating` rows), so only `generating` is retryable here.
+    """
+    try:
+        assessment = client.get_assessment(assessmentId)
+        if (assessment.get("status") or "") != "generating":
+            return service_error(
+                request, IngestionError("conflict", "only a generating assessment can be retried")
+            )
+        material_id = str(assessment.get("material_id") or "")
+        material = client.get_material(material_id)
+        if (material.get("ingestion_state") or "pending") != "ready":
+            return service_error(
+                request, IngestionError("validation_failed", "material is not ready")
+            )
+    except IngestionError as exc:
+        return service_error(request, exc)
+
+    job_id = str(uuid.uuid4())
+    correlation_id = str(uuid.uuid4())
+    try:
+        job_row = client.enqueue_generation(assessmentId, job_id, material_id, correlation_id)
+    except IngestionError as exc:
+        return service_error(request, exc)
+    return JSONResponse(status_code=202, content=async_job_from_row(job_row))
+
+
 @router.get("/assessments/{assessmentId}")
 def get_assessment(
     assessmentId: str,
