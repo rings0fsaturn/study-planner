@@ -8,14 +8,21 @@ fail the job retryable, keep the assessment `generating`, and surface the
 failure as an assessment warning so the UI can offer retry/resume.
 `partial` is reserved for multi-question slices and is never produced here.
 
-Two question families ride this arm (#41): an objective recipe authors one
-MCQ (`mcq_schema(context_ids)`, answer block = correct index) and a written
+Three question families ride this arm (#41, #42): an objective recipe authors
+one MCQ (`mcq_schema(context_ids)`, answer block = correct index), a written
 recipe authors one written question plus its server-only rubric block
-(`written_schema(context_ids)`, migration 027 stores `format`/`subtype`).
-Both schemas are built per message and bind `citations[].chunkId` to the
-retrieved ids by enum, so a hallucinated chunk id cannot reach the citation
-gate. Everything else in the pipeline is shared: same context, same adapter,
-same one-repair policy, same completion RPC.
+(`written_schema(context_ids)`, migration 027 stores `format`/`subtype`), and
+a coding recipe authors one coding question (`coding_schema(context_ids)`,
+migration 031 stores the visible payload; hidden tests and the reference
+solution ride `answer_block`). Every schema is built per message and binds
+`citations[].chunkId` to the retrieved ids by enum, so a hallucinated chunk id
+cannot reach the citation gate. Everything else in the pipeline is shared:
+same context, same adapter, same one-repair policy, same completion RPC.
+
+Coding adds two rules of its own (D-04/D-05): the provider may judge the
+material unsuitable and return a `code_not_derivable` warning instead of a
+question, and every tests-bearing question must pass its own reference
+solution through the sandbox before it is stored (groundedness-over-count).
 
 Note on drop codes: a candidate dropped purely for the citation gate carries
 `Warning(code=citation_missing)`, while the job error_code and telemetry
@@ -35,15 +42,25 @@ from app.generation.context import CONTEXT_TOP_K
 from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
 from app.generation.openrouter_client import OpenRouterGenerationClient
 from app.generation.prompts import (
+    CODING_PROMPT_TEMPLATE_VERSION,
     WRITTEN_PROMPT_TEMPLATE_VERSION,
+    build_coding_messages,
     build_messages,
     build_written_messages,
+    coding_schema,
     mcq_schema,
     prompt_template_version,
     written_schema,
 )
 from app.generation.repo import GenerationRepo
-from app.generation.validation import validate_question, validate_written
+from app.generation.validation import validate_coding, validate_question, validate_written
+from app.grading.coding_grader import (
+    CODING_LANGUAGE,
+    MEMORY_MAX_MB,
+    OUTPUT_PREDICTION_SUBTYPE,
+    TIME_LIMIT_MAX_MS,
+)
+from app.grading.piston_client import RUN_PASSED, PistonClient
 from app.ingestion.models import IngestionError, QueueMessage
 from app.ingestion.queue import WorkQueue
 from app.ingestion.telemetry import TelemetryRecord, TelemetrySink, outcome_for_error_code
@@ -54,17 +71,39 @@ GENERATION_QUEUE = "assessment_generate"
 DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731"
 OBJECTIVE_FORMAT = "objective"
 WRITTEN_FORMAT = "written"
+CODING_FORMAT = "coding"
+
+_TEMPLATE_VERSIONS = {
+    WRITTEN_FORMAT: WRITTEN_PROMPT_TEMPLATE_VERSION,
+    CODING_FORMAT: CODING_PROMPT_TEMPLATE_VERSION,
+}
+
+# One arm per family: (message builder, response schema factory, validator).
+# An unknown format falls back to the objective arm so a stored recipe cannot
+# select an unvalidated path (the `_recipe_format` rule).
+_ARM = {
+    WRITTEN_FORMAT: (build_written_messages, written_schema, validate_written),
+    CODING_FORMAT: (build_coding_messages, coding_schema, validate_coding),
+}
+_OBJECTIVE_ARM = (build_messages, mcq_schema, validate_question)
+
+
+def _arm(question_format: str):
+    return _ARM.get(question_format, _OBJECTIVE_ARM)
 
 
 def _recipe_format(recipe: dict) -> str:
     """Question family this assessment generates (one family per assessment).
 
-    The recipe gate (`routers/assessments.py`) admits `['objective']` or
-    `['written']` only; anything else is treated as objective so a stored
-    recipe cannot select an unvalidated path.
+    The recipe gate (`routers/assessments.py`) admits `['objective']`,
+    `['written']`, or `['coding']`; anything else is treated as objective so a
+    stored recipe cannot select an unvalidated path.
     """
-    if list(recipe.get("formats") or []) == [WRITTEN_FORMAT]:
+    formats = list(recipe.get("formats") or [])
+    if formats == [WRITTEN_FORMAT]:
         return WRITTEN_FORMAT
+    if formats == [CODING_FORMAT]:
+        return CODING_FORMAT
     return OBJECTIVE_FORMAT
 
 
@@ -86,6 +125,66 @@ def _written_answer_block(accepted: dict) -> dict:
             for item in accepted["rubric"]
         ],
     }
+
+
+def _coding_answer_block(accepted: dict) -> dict:
+    """Server-only coding material written to `questions.answer_block`.
+
+    Only the authored keys are copied (the `_written_answer_block` rule): the
+    hidden tests and reference solution for tests-bearing subtypes, the
+    accepted value for output_prediction. Visible tests never appear here.
+    """
+    if str(accepted.get("subtype") or "") == OUTPUT_PREDICTION_SUBTYPE:
+        return {"acceptedValue": accepted["acceptedValue"]}
+    return {
+        "referenceSolution": str(accepted["referenceSolution"]),
+        "hiddenTests": [
+            {
+                "name": str(item["name"]),
+                "stdin": str(item["stdin"]),
+                "expectedOutput": str(item["expectedOutput"]),
+            }
+            for item in accepted["hiddenTests"]
+        ],
+    }
+
+
+def _coding_row(blueprint: GenerationBlueprint, accepted: dict) -> dict:
+    """The `questions` row for an accepted coding candidate (migration 031).
+
+    Visible payload goes to real columns (D-09): `language`, `starter_code`,
+    `visible_tests`. An output_prediction question reuses `starter_code` for
+    the snippet and carries no visible tests.
+    """
+    subtype = str(accepted["subtype"])
+    row = {
+        "id": str(uuid.uuid4()),
+        "assessment_id": blueprint.assessment_id,
+        "user_id": blueprint.owner_id,
+        "material_id": blueprint.material_id,
+        "format": CODING_FORMAT,
+        "subtype": subtype,
+        "prompt": str(accepted["stem"]),
+        "options": [],
+        "skill_tags": list(accepted["skillTags"]),
+        "authored_difficulty": int(accepted["difficulty"]),
+        "citations": list(accepted["citations"]),
+        "answer_block": _coding_answer_block(accepted),
+        "language": CODING_LANGUAGE,
+    }
+    if subtype == OUTPUT_PREDICTION_SUBTYPE:
+        row["starter_code"] = str(accepted["codeSnippet"])
+    else:
+        row["starter_code"] = str(accepted["starterCode"])
+        row["visible_tests"] = [
+            {
+                "name": str(item["name"]),
+                "stdin": str(item["stdin"]),
+                "expectedOutput": str(item["expectedOutput"]),
+            }
+            for item in accepted["visibleTests"]
+        ]
+    return row
 
 
 @dataclass(frozen=True)
@@ -119,6 +218,7 @@ class GenerationWorker:
         telemetry: TelemetrySink,
         config: GenerationWorkerConfig,
         context_builder: ContextBuilder,
+        sandbox: PistonClient | None = None,
     ) -> None:
         self._repo = repo
         self._queue = queue
@@ -126,6 +226,9 @@ class GenerationWorker:
         self._telemetry = telemetry
         self.config = config
         self._context_builder = context_builder
+        # The generation-time self-check runs the reference solution through
+        # the same sandbox client the grading arm uses (#42 P3).
+        self._sandbox = sandbox
 
     def run_once(self) -> int:
         messages = self._queue.poll(
@@ -173,7 +276,7 @@ class GenerationWorker:
         # unparseable one is treated as absent rather than crashing the job.
         scope = AssessmentScope.from_recipe(recipe)
         question_format = _recipe_format(recipe)
-        written = question_format == WRITTEN_FORMAT
+        coding = question_format == CODING_FORMAT
         blueprint = GenerationBlueprint(
             assessment_id=assessment_id,
             job_id=job_id,
@@ -183,8 +286,8 @@ class GenerationWorker:
             skill_tags=skill_tags,
             correlation_id=correlation_id,
             question_format=question_format,
-            prompt_template_version=(
-                WRITTEN_PROMPT_TEMPLATE_VERSION if written else prompt_template_version
+            prompt_template_version=_TEMPLATE_VERSIONS.get(
+                question_format, prompt_template_version
             ),
             scope=scope,
         )
@@ -247,9 +350,8 @@ class GenerationWorker:
 
         context_ids = {chunk.chunk_id for chunk in chunks}
         chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
-        build = build_written_messages if written else build_messages
-        validate = validate_written if written else validate_question
-        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
+        build, schema_for, validate = _arm(question_format)
+        schema = schema_for(context_ids)
         messages = build(blueprint, chunks, title=material.title)
         response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
         repair_attempted = False
@@ -272,7 +374,7 @@ class GenerationWorker:
                     context_ids,
                     chunk_texts,
                     repair_feedback=repair_feedback,
-                    written=written,
+                    question_format=question_format,
                 )
                 warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
@@ -288,14 +390,111 @@ class GenerationWorker:
                 context_ids,
                 chunk_texts,
                 repair_feedback=repair_feedback,
-                written=written,
+                question_format=question_format,
             )
             warnings = [*scope_warnings, *warnings]
             repair_attempted = True
 
+        if accepted is None and any(
+            w["code"] == "code_not_derivable" for w in warnings
+        ):
+            # The provider judged the material unsuitable (D-04): a legitimate
+            # answer, not a format failure, so no repair. The learner-facing
+            # reason rides the warning; the assessment fails with no question.
+            reason = next(
+                str(w["message"])
+                for w in warnings
+                if w["code"] == "code_not_derivable"
+            )
+            logger.info(
+                "coding generation %s unsuitable: %s",
+                assessment_id,
+                reason,
+                extra={"trace_id": correlation_id},
+            )
+            self._fail_assessment(
+                blueprint,
+                warnings=[{"code": "code_not_derivable", "message": reason}],
+                error_code="code_not_derivable",
+                error_message=reason,
+                retryable=False,
+                outcome="partial",
+                latency_ms=response.latency_ms,
+                repair_attempted=repair_attempted,
+                message_id=message.msg_id,
+            )
+            return
+
         if accepted is not None:
+            if coding:
+                try:
+                    failure = self._coding_self_check(blueprint, accepted)
+                except IngestionError as exc:
+                    if exc.retryable:
+                        # The sandbox is down (demand-start, rule 54): leave
+                        # the assessment generating with a warning so the
+                        # learner can retry once it is back.
+                        logger.warning(
+                            "coding self-check for assessment %s deferred (%s)",
+                            assessment_id,
+                            exc.code,
+                            extra={"trace_id": correlation_id},
+                        )
+                        self._mark_job_retryable(job_id, exc)
+                        self._repo.update_assessment_status(
+                            assessment_id,
+                            "generating",
+                            [{"code": exc.code, "message": exc.message}],
+                        )
+                        self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                        return
+                    # A non-retryable sandbox fault is our own bug: fail the
+                    # assessment closed with its own bucket rather than looping
+                    # the queue.
+                    logger.warning(
+                        "coding self-check for assessment %s failed closed (%s)",
+                        assessment_id,
+                        exc.code,
+                        extra={"trace_id": correlation_id},
+                    )
+                    self._fail_assessment(
+                        blueprint,
+                        warnings=[{"code": exc.code, "message": exc.message}],
+                        error_code=exc.code,
+                        error_message=exc.message,
+                        retryable=False,
+                        outcome=outcome_for_error_code(exc.code),
+                        latency_ms=response.latency_ms,
+                        repair_attempted=repair_attempted,
+                        message_id=message.msg_id,
+                    )
+                    return
+                if failure is not None:
+                    logger.warning(
+                        "coding self-check %s failed: %s",
+                        assessment_id,
+                        failure["message"],
+                        extra={"trace_id": correlation_id},
+                    )
+                    self._fail_assessment(
+                        blueprint,
+                        warnings=[failure],
+                        error_code="malformed_output",
+                        error_message=failure["message"],
+                        retryable=False,
+                        outcome="malformed_output",
+                        latency_ms=response.latency_ms,
+                        repair_attempted=repair_attempted,
+                        message_id=message.msg_id,
+                    )
+                    return
             self._accept_question(
-                blueprint, accepted, warnings, response, repair_attempted, written=written
+                blueprint,
+                accepted,
+                warnings,
+                response,
+                repair_attempted,
+                question_format=question_format,
             )
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
@@ -399,11 +598,10 @@ class GenerationWorker:
         chunk_texts: dict[str, str],
         *,
         repair_feedback: str,
-        written: bool,
+        question_format: str,
     ) -> tuple[dict | None, list[dict]]:
-        build = build_written_messages if written else build_messages
-        schema = written_schema(context_ids) if written else mcq_schema(context_ids)
-        validate = validate_written if written else validate_question
+        build, schema_for, validate = _arm(question_format)
+        schema = schema_for(context_ids)
         messages = build(
             blueprint,
             chunks,
@@ -418,6 +616,51 @@ class GenerationWorker:
             return validate(repaired.structured_output, blueprint, context_ids, chunk_texts)
         return None, [{"code": "malformed_output", "message": "repair validation failed"}]
 
+    def _coding_self_check(
+        self, blueprint: GenerationBlueprint, accepted: dict
+    ) -> dict | None:
+        """Run the reference solution over every authored test (D-05).
+
+        Returns None when the reference passes all tests, a `self_check_failed`
+        warning (passed/total + first failing test name, never content) when it
+        does not, and raises `IngestionError` when the sandbox itself is
+        unavailable. `output_prediction` has nothing to execute and always
+        passes. Contract-max limits are passed in; the client clamps them to
+        the configured ceilings.
+        """
+        if str(accepted.get("subtype") or "") == OUTPUT_PREDICTION_SUBTYPE:
+            return None
+        if self._sandbox is None:
+            raise IngestionError(
+                "provider_unavailable",
+                "coding self-check requires a sandbox client",
+                retryable=True,
+            )
+        tests = [*accepted["visibleTests"], *accepted["hiddenTests"]]
+        passed = 0
+        for index, test in enumerate(tests, start=1):
+            run = self._sandbox.execute(
+                source=str(accepted["referenceSolution"]),
+                stdin=str(test.get("stdin") or ""),
+                expected_output=str(test.get("expectedOutput") or ""),
+                time_limit_ms=TIME_LIMIT_MAX_MS,
+                memory_limit_mb=MEMORY_MAX_MB,
+                attempt_id=blueprint.assessment_id,
+                test_index=index,
+                trace_id=blueprint.correlation_id,
+            )
+            if run.outcome != RUN_PASSED:
+                name = str(test.get("name") or f"test {index}")
+                return {
+                    "code": "self_check_failed",
+                    "message": (
+                        f"reference solution passed {passed}/{len(tests)} tests; "
+                        f"first failure: {name} ({run.outcome})"
+                    ),
+                }
+            passed += 1
+        return None
+
     def _accept_question(
         self,
         blueprint: GenerationBlueprint,
@@ -426,9 +669,11 @@ class GenerationWorker:
         response,
         repair_attempted: bool,
         *,
-        written: bool,
+        question_format: str,
     ) -> None:
-        if written:
+        if question_format == CODING_FORMAT:
+            question_row = _coding_row(blueprint, accepted)
+        elif question_format == WRITTEN_FORMAT:
             question_row = {
                 "id": str(uuid.uuid4()),
                 "assessment_id": blueprint.assessment_id,

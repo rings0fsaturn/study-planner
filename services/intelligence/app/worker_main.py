@@ -96,8 +96,13 @@ def _build_openrouter_adapter(prefix: str, schema_name: str):
     )
 
 
-def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry):
-    """Construct the generation arm from GENERATION_* env (D-08 defaults)."""
+def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry, sandbox=None):
+    """Construct the generation arm from GENERATION_* env (D-08 defaults).
+
+    `sandbox` is the Piston client the coding self-check runs the reference
+    solution through (the same instance the grading arm executes learner
+    submissions with).
+    """
     from app.generation.context import build_context
     from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 
@@ -116,6 +121,7 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
         adapter=adapter,
         telemetry=telemetry,
         context_builder=context_builder,
+        sandbox=sandbox,
         config=GenerationWorkerConfig(
             poll_interval_seconds=float(os.getenv("GENERATION_POLL_INTERVAL_SECONDS", "1")),
             visibility_seconds=int(os.getenv("GENERATION_VISIBILITY_SECONDS", "90")),
@@ -212,17 +218,21 @@ def main() -> None:
             max_tokens_per_minute=max_tokens_per_minute,
         ),
     )
+    # One sandbox client for both arms: the generation self-check and the
+    # grading execution talk to the same Piston (demand-started, rule 54).
+    sandbox = _build_piston_client()
     generation_worker = _build_generation_worker(
         shared_client,
         repo,
         queue,
         SupabaseTelemetrySink(supabase_url, service_role_key, client=shared_client),
+        sandbox=sandbox,
     )
     grading_worker = _build_grading_worker(
         repo,
         queue,
         _build_openrouter_adapter("GRADING", "written_rubric"),
-        _build_piston_client(),
+        sandbox,
     )
 
     logger.info("ingestion worker starting against %s", supabase_url)

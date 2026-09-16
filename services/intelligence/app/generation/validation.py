@@ -8,7 +8,9 @@ in-context citations is dropped with `citation_missing`.
 
 Objective (MCQ) and written candidates share the citation half, so a written
 question is grounded exactly like an objective one; only the format gate and
-the accepted row shape differ.
+the accepted row shape differ. The coding arm (#42) reuses the same citation
+gate and adds a branch-aware format gate plus the judge rejection, which is a
+legitimate answer rather than a format failure.
 """
 
 from __future__ import annotations
@@ -16,6 +18,17 @@ from __future__ import annotations
 import re
 
 from app.generation.models import GenerationBlueprint
+from app.generation.prompts import (
+    CODING_SUBTYPES,
+    MIN_VISIBLE_TESTS,
+    TESTS_BEARING_SUBTYPES,
+)
+from app.grading.coding_grader import (
+    CODING_LANGUAGE,
+    CODING_STDIN_MAX_LENGTH,
+    MAX_HIDDEN_TESTS,
+    MAX_VISIBLE_TESTS,
+)
 
 WRITTEN_SUBTYPES = ("short_answer", "long_form")
 # Authored rubric weights are floats the model composes to 1 in prose; a small
@@ -200,6 +213,145 @@ def validate_written(
 ) -> tuple[dict | None, list[dict]]:
     """Written-arm counterpart of `validate_question` (#41, same contract)."""
     failures = written_format_failures(candidate, blueprint)
+    if failures:
+        return None, [{"code": "malformed_output", "message": "; ".join(failures)}]
+
+    verified, warnings = _verified_citations(
+        candidate, context_ids, chunk_texts, blueprint.material_id
+    )
+    if verified is None:
+        return None, warnings
+    return {**candidate, "citations": verified}, warnings
+
+
+# --- #42 coding arm ---
+
+# Models habitually fence code even when asked not to, and a fenced reference
+# solution would fail the generation self-check with a SyntaxError for no
+# product reason. Only a fence wrapping the whole string is stripped.
+_CODE_FIELDS = ("referenceSolution", "starterCode", "codeSnippet")
+_FENCE_RE = re.compile(r"^\s*```[^\n]*\n(?P<body>.*?)\n?```\s*$", re.DOTALL)
+
+
+def strip_code_fence(text: str) -> str:
+    """Unwrap one markdown fence that wraps the entire string, else pass through."""
+    match = _FENCE_RE.match(text)
+    return match.group("body") if match else text
+
+
+def _unfenced(candidate: dict) -> dict:
+    """A copy of the candidate with fenced code fields unwrapped."""
+    normalized = dict(candidate)
+    for field in _CODE_FIELDS:
+        value = normalized.get(field)
+        if isinstance(value, str):
+            normalized[field] = strip_code_fence(value)
+    return normalized
+
+
+def _test_failures(raw: object, what: str, *, minimum: int, maximum: int) -> list[str]:
+    """Shape failures for one authored test list (empty means usable)."""
+    if not isinstance(raw, list) or not raw:
+        return [f"{what}_missing"]
+    if not minimum <= len(raw) <= maximum:
+        return [f"{what}_count"]
+    for item in raw:
+        if not isinstance(item, dict):
+            return [f"{what}_invalid"]
+        name = item.get("name")
+        stdin = item.get("stdin")
+        expected = item.get("expectedOutput")
+        if not isinstance(name, str) or not name.strip():
+            return [f"{what}_invalid"]
+        if not isinstance(stdin, str) or len(stdin) > CODING_STDIN_MAX_LENGTH:
+            return [f"{what}_invalid"]
+        if not isinstance(expected, str) or len(expected) > CODING_STDIN_MAX_LENGTH:
+            return [f"{what}_invalid"]
+    return []
+
+
+def coding_format_failures(candidate: dict, blueprint: GenerationBlueprint) -> list[str]:
+    """Hard format-gate failures for one coding candidate (#42).
+
+    The `subtype` decides the branch: tests-bearing candidates need a language,
+    starter code, both test lists, and a reference solution; an
+    `output_prediction` candidate needs a snippet and a numeric accepted value.
+    An invalid subtype fails fast, like the written rubric gate.
+    """
+    if not isinstance(candidate, dict):
+        return ["not_an_object"]
+    failures: list[str] = []
+    stem = candidate.get("stem")
+    if not isinstance(stem, str) or not stem.strip():
+        failures.append("stem_missing")
+    difficulty = candidate.get("difficulty")
+    if not isinstance(difficulty, int) or difficulty != blueprint.difficulty:
+        failures.append("difficulty_mismatch")
+    skill_tags = candidate.get("skillTags")
+    if not isinstance(skill_tags, list) or not skill_tags:
+        failures.append("skillTags_invalid")
+    elif not all(isinstance(tag, str) and tag.strip() for tag in skill_tags):
+        failures.append("skillTags_invalid")
+    subtype = candidate.get("subtype")
+    if subtype not in CODING_SUBTYPES:
+        return [*failures, "subtype_invalid"]
+    if subtype in TESTS_BEARING_SUBTYPES:
+        if candidate.get("language") != CODING_LANGUAGE:
+            failures.append("language_invalid")
+        starter = candidate.get("starterCode")
+        if not isinstance(starter, str) or not starter.strip():
+            failures.append("starter_code_missing")
+        failures.extend(
+            _test_failures(
+                candidate.get("visibleTests"),
+                "visible_tests",
+                minimum=MIN_VISIBLE_TESTS,
+                maximum=MAX_VISIBLE_TESTS,
+            )
+        )
+        failures.extend(
+            _test_failures(
+                candidate.get("hiddenTests"),
+                "hidden_tests",
+                minimum=1,
+                maximum=MAX_HIDDEN_TESTS,
+            )
+        )
+        reference = candidate.get("referenceSolution")
+        if not isinstance(reference, str) or not reference.strip():
+            failures.append("reference_solution_missing")
+    else:
+        snippet = candidate.get("codeSnippet")
+        if not isinstance(snippet, str) or not snippet.strip():
+            failures.append("code_snippet_missing")
+        accepted = candidate.get("acceptedValue")
+        if isinstance(accepted, bool) or not isinstance(accepted, (int, float)):
+            failures.append("accepted_value_invalid")
+    return failures
+
+
+def validate_coding(
+    candidate: dict,
+    blueprint: GenerationBlueprint,
+    context_ids: set[str],
+    chunk_texts: dict[str, str],
+) -> tuple[dict | None, list[dict]]:
+    """Coding-arm counterpart of `validate_question` (#42, same contract).
+
+    The judge rejection short-circuits before format and citation checks: it is
+    a legitimate answer (the material cannot ground a coding question) and
+    travels to the caller as a `code_not_derivable` warning carrying the
+    learner-facing reason. Everything else follows the shared contract.
+    """
+    if not isinstance(candidate, dict):
+        return None, [{"code": "malformed_output", "message": "not_an_object"}]
+    if candidate.get("unsuitable") is True:
+        reason = str(candidate.get("reason") or "").strip()
+        if not reason:
+            reason = "this material does not support a grounded coding question"
+        return None, [{"code": "code_not_derivable", "message": reason}]
+    candidate = _unfenced(candidate)
+    failures = coding_format_failures(candidate, blueprint)
     if failures:
         return None, [{"code": "malformed_output", "message": "; ".join(failures)}]
 

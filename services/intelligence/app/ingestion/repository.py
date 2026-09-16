@@ -200,6 +200,8 @@ class SupabaseIngestionRepo:
         outline: dict | None = None,
         page_count: int | None = None,
         page_offset: int | None = None,
+        has_code: bool | None = None,
+        code_languages: list[str] | None = None,
     ) -> None:
         payload: dict[str, object] = {
             "ingestion_state": state,
@@ -220,6 +222,13 @@ class SupabaseIngestionRepo:
             payload["page_count"] = page_count
         if page_offset is not None:
             payload["page_offset"] = page_offset
+        # `is not None` on purpose: a scanned material with no code fences
+        # writes `has_code: false` / `code_languages: []` (D-10); NULL stays
+        # reserved for "never scanned".
+        if has_code is not None:
+            payload["has_code"] = has_code
+        if code_languages is not None:
+            payload["code_languages"] = code_languages
         self._patch(
             f"{self._base}/rest/v1/{MATERIALS_TABLE}?id=eq.{material_id}",
             payload,

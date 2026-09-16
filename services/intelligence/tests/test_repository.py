@@ -280,6 +280,8 @@ def test_set_material_state_patch_shape() -> None:
         0.5,
         chunk_count=4,
         extracted_text_path="user/mat/fulltext.txt",
+        has_code=True,
+        code_languages=["python"],
     )
 
     assert captured["body"] == {
@@ -288,7 +290,27 @@ def test_set_material_state_patch_shape() -> None:
         "ingestion_error": None,
         "chunk_count": 4,
         "extracted_text_path": "user/mat/fulltext.txt",
+        "has_code": True,
+        "code_languages": ["python"],
     }
+
+
+def test_set_material_state_writes_false_code_signal() -> None:
+    # A scanned material with no fences writes `has_code: false` (D-10); only
+    # NULL stays reserved for "never scanned", so `is not None` gates the key.
+    captured: dict[str, object] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["body"] = json.loads(request.content)
+        return httpx.Response(204, content=b"")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    repo.set_material_state("mat-1", "chunking", 0.5, has_code=False, code_languages=[])
+
+    assert captured["body"]["has_code"] is False
+    assert captured["body"]["code_languages"] == []
 
 
 def test_set_material_state_failure_clears_error() -> None:

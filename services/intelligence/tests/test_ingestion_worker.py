@@ -172,6 +172,32 @@ def test_stores_a_viewer_copy_only_when_the_pdf_needed_repair() -> None:
     assert "user-1/mat-1/view-v1.pdf" not in storage.objects
 
 
+def test_extract_derives_the_code_bearing_signal() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material(
+        source="theory text\n```python\nprint(1)\n```\nmore text"
+    )
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+
+    row = repo.materials["mat-1"]
+    assert row["ingestion_state"] == "chunking"
+    assert row["has_code"] is True
+    assert row["code_languages"] == ["python"]
+
+
+def test_extract_derives_no_code_signal_for_plain_text() -> None:
+    worker, repo, queue, _ = make_worker()
+    material = make_material(source="only prose, no fences")
+    seed_and_enqueue(repo, queue, material)
+    worker.run_once(EXTRACT_QUEUE)
+
+    row = repo.materials["mat-1"]
+    assert row["ingestion_state"] == "chunking"
+    assert row["has_code"] is False
+    assert row["code_languages"] == []
+
+
 def test_max_in_flight_bounds_messages_processed_per_cycle() -> None:
     worker, repo, queue, _ = make_worker(max_in_flight=1)
     job_ids = []

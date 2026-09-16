@@ -17,6 +17,7 @@ from dataclasses import dataclass, replace
 from typing import Protocol
 
 from .chunking import chunk_segments, document_segments
+from .code_signal import scan_code_blocks
 from .embeddings import DEFAULT_BATCH_SIZE, EMBEDDING_MODEL, Embedder
 from .extractors import (
     Fetcher,
@@ -358,6 +359,10 @@ class IngestionWorker:
             bookmarks=content.bookmarks,
             page_count=len(content.pages),
         )
+        # D-04/D-10: the code-bearing signal comes from the same parse, so it
+        # is derived here instead of in its own stage. The generation prompt
+        # stays the real judge; this flag only powers the UI copy.
+        has_code, code_languages = scan_code_blocks(content.text)
         fulltext_path = f"{material.owner_id}/{material.id}/fulltext.txt"
         self.storage.upload(fulltext_path, content.text.encode("utf-8"), "text/plain")
         if content.viewer_pdf is not None:
@@ -440,6 +445,8 @@ class IngestionWorker:
             outline=outline.to_json() if outline else None,
             page_count=outline.page_count if outline else None,
             page_offset=outline.page_offset if outline else None,
+            has_code=has_code,
+            code_languages=code_languages,
         )
         self.queue.send(
             EMBED_QUEUE,
