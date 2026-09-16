@@ -85,6 +85,9 @@ services:
       GENERATION_MAX_OUTPUT_TOKENS: ${GENERATION_MAX_OUTPUT_TOKENS:-4096}
       GENERATION_TEMPERATURE: ${GENERATION_TEMPERATURE:-0.3}
       GENERATION_REASONING_EFFORT: ${GENERATION_REASONING_EFFORT:-off}
+      # Coding grading reaches the sandbox via service DNS when the `sandbox`
+      # profile is running; a stopped sandbox makes coding grades retryable.
+      PISTON_URL: ${PISTON_URL:-http://piston:2000}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -97,3 +100,55 @@ services:
       retries: 3
       start_period: 15s
     restart: unless-stopped
+
+  # Code-execution sandbox (#42, D-02 → Piston fallback, recorded 2026-09-16).
+  # Demand-started profile: plain `docker-app start` skips it; bring it up with
+  # `docker compose --profile sandbox up -d` (or COMPOSE_PROFILES=sandbox
+  # ./docker-app start) and stop it when no grading work is pending (rule 54
+  # pattern). Loopback publish keeps the execution API off the LAN; the
+  # containerized worker reaches it via the service DNS name instead
+  # (PISTON_URL on ingestion-worker).
+  #
+  # Judge0 CE was rejected at the P2 isolate gate: its bundled isolate 1.8.1
+  # is cgroup-v1-only and this Docker Desktop/WSL2 host is cgroup-v2-only
+  # (status 13 Internal Error on every submission). Piston (MIT, cgroup v2)
+  # is the plan's recorded fallback; the grading arm talks verdicts, so the
+  # swap is confined to the client module.
+  #
+  # The Python runtime is installed on first use (persists in the
+  # piston-packages volume):
+  #   curl -X POST http://127.0.0.1:2000/api/v2/packages \
+  #     -H 'Content-Type: application/json' -d '{"language":"python","version":"3.12.0"}'
+  piston:
+    image: ghcr.io/engineer-man/piston
+    profiles: ["sandbox"]
+    privileged: true
+    environment:
+      PORT: 2000
+      # Server-side ceilings the per-request limits must stay under; the
+      # client clamps learner requests to its own (lower) pins first.
+      PISTON_RUN_TIMEOUT: 20000
+      PISTON_RUN_CPU_TIME: 20000
+      PISTON_RUN_MEMORY_LIMIT: 268435456
+    ports:
+      - "127.0.0.1:2000:2000"
+    # Operator-local egress workaround: this host's network filters some GitHub
+    # CDN IPs (rule 52 pattern); node keeps resolving the package index to
+    # 185.199.109.133 (refused). Pin a working CDN IP for the install-time
+    # download only. Re-check with: curl -sI https://release-assets.githubusercontent.com/
+    extra_hosts:
+      - "release-assets.githubusercontent.com:185.199.108.133"
+    volumes:
+      - piston-packages:/piston/packages
+    tmpfs:
+      - /tmp:exec
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:2000/api/v2/runtimes',r=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  piston-packages:

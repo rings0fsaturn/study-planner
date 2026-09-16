@@ -162,3 +162,66 @@ def test_build_grading_worker_parses_grading_env_overrides(
     assert worker.config.poll_interval_seconds == 3.0
     assert worker.config.visibility_seconds == 45
     assert worker.config.max_in_flight == 2
+
+
+def test_build_grading_worker_wires_the_sandbox_client() -> None:
+    """#42: the coding arm receives the sandbox client; absent by default."""
+    sentinel = object()
+    worker = worker_main._build_grading_worker(object(), object(), object(), sentinel)
+    assert worker._sandbox is sentinel
+
+    without = worker_main._build_grading_worker(object(), object(), object())
+    assert without._sandbox is None
+
+
+def test_build_piston_client_parses_env_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    def fake_client_factory(**kwargs):
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr("app.grading.piston_client.PistonClient", fake_client_factory)
+    for name in (
+        "PISTON_URL",
+        "PISTON_PYTHON_VERSION",
+        "PISTON_HTTP_TIMEOUT_MS",
+        "PISTON_MAX_CPU_TIME_MS",
+        "PISTON_WALL_TIME_EXTRA_MS",
+        "PISTON_MAX_MEMORY_MB",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    worker_main._build_piston_client()
+
+    assert captured["base_url"] == "http://127.0.0.1:2000"
+    assert captured["python_version"] == "3.12.0"
+    assert captured["http_timeout_seconds"] == 60.0
+    assert captured["max_cpu_time_ms"] == 15000
+    assert captured["wall_time_extra_ms"] == 1000
+    assert captured["max_memory_mb"] == 256
+
+
+def test_build_piston_client_parses_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict = {}
+
+    def fake_client_factory(**kwargs):
+        captured.update(kwargs)
+        return object()
+
+    monkeypatch.setattr("app.grading.piston_client.PistonClient", fake_client_factory)
+    monkeypatch.setenv("PISTON_URL", "http://piston:2000")
+    monkeypatch.setenv("PISTON_PYTHON_VERSION", "3.11.0")
+    monkeypatch.setenv("PISTON_HTTP_TIMEOUT_MS", "90000")
+    monkeypatch.setenv("PISTON_MAX_CPU_TIME_MS", "5000")
+    monkeypatch.setenv("PISTON_WALL_TIME_EXTRA_MS", "500")
+    monkeypatch.setenv("PISTON_MAX_MEMORY_MB", "512")
+
+    worker_main._build_piston_client()
+
+    assert captured["base_url"] == "http://piston:2000"
+    assert captured["python_version"] == "3.11.0"
+    assert captured["http_timeout_seconds"] == 90.0
+    assert captured["max_cpu_time_ms"] == 5000
+    assert captured["wall_time_extra_ms"] == 500
+    assert captured["max_memory_mb"] == 512
