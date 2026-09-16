@@ -1,0 +1,542 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-16T00:00:00.000Z",
+  "title": "Design System: Study Tracker",
+  "extensions": {
+    "colorMeta": {
+      "fired-clay": {
+        "role": "primary",
+        "displayName": "Fired Clay",
+        "canonical": "#B85C38",
+        "tonalRamp": [
+          "oklch(0.15 0.05 40)",
+          "oklch(0.25 0.08 40)",
+          "oklch(0.35 0.11 40)",
+          "oklch(0.45 0.13 40)",
+          "oklch(0.55 0.15 40)",
+          "oklch(0.65 0.13 40)",
+          "oklch(0.78 0.09 40)",
+          "oklch(0.9 0.04 40)"
+        ]
+      },
+      "fired-clay-deep": {
+        "role": "primary",
+        "displayName": "Fired Clay Deep",
+        "canonical": "#8E4429",
+        "tonalRamp": [
+          "oklch(0.12 0.04 40)",
+          "oklch(0.2 0.06 40)",
+          "oklch(0.3 0.09 40)",
+          "oklch(0.4 0.11 40)",
+          "oklch(0.5 0.13 40)",
+          "oklch(0.6 0.11 40)",
+          "oklch(0.74 0.08 40)",
+          "oklch(0.88 0.03 40)"
+        ]
+      },
+      "quiet-moss": {
+        "role": "secondary",
+        "displayName": "Quiet Moss",
+        "canonical": "#4A6B3A",
+        "tonalRamp": [
+          "oklch(0.18 0.05 145)",
+          "oklch(0.28 0.07 145)",
+          "oklch(0.38 0.09 145)",
+          "oklch(0.48 0.09 145)",
+          "oklch(0.58 0.08 145)",
+          "oklch(0.68 0.07 145)",
+          "oklch(0.8 0.05 145)",
+          "oklch(0.92 0.02 145)"
+        ]
+      },
+      "moss-soft": {
+        "role": "secondary",
+        "displayName": "Moss Soft",
+        "canonical": "#7A9362",
+        "tonalRamp": [
+          "oklch(0.2 0.05 145)",
+          "oklch(0.3 0.07 145)",
+          "oklch(0.4 0.08 145)",
+          "oklch(0.5 0.08 145)",
+          "oklch(0.6 0.07 145)",
+          "oklch(0.7 0.06 145)",
+          "oklch(0.82 0.04 145)",
+          "oklch(0.94 0.02 145)"
+        ]
+      },
+      "rust-ink": {
+        "role": "tertiary",
+        "displayName": "Rust Ink",
+        "canonical": "#A0432A",
+        "tonalRamp": [
+          "oklch(0.15 0.04 30)",
+          "oklch(0.25 0.06 30)",
+          "oklch(0.35 0.08 30)",
+          "oklch(0.45 0.1 30)",
+          "oklch(0.55 0.12 30)",
+          "oklch(0.65 0.1 30)",
+          "oklch(0.78 0.07 30)",
+          "oklch(0.9 0.03 30)"
+        ]
+      },
+      "clay": {
+        "role": "tertiary",
+        "displayName": "Clay",
+        "canonical": "#C28E5A",
+        "tonalRamp": [
+          "oklch(0.2 0.05 70)",
+          "oklch(0.3 0.07 70)",
+          "oklch(0.4 0.09 70)",
+          "oklch(0.5 0.1 70)",
+          "oklch(0.6 0.09 70)",
+          "oklch(0.7 0.07 70)",
+          "oklch(0.82 0.05 70)",
+          "oklch(0.94 0.02 70)"
+        ]
+      },
+      "cream-paper": {
+        "role": "neutral",
+        "displayName": "Cream Paper",
+        "canonical": "#F5EFE4",
+        "tonalRamp": [
+          "oklch(0.4 0.03 80)",
+          "oklch(0.5 0.03 80)",
+          "oklch(0.6 0.025 80)",
+          "oklch(0.7 0.02 80)",
+          "oklch(0.8 0.015 80)",
+          "oklch(0.88 0.01 80)",
+          "oklch(0.93 0.008 80)",
+          "oklch(0.97 0.005 80)"
+        ]
+      },
+      "paper-deep": {
+        "role": "neutral",
+        "displayName": "Paper Deep",
+        "canonical": "#EDE3D2",
+        "tonalRamp": [
+          "oklch(0.4 0.025 80)",
+          "oklch(0.5 0.025 80)",
+          "oklch(0.6 0.02 80)",
+          "oklch(0.7 0.015 80)",
+          "oklch(0.8 0.012 80)",
+          "oklch(0.88 0.01 80)",
+          "oklch(0.93 0.008 80)",
+          "oklch(0.97 0.005 80)"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card",
+        "canonical": "#FBF7EE",
+        "tonalRamp": [
+          "oklch(0.5 0.02 80)",
+          "oklch(0.6 0.02 80)",
+          "oklch(0.7 0.015 80)",
+          "oklch(0.78 0.012 80)",
+          "oklch(0.85 0.01 80)",
+          "oklch(0.9 0.008 80)",
+          "oklch(0.95 0.005 80)",
+          "oklch(0.98 0.003 80)"
+        ]
+      },
+      "warm-ink": {
+        "role": "neutral",
+        "displayName": "Warm Ink",
+        "canonical": "#2A1F18",
+        "tonalRamp": [
+          "oklch(0.1 0.01 60)",
+          "oklch(0.15 0.012 60)",
+          "oklch(0.22 0.015 60)",
+          "oklch(0.3 0.02 60)",
+          "oklch(0.4 0.025 60)",
+          "oklch(0.52 0.025 60)",
+          "oklch(0.68 0.02 60)",
+          "oklch(0.85 0.01 60)"
+        ]
+      },
+      "ink-soft": {
+        "role": "neutral",
+        "displayName": "Ink Soft",
+        "canonical": "#5C4D40",
+        "tonalRamp": [
+          "oklch(0.1 0.01 60)",
+          "oklch(0.16 0.015 60)",
+          "oklch(0.25 0.02 60)",
+          "oklch(0.35 0.022 60)",
+          "oklch(0.46 0.025 60)",
+          "oklch(0.58 0.022 60)",
+          "oklch(0.72 0.015 60)",
+          "oklch(0.88 0.008 60)"
+        ]
+      },
+      "ink-faint": {
+        "role": "neutral",
+        "displayName": "Ink Faint",
+        "canonical": "#6F6252",
+        "tonalRamp": [
+          "oklch(0.15 0.015 60)",
+          "oklch(0.22 0.018 60)",
+          "oklch(0.32 0.02 60)",
+          "oklch(0.42 0.022 60)",
+          "oklch(0.53 0.022 60)",
+          "oklch(0.64 0.018 60)",
+          "oklch(0.76 0.012 60)",
+          "oklch(0.9 0.006 60)"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#D9CDB8",
+        "tonalRamp": [
+          "oklch(0.3 0.015 80)",
+          "oklch(0.4 0.015 80)",
+          "oklch(0.5 0.015 80)",
+          "oklch(0.6 0.012 80)",
+          "oklch(0.7 0.01 80)",
+          "oklch(0.8 0.008 80)",
+          "oklch(0.9 0.005 80)",
+          "oklch(0.97 0.003 80)"
+        ]
+      },
+      "rule-soft": {
+        "role": "neutral",
+        "displayName": "Rule Soft",
+        "canonical": "#E6DCC8",
+        "tonalRamp": [
+          "oklch(0.35 0.012 80)",
+          "oklch(0.45 0.012 80)",
+          "oklch(0.55 0.01 80)",
+          "oklch(0.65 0.008 80)",
+          "oklch(0.75 0.007 80)",
+          "oklch(0.85 0.005 80)",
+          "oklch(0.93 0.003 80)",
+          "oklch(0.98 0.002 80)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headlines on the marketing site; rare in the app."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles and the home greeting."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles and section headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Primary reading text; never tighter than 1.5 line-height."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Metadata, timestamps, units, eyebrows, stat labels; the only place caps belong."
+      }
+    },
+    "shadows": [
+      {
+        "name": "shadow-sm",
+        "value": "0 1px 0 rgba(42,31,24,0.04), 0 2px 4px rgba(42,31,24,0.04)",
+        "purpose": "Resting elevation for elevated cards and default buttons."
+      },
+      {
+        "name": "shadow-md",
+        "value": "0 1px 0 rgba(42,31,24,0.05), 0 6px 16px rgba(42,31,24,0.06)",
+        "purpose": "Hovered or raised surfaces."
+      },
+      {
+        "name": "shadow-modal",
+        "value": "0 1px 0 rgba(42,31,24,0.05), 0 24px 48px -16px rgba(42,31,24,0.18)",
+        "purpose": "The one elevated moment, for modals."
+      },
+      {
+        "name": "shadow-inset-faint",
+        "value": "inset 0 0 0 1px rgba(42,31,24,0.04)",
+        "purpose": "Subtle inset definition for recessed wells."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Default easing for state transitions (color, border)."
+      },
+      {
+        "name": "ease-in-out",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Standard in-out easing."
+      },
+      {
+        "name": "ease-spring",
+        "value": "cubic-bezier(0.34, 1.36, 0.64, 1)",
+        "purpose": "Playful one-shot moments (boot mark dot-in)."
+      },
+      {
+        "name": "duration-1",
+        "value": "100ms",
+        "purpose": "Press feedback."
+      },
+      {
+        "name": "duration-2",
+        "value": "160ms",
+        "purpose": "Hover color shifts on buttons and links."
+      },
+      {
+        "name": "duration-3",
+        "value": "240ms",
+        "purpose": "Progress fills."
+      },
+      {
+        "name": "duration-4",
+        "value": "360ms",
+        "purpose": "Larger transitions."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "< 480px",
+        "purpose": "Phone portrait, single column, 16px edge gutter; the default design target."
+      },
+      {
+        "name": "phablet",
+        "value": "480 - 767px",
+        "purpose": "Larger phones; same layout with a little more room."
+      },
+      {
+        "name": "tablet",
+        "value": "768 - 1023px",
+        "purpose": "Still mobile shape, 480px max content centered."
+      },
+      {
+        "name": "desktop",
+        "value": "1024 - 1399px",
+        "purpose": "Four screens shift to genuine desktop layouts; everything else column-shaped at 640-680px."
+      },
+      {
+        "name": "wide",
+        "value": "1400px+",
+        "purpose": "Generous gutters; content does not keep widening."
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Accent Button",
+      "kind": "button",
+      "refersTo": "button-accent",
+      "description": "The one action the user is most meant to take on the screen; Fired Clay means act on this.",
+      "html": "<button class=\"ds-btn-accent\">Start now</button>",
+      "css": ".ds-btn-accent { font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: -0.005em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--action-accent); color: var(--paper); box-shadow: var(--shadow-sm); cursor: pointer; line-height: 1; transition: background 160ms cubic-bezier(0.2,0,0,1), color 160ms cubic-bezier(0.2,0,0,1), transform 100ms cubic-bezier(0.2,0,0,1); } .ds-btn-accent:hover { background: var(--action-accent-hover); } .ds-btn-accent:active { transform: translateY(1px); } .ds-btn-accent:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Alternative actions, cancel, edit, manage; transparent with a rule border.",
+      "html": "<button class=\"ds-btn-secondary\">Edit</button>",
+      "css": ".ds-btn-secondary { font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: -0.005em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 18px; border: 1px solid var(--rule); border-radius: var(--radius-md); background: transparent; color: var(--ink); cursor: pointer; line-height: 1; transition: background 160ms cubic-bezier(0.2,0,0,1), border-color 160ms cubic-bezier(0.2,0,0,1); } .ds-btn-secondary:hover { background: var(--paper-deep); border-color: var(--ink-faint); } .ds-btn-secondary:active { transform: translateY(1px); } .ds-btn-secondary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }"
+    },
+    {
+      "name": "Ghost-dark Button",
+      "kind": "button",
+      "refersTo": "button-ghost-dark",
+      "description": "Secondary action on inverted surfaces, such as the Up-next card.",
+      "html": "<button class=\"ds-btn-ghost-dark\">Reschedule</button>",
+      "css": ".ds-btn-ghost-dark { font-family: var(--font-body); font-size: 15px; font-weight: 500; letter-spacing: -0.005em; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 11px 16px; border: 1px solid rgba(245,239,228,0.2); border-radius: var(--radius-md); background: transparent; color: var(--paper); cursor: pointer; line-height: 1; transition: background 160ms cubic-bezier(0.2,0,0,1), border-color 160ms cubic-bezier(0.2,0,0,1); } .ds-btn-ghost-dark:hover { background: rgba(245,239,228,0.08); border-color: rgba(245,239,228,0.35); } .ds-btn-ghost-dark:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Text input with a mono caps label above; focus shifts the border to Warm Ink with a faint halo.",
+      "html": "<div style=\"max-width: 320px; font-family: var(--font-body);\"><label class=\"ds-field-label\">Topic you're studying</label><input class=\"ds-field\" type=\"text\" placeholder=\"Placeholder text\"/></div>",
+      "css": ".ds-field-label { display: block; font-family: var(--font-mono); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-tertiary); margin-bottom: 6px; } .ds-field { width: 100%; box-sizing: border-box; background: var(--surface-page); border: 1px solid var(--rule); border-radius: var(--radius-md); padding: 11px 14px; font-family: var(--font-body); font-size: 15px; color: var(--ink); line-height: 1.4; transition: border-color 160ms cubic-bezier(0.2,0,0,1), box-shadow 160ms cubic-bezier(0.2,0,0,1); } .ds-field::placeholder { color: var(--ink-faint); } .ds-field:hover { border-color: var(--ink-faint); } .ds-field:focus { outline: none; border-color: var(--ink); background: var(--card); box-shadow: 0 0 0 3px rgba(42,31,24,0.06); }"
+    },
+    {
+      "name": "Up-next Card",
+      "kind": "card",
+      "refersTo": "card-inverted",
+      "description": "The day's one job; the single inverted card per home screen and the page's only block of strong contrast.",
+      "html": "<div class=\"ds-upnext\"><div class=\"ds-upnext-eyebrow\">Up next \u00b7 in 12 min</div><div class=\"ds-upnext-title\">Hashing &amp; partitioning</div><div class=\"ds-upnext-meta\">DDIA, Ch. 6 \u00b7 ~32 min planned</div><button class=\"ds-btn-accent\">Start now</button></div>",
+      "css": ".ds-upnext { background: var(--surface-inverted); color: var(--text-on-inverted); border-radius: var(--radius-lg); padding: var(--space-5); max-width: 380px; box-sizing: border-box; } .ds-upnext-eyebrow { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-on-inverted-eyebrow); margin-bottom: 6px; } .ds-upnext-title { font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -0.01em; line-height: 1.2; margin-bottom: 4px; } .ds-upnext-meta { font-family: var(--font-body); font-size: 13px; color: var(--text-on-inverted-dim); margin-bottom: var(--space-3); } .ds-btn-accent { font-family: var(--font-body); font-size: 15px; font-weight: 500; padding: 11px 18px; border: 1px solid transparent; border-radius: var(--radius-md); background: var(--action-accent); color: var(--paper); box-shadow: var(--shadow-sm); cursor: pointer; line-height: 1; transition: background 160ms cubic-bezier(0.2,0,0,1); } .ds-btn-accent:hover { background: var(--action-accent-hover); } .ds-btn-accent:focus-visible { outline: 2px solid var(--paper); outline-offset: 2px; }"
+    },
+    {
+      "name": "Tag",
+      "kind": "chip",
+      "refersTo": "tag",
+      "description": "Carries state, never action, and is never tappable.",
+      "html": "<span class=\"ds-tag\">Suggested material</span>",
+      "css": ".ds-tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 12px; font-weight: 500; background: var(--paper-deep); color: var(--ink-soft); border: 1px solid var(--rule); letter-spacing: -0.005em; line-height: 1.4; }"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "The tappable selection control; selected becomes Warm Ink with cream text.",
+      "html": "<div style=\"display:flex; gap:6px;\"><button class=\"ds-chip\">8h</button><button class=\"ds-chip ds-chip-selected\">10h</button></div>",
+      "css": ".ds-chip { padding: 7px 12px; border-radius: var(--radius-pill); font-family: var(--font-body); font-size: 13px; font-weight: 500; background: var(--surface-card); color: var(--text-secondary); border: 1px solid var(--rule); cursor: pointer; line-height: 1.3; transition: border-color 160ms cubic-bezier(0.2,0,0,1), color 160ms cubic-bezier(0.2,0,0,1); } .ds-chip:hover { border-color: var(--ink-faint); color: var(--text-primary); } .ds-chip-selected { background: var(--ink); color: var(--paper); border-color: var(--ink); } .ds-chip:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }"
+    },
+    {
+      "name": "Sync Indicator",
+      "kind": "nav",
+      "refersTo": "sync-indicator",
+      "description": "A small corner pill showing sync freshness; tappable to force a pull, never the headline.",
+      "html": "<button class=\"ds-sync\"><span class=\"ds-sync-dot\"></span>Synced 2 h ago</button>",
+      "css": ".ds-sync { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--radius-pill); font-family: var(--font-mono); font-size: 11px; font-weight: 500; color: var(--text-tertiary); background: var(--paper-deep); border: 1px solid var(--rule); cursor: pointer; line-height: 1.4; transition: border-color 160ms cubic-bezier(0.2,0,0,1), color 160ms cubic-bezier(0.2,0,0,1); } .ds-sync:hover { border-color: var(--ink-faint); color: var(--text-secondary); } .ds-sync:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } .ds-sync-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--moss); flex-shrink: 0; }"
+    },
+    {
+      "name": "Mobile Nav Item",
+      "kind": "nav",
+      "refersTo": "navbar-item",
+      "description": "Bottom-bar tab; icon plus mono caps label, active item in Warm Ink with a Fired Clay icon.",
+      "html": "<div style=\"background: var(--surface-card); display:flex; gap:4px; border-top:1px solid var(--rule); padding:6px 0 8px;\"><a class=\"ds-nav ds-nav-active\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\"><path d=\"M3 12L12 4l9 8\"/><path d=\"M5 10v10h14V10\"/></svg><span>Home</span></a><a class=\"ds-nav\" href=\"#\"><svg class=\"ds-nav-icon\" viewBox=\"0 0 24 24\"><circle cx=\"12\" cy=\"12\" r=\"10\"/><polyline points=\"12 6 12 12 16 14\"/></svg><span>Session</span></a></div>",
+      "css": ".ds-nav { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 6px; text-decoration: none; color: var(--text-tertiary); font-family: var(--font-mono); font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; } .ds-nav-icon { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; } .ds-nav-active { color: var(--text-primary); } .ds-nav-active .ds-nav-icon { color: var(--terracotta); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Reading Room",
+    "overview": "Study Tracker is the calm, well-lit reading room you keep your study in: cream paper, warm ink, hairline rules, and a quiet serif voice. Surfaces are laid down, never floated; the interface reads like a well-set book page, not a SaaS dashboard. Attention belongs to the work the learner chose, so the room stays still: no glass, no glow, no motion that does not mean something, no decoration that does not carry information.\n\nDensity is the discipline. Marginalia errs toward dense over airy, like a book page rather than a magazine spread; the one exception is the marketing site, which gets the magazine treatment. Color is the rarest resource in the room. Nearly everything is monochrome paper-and-ink, and the three accents are reserved for the moments where they carry meaning: Fired Clay means act on this, Quiet Moss means you're good, Rust Ink means pay attention. If everything is emphasized, nothing is.\n\nThe product mirrors discipline rather than enforcing it. The streak calendar is the signature surface: a year of days the learner can read at a glance, surviving roadmaps, completions, and abandonments. Statistics are honest and provisional where they must be. Errors tell the truth about what is safe. The interface never nags, gamifies, or guilt-trips, and it never claims an AI tell.",
+    "keyCharacteristics": [
+      "Paper, not glass; cream backgrounds with warm near-black ink and hairline rules.",
+      "Serif headlines (Fraunces) lead; serif stats feel weighted, not flashy; mono is reserved for metadata.",
+      "Dense like a well-set book page; the marketing site is the one magazine exception.",
+      "Color carries meaning only: Fired Clay (act), Quiet Moss (good), Rust Ink (attention).",
+      "Honest states: provisional projections, truthful errors, local-first trust."
+    ],
+    "rules": [
+      {
+        "name": "The Meaning-Bearing Accent Rule",
+        "body": "Fired Clay means act on this. Quiet Moss means you're good. Rust Ink means pay attention. If a color appears for any other reason, for visual interest, for warmth, to break things up, it does not belong here.",
+        "section": "colors"
+      },
+      {
+        "name": "The Quiet-by-Default Rule",
+        "body": "Most of the UI is monochrome paper-and-ink. Color is reserved for the few moments where it carries meaning: the Up-next card, a behind-pace verdict, a re-plan call to action. If everything is emphasized, nothing is.",
+        "section": "colors"
+      },
+      {
+        "name": "The Streak Ramp Rule",
+        "body": "Buckets are thresholds, not quotas. A learner who studied 14 minutes still gets a level-1 cell; they showed up. The ramp shape (cream to moss in five levels) is fixed.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Italic Rule",
+        "body": "Italic Fraunces appears once or twice per screen, never more. Allowed in three places: a single emphasized word inside a display headline, an italic Fraunces subtitle under a display headline, and the weekly-narrative pull-quote. Anywhere else it is a designer flourish.",
+        "section": "typography"
+      },
+      {
+        "name": "The No-Bold Rule",
+        "body": "No weight 700 or higher anywhere. If a heading needs more weight, scale up the size or use the italic accent; do not reach for bold.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono-Metadata Rule",
+        "body": "Stats are serif, never mono. Mono is reserved for labels, timestamps, units, and eyebrow lines. Use tabular figures in stats. ALL CAPS belongs only to mono labels.",
+        "section": "typography"
+      },
+      {
+        "name": "The Density Rule",
+        "body": "When two values look acceptable, pick the smaller one. Marginalia errs toward dense over airy, like a well-set book page, not a magazine spread. The marketing site is the one magazine exception.",
+        "section": "layout"
+      },
+      {
+        "name": "The Vertical-Space-First Rule",
+        "body": "Vertical space alone is the first divider. Reach for an actual rule only when the spacing is not sufficient signal.",
+        "section": "layout"
+      },
+      {
+        "name": "The Column-Shape Rule",
+        "body": "Mobile shape is preserved exactly up to 1024px. Only four screens get genuine desktop layouts; everything else stays column-shaped at 640-680px.",
+        "section": "layout"
+      },
+      {
+        "name": "The Warm Shadow Rule",
+        "body": "Shadows are warm, built from the ink color at low opacity, never pure black. A warm shadow looks like an object resting on a desk.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Paper-Not-Glass Rule",
+        "body": "No frosted glass, no neon glows, no dark-mode-by-default. Studying is a slow, considered activity; the interface should feel that way too.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Three-Level-Ceiling Rule",
+        "body": "Two shadows plus one for modals. If a third level of elevation feels needed, the hierarchy is wrong: fix the hierarchy, do not add another shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Border-Thickens, Card-Doesn't-Grow Rule",
+        "body": "When a card uses a 2px border to signal selection, its internal padding shrinks by 1px so the visual weight stays identical to the unselected state.",
+        "section": "shapes"
+      },
+      {
+        "name": "The One Inverted Card Rule",
+        "body": "One inverted card per screen, maximum. The Up-next card on home, or the selected-to-cut total in trim-scope. If two screens both want one, the screen has too much going on.",
+        "section": "components"
+      },
+      {
+        "name": "The One Accent Button Rule",
+        "body": "The Up-next card carries the only accent button on the screen. Other screens may have an accent button, but never alongside this one.",
+        "section": "components"
+      },
+      {
+        "name": "The Six-Destination Rule",
+        "body": "Six destinations, no nesting: Home, Session, Week, Roadmaps, Materials, Settings. Each new destination is earned by proving it needs its own surface; until then it lives inside an existing one. Hamburger menus are not part of this system.",
+        "section": "components"
+      },
+      {
+        "name": "The No-Spinner Rule",
+        "body": "No spinning circle. Spinners signal wait; this app signals here's what's happening. The user is allowed to leave during processing; progress is preserved.",
+        "section": "components"
+      },
+      {
+        "name": "The Empty-State Rule",
+        "body": "An empty state always has a title, body, and action. Two of three is incomplete.",
+        "section": "components"
+      },
+      {
+        "name": "The Tags-Carry-State Rule",
+        "body": "Tags carry state, not action, and are never tappable. If something needs to be tappable, use a chip or a button.",
+        "section": "components"
+      },
+      {
+        "name": "The Progress-Is-a-Glance Rule",
+        "body": "Progress bars are 6px tall, no taller. They are a glance at status; the headline is the projected-finish stat.",
+        "section": "components"
+      },
+      {
+        "name": "The Modals-Are-Rare Rule",
+        "body": "Modals are rare, at most three named moments in v1. An interruption asked for is twice as expensive as one we earned.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do lead each screen with the day's one job, with the Up-next card as the single block of strong contrast.",
+      "Do let the streak calendar carry the long view; sessions persist across roadmaps.",
+      "Do keep color semantic: Fired Clay to act, Quiet Moss for good, Rust Ink for attention, and nothing else.",
+      "Do set stats in Fraunces with tabular figures and mono caps labels; the numbers should feel weighted, not flashy.",
+      "Do keep the sync indicator small and in a corner.",
+      "Do tell the truth in error states: what is broken, what is safe locally, and one concrete action.",
+      "Do deliver focus with a 2px Warm Ink ring via :focus-visible only, and keep touch targets at 44px minimum on mobile.",
+      "Do respect prefers-reduced-motion: non-essential animation collapses to instant state changes."
+    ],
+    "donts": [
+      "Don't use weight 700 or higher on any face, anywhere.",
+      "Don't use mono for body prose or for stat numbers; stats are serif.",
+      "Don't use italic Inter Tight; italics are a Fraunces-only move, once per screen.",
+      "Don't use display sizes without adjusting opsz; Fraunces at 48px with opsz 9 looks broken.",
+      "Don't use proportional numerals in stats; they jitter when values change.",
+      "Don't use ALL CAPS in body sans; caps belong to mono labels only.",
+      "Don't use emoji as decoration in headlines or stats, and never sparkles or robot avatars; the brand explicitly disallows AI-tell ornament.",
+      "Don't set body prose line-height tighter than 1.5; this is a reading product.",
+      "Don't use decorative icons; an icon must save a word, label a control, or carry status.",
+      "Don't add a third shadow level; fix the hierarchy instead.",
+      "Don't ship Fired Clay as text below 14px on cream; use Fired Clay Deep. Verified contrast wins over assumed contrast (WCAG 2.1 AA minimum, AAA on body where the palette already gets there)."
+    ]
+  }
+}

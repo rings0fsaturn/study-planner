@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "packages/design-tokens/src/components.css"
+        ],
+        "createdAt": "2026-09-16T15:32:52.646Z",
+        "reason": "DESIGN.md:307 specifies a 3px colored left edge as the banner's urgency carrier (.banner.attention/.success/.warning); the committed design system documents this pattern, so it is intentional design rather than the generic side-tab tell. Evidence: DESIGN.md Banners spec, pre-existing code (untouched this session)."
+      }
+    ]
+  }
+}

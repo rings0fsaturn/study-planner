@@ -12,7 +12,7 @@
   --card:         #FBF7EE;
   --ink:          #2A1F18;
   --ink-soft:     #5C4D40;
-  --ink-faint:    #8B7B6B;
+  --ink-faint:    #6F6252;
   --rule:         #D9CDB8;
   --rule-soft:    #E6DCC8;
 
@@ -26,9 +26,9 @@
 
   /* ---- STREAK RAMP ---- */
   --streak-0: #EDE3D2;
-  --streak-1: #C9D4B0;
-  --streak-2: #A2B98A;
-  --streak-3: #769A66;
+  --streak-1: #B8C79C;
+  --streak-2: #8EA872;
+  --streak-3: #658A52;
   --streak-4: #4A6B3A;
 
   /* ---- SEMANTIC TOKENS ---- */

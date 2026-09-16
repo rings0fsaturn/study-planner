@@ -35,7 +35,7 @@ from py_progress.gp import (
 )
 from py_progress.kalman import init_kalman, kalman_predict, kalman_update, run_kalman_on_phase
 from py_progress.progress import compute_progress
-from py_progress.streak import build_streak_grid, calculate_streak
+from py_progress.streak import build_streak_grid, build_year_streak_grid, calculate_streak
 from py_progress.trend import analyze_trend
 
 __all__ = [
@@ -73,6 +73,7 @@ __all__ = [
     "analyze_trend",
     "calculate_streak",
     "build_streak_grid",
+    "build_year_streak_grid",
     "compute_calibration",
     "get_prompt_detail",
     "compute_progress",

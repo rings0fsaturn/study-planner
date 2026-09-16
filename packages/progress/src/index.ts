@@ -11,6 +11,7 @@ export type {
   GPPoint,
   CumulativePoint,
   DayCell,
+  YearStreakCell,
   Phase,
   TrendAnalysis,
   RoleMultiplier,
@@ -70,3 +71,4 @@ export {
   type SlotStatusDerivation,
   type UnplannedSession,
 } from './deriveSlotStatuses'
+export { buildYearStreakGrid, calculateStreak } from './streak'

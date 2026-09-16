@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { calculateStreak, buildStreakGrid } from '../src/streak'
+import { calculateStreak, buildStreakGrid, buildYearStreakGrid } from '../src/streak'
 import type { SessionEvent } from '../src/types'
 
 function makeSession(overrides: Partial<SessionEvent> = {}): SessionEvent {
@@ -138,5 +138,50 @@ describe('buildStreakGrid', () => {
     const sat = grid.find((d) => d.date === '2026-01-17')
     expect(fri?.level).toBe(0)
     expect(sat?.level).toBe(0)
+  })
+})
+
+describe('buildYearStreakGrid', () => {
+  const today = '2026-01-15'
+
+  it('covers the 12-month window as Monday-start weeks', () => {
+    const cells = buildYearStreakGrid([], today)
+    // 2025-01-27 (Monday before 2025-02-01) through 2026-01-18 (Sunday of today's week) = 51 weeks
+    expect(cells.length).toBe(357)
+    expect(cells[0].date).toBe('2025-01-27')
+    expect(cells[cells.length - 1].date).toBe('2026-01-18')
+    const todayCell = cells.find((c) => c.isToday)
+    expect(todayCell?.date).toBe(today)
+    expect(cells.every((c) => c.level === 0)).toBe(true)
+  })
+
+  it('maps minutes to the five-level ramp', () => {
+    const cells = buildYearStreakGrid(
+      [
+        makeSession({ date: '2026-01-05', duration: 10 }),
+        makeSession({ date: '2026-01-06', duration: 30 }),
+        makeSession({ date: '2026-01-07', duration: 60 }),
+        makeSession({ date: '2026-01-08', duration: 120 }),
+        makeSession({ date: '2026-01-09', source: 'manual', duration: 0 }),
+      ],
+      today,
+    )
+    const byDate = new Map(cells.map((c) => [c.date, c]))
+    expect(byDate.get('2026-01-05')?.level).toBe(1)
+    expect(byDate.get('2026-01-05')?.minutes).toBe(10)
+    expect(byDate.get('2026-01-06')?.level).toBe(2)
+    expect(byDate.get('2026-01-07')?.level).toBe(3)
+    expect(byDate.get('2026-01-08')?.level).toBe(4)
+    expect(byDate.get('2026-01-09')?.level).toBe(1)
+  })
+
+  it('zeros future dates even when sessions exist', () => {
+    const cells = buildYearStreakGrid(
+      [makeSession({ date: '2026-01-16', duration: 90 })],
+      today,
+    )
+    const cell = cells.find((c) => c.date === '2026-01-16')
+    expect(cell?.level).toBe(0)
+    expect(cell?.minutes).toBe(90)
   })
 })

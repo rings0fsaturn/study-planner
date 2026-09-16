@@ -82,11 +82,15 @@ test.describe('Session log lifecycle', () => {
       await expect(page.locator('.stat-value')).toContainText('45 min');
       await expect(page.locator('.card-title')).toContainText('Chapter 3: Integration');
 
-      const signOutBtn = page.locator('button:has-text("Sign out")');
-      if (await signOutBtn.isVisible()) {
-        await signOutBtn.click();
-        await page.waitForTimeout(2000);
-      }
+      // Sign out lives on Settings with a confirm step: the row opens it, the
+      // confirm commits. Both share the name "Sign out" and only one is mounted
+      // at a time. This block used to look for the button on Home and silently
+      // skip, leaving the account-switch wipe untested.
+      await page.goto(`${APP_URL}/study/settings`);
+      await page.waitForTimeout(1000);
+      await page.getByRole('button', { name: 'Sign out' }).click();
+      await page.getByRole('button', { name: 'Sign out' }).click();
+      await page.waitForURL(/\/study\/sign-in/, { timeout: 15000 });
 
       await page.goto(`${APP_URL}/study/sign-in`);
       await page.waitForTimeout(2000);

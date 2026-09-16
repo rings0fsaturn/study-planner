@@ -1,4 +1,4 @@
-import type { SessionEvent, DayCell } from './types'
+import type { SessionEvent, DayCell, YearStreakCell } from './types'
 
 export function calculateStreak(
   sessions: SessionEvent[],
@@ -110,4 +110,59 @@ export function buildStreakGrid(
   }
 
   return grid
+}
+
+// Five-level minutes buckets for the year calendar (cream → moss):
+// 0 / under 15 / 15-45 / 45-90 / 90+ minutes. Manual zero-duration logs
+// count as "showed up" (level 1), mirroring the mini-week behaviour.
+function yearLevel(totalMinutes: number, hasSessions: boolean): 0 | 1 | 2 | 3 | 4 {
+  if (!hasSessions) return 0
+  if (totalMinutes === 0) return 1
+  if (totalMinutes < 15) return 1
+  if (totalMinutes < 45) return 2
+  if (totalMinutes < 90) return 3
+  return 4
+}
+
+export function buildYearStreakGrid(
+  sessions: Array<{ date: string; source?: string; duration?: number }>,
+  today: string,
+): YearStreakCell[] {
+  const todayDate = new Date(today + 'T12:00:00Z')
+
+  // Window: first of the month 11 months back, aligned to its Monday,
+  // through the Sunday of today's week. Up to 53 columns.
+  const start = new Date(Date.UTC(todayDate.getUTCFullYear(), todayDate.getUTCMonth() - 11, 1))
+  const startDow = start.getUTCDay()
+  const monday = new Date(start)
+  monday.setUTCDate(start.getUTCDate() + (startDow === 0 ? -6 : 1 - startDow))
+
+  const endDow = todayDate.getUTCDay()
+  const end = new Date(todayDate)
+  end.setUTCDate(todayDate.getUTCDate() + (endDow === 0 ? 0 : 7 - endDow))
+
+  const byDate = new Map<string, { total: number; count: number }>()
+  for (const s of sessions) {
+    if (!s.date) continue
+    const minutes = (s.duration ?? 0) > 0 ? s.duration! : s.source === 'manual' ? 1 : 0
+    const entry = byDate.get(s.date) ?? { total: 0, count: 0 }
+    entry.total += minutes
+    entry.count += 1
+    byDate.set(s.date, entry)
+  }
+
+  const cells: YearStreakCell[] = []
+  for (let d = new Date(monday); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
+    const dateStr = d.toISOString().slice(0, 10)
+    const entry = byDate.get(dateStr)
+    const level = dateStr > today ? 0 : yearLevel(entry?.total ?? 0, entry !== undefined)
+    cells.push({
+      date: dateStr,
+      level,
+      minutes: entry?.total ?? 0,
+      isToday: dateStr === today,
+    })
+  }
+
+  return cells
 }

@@ -66,7 +66,11 @@ async function signIn(page: Page, email = EMAIL, password = PASSWORD): Promise<v
 }
 
 async function signOut(page: Page): Promise<void> {
-  await page.goto(`${APP_URL}/study/home`);
+  await page.goto(`${APP_URL}/study/settings`);
+  // Two steps by design: the row opens a confirm, the confirm commits. The
+  // collapsed row and the confirm button share the name "Sign out"; only one
+  // is mounted at a time, so each click targets the current one.
+  await page.getByRole('button', { name: 'Sign out' }).click();
   await page.getByRole('button', { name: 'Sign out' }).click();
   await page.waitForURL(/\/study\/sign-in/, { timeout: 15000 });
 }

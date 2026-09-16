@@ -128,6 +128,47 @@ describe('Home', () => {
     expect(screen.queryByText(/Up next/)).not.toBeInTheDocument()
   })
 
+  it('offers title, body, and action when there is no active roadmap', () => {
+    mockEvents = []
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <Home />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('No active roadmap yet.')).toBeInTheDocument()
+    expect(
+      screen.getByText(/turns the materials you've gathered into a realistic plan/),
+    ).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Create a roadmap' })).toHaveAttribute(
+      'href',
+      '/onboarding?new=1',
+    )
+  })
+
+  it('keeps the streak calendar through a gap with no active roadmap', () => {
+    mockEvents = [
+      {
+        id: 1,
+        kind: 'SessionLogged',
+        payload: { duration: 45, date: '2026-05-01', source: 'manual', sessionId: 'sess-1' },
+        createdAt: '2026-05-01T10:00:00.000Z',
+      },
+    ]
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <Home />
+      </MemoryRouter>
+    )
+
+    expect(screen.getByText('Last 12 months')).toBeInTheDocument()
+    expect(screen.getByText(/1 day studied/)).toBeInTheDocument()
+    // The calendar is the only streak surface on a roadmap-less Home.
+    expect(document.querySelectorAll('.streak-calendar-cell').length).toBeGreaterThan(0)
+  })
+
   it("shows a booking card with suggested material when today's booking exists", () => {
     const today = new Date().toISOString().split('T')[0]
     const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]

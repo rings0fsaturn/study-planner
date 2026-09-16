@@ -15,7 +15,7 @@ from py_progress.gp import cholesky_decompose, cholesky_solve, fit_burn_up_gp, g
 from py_progress.kalman import init_kalman, kalman_predict, kalman_update, run_kalman_on_phase
 from py_progress.progress import compute_progress
 from py_progress.serialize import to_json_value
-from py_progress.streak import build_streak_grid, calculate_streak
+from py_progress.streak import build_streak_grid, build_year_streak_grid, calculate_streak
 from py_progress.trend import analyze_trend
 from py_progress.types import (
     BayesianPosterior,
@@ -234,6 +234,9 @@ def _dispatch(inp: dict) -> Any:
             inp.get("plannedByDate", {}),
             inp["defaultPlanned"],
         )
+
+    if fn == "buildYearStreakGrid":
+        return build_year_streak_grid(inp["sessions"], inp["today"])
 
     if fn == "computeCalibration":
         return compute_calibration(

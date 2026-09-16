@@ -6,8 +6,8 @@ import type { Event } from '../events/EventStore';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { useSync } from '../sync/useSync';
 import Card from '../components/Card';
-import Button from '../components/Button';
-import { StreakCard } from '../components/StreakCard';
+import { buildYearStreakGrid, calculateStreak, type SessionEvent } from '@study-tracker/progress';
+import { StreakCalendar } from '../components/StreakCalendar';
 import { Link, useNavigate } from 'react-router-dom';
 import type { ActiveSessionRecord } from '../session/types';
 import { AbandonedSessionBanner } from '../session/components/AbandonedSessionBanner';
@@ -23,12 +23,14 @@ import { deriveRoadmapEndedState } from '../roadmap/useRoadmapEndedState';
 import { resolveRoadmap, type RoadmapResolutionKind } from '../roadmap/resolveRoadmap';
 import { format, isToday, isTomorrow, differenceInCalendarDays } from 'date-fns';
 
+// Marginalia format lexicon (design/marginalia.html, "Duration · short"):
+// `32 min` / `1h 20m`, and both parts only when both are non-zero.
 function formatMinutesToHoursAndMinutes(totalMinutes: number): string {
   const hours = Math.floor(totalMinutes / 60);
   const minutes = totalMinutes % 60;
   if (hours === 0) return `${minutes} min`;
-  if (minutes === 0) return `${hours} hr`;
-  return `${hours} hr ${minutes} min`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 function formatDate(dateString: string): string {
@@ -55,7 +57,7 @@ function getGreeting(): string {
 }
 
 export function Home() {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const eventStore = useEventStore();
   const navigate = useNavigate();
   const { logEvent } = useSync();
@@ -112,7 +114,7 @@ export function Home() {
   const sessionEvents: Event[] = events
     .filter((e): e is Event => e.kind === 'SessionLogged')
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 10);
+    .slice(0, 3);
 
   const totalMinutes = totalMinutesLogged(events as Event[]);
 
@@ -121,16 +123,24 @@ export function Home() {
   const todayStr = format(new Date(), 'yyyy-MM-dd');
   const todaySessionPlan = deriveTodaySessionPlan(events as Event[], todayStr);
 
+  // Lifetime habit surface: derived from the full event log, never from the
+  // active roadmap, so it survives completions, abandonments, and gap years.
+  const yearSessions: SessionEvent[] = events
+    .filter((e): e is Event => e.kind === 'SessionLogged' && typeof e.payload.date === 'string')
+    .map((e) => ({
+      date: e.payload.date as string,
+      duration: (e.payload.duration as number) ?? 0,
+      source: ((e.payload.source as string) ?? 'manual') as SessionEvent['source'],
+    }));
+  const yearCells = buildYearStreakGrid(yearSessions, todayStr);
+  const calendarStreak = calculateStreak(yearSessions, todayStr);
+
   const projectedFinish = progress?.projection?.finishDate ?? null;
   const confidenceInterval = progress?.projection?.confidenceInterval ?? null;
   const deadline = roadmapPayload?.deadline ?? null;
   const daysEarlyOrLate = projectedFinish && deadline
     ? differenceInCalendarDays(new Date(deadline), new Date(projectedFinish))
     : null;
-
-  const handleSignOut = async () => {
-    await signOut();
-  };
 
   const handleResolveRoadmap = useCallback(async (kind: RoadmapResolutionKind) => {
     if (!roadmapEnded.entry) return;
@@ -291,50 +301,78 @@ export function Home() {
         )
       )}
 
-      {progress && (
-        <StreakCard
-          current={progress.streak.current}
-          weeklyMinutes={progress.weeklyStats.minutesThisWeek}
-          grid={progress.streak.grid}
-        />
+      {!roadmapPayload && (
+        <Card variant="inverted" style={{ marginBottom: '1.5rem' }}>
+          <div className="card-eyebrow">No active roadmap</div>
+          <div className="card-title">No active roadmap yet.</div>
+          <div className="card-meta">
+            A roadmap turns the materials you&apos;ve gathered into a realistic plan.
+            Should take about three minutes to set up.
+          </div>
+          <div className="upnext-actions">
+            <Link to="/onboarding?new=1" className="btn btn-accent" style={{ flex: 1 }}>
+              Create a roadmap
+            </Link>
+          </div>
+        </Card>
       )}
 
+      <div style={{ marginBottom: '1.5rem' }}>
+        <StreakCalendar
+          cells={yearCells}
+          current={calendarStreak.current}
+          longest={calendarStreak.longest}
+        />
+      </div>
+
       {progress && roadmapPayload && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '1.5rem' }}>
+        <div
+          className="stat"
+          style={{
+            padding: '14px 16px',
+            background: 'var(--surface-card)',
+            border: '1px solid var(--border-subtle)',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem',
+          }}
+        >
           {projectedFinish ? (
-            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-              <div className="stat-label" style={{ marginBottom: '6px' }}>Projected finish · provisional</div>
-              <div className={`stat-value sm ${daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'moss' : 'terracotta'}`}>
+            <>
+              <span className="stat-label" style={{ marginBottom: '6px' }}>
+                Projected finish · provisional
+              </span>
+              <span
+                className={`stat-value sm ${daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'moss' : 'rust'}`}
+              >
                 {confidenceInterval
                   ? `${format(new Date(confidenceInterval[0]), 'MMM d')}–${format(new Date(confidenceInterval[1]), 'MMM d')}`
                   : formatDateNice(projectedFinish)}
-              </div>
-              <div className="mono-caps" style={{ marginTop: '4px', color: daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'var(--moss)' : 'var(--terracotta)' }}>
-                {daysEarlyOrLate !== null
-                  ? daysEarlyOrLate > 0 ? `${daysEarlyOrLate} days early` : daysEarlyOrLate === 0 ? 'On target' : `${Math.abs(daysEarlyOrLate)} days late`
+              </span>
+              <span
+                className="mono-caps"
+                style={{ marginTop: '4px', color: daysEarlyOrLate !== null && daysEarlyOrLate >= 0 ? 'var(--moss)' : 'var(--rust)' }}
+              >
+                {daysEarlyOrLate !== null && deadline
+                  ? daysEarlyOrLate > 0
+                    ? `${daysEarlyOrLate} days before ${format(new Date(deadline), 'MMM d')}`
+                    : daysEarlyOrLate === 0
+                      ? `On target · ${format(new Date(deadline), 'MMM d')}`
+                      : `${Math.abs(daysEarlyOrLate)} days past ${format(new Date(deadline), 'MMM d')}`
                   : ''}
-              </div>
-            </div>
+              </span>
+            </>
           ) : (
-            <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-              <div className="stat-label" style={{ marginBottom: '6px' }}>Total logged</div>
-              <div className="stat-value sm">
+            <>
+              <span className="stat-label" style={{ marginBottom: '6px' }}>Total logged</span>
+              <span className="stat-value sm">
                 {formatMinutesToHoursAndMinutes(progress.totalMinutes)}
-              </div>
-              <div className="mono-caps" style={{ marginTop: '4px' }}>
-                {Math.round(progress.completionPercentage)}% complete
-              </div>
-            </div>
+              </span>
+              <span className="mono-caps" style={{ marginTop: '4px' }}>
+                {formatMinutesToHoursAndMinutes(progress.totalMinutes)} of{' '}
+                {formatMinutesToHoursAndMinutes(progress.totalPlannedMinutes)}
+              </span>
+            </>
           )}
-          <div style={{ padding: '14px 16px', background: 'var(--surface-card)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-md)' }}>
-            <div className="stat-label" style={{ marginBottom: '6px' }}>This week</div>
-            <div className="stat-value sm">
-              {formatMinutesToHoursAndMinutes(progress.weeklyStats.minutesThisWeek)}
-            </div>
-            <div className="mono-caps" style={{ marginTop: '4px' }}>
-              of {roadmapPayload.weeklyHours}h goal
-            </div>
-          </div>
         </div>
       )}
 
@@ -349,17 +387,22 @@ export function Home() {
 
       <Card variant="elevated" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <h2 className="t-display-3" style={{ margin: 0 }}>Recent activity</h2>
+          <h2 className="card-title" style={{ margin: 0 }}>Recent activity</h2>
           <Link to="/log" className="btn btn-secondary btn-sm">
             Log session
           </Link>
         </div>
 
         {sessionEvents.length === 0 ? (
-          <p className="t-body" style={{ color: 'var(--text-secondary)' }}>
-            No sessions logged yet.{' '}
-            <Link to="/log">Log your first session</Link>
-          </p>
+          <div>
+            <p className="t-body" style={{ fontWeight: 500, marginBottom: '2px' }}>
+              Nothing logged yet.
+            </p>
+            <p className="t-body" style={{ color: 'var(--text-secondary)' }}>
+              Log a session you studied elsewhere, or start the one planned for today.{' '}
+              <Link to="/log">Log your first session</Link>
+            </p>
+          </div>
         ) : (
           <div>
             {sessionEvents.map((event, index) => {
@@ -390,12 +433,16 @@ export function Home() {
                       </span>
                       {sessionId && (
                         <button
-                          className="btn btn-ghost btn-sm"
-                          style={{ padding: '2px 4px', minWidth: 0, fontSize: 14, lineHeight: 1 }}
+                          className="btn btn-ghost btn-sm btn-flag"
                           title={isExceptional ? 'Unmark as unusual' : 'Mark as unusual'}
+                          aria-label={isExceptional ? 'Unmark as unusual' : 'Mark as unusual'}
+                          aria-pressed={isExceptional}
                           onClick={() => handleToggleExceptional(sessionId, isExceptional)}
                         >
-                          {isExceptional ? '⚑' : '⚐'}
+                          <svg className="icon" viewBox="0 0 24 24" aria-hidden="true" style={{ width: 16, height: 16 }}>
+                            <path d="M5 21V4" />
+                            <path d="M5 4h12l-2.2 4 2.2 4H5" />
+                          </svg>
                         </button>
                       )}
                     </div>
@@ -406,10 +453,6 @@ export function Home() {
           </div>
         )}
       </Card>
-
-      <Button variant="ghost" onClick={handleSignOut}>
-        Sign out
-      </Button>
 
       {recalModalOpen && (
         <RecalibrationModal

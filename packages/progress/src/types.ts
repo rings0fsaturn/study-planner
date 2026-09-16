@@ -136,6 +136,13 @@ export interface DayCell {
   isToday: boolean
 }
 
+export interface YearStreakCell {
+  date: string
+  level: 0 | 1 | 2 | 3 | 4
+  minutes: number
+  isToday: boolean
+}
+
 export interface CumulativePoint {
   date: string
   minutes: number

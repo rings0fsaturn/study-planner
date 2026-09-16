@@ -128,6 +128,14 @@ class DayCell:
 
 
 @dataclass
+class YearStreakCell:
+    date: str
+    level: Literal[0, 1, 2, 3, 4]
+    minutes: float
+    isToday: bool
+
+
+@dataclass
 class CumulativePoint:
     date: str
     minutes: float

@@ -60,4 +60,23 @@ describe('RoadmapEndedBanner', () => {
     expect(onAbandon).toHaveBeenCalledTimes(1)
     expect(screen.getByRole('link', { name: 'Extend deadline' })).toHaveAttribute('href', '/replan?intent=extend')
   })
+
+  it('carries no accent button, so the Up-next card keeps the screen accent', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <RoadmapEndedBanner
+          entry={endedEntry()}
+          onMarkComplete={vi.fn()}
+          onAbandon={vi.fn()}
+        />
+      </MemoryRouter>,
+    )
+
+    // The One Accent Button Rule: the Up-next card owns the sole accent on Home.
+    // An accent here collides with it whenever a plan ends while a session is
+    // still offered. Extend deadline is primary; Abandon is destructive.
+    expect(container.querySelectorAll('.btn-accent')).toHaveLength(0)
+    expect(container.querySelectorAll('.btn-primary')).toHaveLength(1)
+    expect(container.querySelectorAll('.btn-destructive')).toHaveLength(1)
+  })
 })
