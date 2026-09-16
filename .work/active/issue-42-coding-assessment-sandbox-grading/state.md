@@ -1,14 +1,12 @@
 # State – issue-42-coding-assessment-sandbox-grading
 
-_Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (copy: specs/phase2-tickets/10-coding-assessment-sandbox-grading.md) · Plan: active/issue-42-coding-assessment-sandbox-grading/plan/PLAN.md · STATUS row: issue-42-coding-assessment-sandbox-grading · Status: active — P2 done, P3 next · Updated: 2026-09-16_
+_Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (copy: specs/phase2-tickets/10-coding-assessment-sandbox-grading.md) · Plan: active/issue-42-coding-assessment-sandbox-grading/plan/PLAN.md · STATUS row: issue-42-coding-assessment-sandbox-grading · Status: active — P3 done, P4 next · Updated: 2026-09-16_
 
 ## Current state & next
 
-- P0 done: PR #65 merged #44 (P1–P4) into `project/phase-2` (`3844f72`, #44 P5 deferred per user); branch `phase2/issue-42-coding-sandbox-grading` cut off it; plan + STATUS row committed (`a7f66e2`).
-- P1 done and verified: migration 031 pushed to the dev project; contracts 28/28, router tests 45/45, backend 594/5 (the 5 = pre-existing calibration golden-fixture drift, fails on base tree too); ruff clean on touched files. Commit `fd3f79c`.
-- P1 live probe green: service-role coding-row insert; authenticated read shows `language/starter_code/visible_tests`; `answer_block` 403; `has_code` server-owned guard 403; RPC bodies verified live (`::uuid` cast kept, submit gate `IN ('objective','written','coding')`).
-- P2 done: **Judge0 was rejected at the isolate gate** (bundled isolate 1.8.1 is cgroup-v1-only; this Docker Desktop/WSL2 host is cgroup-v2-only → status 13 on every submission) and the user approved the plan's recorded D-02 fallback to **self-hosted Piston** (MIT, single container, cgroup v2). The sandbox client, coding grader, worker three-way dispatch, Piston compose service (profile `sandbox`), and the P1 submit-stub lift all landed. Backend suite 625 passed / 5 pre-existing failures; contracts 28/28; ruff clean on all touched files; rule-80 live client round-trip green against the real sandbox (passed/timeout/compile/failed).
-- Next: P3 — generation coding arm (`coding_schema`/`build_coding_messages`/`validate_coding`/worker dispatch/`_coding_answer_block` + generation-time sandbox self-check + ingestion `has_code`/`code_languages` scan).
+- P3 done: the generation coding arm + the `has_code` producer are in, tested, and live dry-run-verified (see Done so far).
+- The LLM picks the coding subtype per generation: no recipe or UI field carries one (user decision 2026-09-16); `coding_schema` is a 3-branch union (`unsuitable` | tests-bearing | `output_prediction`) and the real provider accepted it under strict mode in the P3 dry run.
+- Next: P4 — client slice (`types.ts`/`attemptFlow`/`CodingTaker` + CodeMirror/Pyodide/`ReviewSurface` execution table/`AssessmentConfig` Coding chip); PracticeThis stays disabled (D-08).
 
 ## Done so far
 
@@ -17,14 +15,15 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - 2026-09-16: P0 — #44 merged into `project/phase-2` via PR #65 (`3844f72`); #42 branch cut; plan committed (`a7f66e2`).
 - 2026-09-16: P1 — migration `031` (coding columns + widened subtype CHECK + RPC re-creations + materials code signal + guard extension), openapi coding schemas + fixtures, `userrest` public columns, router admission + honest submit stub; pushed + live-probed (see Current state). Commit `fd3f79c`.
 - 2026-09-16: P2 — Judge0 isolate gate failed (cgroup v1 vs v2, recorded) → user-approved Piston fallback; `piston_client.py` (synchronous execute, verdict map, clamps, typed errors, D-11 logs), `coding_grader.py` (hidden pass rate, veiled test table, deterministic templates), worker three-way dispatch + retryable-vs-terminal infra split, `worker_main._build_piston_client`, compose `piston` service (profile `sandbox`), router stub lifted; 46 new grading tests + worker/router test updates; full suite 625/5, contracts 28/28, ruff clean, rule-80 live round-trip green.
+- 2026-09-16: P3 — generation coding arm + code signal. `coding_schema` 3-branch union (unsuitable | tests-bearing | output_prediction; the LLM picks the subtype), `CODING_SYSTEM_TEMPLATE` carrying the full authoring contract (stdin→stdout execution model, no markdown fences, numeric-only `acceptedValue`, 2-3 visible / 1-10 hidden tests), `validate_coding` (unsuitable short-circuit → `code_not_derivable`, shared citation gate, `strip_code_fence`), worker three-way dispatch via `_arm`, `_coding_answer_block` whitelist + `_coding_row`, mandatory generation-time self-check (referenceSolution over all authored tests; failure drops with `self_check_failed` warning; retryable sandbox error keeps the assessment `generating`; non-retryable fails closed; `output_prediction` skips the sandbox), ingestion `scan_code_blocks` → `materials.has_code`/`code_languages` (is-not-None semantics), `worker_main` shares one PistonClient between the arms. 52 new tests (45 coding + 7 code signal), full suite 673/5 (same 5 calibration), ruff check clean, rule-80 dry run green: `implement_fn` self-check 5/5 passed, `output_prediction` numeric, `debug` steer judged `code_not_derivable`. Commit `a459774`.
 
 ## Flow trace
 
-1. Generation chain coding must join: router gate `routers/assessments.py:31,36-57` → `assessment_generate` queue → `generation/worker.py` family dispatch (`:59-68,250-252,392-461`) → `questions` row (service-role-only `answer_block`).
-2. Grading chain coding must join: `AttemptTaker` → `attemptFlow` → `POST .../attempts` → migration `027` submit gate (`:123-126`, widened by 031) → `assessment_grade` queue → `grading/worker.py:_process` (`:142-237`) → `QuestionGraded` (`grader: 'judge0'` already in all three contract sites).
-3. Contract already allowed coding (`openapi.yaml:141` formats, `:153` grader, `:146` practice mode); P1 closed the gaps — `AttemptRecord.answer` oneOf += `CodingAnswer`, `Question` coding fields, `QuestionGraded.testCases`.
-4. Storage: `018:64-65` already allowed `format='coding'`; 031 adds the visible columns (`language`, `starter_code`, `visible_tests`), the widened subtype CHECK, and the RPC re-creations.
-5. P1 stub path: a coding-shaped submit answer (`source` key present) 400s at the router with `validation_failed("coding grading lands in P2")` — never reaches the queue before P2.
+1. Generation chain coding: router gate `routers/assessments.py:41` admits `["coding"]` → `assessment_generate` queue → `generation/worker.py` `_recipe_format` picks the coding arm (`_arm` dispatch) → `coding_schema` (3-branch oneOf, chunk-id bound) + `build_coding_messages` → `validate_coding` (unsuitable short-circuit, fence strip, shared citation gate) → `_coding_self_check` (referenceSolution over visible+hidden through Piston; drop on failure) → `_coding_row` → `complete_assessment` (migration 031 columns: `language`/`starter_code`/`visible_tests`; hidden side in `answer_block`).
+2. Grading chain: `AttemptTaker` → `attemptFlow` → `POST .../attempts` → submit gate (widened by 031) → `assessment_grade` queue → `grading/worker.py:_process` (`_is_coding` dispatch) → `QuestionGraded` (`grader: 'judge0'`).
+3. Contract already allowed coding (`openapi.yaml:141` formats, `:153` grader); P1 closed the gaps — `AttemptRecord.answer` oneOf += `CodingAnswer`, `Question` coding fields, `QuestionGraded.testCases`.
+4. Storage: `018:64-65` already allowed `format='coding'`; 031 adds the visible columns, the widened subtype CHECK, and the RPC re-creations.
+5. Code signal: `ingestion/worker.py:_handle_extract` scans `content.text` (`ingestion/code_signal.py:scan_code_blocks`) → `set_material_state(has_code, code_languages)` → `materials` row; browser reads it via Supabase `select('*')` (no API change).
 
 ## Files affected
 
@@ -48,6 +47,16 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - `services/intelligence/app/userrest.py` – `QUESTION_PUBLIC_COLUMNS` += `language,starter_code,visible_tests`.
 - `services/intelligence/app/routers/assessments.py` – `SUPPORTED_FORMATS` += `["coding"]`, `_question` serializes coding columns, submit stub rejects coding-shaped answers with `validation_failed`.
 - `services/intelligence/tests/test_assessments_api.py` – coding 202, coding serialization, submit-stub tests; fake-client gate widened.
+- `services/intelligence/app/generation/prompts.py` – **P3**: `CODING_PROMPT_TEMPLATE_VERSION = "coding-v1"`, `coding_schema` (3-branch oneOf: unsuitable | tests-bearing | output_prediction; caps from `coding_grader`), `CODING_SYSTEM_TEMPLATE`/`CODING_USER_TEMPLATE`/`build_coding_messages` (full authoring contract: stdin→stdout, no fences, numeric-only acceptedValue, 2-3 visible / 1-10 hidden).
+- `services/intelligence/app/generation/validation.py` – **P3**: `strip_code_fence`, `_test_failures`, `coding_format_failures` (subtype-branched), `validate_coding` (unsuitable short-circuit → `code_not_derivable`; shared citation gate).
+- `services/intelligence/app/generation/worker.py` – **P3**: `CODING_FORMAT`, `_arm` dispatch map, `_coding_answer_block` (whitelist) + `_coding_row` (031 columns), `_coding_self_check` (reference over all tests; drop `self_check_failed`; retryable keeps generating; non-retryable fails closed), `code_not_derivable` fail path (telemetry outcome `partial`), `GenerationWorker(sandbox=...)`.
+- `services/intelligence/app/generation/models.py` – **P3**: docstring only (`question_format` now objective|written|coding).
+- `services/intelligence/app/ingestion/code_signal.py` – **P3 new**: `scan_code_blocks(text) -> (has_code, languages)` (GFM 0-3-space fences, first info token, sorted de-duped lowercase).
+- `services/intelligence/app/ingestion/worker.py` – **P3**: scan at `_handle_extract`, `has_code`/`code_languages` into `set_material_state`.
+- `services/intelligence/app/ingestion/repository.py` – **P3**: `set_material_state` meta `has_code`/`code_languages` (is-not-None so False/[] are written).
+- `services/intelligence/app/worker_main.py` – **P3**: one `PistonClient` shared by the generation self-check and grading arms.
+- `services/intelligence/tests/test_generation_coding.py` – **P3 new** (45 cases): prompts/validation/worker incl. self-check pass/drop/infra split, answer-block whitelist, unsuitable no-repair, output_prediction skips sandbox.
+- `services/intelligence/tests/test_code_signal.py` – **P3 new** (7 cases); `test_ingestion_worker.py` + `test_repository.py` + `ingestion_doubles.py` – wiring/signature updates.
 
 ## Pitfalls & rules
 
@@ -66,6 +75,11 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - PyYAML flow-mapping plain scalars truncate at `, ` (comma-space) — reworded openapi descriptions; keep new descriptions comma-free or quote them.
 - Supabase PAT rotates: `services/intelligence/.env` SUPABASE_ACCESS_TOKEN went stale (401); user refreshed it 2026-09-16. Probe `GET https://api.supabase.com/v1/projects` before trusting it.
 - `validation_failed` maps to HTTP 409 via the shared `service_error` map (serialization.py:19), not 400. Coding shape errors use `invalid_request` → 400.
+- The provider accepted the `oneOf` coding schema under `strict: True` (P3 dry run 2026-09-16): no flat-schema fallback was needed. If a future provider rejects it, fall back to a flat schema with validator-enforced branch rules (the local validator is the authority either way).
+- `code_not_derivable` maps to telemetry outcome `partial` (no contract outcome member exists; groundedness-over-count semantics), job error_code `code_not_derivable`, warning carries the LLM's learner-facing reason verbatim.
+- `set_material_state` gates `has_code`/`code_languages` on `is not None` so `False`/`[]` are written for scanned materials; NULL stays reserved for never-scanned (D-10).
+- The test double `FakeIngestionRepo.get_material` must pop `has_code`/`code_languages` from the row (server-owned, not in the worker's `Material` view) or the embed stage breaks (`Material(**row)`).
+- Pre-existing `UP037` ruff findings in `app/generation/models.py:40,51` (quotes around annotations) exist on HEAD; not touched by P3 (ruff `check` clean on all touched files; `ruff format` is not a repo gate).
 
 ## Decisions in force
 
@@ -83,10 +97,12 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - Decided the P1 coding-submit stub is lifted in P2 with real validation + enqueue (user, 2026-09-16, P2).
 - Decided the server executes the visible tests too and reports them in `testCases` (`visible: true`), while `score` stays the hidden-test pass rate (user, 2026-09-16, P2).
 - Decided `CodingAnswer.config.stdin` is client-advisory only: the server never feeds learner stdin into authored tests (it would corrupt their expected outputs) (2026-09-16, P2).
+- Decided the LLM picks the coding subtype per generation because no recipe or UI field carries one; the schema is a 3-branch union and P5 must seed or retry to force a specific subtype (user, 2026-09-16, P3).
+- Decided the generation-time self-check uses the contract-max limits and lets the PistonClient clamp to the `PISTON_*` ceilings (2026-09-16, P3).
 
 ## Open
 
-- P3 unstarted: generation coding arm (`coding_schema`/`build_coding_messages`/`validate_coding`, worker dispatch + `_coding_answer_block`, generation-time sandbox self-check, ingestion `has_code`/`code_languages` scan).
-- P3 plan-text note: the self-check runs `referenceSolution` against the authored tests through the P2 client, now `PistonClient` (synchronous, one `execute` per test).
-- P4/P5 plan-text note: all "Judge0" mentions read as "sandbox (Piston)"; the public grader label and the AC3 wording stay `judge0` because the contract enum is frozen.
-- Pre-existing, not P1/P2: 5 `test_v1_integration.py` calibration golden-fixture failures (fail on base tree; progress-package precision drift) — not touched by #42.
+- P4 unstarted: client slice — `types.ts` (`CodingAnswer`/`CodingSubtype`/`Question` coding fields/`testCases`), `attemptFlow.submitCodingAttempt`, `CodingTaker.tsx` (lazy CodeMirror + Pyodide advisory badge), `ReviewSurface` execution table (replaces the placeholder + its pinned test), `AssessmentConfig` Coding chip, `PracticeThis` hint repoint to #45 (D-08). Material `hasCode`/`codeLanguages` are already browser-readable (Supabase `select('*')`), so P4 only adds the app-side types.
+- P4 plan-text note: all "Judge0" mentions read as "sandbox (Piston)"; the public grader label stays `judge0` (frozen contract).
+- P5 plan-text note: because the LLM picks the subtype, the `output_prediction` live scenario needs a seeded question row or generation retries (no subtype steer exists).
+- Pre-existing, not P1-P3: 5 `test_v1_integration.py` calibration golden-fixture failures (fail on base tree; progress-package precision drift) — not touched by #42.
