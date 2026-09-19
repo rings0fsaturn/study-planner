@@ -280,11 +280,68 @@ describe('family extension points', () => {
     expect(screen.getAllByText('You covered the mechanism but not the consequence.')).toHaveLength(1)
   })
 
-  it('coding renders shared shape plus execution placeholder', () => {
+  it('coding renders the submitted source plus the public verdict table', () => {
     const q = question({ format: 'coding', options: [], prompt: 'Sum an array.' })
-    const attempt = gradedRow({ questionId: q.id, grade: { ...gradedRow().grade!, grader: 'judge0' } })
+    const attempt = gradedRow({
+      questionId: q.id,
+      answer: { language: 'python', source: 'def solve(ns):\n    return 6\n', config: { stdin: '', timeLimitMs: 15000, memoryLimitMb: 256 } },
+      grade: {
+        ...gradedRow().grade!,
+        grader: 'judge0',
+        explanation: 'Passed 3 of 4 tests. Failed: Hidden test 2.',
+        testCases: [
+          { name: 'adds small list', passed: true, visible: true },
+          { name: 'Hidden test 2', passed: false, visible: false },
+        ],
+      },
+    })
     render(<QuestionReviewCard question={q} attempt={attempt} />)
-    expect(screen.getByText('Execution results arrive with coding grading.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Your submitted code')).toHaveTextContent('def solve')
+    expect(screen.getByRole('table', { name: 'Test results' })).toBeInTheDocument()
+    expect(screen.getByText('adds small list')).toBeInTheDocument()
+    expect(screen.getByText('Hidden test 2')).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'failed' })).toBeInTheDocument()
+  })
+
+  it('coding veils hidden content: names render, stdin and expected never do', () => {
+    const q = question({ format: 'coding', options: [], prompt: 'Sum an array.' })
+    const attempt = gradedRow({
+      questionId: q.id,
+      answer: { language: 'python', source: 'def solve(ns):\n    pass\n', config: { stdin: '', timeLimitMs: 15000, memoryLimitMb: 256 } },
+      grade: {
+        ...gradedRow().grade!,
+        grader: 'judge0',
+        testCases: [{ name: 'Hidden test 1', passed: true, visible: false }],
+      },
+    })
+    const view = render(<QuestionReviewCard question={q} attempt={attempt} />)
+    expect(view.container.innerHTML).not.toMatch(
+      /answerBlock|answer_block|referenceSolution|hiddenTest|expectedOutput|stdin/i,
+    )
+  })
+
+  it('output_prediction renders the snippet and the learner value, no verdict table', () => {
+    const q = question({
+      format: 'coding',
+      subtype: 'output_prediction',
+      options: [],
+      prompt: 'What does this snippet print?',
+      starterCode: 'total = 0\nfor n in range(4):\n    total += n\nprint(total)\n',
+    })
+    const attempt = gradedRow({
+      questionId: q.id,
+      answer: { value: '6' },
+      grade: {
+        ...gradedRow().grade!,
+        grader: 'objective',
+        publicFeedback: 'Correct.',
+      },
+    })
+    render(<QuestionReviewCard question={q} attempt={attempt} />)
+    expect(screen.getByLabelText('Code snippet')).toHaveTextContent('total += n')
+    expect(screen.getByText('Your prediction:')).toBeInTheDocument()
+    expect(screen.getByText('6')).toBeInTheDocument()
+    expect(screen.queryByRole('table', { name: 'Test results' })).not.toBeInTheDocument()
   })
 })
 

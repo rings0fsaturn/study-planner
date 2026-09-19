@@ -22,6 +22,7 @@ import type {
   Question,
   QuestionGradedResult,
   RubricCriterionResult,
+  TestCaseResult,
 } from '../../../assessments/types'
 import {
   describeAnswer,
@@ -446,8 +447,13 @@ function WrittenFeedback({
 }
 
 /**
- * Coding treatment: shared grade shape now; execution tables arrive with
- * coding grading (#42 replaces only this placeholder).
+ * Coding treatment (#42): the learner's submitted source, the public
+ * verdict table (visible rows by name, hidden rows veiled as `Hidden test
+ * N`), per-skill observations, and the source evidence. Hidden stdin,
+ * expected outputs, and the reference solution are never in the grade
+ * payload, so there is nothing here that can leak them. The
+ * `output_prediction` subtype never ran the sandbox: it renders the authored
+ * snippet and the learner's numeric prediction instead of the table.
  */
 function CodingFeedback({
   question,
@@ -457,14 +463,86 @@ function CodingFeedback({
   attempt: LocalAttemptRow
 }) {
   const grade = attempt.grade
+  const source = submittedSource(attempt.answer)
+  const prediction = submittedValue(attempt.answer)
+  const testCases = grade?.testCases ?? []
+  const isPrediction = question.subtype === 'output_prediction'
   return (
     <>
-      <p className="ar-panel-placeholder t-body-sm">
-        Execution results arrive with coding grading.
-      </p>
+      {isPrediction ? (
+        <>
+          {question.starterCode && (
+            <pre className="ar-code" aria-label="Code snippet">
+              {question.starterCode}
+            </pre>
+          )}
+          {prediction != null && (
+            <p className="ar-answer-line">
+              Your prediction: <span className="t-mono-sm">{prediction}</span>
+            </p>
+          )}
+        </>
+      ) : (
+        <>
+          {source != null && (
+            <pre className="ar-code" aria-label="Your submitted code">
+              {source}
+            </pre>
+          )}
+          {testCases.length > 0 && (
+            <>
+              <h4 className="ar-subhead">Test cases</h4>
+              <TestCaseTable testCases={testCases} />
+            </>
+          )}
+        </>
+      )}
       {grade && <PerSkillList grade={grade} />}
       <CitationList question={question} />
     </>
+  )
+}
+
+/** The learner's own submitted source (never the reference solution). */
+function submittedSource(answer: LocalAttemptRow['answer']): string | null {
+  if (answer == null) return null
+  const candidate = answer as { source?: unknown }
+  return typeof candidate.source === 'string' ? candidate.source : null
+}
+
+/** The learner's own numeric prediction of an output_prediction question. */
+function submittedValue(answer: LocalAttemptRow['answer']): string | null {
+  if (answer == null) return null
+  const candidate = answer as { value?: unknown }
+  return typeof candidate.value === 'string' ? candidate.value : null
+}
+
+/** Public per-test verdicts of a coding grade (#42 D-05/D-07). */
+function TestCaseTable({ testCases }: { testCases: TestCaseResult[] }) {
+  return (
+    <table className="ar-tests" aria-label="Test results">
+      <thead>
+        <tr>
+          <th scope="col">Case</th>
+          <th scope="col">Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {testCases.map((testCase) => (
+          <tr key={testCase.name} className={testCase.passed ? 'is-pass' : 'is-fail'}>
+            <td>{testCase.name}</td>
+            <td>
+              <span
+                className={`tag tag-sm ${testCase.passed ? 'tag-moss' : 'tag-rust'}`}
+                aria-label={testCase.passed ? 'passed' : 'failed'}
+              >
+                {testCase.passed ? 'pass' : 'fail'}
+              </span>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   )
 }
 

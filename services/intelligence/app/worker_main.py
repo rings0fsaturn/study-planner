@@ -96,8 +96,13 @@ def _build_openrouter_adapter(prefix: str, schema_name: str):
     )
 
 
-def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry):
-    """Construct the generation arm from GENERATION_* env (D-08 defaults)."""
+def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry, sandbox=None):
+    """Construct the generation arm from GENERATION_* env (D-08 defaults).
+
+    `sandbox` is the Piston client the coding self-check runs the reference
+    solution through (the same instance the grading arm executes learner
+    submissions with).
+    """
     from app.generation.context import build_context
     from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 
@@ -116,6 +121,7 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
         adapter=adapter,
         telemetry=telemetry,
         context_builder=context_builder,
+        sandbox=sandbox,
         config=GenerationWorkerConfig(
             poll_interval_seconds=float(os.getenv("GENERATION_POLL_INTERVAL_SECONDS", "1")),
             visibility_seconds=int(os.getenv("GENERATION_VISIBILITY_SECONDS", "90")),
@@ -125,11 +131,12 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
     )
 
 
-def _build_grading_worker(repo, queue, adapter):
-    """Construct the grading arm (#39/#41).
+def _build_grading_worker(repo, queue, adapter, sandbox=None):
+    """Construct the grading arm (#39/#41/#42).
 
     Objective grading is deterministic and needs no provider; written grading
-    rides the shared OpenRouter adapter with the rubric schema name.
+    rides the shared OpenRouter adapter with the rubric schema name; coding
+    grading rides the sandbox client (Piston, the recorded D-02 fallback).
     """
     from app.grading.worker import GradingWorker, GradingWorkerConfig
 
@@ -137,12 +144,27 @@ def _build_grading_worker(repo, queue, adapter):
         repo=repo,
         queue=queue,
         adapter=adapter,
+        sandbox=sandbox,
         config=GradingWorkerConfig(
             poll_interval_seconds=float(os.getenv("GRADING_POLL_INTERVAL_SECONDS", "1")),
             visibility_seconds=int(os.getenv("GRADING_VISIBILITY_SECONDS", "30")),
             max_in_flight=int(os.getenv("GRADING_MAX_IN_FLIGHT", "1")),
             model=os.getenv("GRADING_MODEL", "deepseek/deepseek-v4-flash-0731"),
         ),
+    )
+
+
+def _build_piston_client():
+    """Construct the sandbox client from PISTON_* env (#42, D-02 fallback)."""
+    from app.grading.piston_client import PistonClient
+
+    return PistonClient(
+        base_url=os.getenv("PISTON_URL", "http://127.0.0.1:2000"),
+        python_version=os.getenv("PISTON_PYTHON_VERSION", "3.12.0"),
+        http_timeout_seconds=float(os.getenv("PISTON_HTTP_TIMEOUT_MS", "60000")) / 1000,
+        max_cpu_time_ms=int(os.getenv("PISTON_MAX_CPU_TIME_MS", "15000")),
+        wall_time_extra_ms=int(os.getenv("PISTON_WALL_TIME_EXTRA_MS", "1000")),
+        max_memory_mb=int(os.getenv("PISTON_MAX_MEMORY_MB", "256")),
     )
 
 
@@ -196,14 +218,21 @@ def main() -> None:
             max_tokens_per_minute=max_tokens_per_minute,
         ),
     )
+    # One sandbox client for both arms: the generation self-check and the
+    # grading execution talk to the same Piston (demand-started, rule 54).
+    sandbox = _build_piston_client()
     generation_worker = _build_generation_worker(
         shared_client,
         repo,
         queue,
         SupabaseTelemetrySink(supabase_url, service_role_key, client=shared_client),
+        sandbox=sandbox,
     )
     grading_worker = _build_grading_worker(
-        repo, queue, _build_openrouter_adapter("GRADING", "written_rubric")
+        repo,
+        queue,
+        _build_openrouter_adapter("GRADING", "written_rubric"),
+        sandbox,
     )
 
     logger.info("ingestion worker starting against %s", supabase_url)

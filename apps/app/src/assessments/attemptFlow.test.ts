@@ -458,3 +458,232 @@ describe('refreshAttempts written echo (D-02)', () => {
     await db.delete()
   })
 })
+
+describe('submitCodingAttempt (#42)', () => {
+  const CODING_QUESTION: Question = {
+    id: 'q-coding-1',
+    assessmentId: 'ass-1',
+    materialId: 'mat-1',
+    format: 'coding',
+    subtype: 'implement_fn',
+    prompt: 'Write sum_list(nums).',
+    options: [],
+    starterCode: 'def sum_list(nums):\n    pass\n',
+    visibleTests: [{ name: 'adds small list', stdin: '[1, 2, 3]', expectedOutput: '6' }],
+    skillTags: ['Iteration'],
+    authoredDifficulty: 2,
+    citations: [],
+  }
+  const CODING_ASSESSMENT: Assessment = { ...ASSESSMENT, questions: [CODING_QUESTION] }
+  const CODING_SOURCE = 'def sum_list(nums):\n    return sum(nums)\n'
+
+  it('sends { language, source, config } and keeps the source on the local row', async () => {
+    await Dexie.delete('AttemptFlowCodingSubmitTest')
+    const bodies: Array<Record<string, unknown>> = []
+    const { db, store, flow, fetchDouble } = harness((path, init) => {
+      if (path.endsWith('/attempts') && init?.method === 'POST') {
+        bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>)
+        return {
+          attemptId: 'att-coding-server-1',
+          questionId: 'q-coding-1',
+          status: 'queued',
+          jobId: 'job-coding-1',
+        }
+      }
+      throw new Error('unexpected path: ' + path)
+    }, 'AttemptFlowCodingSubmitTest')
+
+    const result = await flow.submitCodingAttempt(CODING_ASSESSMENT, CODING_QUESTION, CODING_SOURCE)
+
+    expect(result.online).toBe(true)
+    expect(bodies).toHaveLength(1)
+    expect(bodies[0].answer).toEqual({
+      language: 'python',
+      source: CODING_SOURCE,
+      config: { stdin: '', timeLimitMs: 15000, memoryLimitMb: 256 },
+    })
+    expect(result.local.answer).toEqual(bodies[0].answer)
+
+    const rows: LocalAttemptRow[] = await db.table('assessmentAttempts').toArray()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].status).toBe('submitted')
+
+    // The durable event stays answer-free: only the row and the server carry source.
+    const attempted = (await store.getAll()).find((event) => event.kind === QUESTION_ATTEMPTED)
+    expect(attempted?.payload).not.toHaveProperty('answer')
+    expect(attempted?.payload).not.toHaveProperty('source')
+    expect(attempted?.payload.answerKind).toBe('coding')
+    expect(fetchDouble.calls[0].path).toBe('/v1/assessments/ass-1/questions/q-coding-1/attempts')
+    await db.delete()
+  })
+
+  it('refuses blank source client-side without touching Dexie or the wire', async () => {
+    await Dexie.delete('AttemptFlowCodingBlankTest')
+    const { db, flow, fetchDouble } = harness(() => {
+      throw new Error('transport must not be called for a blank coding answer')
+    }, 'AttemptFlowCodingBlankTest')
+
+    await expect(
+      flow.submitCodingAttempt(CODING_ASSESSMENT, CODING_QUESTION, '   '),
+    ).rejects.toThrow(/write code/i)
+
+    expect(await db.table('assessmentAttempts').toArray()).toHaveLength(0)
+    expect(fetchDouble.calls).toHaveLength(0)
+    await db.delete()
+  })
+
+  it('refuses source over the contract budget client-side', async () => {
+    await Dexie.delete('AttemptFlowCodingOversizedTest')
+    const { db, flow, fetchDouble } = harness(() => {
+      throw new Error('transport must not be called for an oversized coding answer')
+    }, 'AttemptFlowCodingOversizedTest')
+
+    await expect(
+      flow.submitCodingAttempt(CODING_ASSESSMENT, CODING_QUESTION, 'x'.repeat(100001)),
+    ).rejects.toThrow(/limited to 100000/i)
+
+    expect(await db.table('assessmentAttempts').toArray()).toHaveLength(0)
+    expect(fetchDouble.calls).toHaveLength(0)
+    await db.delete()
+  })
+
+  it('refuses out-of-contract config client-side', async () => {
+    await Dexie.delete('AttemptFlowCodingConfigTest')
+    const { db, flow, fetchDouble } = harness(() => {
+      throw new Error('transport must not be called for out-of-contract config')
+    }, 'AttemptFlowCodingConfigTest')
+
+    await expect(
+      flow.submitCodingAttempt(CODING_ASSESSMENT, CODING_QUESTION, CODING_SOURCE, {
+        stdin: '',
+        timeLimitMs: 99999,
+        memoryLimitMb: 256,
+      }),
+    ).rejects.toThrow(/time limit/i)
+
+    expect(await db.table('assessmentAttempts').toArray()).toHaveLength(0)
+    expect(fetchDouble.calls).toHaveLength(0)
+    await db.delete()
+  })
+})
+
+describe('submitPredictionAttempt (#42 D-01)', () => {
+  const PREDICTION_QUESTION: Question = {
+    id: 'q-prediction-1',
+    assessmentId: 'ass-1',
+    materialId: 'mat-1',
+    format: 'coding',
+    subtype: 'output_prediction',
+    prompt: 'What does this snippet print?',
+    options: [],
+    starterCode: 'print(sum(range(4)))\n',
+    skillTags: ['Iteration'],
+    authoredDifficulty: 2,
+    citations: [],
+  }
+  const PREDICTION_ASSESSMENT: Assessment = {
+    ...ASSESSMENT,
+    questions: [PREDICTION_QUESTION],
+  }
+
+  it('sends the objective { value } shape and keeps it on the local row', async () => {
+    await Dexie.delete('AttemptFlowPredictionSubmitTest')
+    const bodies: Array<Record<string, unknown>> = []
+    const { db, store, flow, fetchDouble } = harness((path, init) => {
+      if (path.endsWith('/attempts') && init?.method === 'POST') {
+        bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>)
+        return {
+          attemptId: 'att-prediction-server-1',
+          questionId: 'q-prediction-1',
+          status: 'queued',
+          jobId: 'job-prediction-1',
+        }
+      }
+      throw new Error('unexpected path: ' + path)
+    }, 'AttemptFlowPredictionSubmitTest')
+
+    const result = await flow.submitPredictionAttempt(
+      PREDICTION_ASSESSMENT,
+      PREDICTION_QUESTION,
+      '  6  ',
+    )
+
+    expect(result.online).toBe(true)
+    expect(bodies).toHaveLength(1)
+    // The prediction is trimmed; the server compares it numerically.
+    expect(bodies[0].answer).toEqual({ value: '6' })
+    expect(result.local.answer).toEqual({ value: '6' })
+
+    const rows: LocalAttemptRow[] = await db.table('assessmentAttempts').toArray()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].status).toBe('submitted')
+
+    // The durable event stays answer-free, exactly like the coding arm.
+    const attempted = (await store.getAll()).find((event) => event.kind === QUESTION_ATTEMPTED)
+    expect(attempted?.payload).not.toHaveProperty('answer')
+    expect(attempted?.payload.answerKind).toBe('coding')
+    expect(fetchDouble.calls[0].path).toBe(
+      '/v1/assessments/ass-1/questions/q-prediction-1/attempts',
+    )
+    await db.delete()
+  })
+
+  it('refuses a blank prediction client-side without touching Dexie or the wire', async () => {
+    await Dexie.delete('AttemptFlowPredictionBlankTest')
+    const { db, flow, fetchDouble } = harness(() => {
+      throw new Error('transport must not be called for a blank prediction')
+    }, 'AttemptFlowPredictionBlankTest')
+
+    await expect(
+      flow.submitPredictionAttempt(PREDICTION_ASSESSMENT, PREDICTION_QUESTION, '   '),
+    ).rejects.toThrow(/predict the output/i)
+
+    expect(await db.table('assessmentAttempts').toArray()).toHaveLength(0)
+    expect(fetchDouble.calls).toHaveLength(0)
+    await db.delete()
+  })
+
+  it('refuses a non-numeric prediction client-side', async () => {
+    await Dexie.delete('AttemptFlowPredictionTextTest')
+    const { db, flow, fetchDouble } = harness(() => {
+      throw new Error('transport must not be called for a non-numeric prediction')
+    }, 'AttemptFlowPredictionTextTest')
+
+    await expect(
+      flow.submitPredictionAttempt(PREDICTION_ASSESSMENT, PREDICTION_QUESTION, 'six'),
+    ).rejects.toThrow(/numeric/i)
+
+    expect(await db.table('assessmentAttempts').toArray()).toHaveLength(0)
+    expect(fetchDouble.calls).toHaveLength(0)
+    await db.delete()
+  })
+
+  it('accepts the numeric shapes Python float() accepts', async () => {
+    await Dexie.delete('AttemptFlowPredictionNumericTest')
+    const bodies: Array<Record<string, unknown>> = []
+    const { db, flow } = harness((path, init) => {
+      if (path.endsWith('/attempts') && init?.method === 'POST') {
+        bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>)
+        return {
+          attemptId: `att-${bodies.length}`,
+          questionId: 'q-prediction-1',
+          status: 'queued',
+          jobId: `job-${bodies.length}`,
+        }
+      }
+      throw new Error('unexpected path: ' + path)
+    }, 'AttemptFlowPredictionNumericTest')
+
+    for (const value of ['6', '-3.5', '.5', '1e3', '+42']) {
+      await flow.submitPredictionAttempt(PREDICTION_ASSESSMENT, PREDICTION_QUESTION, value)
+    }
+    expect(bodies.map((body) => (body.answer as { value: string }).value)).toEqual([
+      '6',
+      '-3.5',
+      '.5',
+      '1e3',
+      '+42',
+    ])
+    await db.delete()
+  })
+})

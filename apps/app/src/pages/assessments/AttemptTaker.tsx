@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import {
   QUESTION_ATTEMPTED,
   QUESTION_GRADED,
@@ -10,9 +10,18 @@ import {
   type AttemptFlow,
   type LocalAttemptRow,
 } from '../../assessments/attemptFlow'
-import { WRITTEN_ANSWER_MAX_LENGTH } from '../../assessments/types'
+import { WRITTEN_ANSWER_MAX_LENGTH, OUTPUT_PREDICTION_SUBTYPE } from '../../assessments/types'
 import type { Assessment, ObjectiveAnswer, Question } from '../../assessments/types'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
+import { OutputPredictionTaker } from './OutputPredictionTaker'
+
+/**
+ * The coding branch (editor + advisory run) stays out of the main bundle
+ * (#42 D-06): CodeMirror + Pyodide load only when a coding question renders.
+ */
+const CodingTaker = lazy(() =>
+  import('./CodingTaker').then((module) => ({ default: module.CodingTaker })),
+)
 
 /**
  * Attempt taking for one question — objective (#39 D-06) or written (#41
@@ -39,6 +48,10 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
   const [attempts, setAttempts] = useState<LocalAttemptRow[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
   const isWritten = question.format === 'written'
+  const isCoding = question.format === 'coding'
+  // The fourth coding subtype never runs the sandbox (D-01): it renders the
+  // read-only snippet + value input instead of the editor branch.
+  const isOutputPrediction = isCoding && question.subtype === OUTPUT_PREDICTION_SUBTYPE
   const writtenProblem = isWritten ? writtenAnswerProblem(text) : null
 
   // Local flow bound to this render's event store (per-user Dexie).
@@ -78,20 +91,30 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
     const result = isWritten
       ? await flow.submitWrittenAttempt(assessment, question, text, undefined)
       : await flow.submitObjectiveAttempt(assessment, question, answer, undefined)
-    setAttempts(await flow.listLocalAttempts(assessment.id))
+    await afterSubmit(result)
+  }
+
+  /**
+   * Shared post-submit path: the coding branch calls this back with its own
+   * submit result. Coding grades run a sandbox per hidden test, so the poll
+   * window honours seconds, not milliseconds.
+   */
+  async function afterSubmit(result: { local: LocalAttemptRow; online: boolean }) {
+    setAttempts(await flow!.listLocalAttempts(assessment.id))
     if (!result.online) {
       setPhase('queued-offline')
       setSubmitError(result.local.submitError ?? 'You appear to be offline.')
       return
     }
     setPhase('grading')
-    // The grade normally lands within a second (deterministic queue arm).
-    const graded = await flow.pollGrade(
+    // The grade normally lands within a second (deterministic queue arm);
+    // the coding arm runs a sandbox per test, so it takes seconds.
+    const graded = await flow!.pollGrade(
       result.local.clientAttemptId,
       assessment.id,
-      isWritten ? 'llm_rubric' : 'objective',
+      isWritten ? 'llm_rubric' : isCoding && !isOutputPrediction ? 'judge0' : 'objective',
     )
-    setAttempts(await flow.listLocalAttempts(assessment.id))
+    setAttempts(await flow!.listLocalAttempts(assessment.id))
     setPhase(graded.status === 'graded' ? 'graded' : graded.status === 'failed' ? 'failed' : 'grading')
     onAttemptRecorded?.()
   }
@@ -111,6 +134,54 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
   }
 
   const latest = attempts.length > 0 ? attempts[attempts.length - 1] : null
+
+  // Coding renders through the lazy editor branch (#42 D-06); the
+  // output-prediction subtype renders its own small value input (D-01). The
+  // shared post-submit states below stay identical so the retry/history
+  // contract holds for all three families; only the grading copy names the
+  // sandbox.
+  if (isCoding && flow) {
+    return (
+      <div className="attempt-taker" aria-label="Answer this question">
+        {isOutputPrediction ? (
+          <OutputPredictionTaker
+            assessment={assessment}
+            question={question}
+            flow={flow}
+            phase={phase === 'submitting' || phase === 'grading' ? phase : 'answering'}
+            onSubmitting={() => setPhase('submitting')}
+            onSubmitted={(result) => void afterSubmit(result)}
+            onAttemptRecorded={onAttemptRecorded}
+          />
+        ) : (
+          <Suspense
+            fallback={
+              <p className="t-body-sm" role="status" style={{ marginTop: '0.75rem', color: 'var(--text-tertiary)' }}>
+                Loading the code editor…
+              </p>
+            }
+          >
+            <CodingTaker
+              assessment={assessment}
+              question={question}
+              flow={flow}
+              phase={phase === 'submitting' || phase === 'grading' ? phase : 'answering'}
+              onSubmitting={() => setPhase('submitting')}
+              onSubmitted={(result) => void afterSubmit(result)}
+              onAttemptRecorded={onAttemptRecorded}
+            />
+          </Suspense>
+        )}
+        {phase === 'grading' && (
+          <p className="t-body-sm" role="status" aria-busy="true" style={{ marginTop: '0.75rem', color: 'var(--text-tertiary)' }}>
+            {isOutputPrediction
+              ? 'Grading…'
+              : 'Grading in the sandbox - this takes a few seconds…'}
+          </p>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div className="attempt-taker" aria-label="Answer this question">

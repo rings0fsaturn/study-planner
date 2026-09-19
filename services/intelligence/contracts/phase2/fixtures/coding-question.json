@@ -1,0 +1,24 @@
+{
+  "id": "q-coding-001",
+  "assessmentId": "asmt-coding-001",
+  "materialId": "mat-code-001",
+  "format": "coding",
+  "subtype": "implement_fn",
+  "prompt": "Implement `fib(n)` that returns the n-th Fibonacci number. The function is called with a non-negative integer; return the value, not a print.",
+  "options": [],
+  "skillTags": ["algorithms"],
+  "authoredDifficulty": 3,
+  "citations": [
+    {
+      "chunkId": "chunk-code-007",
+      "materialId": "mat-code-001",
+      "quote": "The Fibonacci sequence is defined by the recurrence F(n) = F(n-1) + F(n-2)."
+    }
+  ],
+  "language": "python",
+  "starterCode": "def fib(n: int) -> int:\n    pass\n",
+  "visibleTests": [
+    { "name": "base cases", "stdin": "", "expectedOutput": "0\n1\n" },
+    { "name": "small n", "stdin": "", "expectedOutput": "55\n" }
+  ]
+}

@@ -7,17 +7,18 @@ describe('ServiceStatusBanner', () => {
     const { rerender } = render(<ServiceStatusBanner status="stale" />)
 
     expect(screen.getByText('Offline')).toBeInTheDocument()
-    expect(screen.getByText(/Showing last known pace/)).toBeInTheDocument()
+    expect(screen.getByText(/Showing your last known pace/)).toBeInTheDocument()
 
     rerender(<ServiceStatusBanner status="error" />)
 
-    expect(screen.getByText('Service')).toBeInTheDocument()
-    expect(screen.getByText(/Couldn't reach/)).toBeInTheDocument()
+    expect(screen.getByText('Pace')).toBeInTheDocument()
+    expect(screen.getByText(/We can't reach the pace service/)).toBeInTheDocument()
+    expect(screen.getByText(/Your sessions are safe on this device/)).toBeInTheDocument()
 
     rerender(<ServiceStatusBanner status="auth-error" />)
 
-    expect(screen.getByText('Auth')).toBeInTheDocument()
-    expect(screen.getByText(/SUPABASE_JWT_SECRET/)).toBeInTheDocument()
+    expect(screen.getByText('Pace')).toBeInTheDocument()
+    expect(screen.getByText(/We can't refresh your pace estimate/)).toBeInTheDocument()
   })
 
   it('does not render for loading or ready states', () => {

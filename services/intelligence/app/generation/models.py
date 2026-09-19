@@ -65,10 +65,10 @@ class AssessmentScope:
 class GenerationBlueprint:
     """What the worker executes: one grounded question for one assessment.
 
-    `question_format` is the family this assessment generates (`objective` or
-    `written`, one family per assessment); it selects the prompt, response
-    schema, validator, and accepted row shape. `prompt_template_version` labels
-    the prompt that produced the question in telemetry. `scope` is the
+    `question_format` is the family this assessment generates (`objective`,
+    `written`, or `coding`, one family per assessment); it selects the prompt,
+    response schema, validator, and accepted row shape. `prompt_template_version`
+    labels the prompt that produced the question in telemetry. `scope` is the
     learner's page range when one was requested (P4), carried through the whole
     pipeline so retrieval and the prompt agree on what was asked for.
     """

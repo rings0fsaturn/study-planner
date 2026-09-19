@@ -329,3 +329,47 @@ describe('AssessmentConfig', () => {
     })
   })
 })
+
+describe('coding family (#42)', () => {
+  it('offers the Coding chip and sends the coding family when picked', async () => {
+    const materials = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-1' }))
+    renderConfig(materials, assessments)
+
+    await screen.findByText('Difficulty band')
+    fireEvent.click(screen.getByRole('button', { name: 'Coding' }))
+    expect(screen.getByRole('button', { name: 'Coding' }).className).toContain('selected')
+    expect(
+      screen.getByText(/grade in a server sandbox against hidden tests/),
+    ).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    expect(assessments.generateAssessment.mock.calls[0][0].recipe.formats).toEqual(['coding'])
+  })
+
+  it('warns when the material carries no detected code blocks', async () => {
+    const materials = new FakeMaterialClient([material({ hasCode: false })])
+    const assessments = new FakeAssessmentClient()
+    renderConfig(materials, assessments)
+
+    await screen.findByText('Difficulty band')
+    fireEvent.click(screen.getByRole('button', { name: 'Coding' }))
+    expect(screen.getByText(/no code blocks detected/i)).toBeInTheDocument()
+  })
+
+  it('stays silent about code blocks on unscanned or code-bearing materials', async () => {
+    for (const overrides of [{}, { hasCode: true }, { hasCode: null }]) {
+      const materials = new FakeMaterialClient([material(overrides)])
+      const assessments = new FakeAssessmentClient()
+      const view = renderConfig(materials, assessments)
+      await screen.findByText('Difficulty band')
+      fireEvent.click(screen.getByRole('button', { name: 'Coding' }))
+      expect(screen.queryByText(/no code blocks detected/i)).not.toBeInTheDocument()
+      view.unmount()
+    }
+  })
+})

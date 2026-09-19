@@ -109,9 +109,10 @@ class FakeIngestionRepo:
             raise IngestionError("not_found", "material not found")
         row = dict(self.materials[material_id])
         row["owner_id"] = row.pop("user_id")
-        # The outline columns are server-owned material state, not part of the
-        # worker's Material view (the production row mapper ignores them too).
-        for key in ("outline", "page_count", "page_offset"):
+        # The outline and code-signal columns are server-owned material state,
+        # not part of the worker's Material view (the production row mapper
+        # ignores them too).
+        for key in ("outline", "page_count", "page_offset", "has_code", "code_languages"):
             row.pop(key, None)
         return Material(**row)
 
@@ -130,6 +131,8 @@ class FakeIngestionRepo:
         outline: dict | None = None,
         page_count: int | None = None,
         page_offset: int | None = None,
+        has_code: bool | None = None,
+        code_languages: list[str] | None = None,
     ) -> None:
         row = self.materials[material_id]
         row["ingestion_state"] = state
@@ -149,6 +152,10 @@ class FakeIngestionRepo:
             row["page_count"] = page_count
         if page_offset is not None:
             row["page_offset"] = page_offset
+        if has_code is not None:
+            row["has_code"] = has_code
+        if code_languages is not None:
+            row["code_languages"] = code_languages
 
     def get_job(self, job_id: str) -> IngestionJob:
         if job_id not in self.jobs:

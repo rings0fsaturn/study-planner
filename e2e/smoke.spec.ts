@@ -56,7 +56,9 @@ test.describe('React app at /study/', () => {
 
     await expect(page.getByLabel('Email')).toBeVisible();
     await expect(page.getByLabel('Password')).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Continue' })).toBeVisible();
+    // exact: the page also carries "Continue with Google", which the loose
+    // name match resolves to as well (strict-mode violation).
+    await expect(page.getByRole('button', { name: 'Continue', exact: true })).toBeVisible();
     await expect(page.getByRole('link', { name: 'Sign up' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Forgot password?' })).toBeVisible();
     await expect(page.locator('.auth-mark-name')).toContainText('Study Tracker');

@@ -7,10 +7,33 @@
  */
 
 export type AssessmentFormat = 'objective' | 'written' | 'coding'
-/** Authored written subtype (`Question.subtype`); absent for objective/coding. */
+/** Authored written subtype (`Question.subtype`). */
 export type WrittenSubtype = 'short_answer' | 'long_form'
+/** Authored coding subtype (`Question.subtype`, #42 D-09). */
+export type CodingSubtype = 'implement_fn' | 'debug' | 'output_prediction' | 'complete_code'
+/** Every authored subtype a `Question` may carry; absent for objective. */
+export type QuestionSubtype = WrittenSubtype | CodingSubtype
 /** Contract budget for `WrittenAnswer.text` (mirrors the server gate). */
 export const WRITTEN_ANSWER_MAX_LENGTH = 20000
+
+/** Day 1 sandbox language (openapi CodingAnswer.language). */
+export type CodingLanguage = 'python'
+/** Subtype graded by value match, not by the sandbox (#42 D-01). */
+export const OUTPUT_PREDICTION_SUBTYPE: CodingSubtype = 'output_prediction'
+/** Contract budgets for `CodingAnswer`, mirroring the server gates. */
+export const CODING_SOURCE_MAX_LENGTH = 100000
+export const CODING_STDIN_MAX_LENGTH = 20000
+export const CODING_TIME_LIMIT_MIN_MS = 100
+export const CODING_TIME_LIMIT_MAX_MS = 30000
+export const CODING_MEMORY_MIN_MB = 16
+export const CODING_MEMORY_MAX_MB = 1024
+/**
+ * Defaults a coding submission opens with. The sandbox clamps to its own
+ * ceilings (15 s CPU / 256 MB), so offering more than these would promise a
+ * budget the server cannot honour.
+ */
+export const CODING_TIME_LIMIT_DEFAULT_MS = 15000
+export const CODING_MEMORY_DEFAULT_MB = 256
 export type AssessmentStatus = 'generating' | 'ready' | 'partial' | 'failed'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled'
 export type JobKind = 'ingestion' | 'generation' | 'grading' | 'roadmap_feedback'
@@ -54,15 +77,30 @@ export interface Warning {
   questionId?: string
 }
 
+/** One learner-visible test case of a coding question (openapi VisibleTestCase). */
+export interface VisibleTestCase {
+  name: string
+  stdin: string
+  expectedOutput: string
+}
+
 export interface Question {
   id: string
   assessmentId: string
   materialId: string
   format: AssessmentFormat
-  /** Written questions only: the authored subtype. Absent for objective/coding. */
-  subtype?: WrittenSubtype
+  /**
+   * The authored subtype. Written questions carry `short_answer`/`long_form`;
+   * coding questions carry the P3-authored subtype (#42 D-09); absent for
+   * objective.
+   */
+  subtype?: QuestionSubtype
   prompt: string
   options: string[]
+  /** Coding questions only (`subtype` for `output_prediction` holds the snippet). */
+  starterCode?: string
+  /** Coding questions only: tests the advisory runner may execute in browser. */
+  visibleTests?: VisibleTestCase[]
   skillTags: string[]
   authoredDifficulty: number
   citations: Citation[]
@@ -145,8 +183,23 @@ export interface WrittenAnswer {
   text: string
 }
 
-/** The learner's own answer: objective shapes (#39) or written free text (#41). */
-export type LearnerAnswer = ObjectiveAnswer | WrittenAnswer
+/** Learner's source submission for a coding question (openapi CodingAnswer). */
+export interface CodingAnswer {
+  language: CodingLanguage
+  source: string
+  config: {
+    stdin: string
+    timeLimitMs: number
+    memoryLimitMb: number
+  }
+}
+
+/**
+ * The learner's own answer: objective shapes (#39), written free text (#41),
+ * or a coding submission (#42). The server echoes the learner's own answer on
+ * the owner-scoped read route (#40 D-01).
+ */
+export type LearnerAnswer = ObjectiveAnswer | WrittenAnswer | CodingAnswer
 
 /** Body of POST /v1/assessments/{assessmentId}/questions/{questionId}/attempts. */
 export interface AttemptSubmitInput {
@@ -196,6 +249,18 @@ export interface QuestionGradedResult {
   publicFeedback?: string
   /** Written grading only (`grader: llm_rubric`); the rubric itself stays server-side. */
   rubricBreakdown?: RubricCriterionResult[]
+  /**
+   * Coding grading only (`grader: judge0`): the public per-test verdicts.
+   * Hidden tests are named `Hidden test N` and carry no content.
+   */
+  testCases?: TestCaseResult[]
+}
+
+/** One public per-test verdict of a coding grade (openapi TestCaseResult). */
+export interface TestCaseResult {
+  name: string
+  passed: boolean
+  visible: boolean
 }
 
 /** One attempt in GET /v1/assessments/{assessmentId}/attempts (public record). */

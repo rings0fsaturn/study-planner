@@ -293,6 +293,35 @@
 }
 
 /* ---- Phase 3: family feedback treatments ---- */
+.ar-subhead {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin: var(--space-4) 0 var(--space-2);
+}
+
+/* Coding: the learner's submitted source (never the reference solution). */
+.ar-code {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed);
+  border-radius: var(--radius-sm);
+  overflow-x: auto;
+  /* Code is case-sensitive: no `.t-mono-sm` here, whose uppercase would
+     render the learner's source as a different program. */
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .ar-feedback-line {
   margin: var(--space-4) 0 0;
   padding: var(--space-3) var(--space-4);
@@ -347,6 +376,12 @@
   margin-top: var(--space-4);
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+/* Learner-supplied values are data, not labels: never uppercase them. */
+.ar-answer-line .t-mono-sm {
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 /* Written: rubric criteria + LLM explanation */

@@ -1,0 +1,12 @@
+{
+  "clientAttemptId": "ca-coding-submit-001",
+  "questionId": "q-coding-001",
+  "answer": {
+    "language": "python",
+    "source": "def fib(n: int) -> int:\n    a, b = 0, 1\n    for _ in range(n):\n        a, b = b, a + b\n    return a\n",
+    "config": { "stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128 }
+  },
+  "submittedAt": "2026-09-16T10:15:00Z",
+  "elapsedSeconds": 213,
+  "correlationId": "corr-coding-submit-001"
+}

@@ -207,6 +207,9 @@ export function feedbackText(grade: QuestionGradedResult | null | undefined): st
 export function describeAnswer(answer: LearnerAnswer | undefined): string | null {
   if (!answer) return null
   if ('text' in answer) return answer.text
+  // A coding submission renders its source in the execution table (#42), not
+  // as an answer line - and it carries none of the objective keys below.
+  if ('source' in answer) return null
   if (answer.value != null) return answer.value
   if (answer.flag != null) return answer.flag ? 'True' : 'False'
   return null
@@ -215,7 +218,7 @@ export function describeAnswer(answer: LearnerAnswer | undefined): string | null
 /** Option indexes marked as the learner's pick (mcq / multi_select). */
 export function pickedOptionIndexes(answer: LearnerAnswer | undefined): number[] {
   if (!answer) return []
-  if ('text' in answer) return []
+  if ('text' in answer || 'source' in answer) return []
   if (answer.index != null) return [answer.index]
   if (answer.indices != null) return [...answer.indices]
   return []

@@ -95,16 +95,21 @@ class FakeUserClient:
         attempt_id: str,
         job_id: str,
     ) -> dict:
-        """Mirror of the 025 submit_assessment_attempt RPC semantics."""
+        """Mirror of the 025/027/031 submit_assessment_attempt RPC semantics."""
         question = next(
             (q for q in self.questions.get(assessment_id, []) if q["id"] == question_id),
             None,
         )
         if question is None:
             raise IngestionError("not_found", "question not found")
-        if question.get("format", "objective") not in ("objective", "written"):
+        if question.get("format", "objective") not in (
+            "objective",
+            "written",
+            "coding",
+        ):
             raise IngestionError(
-                "invalid_request", "only objective and written questions grade in this slice"
+                "invalid_request",
+                "only objective, written and coding questions grade in this slice",
             )
         client_attempt_id = str(body.get("clientAttemptId") or "")
         for attempt in self.attempts:
@@ -301,7 +306,7 @@ def test_generate_assessment_missing_material_is_404(_override_client: FakeUserC
 def test_generate_assessment_wrong_format_is_400(_override_client: FakeUserClient) -> None:
     _override_client.seed(_material())
     body = _request_body()
-    body["recipe"]["formats"] = ["coding"]
+    body["recipe"]["formats"] = ["adaptive"]
     response = asyncio.run(
         _request(
             "POST",
@@ -347,6 +352,25 @@ def test_generate_assessment_written_format_is_202(_override_client: FakeUserCli
     assessment = next(iter(_override_client.assessments.values()))
     assert assessment["recipe"]["formats"] == ["written"]
     assert assessment["status"] == "generating"
+
+
+def test_generate_assessment_coding_format_is_202(_override_client: FakeUserClient) -> None:
+    """#42 P1: the router admits the coding family; the worker arm lands in P3."""
+    _override_client.seed(_material())
+    body = _request_body()
+    body["recipe"]["formats"] = ["coding"]
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/generate",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000000"},
+        )
+    )
+    assert response.status_code == 202, response.text
+    assert response.json()["kind"] == "generation"
+    assessment = next(iter(_override_client.assessments.values()))
+    assert assessment["recipe"]["formats"] == ["coding"]
 
 
 def test_generate_assessment_wrong_question_count_is_400(_override_client: FakeUserClient) -> None:
@@ -741,6 +765,48 @@ def test_get_assessment_serializes_written_subtype_and_omits_it_for_objective(
     _assert_no_secret_keys(body)
 
 
+def test_get_assessment_serializes_coding_columns_and_omits_them_for_objective(
+    _override_client: FakeUserClient,
+) -> None:
+    """#42 P1: the visible coding payload rides the public question columns."""
+    _override_client.seed(_material())
+    _override_client.assessments["a1"] = {
+        "id": "a1",
+        "user_id": "fixture-user",
+        "client_id": "client-1",
+        "material_id": "mat-1",
+        "recipe": {"formats": ["coding"], "questionCount": 1, "difficulty": 3},
+        "status": "ready",
+        "warnings": [],
+        "correlation_id": "corr-1",
+        "created_at": "2026-09-16T00:00:00Z",
+        "updated_at": "2026-09-16T00:02:00Z",
+    }
+    coding = _question(question_id="q-coding", format="coding", subtype="implement_fn")
+    coding.update(
+        {
+            "language": "python",
+            "starter_code": "def fib(n: int) -> int:\n    pass\n",
+            "visible_tests": [
+                {"name": "base cases", "stdin": "", "expectedOutput": "0\n1\n"}
+            ],
+        }
+    )
+    _override_client.questions["a1"] = [coding, _question(question_id="q-objective")]
+    response = asyncio.run(_request("GET", "/v1/assessments/a1"))
+    assert response.status_code == 200, response.text
+    body = response.json()
+    coding_out, objective_out = body["questions"]
+    assert coding_out["format"] == "coding"
+    assert coding_out["subtype"] == "implement_fn"
+    assert coding_out["language"] == "python"
+    assert coding_out["starterCode"] == "def fib(n: int) -> int:\n    pass\n"
+    assert coding_out["visibleTests"][0]["name"] == "base cases"
+    for key in ("language", "starterCode", "visibleTests"):
+        assert key not in objective_out, key
+    _assert_no_secret_keys(body)
+
+
 def test_get_assessment_404_for_other_users_row(_override_client: FakeUserClient) -> None:
     response = asyncio.run(_request("GET", "/v1/assessments/nope"))
     assert response.status_code == 404
@@ -941,6 +1007,149 @@ def test_submit_assessment_attempt_unsupported_format_is_400(
         )
     )
     assert response.status_code == 400, response.text
+
+
+def _coding_attempt_body(
+    source: str = "def fib(n: int) -> int:\n    return n\n",
+    client_attempt_id: str = "client-coding-0000001",
+    question_id: str = "q-coding",
+) -> dict:
+    return {
+        "clientAttemptId": client_attempt_id,
+        "questionId": question_id,
+        "answer": {
+            "language": "python",
+            "source": source,
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128},
+        },
+        "submittedAt": "2026-09-16T10:00:00Z",
+        "elapsedSeconds": 90,
+        "correlationId": "corr-coding-1",
+    }
+
+
+def test_submit_assessment_attempt_coding_is_201(
+    _override_client: FakeUserClient,
+) -> None:
+    """#42 P2: the coding arm landed, so a valid coding submit queues."""
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question(question_id="q-coding", format="coding"))
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-coding/attempts",
+            json=_coding_attempt_body(),
+            headers={"Idempotency-Key": "idem-key-000000000005"},
+        )
+    )
+    assert response.status_code == 201, response.text
+    assert response.json()["status"] == "queued"
+    stored = _override_client.attempts[-1]["answer"]
+    assert stored["source"].startswith("def fib")
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        {
+            "language": "javascript",
+            "source": "x",
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128},
+        },
+        {
+            "language": "python",
+            "source": "",
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128},
+        },
+        {
+            "language": "python",
+            "source": "x" * 100001,
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 128},
+        },
+        {"language": "python", "source": "x"},
+        {
+            "language": "python",
+            "source": "x",
+            "config": {"stdin": "y" * 20001, "timeLimitMs": 2000, "memoryLimitMb": 128},
+        },
+        {
+            "language": "python",
+            "source": "x",
+            "config": {"stdin": "", "timeLimitMs": 99, "memoryLimitMb": 128},
+        },
+        {
+            "language": "python",
+            "source": "x",
+            "config": {"stdin": "", "timeLimitMs": 30001, "memoryLimitMb": 128},
+        },
+        {
+            "language": "python",
+            "source": "x",
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 15},
+        },
+        {
+            "language": "python",
+            "source": "x",
+            "config": {"stdin": "", "timeLimitMs": 2000, "memoryLimitMb": 1025},
+        },
+    ],
+)
+def test_submit_assessment_attempt_coding_rejects_bad_shape(
+    _override_client: FakeUserClient, answer: dict
+) -> None:
+    """#42 P2: malformed coding submits are rejected, never queued."""
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(_question(question_id="q-coding", format="coding"))
+    body = _coding_attempt_body()
+    body["answer"] = answer
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-coding/attempts",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000006"},
+        )
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["code"] == "invalid_request"
+    assert _override_client.attempts == []
+
+
+def test_submit_assessment_attempt_output_prediction_value_is_admitted(
+    _override_client: FakeUserClient,
+) -> None:
+    """#42 D-01: output_prediction answers are `{value}`, not code."""
+    _override_client.assessments["ass-1"] = {
+        "id": "ass-1",
+        "user_id": "fixture-user",
+        "material_id": "mat-1",
+        "status": "ready",
+    }
+    _override_client.seed_question(
+        _question(question_id="q-op", format="coding", subtype="output_prediction")
+    )
+    body = _coding_attempt_body(client_attempt_id="client-op-0000001", question_id="q-op")
+    body["answer"] = {"value": "42"}
+    response = asyncio.run(
+        _request(
+            "POST",
+            "/v1/assessments/ass-1/questions/q-op/attempts",
+            json=body,
+            headers={"Idempotency-Key": "idem-key-000000000007"},
+        )
+    )
+    assert response.status_code == 201, response.text
+    assert _override_client.attempts[-1]["answer"] == {"value": "42"}
 
 
 def _written_attempt_body(

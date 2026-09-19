@@ -36,6 +36,9 @@ playwright-report/
 # pdf.js wasm decoders, copied into public/ by apps/app/scripts/sync-pdfjs-wasm.mjs
 apps/app/public/pdfjs-wasm/
 
+# Pyodide runtime, copied into public/ by apps/app/scripts/sync-pyodide-assets.mjs
+apps/app/public/pyodide/
+
 # Hermes agent workspace mirrors of the agents rules/skills (tool-generated)
 .hermes/
 

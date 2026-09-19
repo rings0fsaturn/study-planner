@@ -12,7 +12,7 @@ import {
 } from '../../packages/progress/src/kalman'
 import { gpRegression, fitBurnUpGP, choleskyDecompose, choleskySolve } from '../../packages/progress/src/gp'
 import { analyzeTrend } from '../../packages/progress/src/trend'
-import { calculateStreak, buildStreakGrid } from '../../packages/progress/src/streak'
+import { calculateStreak, buildStreakGrid, buildYearStreakGrid } from '../../packages/progress/src/streak'
 import { computeCalibration, getPromptDetail } from '../../packages/progress/src/calibration'
 import { computeProgress } from '../../packages/progress/src/progress'
 import type {
@@ -1196,6 +1196,58 @@ export function progressCases(): FixtureCase[] {
           '2026-01-15',
           { '2026-01-16': 60, '2026-01-17': 60 },
           60,
+        ),
+    },
+
+    // buildYearStreakGrid — the 53x7 year calendar
+    {
+      name: 'year-grid-no-sessions',
+      fn: 'buildYearStreakGrid',
+      input: { sessions: [], today: '2026-01-15' },
+      run: () => buildYearStreakGrid([], '2026-01-15'),
+    },
+    {
+      name: 'year-grid-buckets',
+      fn: 'buildYearStreakGrid',
+      input: {
+        sessions: [
+          makeSession({ date: '2026-01-05', duration: 10, sessionId: 's-1' }),
+          makeSession({ date: '2026-01-06', duration: 30, sessionId: 's-2' }),
+          makeSession({ date: '2026-01-07', duration: 60, sessionId: 's-3' }),
+          makeSession({ date: '2026-01-08', duration: 120, sessionId: 's-4' }),
+          makeSession({ date: '2026-01-09', source: 'manual', duration: 0, sessionId: 's-5' }),
+        ],
+        today: '2026-01-15',
+      },
+      run: () =>
+        buildYearStreakGrid(
+          [
+            makeSession({ date: '2026-01-05', duration: 10, sessionId: 's-1' }),
+            makeSession({ date: '2026-01-06', duration: 30, sessionId: 's-2' }),
+            makeSession({ date: '2026-01-07', duration: 60, sessionId: 's-3' }),
+            makeSession({ date: '2026-01-08', duration: 120, sessionId: 's-4' }),
+            makeSession({ date: '2026-01-09', source: 'manual', duration: 0, sessionId: 's-5' }),
+          ],
+          '2026-01-15',
+        ),
+    },
+    {
+      name: 'year-grid-future-zero',
+      fn: 'buildYearStreakGrid',
+      input: {
+        sessions: [
+          makeSession({ date: '2026-01-16', duration: 90, sessionId: 's-1' }),
+          makeSession({ date: '2025-03-15', duration: 45, sessionId: 's-2' }),
+        ],
+        today: '2026-01-15',
+      },
+      run: () =>
+        buildYearStreakGrid(
+          [
+            makeSession({ date: '2026-01-16', duration: 90, sessionId: 's-1' }),
+            makeSession({ date: '2025-03-15', duration: 45, sessionId: 's-2' }),
+          ],
+          '2026-01-15',
         ),
     },
 

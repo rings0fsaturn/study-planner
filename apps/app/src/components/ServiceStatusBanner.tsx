@@ -7,15 +7,15 @@ interface ServiceStatusBannerProps {
 const COPY = {
   stale: {
     label: 'Offline',
-    message: 'Showing last known pace while reconnecting.',
+    message: 'Showing your last known pace while we reconnect.',
   },
   error: {
-    label: 'Service',
-    message: "Couldn't reach the calibration service.",
+    label: 'Pace',
+    message: "We can't reach the pace service. Your sessions are safe on this device.",
   },
   'auth-error': {
-    label: 'Auth',
-    message: 'Calibration auth failed. Check the service SUPABASE_JWT_SECRET.',
+    label: 'Pace',
+    message: "We can't refresh your pace estimate right now. Please try again shortly.",
   },
 } as const
 
@@ -23,7 +23,7 @@ export function ServiceStatusBanner({ status }: ServiceStatusBannerProps) {
   if (status !== 'stale' && status !== 'error' && status !== 'auth-error') return null
 
   const copy = COPY[status]
-  const borderColor = status === 'stale' ? 'var(--moss)' : 'var(--rust)'
+  const borderColor = status === 'stale' ? 'var(--ink-faint)' : 'var(--rust)'
 
   return (
     <div

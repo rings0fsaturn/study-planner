@@ -75,8 +75,23 @@
 .btn-destructive:hover:not(:disabled) { background: rgba(160, 67, 42, 0.06); }
 
 .btn-sm { font-size: 13px; padding: 7px 12px; border-radius: var(--radius-sm); }
+.btn-flag { padding: 6px 8px; min-width: 0; line-height: 1; }
 .btn-lg { font-size: 16px; padding: 14px 22px; }
 .btn-block { width: 100%; }
+
+/* DESIGN.md commits touch targets to 44px on mobile. Enforced here, once, on
+   the primitives, instead of at each call site. A pointer device keeps the
+   tighter visual rhythm; the tap target grows only where a thumb is doing the
+   tapping. Padding, not min-height, so the hit area grows the same way for
+   every variant without fighting their individual padding values. */
+@media (pointer: coarse) {
+  .btn { min-height: 44px; }
+  .btn-sm { min-height: 44px; padding: 11px 14px; }
+  .sync-indicator { min-height: 44px; padding: 10px 14px; }
+  /* The flag toggle is icon-only, so the horizontal target has to clear 44px
+     on its own rather than borrowing width from a text label. */
+  .btn-flag { padding: 13px; }
+}
 
 /* ---- Card ---- */
 .card {
@@ -147,6 +162,103 @@
 .tag-rust { background: rgba(160, 67, 42, 0.1); color: var(--rust); border-color: transparent; }
 .tag-terracotta { background: rgba(184, 92, 56, 0.1); color: var(--terracotta-d); border-color: transparent; }
 .tag-sm { padding: 2px 8px; font-size: 11px; }
+
+/* ---- Streak calendar · year ---- */
+.streak-calendar {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-4);
+}
+.streak-calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.streak-calendar-meta {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+}
+/* The 12-month window is up to 53 columns. A fixed min-width here pushed the
+   grid to 1031px inside a 574px card, so ~457px of the year sat off-screen
+   behind a scrollbar with no affordance saying so. Columns are minmax(0, 1fr)
+   at width 100% instead: the whole year always fits the card, cells stay square
+   via aspect-ratio, and cell size is what flexes. The meta line carries the
+   numbers at a readable size and the grid's aria-label carries them for AT. */
+.streak-calendar-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 2px;
+}
+.streak-calendar-grid {
+  display: grid;
+  width: 100%;
+  grid-template-rows: 14px repeat(7, auto);
+  gap: 3px;
+}
+/* Compact phone: the reference's 2px gap. At 375px, 52 three-px gutters eat
+   156px of a ~309px grid, leaving sub-3px cells. Halving the gutter returns
+   that space to the cells, which is what makes the year legible as a texture
+   at phone width. */
+@media (max-width: 600px) {
+  .streak-calendar { padding: var(--space-3); }
+  .streak-calendar-grid { gap: 2px; grid-template-rows: 12px repeat(7, auto); }
+  .streak-calendar-month { font-size: 8px; }
+}
+.streak-calendar-month {
+  grid-row: 1;
+  align-self: end;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+  /* A month's span is its week count, so the trailing partial month can be
+     narrower than its own label. Clipping keeps a truncated label from
+     widening the scroll area and reintroducing the horizontal scroll. */
+  overflow: hidden;
+  min-width: 0;
+}
+.streak-calendar-cell {
+  aspect-ratio: 1;
+  border-radius: 2px;
+  /* Non-color channel: the reference's inset hairline. Every cell carries the
+     same edge, so level survives for colorblind readers and on dim displays,
+     where the cream-to-moss ramp alone is only ~1.4:1 between neighbours. */
+  box-shadow: var(--shadow-inset-faint);
+}
+.streak-calendar-cell[data-level='0'] { background: var(--streak-0); }
+.streak-calendar-cell[data-level='1'] { background: var(--streak-1); }
+.streak-calendar-cell[data-level='2'] { background: var(--streak-2); }
+.streak-calendar-cell[data-level='3'] { background: var(--streak-3); }
+.streak-calendar-cell[data-level='4'] { background: var(--streak-4); }
+.streak-calendar-cell-today {
+  box-shadow: var(--shadow-inset-faint), inset 0 0 0 1.5px var(--ink);
+}
+.streak-calendar-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--space-3);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.streak-calendar-legend-cell {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  box-shadow: var(--shadow-inset-faint);
+}
 
 /* ---- Field / Input ---- */
 .field-group {
@@ -311,6 +423,14 @@
 @keyframes pulse-sync {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.3; }
+}
+
+/* The syncing dot is the only running loop in the shell; the label already
+   says "syncing", so collapsing the pulse to a steady dot loses no meaning. */
+@media (prefers-reduced-motion: reduce) {
+  .sync-indicator.syncing .sync-indicator-dot {
+    animation: none;
+  }
 }
 
 /* ---- Auth wordmark ---- */
@@ -887,6 +1007,70 @@
   line-height: 1.55; margin-bottom: var(--space-4);
 }
 .modal-body strong { color: var(--text-primary); font-weight: 600; }
+
+/* ---- SETTINGS GROUP / ROW ----
+   Extracted from design/marginalia.html (composite: .settings-group .settings-row).
+   Each group holds 1-4 rows: a label-and-sub on the left, one right-side
+   affordance (toggle, value, or chevron). Grouping solves density; pagination
+   is not the answer. */
+.settings-group {
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+.settings-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-3);
+  transition: background var(--duration-2) var(--ease-out);
+}
+.settings-row:last-child { border-bottom: none; }
+.settings-row-body { flex: 1; min-width: 0; }
+.settings-row-label {
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+.settings-row-label.destructive { color: var(--rust); }
+.settings-row-sub {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+.settings-row-value {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  flex-shrink: 0;
+}
+/* A row is interactive only when it does something. */
+button.settings-row,
+a.settings-row {
+  width: 100%;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.settings-row:hover,
+a.settings-row:hover { background: var(--paper-deep); }
+.settings-row-chevron {
+  color: var(--text-tertiary);
+  font-size: 18px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+  line-height: 1;
+}
 
 /* ---- BANNER ---- */
 .banner {

@@ -17,6 +17,15 @@ from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse
 
 from app.dependencies import get_user_client
+from app.grading.coding_grader import (
+    CODING_LANGUAGE,
+    CODING_SOURCE_MAX_LENGTH,
+    CODING_STDIN_MAX_LENGTH,
+    MEMORY_MAX_MB,
+    MEMORY_MIN_MB,
+    TIME_LIMIT_MAX_MS,
+    TIME_LIMIT_MIN_MS,
+)
 from app.ingestion.models import IngestionError
 from app.routers.serialization import async_job_from_row, service_error
 from app.security import require_user
@@ -27,17 +36,65 @@ router = APIRouter()
 DIFFICULTY_MIN = 1
 DIFFICULTY_MAX = 5
 # One question family per assessment in this slice (#41, D-01); mixed-family
-# generation is out of scope.
-SUPPORTED_FORMATS = (["objective"], ["written"])
+# generation is out of scope. #42 adds the coding family; the grading arm
+# that drains coding attempts landed in P2.
+SUPPORTED_FORMATS = (["objective"], ["written"], ["coding"])
 # Contract bound for WrittenAnswer.text (openapi, Phase 2 #41).
 WRITTEN_TEXT_MAX_LENGTH = 20000
+
+
+def _coding_answer_failures(answer: dict) -> list[str]:
+    """Shape validation for a coding submit, mirroring the openapi caps.
+
+    The worker re-validates before grading; this gate keeps malformed
+    submissions out of the queue with an honest 400 instead of a silent
+    queue death.
+    """
+    failures: list[str] = []
+    if answer.get("language") != CODING_LANGUAGE:
+        failures.append(f"language must be '{CODING_LANGUAGE}' for this slice")
+    source = answer.get("source")
+    if not isinstance(source, str) or not source.strip():
+        failures.append("source must be a non-empty string")
+    elif len(source) > CODING_SOURCE_MAX_LENGTH:
+        failures.append(f"source exceeds {CODING_SOURCE_MAX_LENGTH} characters")
+    config = answer.get("config")
+    if not isinstance(config, dict):
+        failures.append("config must be an object")
+    else:
+        stdin = config.get("stdin")
+        if not isinstance(stdin, str) or len(stdin) > CODING_STDIN_MAX_LENGTH:
+            failures.append(f"config.stdin exceeds {CODING_STDIN_MAX_LENGTH} characters")
+        time_limit_ms = config.get("timeLimitMs")
+        if (
+            isinstance(time_limit_ms, bool)
+            or not isinstance(time_limit_ms, int)
+            or not TIME_LIMIT_MIN_MS <= time_limit_ms <= TIME_LIMIT_MAX_MS
+        ):
+            failures.append(
+                f"config.timeLimitMs must be an integer from "
+                f"{TIME_LIMIT_MIN_MS} to {TIME_LIMIT_MAX_MS}"
+            )
+        memory_limit_mb = config.get("memoryLimitMb")
+        if (
+            isinstance(memory_limit_mb, bool)
+            or not isinstance(memory_limit_mb, int)
+            or not MEMORY_MIN_MB <= memory_limit_mb <= MEMORY_MAX_MB
+        ):
+            failures.append(
+                f"config.memoryLimitMb must be an integer from "
+                f"{MEMORY_MIN_MB} to {MEMORY_MAX_MB}"
+            )
+    return failures
 
 
 def _validate_recipe(recipe: dict) -> list[str]:
     failures: list[str] = []
     formats = recipe.get("formats")
     if formats not in SUPPORTED_FORMATS:
-        failures.append("formats must be ['objective'] or ['written'] for this slice")
+        failures.append(
+            "formats must be ['objective'], ['written'], or ['coding'] for this slice"
+        )
     question_count = recipe.get("questionCount")
     if question_count != 1:
         failures.append("questionCount must be 1 for this slice")
@@ -125,6 +182,17 @@ def _question(row: dict) -> dict:
     subtype = row.get("subtype")
     if subtype:
         question["subtype"] = subtype
+    # #42: coding questions carry the visible coding payload; pre-coding rows
+    # omit all three keys rather than sending nulls.
+    if (row.get("format") or "") == "coding":
+        for key, column in (
+            ("language", "language"),
+            ("starterCode", "starter_code"),
+            ("visibleTests", "visible_tests"),
+        ):
+            value = row.get(column)
+            if value is not None:
+                question[key] = value
     return question
 
 
@@ -271,16 +339,31 @@ def submit_assessment_attempt(
     client_attempt_id = str(body.get("clientAttemptId") or "")
     if not client_attempt_id or body.get("questionId") != questionId:
         return service_error(
-            request, IngestionError("invalid_request", "clientAttemptId and questionId must match the route")
+            request,
+            IngestionError(
+                "invalid_request", "clientAttemptId and questionId must match the route"
+            ),
         )
     if not isinstance(body.get("answer"), dict):
         return service_error(
             request, IngestionError("invalid_request", "answer must be an object")
         )
+    # Coding answers (#42): `{language, source, config}` is the only accepted
+    # shape, and the contract caps are enforced here so a malformed submission
+    # never reaches the queue. Output-prediction answers (`{value}`) carry no
+    # `source` key and fall through to the generic gate, then grade
+    # deterministically server-side.
+    answer = body["answer"]
+    if "source" in answer:
+        failures = _coding_answer_failures(answer)
+        if failures:
+            return service_error(
+                request, IngestionError("invalid_request", "; ".join(failures))
+            )
     # Written answers (#41, D-02): `{ text }` is the only accepted shape, and an
     # empty or oversized submission never reaches the queue. Objective answers
     # carry no `text` key, so this gate cannot touch them.
-    text = body["answer"].get("text")
+    text = answer.get("text")
     if text is not None:
         if not isinstance(text, str) or not text.strip():
             return service_error(

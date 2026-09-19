@@ -1,0 +1,75 @@
+/**
+ * Coding editor (#42 D-06): CodeMirror dressed in the Marginalia room -
+ * paper ground, ink text, hairline border, mono type. The `.field` padding
+ * is zeroed on the host so the editor's own gutters own the inset.
+ */
+
+.coding-editor.field {
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.coding-editor .cm-editor {
+  background: transparent;
+  color: var(--ink);
+}
+
+.coding-editor .cm-content {
+  padding: 11px 0;
+  line-height: 1.55;
+}
+
+.coding-editor .cm-gutters {
+  background: transparent;
+  border-right: 1px solid var(--rule);
+  color: var(--text-tertiary);
+}
+
+.coding-editor .cm-activeLineGutter,
+.coding-editor .cm-activeLine {
+  background: rgba(42, 31, 24, 0.04);
+}
+
+.coding-editor .cm-cursor {
+  border-left-color: var(--ink);
+}
+
+.coding-editor .cm-selectionBackground,
+.coding-editor ::selection {
+  background: rgba(184, 92, 56, 0.18);
+}
+
+.coding-editor .cm-focused {
+  outline: none;
+}
+
+/* Read-only authored snippet of an output_prediction question (D-01). */
+.coding-snippet {
+  margin: 0;
+  padding: 11px var(--space-4);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow-x: auto;
+  /* Code is case-sensitive: no `.t-mono-sm` here, whose uppercase would
+     render the authored snippet as a different program. */
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink);
+  white-space: pre;
+}
+
+/* The code surfaces own the card width: a 420px form field is an editor trap. */
+.coding-field-group.field-group {
+  max-width: 100%;
+}
+
+/* A predicted value is short; the input should not stretch to card width. */
+.coding-prediction-input {
+  max-width: 240px;
+}
