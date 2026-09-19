@@ -7,7 +7,7 @@ _Ticket: #42 · Parent spec #32 · Plan: plan/PLAN.md · Updated: 2026-09-19 (P4
 - [x] AC1 — Coding formats generate only when the material supports code-bearing content. — P1 (`has_code`/`code_languages` on the material read) + P3 (in-generation LLM judge; `code_not_derivable` carries the reasoning). P3 dry run: `implement_fn` self-check 5/5, `debug` steer judged `code_not_derivable`; P4 renders the warning path untouched.
 - [x] AC2 — Client execution advisory, server execution authoritative. — **P4**: the taker runs the question's visible tests in a lazily imported Pyodide (`advisoryRunner.ts`) behind an "Advisory - the server grade is authoritative" badge; the grade arrives only from the server poll (`pollGrade(..., 'judge0')`), and a compile-error grade from the server overrides a passing advisory (exercised live: advisory pass + real Piston grade 1.00; the earlier compile-error run showed the server verdict authoritative over the editor state).
 - [x] AC3 — Compile/runtime/timeout/test-case normalize into the public grading contract. — P2 (`coding_grader`: hidden pass rate, `correct @ 0.6`, shared `per_skill_observations`, `testCases` veil). P4 renders the table and the deterministic template words; live grades showed `Passed 2/2 hidden tests.` and `Your code did not compile.`
-- [ ] AC4 — Sandbox isolation, hidden-test protection, failure behavior tested. — P2 unit coverage + live client round-trip landed; the full live failure drill (redaction sweep, infra retry) is **P5** scope. Not ticked.
+- [x] AC4 — Sandbox isolation, hidden-test protection, failure behavior tested. — P2 unit coverage + live client round-trip + **P5** live spec: `e2e/coding-assessment-live.spec.ts` 3/3 green (real Piston sandbox end to end: fail-closed compile error, mid-grading reload resume, retry, output_prediction with a worker-log no-sandbox-contact assertion, 375 px flow); redaction sweep over every `/rest/v1` + `/v1` response body and the rendered DOM against seeded hidden-content markers; window-scoped cleanup verified cascade-empty.
 
 ## Phase gates
 
@@ -16,6 +16,7 @@ _Ticket: #42 · Parent spec #32 · Plan: plan/PLAN.md · Updated: 2026-09-19 (P4
 - [x] P2 — Piston sandbox + grading arm (D-02 amended after the isolate gate failed on this host). 46 new tests; suite 625/5 (pre-existing calibration); rule-80 live round-trip green.
 - [x] P3 — generation coding arm + `has_code`. 52 new tests; suite 673/5; rule-80 dry run green (`implement_fn` 5/5, `output_prediction` numeric, `debug` steer `code_not_derivable`).
 - [x] P4 — client slice. Gates below.
+- [x] P5 — durable live spec + AC sweep + records. Gates below.
 
 ## P4 gate evidence (2026-09-19)
 
@@ -63,12 +64,47 @@ The temporary spec (`e2e/tmp-p4-vision.spec.ts`) and the seed script were delete
 5. **Editor width capped at 420px** by the `.field-group` form primitive, and the prediction input stretched to card width. `coding-field-group` widens the code surfaces; the prediction input caps at 240px.
 6. **`basicSetup` pulled autocompletion + lint** (D-06 forbids them) and the hidden textarea fallback was dead weight. The extension list is now the explicit D-06 ceiling, and the fallback is deleted.
 
-## P5 notes (handoff)
+## P5 gate evidence (2026-09-19)
 
-- The live spec can seed rows directly (the P4 recipe): one `materials` row (`ingestion_state='ready'`, `has_code`), one `assessments` row (`status='ready'`, `recipe.formats=['coding']`), one `questions` row (`format='coding'`, `subtype`, `starter_code`, `visible_tests`, `answer_block` = `{hiddenTests, referenceSolution}` or `{acceptedValue}`). Service-role PostgREST; cleanup deletes the material and cascades.
+### Live spec: `e2e/coding-assessment-live.spec.ts` - 3/3 green
+
+```
+✓ 1 implement_fn: advisory, fail-closed compile error, mid-grading reload resume, retry, sandbox grade, hidden veil (16.7s)
+✓ 2 output_prediction: deterministic grade without any sandbox contact (13.0s)
+✓ 3 coding flow at 375: sandbox grade, veiled table, zero horizontal overflow (14.2s)
+3 passed (47.5s)
+pnpm exec playwright test -c e2e/playwright.config.ts e2e/coding-assessment-live.spec.ts --project=app --workers=1
+```
+
+Each scenario signs in with the shared account, seeds one material + assessment + coding question through service-role PostgREST (the P4 recipe), drives the real taker/review, and deletes the material by id with a cascade-empty verification (`assessments`, `questions`, `question_attempts`). Stale rows from failed runs are swept by title prefix at scenario start; the frozen ACCA corpus is never touched (verified no `E2E#42*` rows remain after the run).
+
+- Scenario 1 (desktop 1280): CodeMirror renders the starter (width > 600 px asserted - the desktop-only gate), the Pyodide advisory fails the deliberately wrong starter and passes the corrected source, a `SyntaxError` submission grades fail-closed 0 through the **real Piston sandbox** ("Your code did not compile.", padded failed verdicts, veiled `Hidden test 1/2` rows), a reload issued right after the POST /attempts commit resumes through the 3 s server refresh loop and lands the grade, retry mints attempt 2 (history shows `Attempt #1 incorrect · 0.00` + `Attempt #2 correct · 1.00`), score 1.00 with `Passed 2/2 hidden tests.`.
+- Scenario 2 (desktop): read-only snippet + numeric input, no editor, no advisory; deterministic `Correct.` grade; the worker log's `piston execution attempt=` line count is identical before and after - **no sandbox contact**.
+- Scenario 3 (375 px): full coding flow, veiled table, `scrollWidth <= clientWidth` (no horizontal overflow).
+
+Redaction (AC4): the seeded `answer_block` carries three distinctive markers (reference comment `# ref-only-77a1`, hidden test name `H7f3aX`, hidden stdin `99 99`); every `/rest/v1` + `/v1` response body buffered during the scenario and the rendered DOM are swept for the markers and the structural keys (`answerBlock|answer_block|referenceSolution|hiddenTests|...`) - zero hits in all three scenarios.
+
+Evidence: `plan/evidence/p5-impl-desktop.png`, `p5-impl-mobile.png`, `p5-prediction-desktop.png`.
+
+### Full gates
+
+- App suite **902/904** (the 2 documented WSL TZ flakes in `src/dev/seedTestData.test.ts`, pass with `--pool=forks`); `typecheck` clean; `lint` clean; `build` green (main chunk 1,188.20 kB, unchanged vs P4's 1,188.07 kB - P5 ships no product code).
+- Backend suite **673/5** (the 5 documented pre-existing calibration golden-fixture failures, fail on base tree); contracts **28/28**; ruff clean (no backend change in P5).
+- Sandbox hygiene: Piston demand-started before the run (rule-80 trivial submission green) and stopped after; the leftover stopped dockerized stack (`web`/`intelligence`/`ingestion-worker` from a prior session) was re-stopped so only one worker drains `assessment_grade`.
+
+### Defects found and fixed in P5 (all in the spec, none in product code)
+
+1. **Admin-users lookup is ambiguous on this account**: Gmail dot-aliasing means several auth rows share one inbox (`iamrohit.saji@gmail.com` and `i.amrohitsaji@gmail.com` both normalize to the same address), and the actually signed-in user id was not even in the first admin page. The spec now reads the user id from the signed-in session the app itself stored (`localStorage['sb-kabpmbhlvfbrhtbxjaua-auth-token'].user.id`) - authoritative, since the seeded rows must carry the exact id RLS checks.
+2. **The in-flight grading text is not assertable**: the sandbox composes a grade in ~250 ms of the worker picking the message up (measured from `worker.log`: 4 Piston executions in 180 ms), so `Grading…`/`Grading in the sandbox` flashes for less than one poll interval. The mid-grading reload now waits on the deterministic commit signal - the POST `/attempts` response - before reloading.
+3. **`Your submitted code` is an aria-label, not text**: the review card's source `<pre>` carries `aria-label="Your submitted code"` and its text is the code itself; `getByText` cannot find it, `getByLabel` can.
+
+## Handoff notes (superseded in part by the live spec)
+
+- The live spec can seed rows directly (the P4 recipe): one `materials` row (`ingestion_state='ready'`, `has_code`), one `assessments` row (`status='ready'`, `recipe.formats=['coding']`), one `questions` row (`format='coding'`, `subtype`, `starter_code`, `visible_tests`, `answer_block` = `{hiddenTests, referenceSolution}` or `{acceptedValue}`). Service-role PostgREST; cleanup deletes the material and cascades. The P5 spec (`e2e/coding-assessment-live.spec.ts`) now owns this recipe and its cleanup; reuse its helpers rather than this note.
 - The LLM picks the subtype, so the `output_prediction` scenario needs a seeded row (or generation retries) - the P4 seed proved the row shape works end to end.
 - Playwright typing into CodeMirror: use `keyboard.insertText` after `ControlOrMeta+a`; per-key typing is mangled by `indentOnInput` (and mobile autocapitalize).
 - Piston must be up (`docker compose --profile sandbox up -d`, python 3.12.0 in the volume) and stopped after; a stopped sandbox makes coding grades retryable, never silent.
+- The user id for seeding must be read from the signed-in session (the admin-users listing is ambiguous on this account; see the P5 defect log).
 
 ## Shared-account hygiene
 
