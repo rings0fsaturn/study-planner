@@ -1,12 +1,12 @@
 # State – issue-42-coding-assessment-sandbox-grading
 
-_Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (copy: specs/phase2-tickets/10-coding-assessment-sandbox-grading.md) · Plan: active/issue-42-coding-assessment-sandbox-grading/plan/PLAN.md · STATUS row: issue-42-coding-assessment-sandbox-grading · Status: active — P3 done, P4 next · Updated: 2026-09-16_
+_Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (copy: specs/phase2-tickets/10-coding-assessment-sandbox-grading.md) · Plan: active/issue-42-coding-assessment-sandbox-grading/plan/PLAN.md · STATUS row: issue-42-coding-assessment-sandbox-grading · Status: active — P4 done, P5 next · Updated: 2026-09-19_
 
 ## Current state & next
 
-- P3 done: the generation coding arm + the `has_code` producer are in, tested, and live dry-run-verified (see Done so far).
-- The LLM picks the coding subtype per generation: no recipe or UI field carries one (user decision 2026-09-16); `coding_schema` is a 3-branch union (`unsuitable` | tests-bearing | `output_prediction`) and the real provider accepted it under strict mode in the P3 dry run.
-- Next: P4 — client slice (`types.ts`/`attemptFlow`/`CodingTaker` + CodeMirror/Pyodide/`ReviewSurface` execution table/`AssessmentConfig` Coding chip); PracticeThis stays disabled (D-08).
+- P4 done: the client slice (coding taker + advisory + output_prediction + review table + config chip) is in, tested, and live-verified end to end against the real stack (see Done so far).
+- Next: P5 — `e2e/coding-assessment-live.spec.ts` (durable live spec: redaction sweep over responses + DOM, hidden-veil assertions, failure drill, window-scoped cleanup), AC sweep on #42, records, wayfinder exit.
+- P5 head start: `plan/VERIFICATION.md` "P5 notes" records the seed-row recipe (the LLM picks the subtype, so `output_prediction` needs a seeded row), the `insertText` CodeMirror typing trick, and the Piston demand-start/stop routine.
 
 ## Done so far
 
@@ -16,6 +16,7 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - 2026-09-16: P1 — migration `031` (coding columns + widened subtype CHECK + RPC re-creations + materials code signal + guard extension), openapi coding schemas + fixtures, `userrest` public columns, router admission + honest submit stub; pushed + live-probed (see Current state). Commit `fd3f79c`.
 - 2026-09-16: P2 — Judge0 isolate gate failed (cgroup v1 vs v2, recorded) → user-approved Piston fallback; `piston_client.py` (synchronous execute, verdict map, clamps, typed errors, D-11 logs), `coding_grader.py` (hidden pass rate, veiled test table, deterministic templates), worker three-way dispatch + retryable-vs-terminal infra split, `worker_main._build_piston_client`, compose `piston` service (profile `sandbox`), router stub lifted; 46 new grading tests + worker/router test updates; full suite 625/5, contracts 28/28, ruff clean, rule-80 live round-trip green.
 - 2026-09-16: P3 — generation coding arm + code signal. `coding_schema` 3-branch union (unsuitable | tests-bearing | output_prediction; the LLM picks the subtype), `CODING_SYSTEM_TEMPLATE` carrying the full authoring contract (stdin→stdout execution model, no markdown fences, numeric-only `acceptedValue`, 2-3 visible / 1-10 hidden tests), `validate_coding` (unsuitable short-circuit → `code_not_derivable`, shared citation gate, `strip_code_fence`), worker three-way dispatch via `_arm`, `_coding_answer_block` whitelist + `_coding_row`, mandatory generation-time self-check (referenceSolution over all authored tests; failure drops with `self_check_failed` warning; retryable sandbox error keeps the assessment `generating`; non-retryable fails closed; `output_prediction` skips the sandbox), ingestion `scan_code_blocks` → `materials.has_code`/`code_languages` (is-not-None semantics), `worker_main` shares one PistonClient between the arms. 52 new tests (45 coding + 7 code signal), full suite 673/5 (same 5 calibration), ruff check clean, rule-80 dry run green: `implement_fn` self-check 5/5 passed, `output_prediction` numeric, `debug` steer judged `code_not_derivable`. Commit `a459774`.
+- 2026-09-19: P4 — client slice. `types.ts` (CodingSubtype/CodingAnswer/Question coding fields/TestCaseResult/caps), `attemptFlow` (`codingAnswerProblem`/`defaultCodingConfig`/`codingConfigProblem`/`submitCodingAttempt` + `predictionAnswerProblem`/`submitPredictionAttempt`; `recordGrade` identity fallback when the DB closes mid-poll), `advisoryRunner` (real Pyodide, **sandbox execution model**: whole program + `sys.stdin = io.StringIO(...)` + normalized stdout; lazy import), `CodingTaker` (lazy; CodeMirror composed to the D-06 ceiling - no autocompletion/lint; hidden textarea fallback deleted), `OutputPredictionTaker` (read-only snippet + numeric value input, no editor/Pyodide), `AttemptTaker` third branch (poll grader `judge0`, `objective` for predictions), `ReviewSurface` `CodingFeedback` (submitted source or snippet + prediction + public verdict table), `AssessmentDetail` coding heading + recipe fallback, `AssessmentConfig` Coding chip + no-code note, `PracticeThis` hint repoint, `materials` `hasCode`/`codeLanguages`, `sync-pyodide-assets.mjs` (+ gitignore), package deps (`codemirror` dropped; `@codemirror/commands`/`@codemirror/language` added). Gates: 114 focused tests, app suite 902/904 (2 documented WSL TZ flakes), typecheck/lint/build green, bundle measured (main +5.48 kB; CodeMirror/Pyodide in lazy chunks only). Live pass (seeded rows + real Piston): desktop coding taker/advisory/grading/review, desktop output_prediction, mobile 375 - 3/3, console clean, screenshots in `plan/evidence/`. Vision-pass fixes: advisory execution-model parity, uppercase code blocks, 420px editor cap, "Objective assessment" heading, prediction input width, `basicSetup` scope. See `plan/VERIFICATION.md`.
 
 ## Flow trace
 
@@ -57,6 +58,18 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - `services/intelligence/app/worker_main.py` – **P3**: one `PistonClient` shared by the generation self-check and grading arms.
 - `services/intelligence/tests/test_generation_coding.py` – **P3 new** (45 cases): prompts/validation/worker incl. self-check pass/drop/infra split, answer-block whitelist, unsuitable no-repair, output_prediction skips sandbox.
 - `services/intelligence/tests/test_code_signal.py` – **P3 new** (7 cases); `test_ingestion_worker.py` + `test_repository.py` + `ingestion_doubles.py` – wiring/signature updates.
+- `apps/app/src/assessments/types.ts` – **P4**: `CodingSubtype`, `CodingAnswer`, `QuestionSubtype`, `Question.starterCode/visibleTests`, `LearnerAnswer` += coding, `TestCaseResult`, `QuestionGradedResult.testCases`, contract caps/defaults.
+- `apps/app/src/assessments/attemptFlow.ts` – **P4**: `codingAnswerProblem`/`defaultCodingConfig`/`codingConfigProblem`/`submitCodingAttempt`; `predictionAnswerProblem`/`submitPredictionAttempt`; `recordGrade` identity fallback (no `undefined` when the DB closes mid-poll).
+- `apps/app/src/pages/assessments/CodingTaker.tsx` – **P4 new** (lazy): CodeMirror composed to the D-06 ceiling, advisory run + badge, submit; `codingTaker.css` – **P4 new**: Marginalia editor theme, `.coding-snippet`, `.coding-field-group`, `.coding-prediction-input`.
+- `apps/app/src/pages/assessments/OutputPredictionTaker.tsx` – **P4 new**: read-only snippet + numeric value input (no editor, no Pyodide).
+- `apps/app/src/pages/assessments/advisoryRunner.ts` + `.test.ts` – **P4 new**: lazy Pyodide, whole-program stdin execution + sandbox-normalized stdout comparison; `sync-pyodide-assets.mjs` – **P4 new** (public/pyodide, gitignored).
+- `apps/app/src/pages/assessments/AttemptTaker.tsx` – **P4**: coding branch (lazy editor / prediction input), `pollGrade` grader per subtype, sandbox grading copy.
+- `apps/app/src/pages/assessments/AssessmentDetail.tsx` – **P4**: coding family heading + recipe fallback.
+- `apps/app/src/pages/assessments/review/ReviewSurface.tsx` + `review.css` – **P4**: `CodingFeedback` (source/snippet + prediction + public verdict table), `.ar-code` own styling (no uppercase), answer-value uppercase exemption; `reviewModel.ts` – coding answer guards.
+- `apps/app/src/pages/assessments/AssessmentConfig.tsx` – **P4**: Coding chip + honest copy + `hasCode === false` note; `PracticeThis.tsx` – hint repoint to #45 (D-08).
+- `apps/app/src/materials/{types,materialClient}.ts` – **P4**: `hasCode`/`codeLanguages`.
+- `apps/app/package.json` + `pnpm-lock.yaml` – **P4**: `codemirror` meta dropped; `@codemirror/commands` + `@codemirror/language` added; `pyodide` dep + asset sync.
+- `.work/active/issue-42-coding-assessment-sandbox-grading/plan/VERIFICATION.md` + `plan/evidence/*.png` – **P4**: gates, bundle numbers, live pass, defect list, P5 notes.
 
 ## Pitfalls & rules
 
@@ -80,6 +93,11 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - `set_material_state` gates `has_code`/`code_languages` on `is not None` so `False`/`[]` are written for scanned materials; NULL stays reserved for never-scanned (D-10).
 - The test double `FakeIngestionRepo.get_material` must pop `has_code`/`code_languages` from the row (server-owned, not in the worker's `Material` view) or the embed stage breaks (`Material(**row)`).
 - Pre-existing `UP037` ruff findings in `app/generation/models.py:40,51` (quotes around annotations) exist on HEAD; not touched by P3 (ruff `check` clean on all touched files; `ruff format` is not a repo gate).
+- **`.t-mono-sm` is a label style with `text-transform: uppercase`** — never apply it to code or learner-supplied data; it silently rewrites the source on screen. Code surfaces style themselves (`.ar-code`, `.coding-snippet`).
+- **The advisory must mirror the sandbox model**: whole program, stdin piped, stdout compared CRLF/trailing-whitespace-normalized. The pre-P4 `solve(...)` harness disagreed with the server on the same submission.
+- **Playwright + CodeMirror**: `keyboard.insertText` after `ControlOrMeta+a`; per-key `type()` is mangled by `indentOnInput` (and mobile autocapitalize uppercases the source).
+- `./full-app restart full` reloads CSS too: Vite on `/mnt/d` misses `codingTaker.css`/`review.css` edits, so a vision pass after a style change needs a restart or the screenshot shows stale styles.
+- The `.field-group` primitive caps at 420px; coding surfaces opt out with `.coding-field-group` (a form field is not an editor).
 
 ## Decisions in force
 
@@ -99,10 +117,14 @@ _Spec: GitHub [#42](https://github.com/rings0fsaturn/study-planner/issues/42) (c
 - Decided `CodingAnswer.config.stdin` is client-advisory only: the server never feeds learner stdin into authored tests (it would corrupt their expected outputs) (2026-09-16, P2).
 - Decided the LLM picks the coding subtype per generation because no recipe or UI field carries one; the schema is a 3-branch union and P5 must seed or retry to force a specific subtype (user, 2026-09-16, P3).
 - Decided the generation-time self-check uses the contract-max limits and lets the PistonClient clamp to the `PISTON_*` ceilings (2026-09-16, P3).
+- Decided P4's `output_prediction` gets a distinct taker (read-only snippet + numeric value input) rather than reusing the editor branch (user, 2026-09-19, P4).
+- Decided the P4 vision pass is a full pass at 1280x720 + 375x812, and main-bundle growth is a gate (user, 2026-09-19, P4). Measured: main +5.48 kB of feature code; CodeMirror/Pyodide strictly lazy (recorded deviation in `plan/VERIFICATION.md`).
+- Decided the advisory runner mirrors the sandbox execution model exactly (whole program, stdin piped, normalized stdout) rather than a `solve(...)` harness; an advisory that disagrees with the server is worse than none (2026-09-19, P4).
+- Decided the coding surfaces own the card width (`.coding-field-group`) and code blocks never inherit the uppercase label style (2026-09-19, P4 vision pass).
 
 ## Open
 
-- P4 unstarted: client slice — `types.ts` (`CodingAnswer`/`CodingSubtype`/`Question` coding fields/`testCases`), `attemptFlow.submitCodingAttempt`, `CodingTaker.tsx` (lazy CodeMirror + Pyodide advisory badge), `ReviewSurface` execution table (replaces the placeholder + its pinned test), `AssessmentConfig` Coding chip, `PracticeThis` hint repoint to #45 (D-08). Material `hasCode`/`codeLanguages` are already browser-readable (Supabase `select('*')`), so P4 only adds the app-side types.
+- P5 unstarted: `e2e/coding-assessment-live.spec.ts` (durable live spec: seeded or generated coding questions, redaction sweep over responses + DOM, hidden-veil assertions, compile-error drill, window-scoped cleanup), AC sweep on #42 (AC4), records, wayfinder exit. Head start in `plan/VERIFICATION.md` "P5 notes".
 - P4 plan-text note: all "Judge0" mentions read as "sandbox (Piston)"; the public grader label stays `judge0` (frozen contract).
 - P5 plan-text note: because the LLM picks the subtype, the `output_prediction` live scenario needs a seeded question row or generation retries (no subtype steer exists).
-- Pre-existing, not P1-P3: 5 `test_v1_integration.py` calibration golden-fixture failures (fail on base tree; progress-package precision drift) — not touched by #42.
+- Pre-existing, not P1-P4: 5 `test_v1_integration.py` calibration golden-fixture failures (fail on base tree; progress-package precision drift) — not touched by #42.

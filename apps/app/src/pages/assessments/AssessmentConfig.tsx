@@ -20,11 +20,13 @@ const DIFFICULTY_OPTIONS = ['1', '2', '3', '4', '5'] as const
 const FAMILY_OPTIONS: Array<{ format: AssessmentFormat; label: string }> = [
   { format: 'objective', label: 'Objective' },
   { format: 'written', label: 'Written' },
+  { format: 'coding', label: 'Coding' },
 ]
 
 const FAMILY_COPY: Record<string, string> = {
   objective: 'One objective question grounded in',
   written: 'One written question grounded in',
+  coding: 'One coding question grounded in',
 }
 
 /** The pages a chapter chip covers: its own page to the next chapter's minus one. */
@@ -254,8 +256,12 @@ export function AssessmentConfig() {
               ))}
             </div>
             <p className="field-hint">
-              Objective questions grade deterministically; written answers grade against a rubric
-              with per-criterion feedback.
+              {family === 'coding'
+                ? 'Coding questions grade in a server sandbox against hidden tests; conceptual material is judged at generation, with the reasoning shown.'
+                : 'Objective questions grade deterministically; written answers grade against a rubric with per-criterion feedback.'}
+              {family === 'coding' && material.hasCode === false && (
+                <> No code blocks detected - the generator will judge from concepts.</>
+              )}
             </p>
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>

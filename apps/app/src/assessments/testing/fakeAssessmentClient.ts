@@ -177,6 +177,101 @@ export function writtenQuestion(overrides: Partial<Question> = {}): Question {
 }
 
 /**
+ * A coding question (#42): the visible payload only - starter code + visible
+ * tests the advisory runner may execute. The hidden tests and reference
+ * solution live server-side in `answer_block` and never appear here.
+ */
+export function codingQuestion(overrides: Partial<Question> = {}): Question {
+  return {
+    id: 'q-coding-1',
+    assessmentId: 'assessment-1',
+    materialId: 'mat-1',
+    format: 'coding',
+    subtype: 'implement_fn',
+    prompt: 'Write sum_list(nums) that returns the sum of a list of integers.',
+    options: [],
+    starterCode: 'def sum_list(nums):\n    pass\n',
+    visibleTests: [
+      { name: 'adds small list', stdin: '[1, 2, 3]', expectedOutput: '6' },
+      { name: 'handles empty list', stdin: '[]', expectedOutput: '0' },
+    ],
+    skillTags: ['Iteration'],
+    authoredDifficulty: 2,
+    citations: [{ chunkId: 'c1', materialId: 'mat-1', quote: 'loop over the list' }],
+    ...overrides,
+  }
+}
+
+/**
+ * A normalized `judge0` grade (#42): the public verdict table only - visible
+ * rows are named, hidden rows are veiled (`Hidden test N`), and neither
+ * carries stdin or expected content.
+ */
+export function codingGrade(overrides: Partial<QuestionGradedResult> = {}): QuestionGradedResult {
+  return {
+    attemptId: 'att-coding-1',
+    questionId: 'q-coding-1',
+    materialId: 'mat-1',
+    score: 0.75,
+    correct: true,
+    perSkill: [{ skillTag: 'Iteration', score: 0.75, correct: true }],
+    explanation: 'Passed 3 of 4 tests. Failed: Hidden test 2.',
+    grader: 'judge0',
+    gradedAt: '2026-09-16T10:05:00Z',
+    testCases: [
+      { name: 'adds small list', passed: true, visible: true },
+      { name: 'handles empty list', passed: true, visible: true },
+      { name: 'Hidden test 1', passed: true, visible: false },
+      { name: 'Hidden test 2', passed: false, visible: false },
+    ],
+    ...overrides,
+  }
+}
+
+/**
+ * An `output_prediction` coding question (#42 D-01): the authored snippet
+ * rides `starterCode`, there are no visible tests, and the accepted value
+ * stays server-side in `answer_block`.
+ */
+export function predictionQuestion(overrides: Partial<Question> = {}): Question {
+  return {
+    id: 'q-prediction-1',
+    assessmentId: 'assessment-1',
+    materialId: 'mat-1',
+    format: 'coding',
+    subtype: 'output_prediction',
+    prompt: 'What does this snippet print?',
+    options: [],
+    starterCode: 'total = 0\nfor n in range(4):\n    total += n\nprint(total)\n',
+    skillTags: ['Iteration'],
+    authoredDifficulty: 2,
+    citations: [{ chunkId: 'c1', materialId: 'mat-1', quote: 'loop over the range' }],
+    ...overrides,
+  }
+}
+
+/**
+ * A normalized `objective` grade for an output_prediction answer (#42 D-01):
+ * the deterministic numeric match, no sandbox verdict table.
+ */
+export function predictionGrade(
+  overrides: Partial<QuestionGradedResult> = {},
+): QuestionGradedResult {
+  return {
+    attemptId: 'att-prediction-1',
+    questionId: 'q-prediction-1',
+    materialId: 'mat-1',
+    score: 1,
+    correct: true,
+    perSkill: [{ skillTag: 'Iteration', score: 1, correct: true }],
+    grader: 'objective',
+    gradedAt: '2026-09-16T10:05:00Z',
+    publicFeedback: 'Correct.',
+    ...overrides,
+  }
+}
+
+/**
  * A normalized `llm_rubric` grade (#41): public criterion fields only, with a
  * mixed met/not-met breakdown so a partial score is exercised.
  */

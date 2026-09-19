@@ -386,7 +386,12 @@ export function AssessmentDetail() {
   // button exists for. Older rows without a recipe fall back to the question.
   const recipe = assessment.recipe
   const formats: GenerationRequest['recipe']['formats'] =
-    recipe?.formats ?? (assessment.questions[0]?.format === 'written' ? ['written'] : ['objective'])
+    recipe?.formats ??
+    (assessment.questions[0]?.format === 'written'
+      ? ['written']
+      : assessment.questions[0]?.format === 'coding'
+        ? ['coding']
+        : ['objective'])
   // While generating there is no question to read the family from yet, so the
   // heading stays neutral rather than guessing "objective".
   const familyHeading =
@@ -394,7 +399,9 @@ export function AssessmentDetail() {
       ? 'Generating assessment'
       : formats[0] === 'written'
         ? 'Written assessment'
-        : 'Objective assessment'
+        : formats[0] === 'coding'
+          ? 'Coding assessment'
+          : 'Objective assessment'
 
   async function retry() {
     setRetrying(true)

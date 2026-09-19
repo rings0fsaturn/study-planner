@@ -101,6 +101,13 @@ export interface MaterialRecord {
   /** PDF page count, and the printed->PDF offset the outline was built with. */
   pageCount?: number | null
   pageOffset?: number | null
+  /**
+   * Code-bearing signal (#42 D-04/D-10): whether ingestion found fenced code
+   * blocks, and the detected languages. NULL (absent) means never scanned -
+   * the UI treats it as unknown, never as a gate.
+   */
+  hasCode?: boolean | null
+  codeLanguages?: string[] | null
   createdAt: string
   updatedAt: string
 }

@@ -12,12 +12,24 @@ import type Dexie from 'dexie'
 import { QUESTION_ATTEMPTED, QUESTION_GRADED } from '../events/EventStore'
 import type { EventStore } from '../events/EventStore'
 import type { QuestionAttemptedPayload, QuestionGradedPayload } from '../sync/types'
-import { AssessmentServiceError, WRITTEN_ANSWER_MAX_LENGTH } from './types'
+import {
+  AssessmentServiceError,
+  CODING_MEMORY_DEFAULT_MB,
+  CODING_MEMORY_MAX_MB,
+  CODING_MEMORY_MIN_MB,
+  CODING_SOURCE_MAX_LENGTH,
+  CODING_STDIN_MAX_LENGTH,
+  CODING_TIME_LIMIT_DEFAULT_MS,
+  CODING_TIME_LIMIT_MAX_MS,
+  CODING_TIME_LIMIT_MIN_MS,
+  WRITTEN_ANSWER_MAX_LENGTH,
+} from './types'
 import type {
   Assessment,
   AttemptCreated,
   AttemptRecord,
   AttemptSubmitInput,
+  CodingAnswer,
   LearnerAnswer,
   ObjectiveAnswer,
   Question,
@@ -97,6 +109,77 @@ export function writtenAnswerProblem(text: string): string | null {
   if (text.trim().length === 0) return 'Write an answer before submitting.'
   if (text.length > WRITTEN_ANSWER_MAX_LENGTH) {
     return `Written answers are limited to ${WRITTEN_ANSWER_MAX_LENGTH} characters.`
+  }
+  return null
+}
+
+/**
+ * Client mirror of the server coding-answer gate (#42, the
+ * `writtenAnswerProblem` precedent): empty source and over-budget
+ * caps never leave the browser. Returns the honest reason, or null when
+ * the source is submittable. `stdin` is client-advisory only - the server
+ * never feeds it into the authored tests.
+ */
+export function codingAnswerProblem(source: string): string | null {
+  if (source.trim().length === 0) return 'Write code before submitting.'
+  if (source.length > CODING_SOURCE_MAX_LENGTH) {
+    return `Code submissions are limited to ${CODING_SOURCE_MAX_LENGTH} characters.`
+  }
+  return null
+}
+
+/** Defaults a coding submission opens with (the sandbox ceilings, #42 D-05). */
+export function defaultCodingConfig(): CodingAnswer['config'] {
+  return {
+    stdin: '',
+    timeLimitMs: CODING_TIME_LIMIT_DEFAULT_MS,
+    memoryLimitMb: CODING_MEMORY_DEFAULT_MB,
+  }
+}
+
+/**
+ * The one shape Python's `float()` accepts that the server's numeric
+ * comparison can use: sign, digits, optional exponent. The generated
+ * `acceptedValue` is numeric-only (P3), so anything else fails closed
+ * server-side - this gate keeps that failure out of the queue.
+ */
+const NUMERIC_PREDICTION = /^[+-]?(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/
+
+/**
+ * Client mirror of the output_prediction gate (#42 D-01): the fourth coding
+ * subtype is a numeric value match, not a sandbox run, and a blank or
+ * non-numeric prediction never leaves the browser.
+ */
+export function predictionAnswerProblem(value: string): string | null {
+  const trimmed = value.trim()
+  if (trimmed.length === 0) return 'Predict the output before submitting.'
+  if (!NUMERIC_PREDICTION.test(trimmed)) {
+    return 'Enter the numeric output the snippet prints.'
+  }
+  return null
+}
+
+/**
+ * Guard the learner-tunable config against the contract caps before submit
+ * (defensive - the taker's number inputs already clamp this range).
+ */
+export function codingConfigProblem(config: CodingAnswer['config']): string | null {
+  if (typeof config.stdin !== 'string' || config.stdin.length > CODING_STDIN_MAX_LENGTH) {
+    return `Standard input is limited to ${CODING_STDIN_MAX_LENGTH} characters.`
+  }
+  if (
+    !Number.isInteger(config.timeLimitMs) ||
+    config.timeLimitMs < CODING_TIME_LIMIT_MIN_MS ||
+    config.timeLimitMs > CODING_TIME_LIMIT_MAX_MS
+  ) {
+    return `Time limit must be ${CODING_TIME_LIMIT_MIN_MS}-${CODING_TIME_LIMIT_MAX_MS} ms.`
+  }
+  if (
+    !Number.isInteger(config.memoryLimitMb) ||
+    config.memoryLimitMb < CODING_MEMORY_MIN_MB ||
+    config.memoryLimitMb > CODING_MEMORY_MAX_MB
+  ) {
+    return `Memory limit must be ${CODING_MEMORY_MIN_MB}-${CODING_MEMORY_MAX_MB} MB.`
   }
   return null
 }
@@ -288,8 +371,12 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
         await eventStore.append(QUESTION_GRADED, payload as unknown as Record<string, unknown>)
       }
     }
-    const row = (await attempts().get(record.clientAttemptId)) as LocalAttemptRow
-    return row
+    const row = (await attempts().get(record.clientAttemptId)) as
+      | LocalAttemptRow
+      | undefined
+    // The row can be gone if the database closed mid-poll (user switch,
+    // teardown): keep the contract by falling back to the known identity.
+    return row ?? { ...EMPTY_ROW, clientAttemptId: record.clientAttemptId }
   }
 
   /**
@@ -423,7 +510,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
   /**
    * Written taking (#41 D-02): the answer is `{ text }` and the client gate
    * rejects blank/oversized text before a row or a request exists. The throw is
-   * defensive — the taker disables submit on the same predicate.
+   * defensive - the taker disables submit on the same predicate.
    */
   async function submitWrittenAttempt(
     assessment: Assessment,
@@ -436,9 +523,49 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
     return recordAndSubmit(assessment, question, { text }, elapsedSeconds)
   }
 
+  /**
+   * Coding taking (#42): the answer is `{ language, source, config }` and
+   * the client gate rejects empty/oversized source (or out-of-contract
+   * config) before a row or a request exists. The throw is defensive - the
+   * taker disables submit on the same predicate.
+   */
+  async function submitCodingAttempt(
+    assessment: Assessment,
+    question: Question,
+    source: string,
+    config: CodingAnswer['config'] = defaultCodingConfig(),
+    elapsedSeconds?: number,
+  ): Promise<SubmitResult> {
+    const problem = codingAnswerProblem(source) ?? codingConfigProblem(config)
+    if (problem) throw new Error(problem)
+    const answer: CodingAnswer = { language: 'python', source, config }
+    return recordAndSubmit(assessment, question, answer, elapsedSeconds)
+  }
+
+  /**
+   * Output-prediction taking (#42 D-01): the answer is the objective
+   * `{ value }` shape, because the server grades it deterministically with
+   * `grade_objective`'s numeric key and never touches the sandbox. The client
+   * gate rejects a blank or non-numeric prediction before a row or a request
+   * exists. The throw is defensive - the taker disables submit on the same
+   * predicate.
+   */
+  async function submitPredictionAttempt(
+    assessment: Assessment,
+    question: Question,
+    value: string,
+    elapsedSeconds?: number,
+  ): Promise<SubmitResult> {
+    const problem = predictionAnswerProblem(value)
+    if (problem) throw new Error(problem)
+    return recordAndSubmit(assessment, question, { value: value.trim() }, elapsedSeconds)
+  }
+
   return {
     submitObjectiveAttempt,
     submitWrittenAttempt,
+    submitCodingAttempt,
+    submitPredictionAttempt,
     pollGrade,
     drainQueuedAttempts,
     refreshAttempts,

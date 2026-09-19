@@ -265,7 +265,7 @@ export function PracticeThis() {
                 </button>
               ))}
             </div>
-            <p className="field-hint">Coding and mixed practice arrive with the coding slice.</p>
+            <p className="field-hint">Coding and mixed practice arrive with #45.</p>
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
             <label className="field-label">Difficulty</label>

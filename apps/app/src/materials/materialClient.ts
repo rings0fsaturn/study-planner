@@ -156,6 +156,10 @@ export function materialRowToRecord(row: Record<string, unknown>): MaterialRecor
     outline: outlineFromRow(row.outline),
     pageCount: row.page_count == null ? null : Number(row.page_count),
     pageOffset: row.page_offset == null ? null : Number(row.page_offset),
+    hasCode: row.has_code == null ? null : Boolean(row.has_code),
+    codeLanguages: Array.isArray(row.code_languages)
+      ? (row.code_languages as unknown[]).map(String)
+      : null,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   }
