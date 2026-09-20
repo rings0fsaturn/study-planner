@@ -192,6 +192,9 @@ class GenerationWorkerConfig:
     poll_interval_seconds: float = 1.0
     visibility_seconds: int = 90
     max_in_flight: int = 1
+    # Retryable storage faults redeliver at most this many times before the
+    # message is archived (the ingestion worker's max_deliveries precedent).
+    max_deliveries: int = 3
     model: str = DEFAULT_MODEL
 
 
@@ -239,6 +242,26 @@ class GenerationWorker:
         for message in messages:
             try:
                 self._process(message)
+            except IngestionError as exc:
+                # A message whose target row is gone (or any other terminal
+                # error) can never succeed: archive it instead of redelivering
+                # forever. Without this, one orphaned message head-of-line
+                # blocks the single-in-flight generation arm (observed live
+                # 2026-09-20: a cleanup deleted an in-flight assessment and the
+                # worker re-read its message 276 times).
+                if not exc.retryable or message.read_ct >= self.config.max_deliveries:
+                    logger.warning(
+                        "generation message %s dropped (%s): %s",
+                        message.msg_id,
+                        exc.code,
+                        exc.message,
+                    )
+                    self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                else:
+                    logger.exception(
+                        "generation message %s failed transiently", message.msg_id
+                    )
+                    self._queue.complete(GENERATION_QUEUE, message.msg_id, False)
             except Exception:
                 logger.exception("generation message %s failed", message.msg_id)
                 self._queue.complete(GENERATION_QUEUE, message.msg_id, False)

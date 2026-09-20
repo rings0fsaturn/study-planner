@@ -68,6 +68,9 @@ class GradingWorkerConfig:
     poll_interval_seconds: float = 1.0
     visibility_seconds: int = 30
     max_in_flight: int = 1
+    # Retryable storage faults redeliver at most this many times before the
+    # message is archived (the ingestion worker's max_deliveries precedent).
+    max_deliveries: int = 3
     model: str = DEFAULT_MODEL
 
 
@@ -157,12 +160,37 @@ class GradingWorker:
         for message in messages:
             try:
                 self._process(message)
-            except IngestionError:
-                # Transient storage fault: return the message for redelivery
-                # and reset the job to queued so no running row is orphaned.
-                logger.exception("grading message %s failed transiently", message.msg_id)
-                self._repo.update_job_status(str(message.payload.get("jobId") or ""), "queued")
-                self._queue.complete(GRADING_QUEUE, message.msg_id, False)
+            except IngestionError as exc:
+                job_id = str(message.payload.get("jobId") or "")
+                if not exc.retryable or message.read_ct >= self.config.max_deliveries:
+                    # A terminal error (the attempt or question was deleted
+                    # while the message was in flight, say) can never succeed:
+                    # mark the job failed when it still exists and archive the
+                    # message instead of redelivering forever — one orphaned
+                    # message head-of-line blocks the single-in-flight arm.
+                    logger.warning(
+                        "grading message %s dropped (%s): %s",
+                        message.msg_id,
+                        exc.code,
+                        exc.message,
+                    )
+                    try:
+                        self._repo.update_job_status(
+                            job_id,
+                            "failed",
+                            error_code=exc.code,
+                            error_message=exc.message,
+                            retryable=False,
+                        )
+                    except Exception:
+                        logger.exception("grading job %s could not be marked failed", job_id)
+                    self._queue.complete(GRADING_QUEUE, message.msg_id, True)
+                else:
+                    # Transient storage fault: return the message for redelivery
+                    # and reset the job to queued so no running row is orphaned.
+                    logger.exception("grading message %s failed transiently", message.msg_id)
+                    self._repo.update_job_status(job_id, "queued")
+                    self._queue.complete(GRADING_QUEUE, message.msg_id, False)
             except Exception:
                 logger.exception("grading message %s failed", message.msg_id)
                 self._queue.complete(GRADING_QUEUE, message.msg_id, False)

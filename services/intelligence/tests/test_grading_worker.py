@@ -43,10 +43,13 @@ class FakeGradingRepo:
         self.job_errors: list[tuple[str, dict]] = []
         self.finished: list[dict] = []
         self.fail_on_get = False
+        self.missing_attempt = False
 
     def get_attempt(self, attempt_id: str) -> dict:
         if self.fail_on_get:
             raise IngestionError("provider_unavailable", "storage GET failed", retryable=True)
+        if self.missing_attempt:
+            raise IngestionError("not_found", "attempt not found")
         return self.attempt
 
     def get_question(self, question_id: str) -> dict:
@@ -428,3 +431,37 @@ def test_objective_questions_never_call_the_rubric_adapter() -> None:
 
     assert repo.finished[0]["status"] == "graded"
     assert repo.finished[0]["grade"]["grader"] == "objective"
+
+
+def test_a_message_for_a_deleted_attempt_is_archived_not_retried() -> None:
+    """A cleanup can delete an in-flight attempt; its message must not loop."""
+    repo = FakeGradingRepo(ATTEMPT, QUESTION)
+    repo.missing_attempt = True
+    queue = FakeQueue([_message()])
+
+    GradingWorker(repo=repo, queue=queue, config=GradingWorkerConfig()).run_once()
+
+    assert queue.completed == [(7, True)]
+    assert ("job-grade-01", "failed") in repo.job_status
+    assert repo.finished == []
+
+
+def test_a_retryable_storage_fault_redelivers_then_archives_at_the_cap() -> None:
+    repo = FakeGradingRepo(ATTEMPT, QUESTION)
+    repo.fail_on_get = True
+    queue = FakeQueue(
+        [
+            QueueMessage(msg_id=7, payload=_message().payload, read_ct=1),
+            QueueMessage(msg_id=7, payload=_message().payload, read_ct=2),
+            QueueMessage(msg_id=7, payload=_message().payload, read_ct=3),
+        ]
+    )
+    worker = GradingWorker(repo=repo, queue=queue, config=GradingWorkerConfig())
+
+    worker.run_once()
+    worker.run_once()
+    assert queue.completed == [(7, False), (7, False)]
+
+    worker.run_once()
+
+    assert queue.completed == [(7, False), (7, False), (7, True)]

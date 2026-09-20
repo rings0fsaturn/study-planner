@@ -31,12 +31,15 @@ class FakeGenerationRepo:
         self.job_updates: list[dict] = []
         self.assessment_updates: list[tuple[str, str, list[dict]]] = []
         self.embedder_failure: IngestionError | None = None
+        self.get_assessment_failure: IngestionError | None = None
 
     def seed(self, assessment: dict, material: Material) -> None:
         self.assessments[assessment["id"]] = assessment
         self.materials[material.id] = material
 
     def get_assessment(self, assessment_id: str) -> dict:
+        if self.get_assessment_failure is not None:
+            raise self.get_assessment_failure
         if assessment_id not in self.assessments:
             raise IngestionError("not_found", "assessment not found")
         return self.assessments[assessment_id]
@@ -959,3 +962,46 @@ def test_a_scope_with_no_chunks_fails_the_assessment() -> None:
     ]
     assert repo.job_updates[-1]["status"] == "failed"
     assert repo.job_updates[-1]["retryable"] is False
+
+
+def test_a_message_for_a_deleted_assessment_is_archived_not_retried() -> None:
+    """A cleanup can delete an in-flight assessment; its message must not loop."""
+    repo = FakeGenerationRepo()
+    queue = FakeQueue()
+    adapter = FakeAdapter([])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a-gone", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    processed = make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert processed == 1
+    assert queue.queues.get("assessment_generate", []) == []
+    assert queue.redelivered == []
+    assert repo.completed == []
+
+
+def test_a_retryable_storage_fault_redelivers_then_archives_at_the_cap() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    repo.get_assessment_failure = IngestionError(
+        "provider_unavailable", "store down", retryable=True
+    )
+    queue = FakeQueue()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    worker = make_worker(repo, queue, FakeAdapter([]), FakeTelemetry())
+
+    worker.run_once()
+    worker.run_once()
+    assert queue.redelivered == [("assessment_generate", 1), ("assessment_generate", 1)]
+    assert len(queue.queues["assessment_generate"]) == 1
+
+    worker.run_once()
+
+    assert queue.queues["assessment_generate"] == []
+    assert repo.completed == []
