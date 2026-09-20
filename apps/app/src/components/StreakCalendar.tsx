@@ -1,9 +1,12 @@
+import type { ReactNode } from 'react';
 import type { YearStreakCell } from '@study-tracker/progress';
 
 interface StreakCalendarProps {
   cells: YearStreakCell[];
   current: number;
   longest: number;
+  /** Optional action rendered at the right of the calendar header. */
+  headerAction?: ReactNode;
 }
 
 function monthLabel(isoMonth: string): string {
@@ -12,7 +15,7 @@ function monthLabel(isoMonth: string): string {
   });
 }
 
-export function StreakCalendar({ cells, current, longest }: StreakCalendarProps) {
+export function StreakCalendar({ cells, current, longest, headerAction }: StreakCalendarProps) {
   const weeks = cells.length / 7;
   const daysStudied = cells.filter((c) => c.level > 0).length;
 
@@ -38,6 +41,7 @@ export function StreakCalendar({ cells, current, longest }: StreakCalendarProps)
             {longest === 1 ? 'day' : 'days'}
           </div>
         </div>
+        {headerAction}
       </div>
 
       <div className="streak-calendar-scroll">

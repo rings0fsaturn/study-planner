@@ -128,6 +128,20 @@ describe('Home', () => {
     expect(screen.queryByText(/Up next/)).not.toBeInTheDocument()
   })
 
+  it('greets without the raw email local-part and links the year calendar to the week', () => {
+    mockEvents = []
+
+    render(
+      <MemoryRouter initialEntries={['/home']}>
+        <Home />
+      </MemoryRouter>
+    )
+
+    // The mock user is test@example.com; the greeting must not leak "test".
+    expect(screen.queryByText(/,\s*test\b/)).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Week review/ })).toHaveAttribute('href', '/week')
+  })
+
   it('offers title, body, and action when there is no active roadmap', () => {
     mockEvents = []
 

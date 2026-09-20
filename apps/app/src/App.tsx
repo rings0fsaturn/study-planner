@@ -19,6 +19,7 @@ import { Settings } from './pages/Settings';
 import { Session } from './pages/Session';
 import { AppShell } from './components/AppShell';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { LoadingState } from './components/LoadingState';
 import { lazy, Suspense, useEffect } from 'react';
 import { OnboardingGate } from './onboarding/OnboardingGate';
 import { RequireOnboarding } from './onboarding/RequireOnboarding';
@@ -100,9 +101,7 @@ function RootRedirect() {
   if (loading) {
     return (
       <div className="app">
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-          <p className="t-body">Loading...</p>
-        </div>
+        <LoadingState title="Loading" />
       </div>
     );
   }
@@ -123,9 +122,7 @@ function PublicRouteWithAuthCheck({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="app">
-        <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem' }}>
-          <p className="t-body">Loading...</p>
-        </div>
+        <LoadingState title="Loading" />
       </div>
     );
   }

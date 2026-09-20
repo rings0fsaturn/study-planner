@@ -114,10 +114,10 @@
   gap: var(--space-4);
   margin-bottom: var(--space-4);
   padding: var(--space-4);
-  border: var(--border-width-hair) solid var(--terracotta);
-  border-left: 4px solid var(--rust);
+  border: var(--border-width-hair) solid var(--border-default);
+  border-left: 3px solid var(--rust);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--terracotta) 10%, var(--surface-card));
+  background: var(--surface-card);
 }
 
 .roadmap-ended-copy {

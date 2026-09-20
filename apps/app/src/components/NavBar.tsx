@@ -82,6 +82,7 @@ export function NavBar() {
             key={to}
             to={to}
             className={`navbar-item${isActive(prefix) ? ' active' : ''}`}
+            aria-current={isActive(prefix) ? 'page' : undefined}
           >
             <Icon />
             <span>{label}</span>
@@ -97,6 +98,7 @@ export function NavBar() {
             key={to}
             to={to}
             className={`navbar-desktop-item${isActive(prefix) ? ' active' : ''}`}
+            aria-current={isActive(prefix) ? 'page' : undefined}
           >
             {label}
           </Link>

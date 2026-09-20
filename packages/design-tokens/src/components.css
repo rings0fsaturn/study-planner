@@ -90,7 +90,7 @@
   .sync-indicator { min-height: 44px; padding: 10px 14px; }
   /* The flag toggle is icon-only, so the horizontal target has to clear 44px
      on its own rather than borrowing width from a text label. */
-  .btn-flag { padding: 13px; }
+  .btn-flag { padding: 14px; }
 }
 
 /* ---- Card ---- */
@@ -177,6 +177,11 @@
   gap: var(--space-3);
   margin-bottom: var(--space-3);
 }
+.streak-calendar-link {
+  font-family: var(--font-body); font-size: 13px; font-weight: 600;
+  color: var(--terracotta-d); text-decoration: none; white-space: nowrap;
+}
+.streak-calendar-link:hover { text-decoration: underline; }
 .streak-calendar-meta {
   font-family: var(--font-mono);
   font-size: 10px;
@@ -619,6 +624,53 @@
 .shimmer-line.short { width: 60%; }
 .shimmer-line.medium { width: 80%; }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ---- PROCESSING / LOADING STATE (the No-Spinner Rule) ---- */
+.processing-state {
+  text-align: center;
+  padding: var(--space-6) var(--space-4);
+  max-width: 460px;
+  margin: 0 auto;
+}
+.processing-dots {
+  display: inline-flex;
+  gap: 6px;
+  margin-bottom: var(--space-4);
+}
+/* Inline variant for a status row that sits in the page flow. */
+.processing-dots-inline { margin: 0 8px 0 0; vertical-align: middle; }
+.processing-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--ink-faint); opacity: 0.3;
+  animation: processingPulse 1.4s infinite ease-in-out;
+}
+.processing-dot:nth-child(2) { animation-delay: 0.2s; }
+.processing-dot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes processingPulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(1); background: var(--ink-faint); }
+  40% { opacity: 1; transform: scale(1.2); background: var(--terracotta); }
+}
+.processing-title {
+  font-family: var(--font-display); font-size: 19px; font-weight: 500;
+  letter-spacing: -0.01em; margin-bottom: 6px; color: var(--text-primary);
+}
+.processing-sub {
+  font-family: var(--font-display); font-style: italic; font-size: 13px;
+  color: var(--text-secondary); line-height: 1.45;
+}
+@media (prefers-reduced-motion: reduce) {
+  .processing-dot { animation: none; opacity: 0.6; }
+}
+
+/* ---- SKIP LINK ---- */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 100;
+  padding: 10px 16px;
+  background: var(--surface-card); color: var(--text-primary);
+  border: 1px solid var(--border-default); border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: 13px; text-decoration: none;
+}
+.skip-link:focus { left: var(--space-3); top: var(--space-3); }
 
 /* ---- MATERIAL: Needs attention badge ---- */
 .material-badge-attention {

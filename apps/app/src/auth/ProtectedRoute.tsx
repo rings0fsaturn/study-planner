@@ -1,5 +1,6 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from './useAuth';
+import { LoadingState } from '../components/LoadingState';
 import type { ReactNode } from 'react';
 
 interface ProtectedRouteProps {
@@ -12,9 +13,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
   if (loading) {
     return (
       <div className="app">
-        <div className="card card-elevated" style={{ textAlign: 'center', padding: '2rem' }}>
-          <p className="t-body">Loading...</p>
-        </div>
+        <LoadingState title="Getting things ready" sub="Checking your session — one moment." />
       </div>
     );
   }

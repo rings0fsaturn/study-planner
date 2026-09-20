@@ -1,15 +1,23 @@
 # State – marginalia-visual-refresh
-_Spec: .work/specs/marginalia-visual-refresh.md · Plan: active/marginalia-visual-refresh/plan/ · STATUS row: marginalia-visual-refresh · Status: active · Updated: 2026-09-16_
+_Spec: .work/specs/marginalia-visual-refresh.md · Plan: active/marginalia-visual-refresh/plan/ · STATUS row: marginalia-visual-refresh · Status: active (session 3; user review gate still open) · Updated: 2026-09-20_
 
 ## Current state & next
 
-- Session 2 fixed all three Home critique P1s, all four P2s, and the in-scope P3s. Typecheck, lint, `pnpm build` (both apps), app suite 877/879 (2 = documented WSL TZ baseline), progress 101/101, py-progress 79/79, and e2e smoke 10/10 are green.
-- Verified in a real browser at 1280px and 375px this session (a vision-capable pass, unlike session 1): heading order is now H1 28px → H2 22px "Last 12 months" → H2 19px "Recent activity"; one accent button on Home; the year calendar fits its card at both widths with zero horizontal overflow.
-- **The user's review gate is open.** No other screen may be touched until they confirm the Home pass.
-- Next: present for review; then, on confirmation, cut the remaining P3s and propagate to Week/Roadmap/Materials/Session/onboarding/marketing (spec sequence steps 6-8).
+- Session 3 fixed every remaining unblocked P3 and the two P1s the critique re-run surfaced. The user's Home review gate is **still open**; no other screen may be touched until they confirm.
+- Added: `aria-current="page"` on both navs; a skip link + focusable `#main-content`; the three-dots loading state (`LoadingState` on the route-level waits, an inline variant on Home's calibrating row, and the canonical `.processing-dots` CSS that `PlaylistLoadingPopup` referenced but was never defined); a "Week review →" link in the calendar header; a greeting that never uses the email local-part; the ended-roadmap banner pinned to the DESIGN.md 3px single-meaning edge.
+- Verified in a real browser at 1280 and 375 this session: skip link -9999 → 12,12 on focus, `aria-current` on Home, `/study/week` href, greeting "Good afternoon.", zero horizontal overflow at both widths, zero page errors.
+- **Critique re-run: 32/40, up from 23/40** (two isolated sub-agents + detector; detector clean on the changed TSX). Remaining findings recorded under Open.
+- Next: the user's Home verdict; then the deferred P2/P3s below and spec steps 6-8.
 
 ## Done so far
 
+- Session 3 (2026-09-20) — remaining unblocked P3s + the critique re-run's P1s:
+  - **Nav a11y:** `aria-current="page"` on the active destination in both nav variants (`NavBar.tsx`); a "Skip to content" link (`AppShell.tsx`, `.skip-link`) targeting a focusable `#main-content`.
+  - **Loading states (No-Spinner Rule):** new `LoadingState` component used on the route-level waits (`ProtectedRoute`, both `App` gates); Home's calibrating row gets the dots inline; and the canonical `.processing-dots`/`.processing-dot` CSS is now defined in the token package, which also fixes `PlaylistLoadingPopup` (it referenced the classes but they had never been defined anywhere).
+  - **Calendar → week path:** `StreakCalendar` gained a `headerAction` slot and Home passes a "Week review →" link, replacing the orphaned ghost button the critique flagged.
+  - **Greeting:** Home greets by `user_metadata.full_name`/`name` when present, else just the time-of-day greeting; it never renders the raw email local-part.
+  - **Ended-roadmap banner:** pinned to DESIGN.md's 3px single-meaning edge (rust warning), dropping the 4px edge + terracotta border/tint mix.
+  - **Critique re-run:** 32/40 (from 23/40), two isolated sub-agents + detector; detector clean on the changed TSX.
 - Session 1 (2026-09-16): DESIGN.md + `.impeccable/design.json`; Home distilled; year streak calendar with TS+Python parity; service-banner copy; critique re-run at 23/40.
 - Session 2 - P1a two accents on an ended roadmap: `RoadmapEndedBanner` "Extend deadline" is now `btn-primary` and "Abandon" is `btn-destructive`, so the Up-next card keeps the screen's only accent.
 - Session 2 - P1b heading inversion: the streak title became a real `<h2 class="t-display-3">` (22px) and "Recent activity" dropped to the 19px `card-title` tier.
@@ -33,6 +41,7 @@ _Spec: .work/specs/marginalia-visual-refresh.md · Plan: active/marginalia-visua
 
 ## Files affected
 
+- Session 3: `apps/app/src/components/LoadingState.tsx` (new); `apps/app/src/components/AppShell.tsx` (skip link + `#main-content`); `apps/app/src/components/NavBar.tsx` (`aria-current`); `apps/app/src/components/StreakCalendar.tsx` (`headerAction`); `apps/app/src/auth/ProtectedRoute.tsx`, `apps/app/src/App.tsx` (route-level `LoadingState`); `apps/app/src/pages/Home.tsx` (greeting, week link, inline dots) + `Home.test.tsx`; `apps/app/src/roadmap/roadmap.css` (ended banner edge); `packages/design-tokens/src/components.css` (`.processing-state`/`.processing-dots`/`.skip-link`/`.streak-calendar-link`; `.btn-flag` 44px).
 - `packages/design-tokens/src/tokens.css` – `--ink-faint` -> `#6F6252`; `--streak-1/2/3` re-spaced for even separation.
 - `packages/design-tokens/src/components.css` – dropped `.streak-calendar-title`; inset hairline on cells and legend swatches; `.settings-group`/`.settings-row` extracted from the reference; `.btn-flag`; `pointer: coarse` touch targets; `prefers-reduced-motion` for `pulse-sync`; calendar grid is `minmax(0, 1fr)` at `width: 100%` with clipped month labels.
 - `packages/progress/src/index.ts` – exports `calculateStreak` (Python already exported `calculate_streak`; no engine behaviour changed, so no new parity fixtures).
@@ -78,8 +87,11 @@ _Spec: .work/specs/marginalia-visual-refresh.md · Plan: active/marginalia-visua
 ## Open
 
 - **User review of the Home pass** · blocks spec sequence steps 6-8 · the user must confirm before any other screen is touched.
-- **Remaining P3s (not yet fixed):** no `aria-current` in the nav; no skip link; loading is still a bordered text row rather than the three-dots pattern; no path from the year calendar to the weekly review; Home greets by raw email local-part.
-- **Design-detector findings left standing (pre-existing, attribution unknown, neither introduced this session):** `roadmap.css:118` gives `.roadmap-ended-banner` a 4px rust left edge on top of a 1px terracotta border and a terracotta tint — DESIGN.md pins the banner edge at 3px, and terracotta (act) plus rust (attention) on one element mixes two meanings. `components.css:341` transitions `width` on `.progress-fill`; the performant form is `transform: scaleX()`, but that changes how the rounded pill renders at partial widths, so it needs a design decision rather than a silent swap.
-- **Critique re-run pending:** the re-run that scores the session-2 Home (spec done-criteria) has not been run.
-- **`e2e/material-ingestion-live.spec.ts` sign-out fix is UNVERIFIED** — it needs live credentials and the service-role environment to run.
+- **Critique re-run done (32/40, from 23/40).** Its remaining findings, deferred pending the user's review (all P2/P3, none a regression from session 3):
+  - P2 container consistency: the projection/total stat is a hand-rolled inline div in one branch and a `Card` in the other (`Home.tsx`); the projection block re-declares border/radius/padding inline instead of using the `Card` primitive.
+  - P2 banner stacking: up to five banners can coexist above content (`Home.tsx`), pushing the day's one job below the fold.
+  - P3 redundant empty copy: eyebrow `No active roadmap` + title `No active roadmap yet.` say the same thing twice.
+  - P3 `.progress-fill` width transition (detector): **decision taken 2026-09-20 - keep `width`.** `transform: scaleX()` would flatten the pill's rounded leading edge (the container clips only the far edge), a visual regression for a 6px bar whose transition cost is negligible. Recorded, not silently swapped.
+  - Detector CSS advisory (52 off-ramp literal font sizes, 4 off-scale radii, 3 undocumented colors) is pre-existing and out of scope for the Home pass.
+- **Sign-out helper VERIFIED live 2026-09-20.** `e2e/session-log.spec.ts` was repaired twice over: it used the stale `Sign in` button name (the app renders `Continue`) and it swallowed every assertion in a `catch`, so it always reported green. It now signs in with the real label, seeds a roadmap through `window.__seed()` (a fresh account is gated into onboarding), logs a session, asserts it survives a reload, signs out through the Settings two-step, and proves user B does not inherit user A's session — and it can actually fail. `e2e/material-ingestion-live.spec.ts` uses the same two-step sign-out helper; the full ingestion spec (600 s, 572-page upload) was not re-run for this, since the helper path is what was in question and it is now verified.
 - **Deferred by scope, not by rejection:** the marketing site pass, and the four screens that earn a real desktop layout.

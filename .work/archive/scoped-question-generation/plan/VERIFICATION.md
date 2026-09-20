@@ -39,8 +39,8 @@ _Ticket: GitHub #62 (filed + claimed 2026-09-11) · Parent spec #32 · Plan: pla
 
 ## Wayfinder resolution (exit)
 
-- [x] File the GitHub ticket on the #33-#49 spine, claim it, and add the map #4 line. — **Ticket #62 filed + assigned 2026-09-11** (`wayfinder:phase2` + `ready-for-agent`). Map #4 line still to add at resolution.
-- [ ] Resolution comment; issue closed; STATUS row flipped to Done; folder archived.
+- [x] File the GitHub ticket on the #33-#49 spine, claim it, and add the map #4 line. — **Ticket #62 filed + assigned 2026-09-11**; map #4 line added 2026-09-20.
+- [x] Resolution comment; issue closed; STATUS row flipped to Done; folder archived. — **Done 2026-09-20:** resolution comment posted, #62 closed, map #4 updated, STATUS Done row added, folder archived.
 
 ## Revision acceptance criteria (R1–R4, raised 2026-09-12 from a hands-on pass)
 

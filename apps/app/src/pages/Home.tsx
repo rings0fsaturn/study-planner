@@ -190,7 +190,12 @@ export function Home() {
   }, [logEvent]);
 
   const dateHeader = format(new Date(), 'EEE · MMM d');
-  const emailPrefix = user?.email?.split('@')[0] ?? '';
+  // Greet by a real name when the provider has one; never by the raw email
+  // local-part, which reads like a machine address.
+  const metadataName =
+    (user?.user_metadata?.full_name as string | undefined) ??
+    (user?.user_metadata?.name as string | undefined);
+  const displayName = metadataName?.trim() || null;
 
   return (
     <div style={{ padding: '2rem 1rem', maxWidth: '640px', margin: '0 auto' }}>
@@ -204,7 +209,7 @@ export function Home() {
 
       <div className="mono-caps" style={{ marginBottom: 4 }}>{dateHeader}</div>
       <h1 className="t-display-2" style={{ marginBottom: '0.5rem' }}>
-        {getGreeting()}, {emailPrefix}.
+        {getGreeting()}{displayName ? `, ${displayName}` : ''}.
       </h1>
       <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
         Here's how your study time adds up
@@ -224,7 +229,12 @@ export function Home() {
             borderBottom: '1px solid var(--border-subtle)',
           }}
         >
-          Calibrating your pace...
+          <span className="processing-dots processing-dots-inline" aria-hidden="true">
+            <span className="processing-dot" />
+            <span className="processing-dot" />
+            <span className="processing-dot" />
+          </span>
+          Calibrating your pace…
         </div>
       )}
 
@@ -322,6 +332,11 @@ export function Home() {
           cells={yearCells}
           current={calendarStreak.current}
           longest={calendarStreak.longest}
+          headerAction={
+            <Link to="/week" className="streak-calendar-link">
+              Week review →
+            </Link>
+          }
         />
       </div>
 
