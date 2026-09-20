@@ -1,8 +1,4 @@
-import {
-  updatePosterior,
-  computeHierarchicalModel,
-  inferTimeOfDay,
-} from '../../packages/progress/src/bayesian'
+import { updatePosterior, computeHierarchicalModel, inferTimeOfDay } from '../../packages/progress/src/bayesian'
 import { runCUSUM, detectRegimeShifts } from '../../packages/progress/src/cusum'
 import {
   initKalman,
@@ -15,6 +11,7 @@ import { analyzeTrend } from '../../packages/progress/src/trend'
 import { calculateStreak, buildStreakGrid, buildYearStreakGrid } from '../../packages/progress/src/streak'
 import { computeCalibration, getPromptDetail } from '../../packages/progress/src/calibration'
 import { computeProgress } from '../../packages/progress/src/progress'
+import { projectMastery, recommendBand } from '../../packages/progress/src/mastery'
 import type {
   BayesianPosterior,
   ExceptionalTag,
@@ -1508,6 +1505,123 @@ export function progressCases(): FixtureCase[] {
           makeSession({ date: '2026-01-15', duration: 55, sessionId: 's-3' }),
         ]
         return computeProgress(sessions, roadmap, defaultCalibration(), '2026-01-15')
+      },
+    },
+
+    // mastery.test.ts — #43 projectMastery / recommendBand
+    {
+      name: 'mastery-cold-start-neutral-uncertain',
+      fn: 'projectMastery',
+      input: { materialId: 'mat-1', observations: [] },
+      run: () => projectMastery('mat-1', []),
+    },
+    {
+      name: 'mastery-single-correct-stays-uncertain',
+      fn: 'projectMastery',
+      input: {
+        materialId: 'mat-1',
+        observations: [{ skillTag: 's', correct: true, score: 1 }],
+      },
+      run: () => projectMastery('mat-1', [{ skillTag: 's', correct: true, score: 1 }]),
+    },
+    {
+      name: 'mastery-sustained-correct-saturates',
+      fn: 'projectMastery',
+      input: {
+        materialId: 'mat-1',
+        observations: Array.from({ length: 8 }, () => ({ skillTag: 's', correct: true })),
+      },
+      run: () =>
+        projectMastery(
+          'mat-1',
+          Array.from({ length: 8 }, () => ({ skillTag: 's', correct: true })),
+        ),
+    },
+    {
+      name: 'mastery-incorrect-collapses',
+      fn: 'projectMastery',
+      input: {
+        materialId: 'mat-1',
+        observations: [
+          { skillTag: 's', correct: true },
+          { skillTag: 's', correct: false },
+        ],
+      },
+      run: () =>
+        projectMastery('mat-1', [
+          { skillTag: 's', correct: true },
+          { skillTag: 's', correct: false },
+        ]),
+    },
+    {
+      name: 'mastery-rebuildable-from-durable-grades',
+      fn: 'projectMasteryChain',
+      input: {
+        materialId: 'mat-1',
+        observations: Array.from({ length: 6 }, (_, i) => ({
+          skillTag: 's',
+          correct: i < 4,
+        })),
+      },
+      run: () => {
+        const observations = Array.from({ length: 6 }, (_, i) => ({
+          skillTag: 's' as const,
+          correct: i < 4,
+        }))
+        const first = projectMastery('mat-1', observations)
+        const rebuilt = projectMastery('mat-1', observations)
+        return { equal: first.mastery === rebuilt.mastery, projection: rebuilt }
+      },
+    },
+    {
+      name: 'mastery-recommendation-one-band-up',
+      fn: 'recommendBand',
+      input: {
+        observations: Array.from({ length: 6 }, () => ({ skillTag: 's', correct: true })),
+        currentBand: 3,
+      },
+      run: () => {
+        const projection = projectMastery(
+          'mat-1',
+          Array.from({ length: 6 }, () => ({ skillTag: 's', correct: true })),
+        )
+        return recommendBand(projection, 3)
+      },
+    },
+    {
+      name: 'mastery-recommendation-one-band-down',
+      fn: 'recommendBand',
+      input: {
+        observations: Array.from({ length: 3 }, () => ({ skillTag: 's', correct: false })),
+        currentBand: 3,
+      },
+      run: () => {
+        const projection = projectMastery(
+          'mat-1',
+          Array.from({ length: 3 }, () => ({ skillTag: 's', correct: false })),
+        )
+        return recommendBand(projection, 3)
+      },
+    },
+    {
+      name: 'mastery-recommendation-cold-start-keeps-band',
+      fn: 'recommendBand',
+      input: { observations: [], currentBand: 3 },
+      run: () => recommendBand(projectMastery('mat-1', []), 3),
+    },
+    {
+      name: 'mastery-recommendation-clamped-at-edges',
+      fn: 'recommendBand',
+      input: {
+        observations: Array.from({ length: 8 }, () => ({ skillTag: 's', correct: true })),
+        currentBand: 5,
+      },
+      run: () => {
+        const projection = projectMastery(
+          'mat-1',
+          Array.from({ length: 8 }, () => ({ skillTag: 's', correct: true })),
+        )
+        return recommendBand(projection, 5)
       },
     },
   ]

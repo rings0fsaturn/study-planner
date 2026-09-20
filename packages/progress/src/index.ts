@@ -71,4 +71,17 @@ export {
   type SlotStatusDerivation,
   type UnplannedSession,
 } from './deriveSlotStatuses'
+export {
+  MODEL_VERSION,
+  DEFAULT_PARAMS,
+  bktForward,
+  projectMastery,
+  recommendBand,
+  type BktParams,
+  type MasteryObservation,
+  type MasteryProjection,
+  type DifficultyRecommendation,
+  type BktForwardResult,
+  type RecommendBandOptions,
+} from './mastery'
 export { buildYearStreakGrid, calculateStreak } from './streak'

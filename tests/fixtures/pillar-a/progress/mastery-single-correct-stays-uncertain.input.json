@@ -1,0 +1,11 @@
+{
+  "fn": "projectMastery",
+  "materialId": "mat-1",
+  "observations": [
+    {
+      "skillTag": "s",
+      "correct": true,
+      "score": 1
+    }
+  ]
+}

@@ -169,6 +169,19 @@ class UserScopedClient:
             f"?assessment_id=eq.{assessment_id}&order=submitted_at.asc&select=*"
         )
 
+    def list_graded_attempts(self) -> list[dict[str, Any]]:
+        """Owner-scoped graded attempt rows in grade order (mastery input).
+
+        Only the grade column is fetched; the durable per-skill observations
+        live in ``grade.perSkill`` and the owning material in
+        ``grade.materialId``, so the projection can be rebuilt from this
+        alone (RLS SELECT keeps it owner-scoped).
+        """
+        return self._get_rows(
+            f"{self._base}/rest/v1/{ATTEMPTS_TABLE}"
+            f"?status=eq.graded&order=graded_at.asc&select=grade"
+        )
+
     def download_fulltext(self, material_id: str, path: str) -> bytes:
         response = self._http.get(
             f"{self._base}/storage/v1/object/{STORAGE_BUCKET}/{path}",

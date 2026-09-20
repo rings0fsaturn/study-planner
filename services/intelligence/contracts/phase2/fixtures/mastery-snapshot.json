@@ -1,0 +1,15 @@
+{
+  "version": "bkt-v1",
+  "entries": [
+    {
+      "materialId": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "skillTag": "Exam structure",
+      "mastery": 0.852
+    },
+    {
+      "materialId": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+      "skillTag": "Professional skills",
+      "mastery": 0.107
+    }
+  ]
+}

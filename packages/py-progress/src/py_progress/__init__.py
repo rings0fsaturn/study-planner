@@ -34,6 +34,18 @@ from py_progress.gp import (
     gp_regression,
 )
 from py_progress.kalman import init_kalman, kalman_predict, kalman_update, run_kalman_on_phase
+from py_progress.mastery import (
+    BAKEOFF_SOURCE,
+    DEFAULT_PARAMS,
+    MODEL_VERSION,
+    BktParams,
+    DifficultyRecommendation,
+    MasteryObservation,
+    MasteryProjection,
+    bkt_forward,
+    project_mastery,
+    recommend_band,
+)
 from py_progress.progress import compute_progress
 from py_progress.streak import build_streak_grid, build_year_streak_grid, calculate_streak
 from py_progress.trend import analyze_trend
@@ -66,6 +78,16 @@ __all__ = [
     "kalman_predict",
     "kalman_update",
     "run_kalman_on_phase",
+    "MODEL_VERSION",
+    "BAKEOFF_SOURCE",
+    "DEFAULT_PARAMS",
+    "BktParams",
+    "MasteryObservation",
+    "MasteryProjection",
+    "DifficultyRecommendation",
+    "bkt_forward",
+    "project_mastery",
+    "recommend_band",
     "gp_regression",
     "cholesky_decompose",
     "cholesky_solve",

@@ -62,6 +62,20 @@ export function createEventStore(userId: string): EventStore {
     assessmentAttempts: 'clientAttemptId, attemptId, questionId, assessmentId, status, submittedAt',
     assessmentContentCache: 'assessmentId',
   });
+  // #43: derived mastery projections keyed by (material, skill). Non-synced,
+  // rebuildable from durable grades via GET /v1/mastery (calibrationCache
+  // precedent, map #4 #10); a fresh fetch overwrites the row in place.
+  db.version(7).stores({
+    events: '++id, kind, createdAt',
+    sync_queue: '++id, kind, createdAt, retries',
+    sync_meta: 'key',
+    onboardingDraft: 'id',
+    activeSession: 'id',
+    calibrationCache: 'key',
+    assessmentAttempts: 'clientAttemptId, attemptId, questionId, assessmentId, status, submittedAt',
+    assessmentContentCache: 'assessmentId',
+    masteryCache: 'materialId, skillTag',
+  });
   return new EventStore(db);
 }
 

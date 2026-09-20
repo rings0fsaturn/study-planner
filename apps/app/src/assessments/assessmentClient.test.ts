@@ -10,6 +10,7 @@ import {
   type AsyncJob,
   type GenerationRequest,
 } from './types'
+import { masteryProjection } from './testing/fakeAssessmentClient'
 
 function request(overrides: Partial<GenerationRequest> = {}): GenerationRequest {
   return {
@@ -99,6 +100,23 @@ describe('AssessmentClient', () => {
     const client = new AssessmentClient(new FakeFetch(async () => job))
 
     await expect(client.getJob('job-1')).resolves.toEqual(job)
+  })
+
+  it('getMastery returns the projections without filters', async () => {
+    const projections = [masteryProjection()]
+    const fetchLike = new FakeFetch(async () => projections)
+    const client = new AssessmentClient(fetchLike)
+
+    await expect(client.getMastery()).resolves.toEqual(projections)
+    expect(fetchLike.calls[0].path).toBe('/v1/mastery')
+  })
+
+  it('getMastery adds material and skill filters to the query', async () => {
+    const fetchLike = new FakeFetch(async () => [])
+    const client = new AssessmentClient(fetchLike)
+
+    await client.getMastery('mat-1', 'Exam structure')
+    expect(fetchLike.calls[0].path).toBe('/v1/mastery?materialId=mat-1&skillTag=Exam+structure')
   })
 
   it('regenerateAssessment posts to the assessment and returns the AsyncJob', async () => {

@@ -62,6 +62,40 @@ export interface GenerationRequest {
   materialIds: string[]
   recipe: AssessmentRecipe
   correlationId: string
+  /** Client-supplied per-skill mastery snapshot (#43; the server stores none). */
+  masterySnapshot?: MasterySnapshot
+}
+
+/**
+ * Rebuildable per-(material, skill) mastery projection (openapi
+ * MasteryProjection, #43). Stateless: the same durable grades always produce
+ * the same projection; `modelVersion` identifies the BKT parameter set.
+ */
+export interface MasteryProjection {
+  materialId: string
+  skillTag: string
+  mastery: number
+  uncertainty: number
+  confidence: number
+  n: number
+  modelVersion: string
+  recentTrend?: number
+}
+
+/** One adaptive difficulty recommendation (openapi AdaptiveRecommendation). */
+export interface DifficultyRecommendation {
+  materialId: string
+  skillTag: string
+  currentBand: number
+  recommendedBand: number
+  targetExpectedCorrectness: number
+  modelVersion: string
+}
+
+/** Client-supplied mastery snapshot that rides a GenerationRequest (#43). */
+export interface MasterySnapshot {
+  version: string
+  entries: Array<{ materialId: string; skillTag: string; mastery: number }>
 }
 
 export interface Citation {

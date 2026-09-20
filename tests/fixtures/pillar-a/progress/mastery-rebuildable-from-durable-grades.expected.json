@@ -1,0 +1,13 @@
+{
+  "equal": true,
+  "projection": {
+    "materialId": "mat-1",
+    "skillTag": "s",
+    "mastery": 0.4670098112624077,
+    "uncertainty": 0.9968573958431904,
+    "confidence": 0.0031426041568095586,
+    "n": 6,
+    "modelVersion": "bkt-v1",
+    "recentTrend": -0.4497773952326273
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "materialId": "mat-1",
+  "skillTag": "",
+  "currentBand": 3,
+  "recommendedBand": 3,
+  "targetExpectedCorrectness": 0.7,
+  "modelVersion": "bkt-v1"
+}

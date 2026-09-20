@@ -6,12 +6,14 @@ import {
   type AssessmentFormat,
   type GenerationRequest,
 } from '../../assessments/types'
+import { saveMasteryProjections } from '../../assessments/masteryCache'
 import { PRACTICE_RUN_STARTED } from '../../events/EventStore'
 import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
 import { logger } from '../../lib/logger'
+import { recommendBand } from '@study-tracker/progress'
 import '../../materials/materials.css'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
 
@@ -26,6 +28,8 @@ const GENERATION_CONCURRENCY = 2
 const MAX_QUESTIONS = 20
 /** D-10: the primary material plus up to four more, distributed round-robin. */
 const MAX_MATERIALS = 5
+/** The band assumed before any evidence (no attempts yet, #43). */
+const DEFAULT_BAND = 3
 
 function formatMinutes(mins: number | null): string {
   if (!mins) return 'Unknown duration'
@@ -138,12 +142,39 @@ export function PracticeThis() {
    * carries exactly one materialId (the server's per-call gate). A problem
    * keeps its own clientId/correlationId so a retried request is a fresh
    * idempotency key rather than a replay.
+   *
+   * Adaptive (#43): when the learner picks Adaptive, each problem's band is
+   * the one-band recommendation from the material's mastery projection
+   * (target ~0.7 expected correctness; the cold start keeps the mid band).
+   * The projections are fetched once per run and cached in masteryCache.
    */
   async function startRun() {
     if (generating) return
     const total = questionCount
+    const adaptive = difficulty === 'Adaptive'
     setGenerating(true)
     setError(null)
+
+    let bandByMaterial = new Map<string, number>()
+    if (adaptive) {
+      try {
+        const projections = await assessments.getMastery()
+        await saveMasteryProjections(eventStore, projections)
+        bandByMaterial = new Map(
+          runMaterials.map((entry) => {
+            const own = projections.filter((p) => p.materialId === entry.id)
+            if (own.length === 0) return [entry.id, DEFAULT_BAND]
+            const highest = own.reduce((best, p) => (p.mastery > best.mastery ? p : best))
+            return [entry.id, recommendBand(highest, DEFAULT_BAND).recommendedBand]
+          }),
+        )
+      } catch (masteryError) {
+        // Adaptive is advisory: a failed mastery fetch falls back to the mid
+        // band instead of blocking the run (#43).
+        logger.warn('[practice] mastery fetch failed, using mid band', masteryError)
+        bandByMaterial = new Map(runMaterials.map((entry) => [entry.id, DEFAULT_BAND]))
+      }
+    }
 
     const generated: Array<string | undefined> = new Array(total).fill(undefined)
     let firstError: AssessmentServiceError | null = null
@@ -158,7 +189,7 @@ export function PracticeThis() {
           // The slice gate accepts exactly one question per call, so an
           // N-problem run is N calls (D-06).
           questionCount: 1,
-          difficulty: Number(difficulty),
+          difficulty: adaptive ? (bandByMaterial.get(source.id) ?? DEFAULT_BAND) : Number(difficulty),
         },
         correlationId: crypto.randomUUID(),
       }
@@ -275,14 +306,15 @@ export function PracticeThis() {
                   key={option}
                   type="button"
                   className={`chip${difficulty === option ? ' selected' : ''}`}
-                  disabled={option === 'Adaptive'}
                   onClick={() => setDifficulty(option)}
                 >
                   {option}
                 </button>
               ))}
             </div>
-            <p className="field-hint">Adaptive difficulty arrives with the mastery projection.</p>
+            <p className="field-hint">
+              Adaptive picks each problem's band from your mastery projection, one band at a time.
+            </p>
           </div>
         </div>
         <div className="material-practice-actions">

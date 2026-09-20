@@ -15,6 +15,7 @@ import type {
   AttemptRecord,
   AttemptSubmitInput,
   GenerationRequest,
+  MasteryProjection,
 } from './types'
 
 export interface AssessmentFetchLike {
@@ -32,6 +33,8 @@ export interface AssessmentClientLike {
     input: AttemptSubmitInput,
   ): Promise<AttemptCreated>
   listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]>
+  /** Rebuildable mastery projections from the owner's durable grades (#43). */
+  getMastery(materialId?: string, skillTag?: string): Promise<MasteryProjection[]>
   /** AttemptTransport view (attemptFlow's DI seam) — same calls, fewer args. */
   readonly transport: {
     submitAttempt(
@@ -288,6 +291,17 @@ export class AssessmentClient implements AssessmentClientLike {
         `/v1/assessments/${assessmentId}/attempts`,
       )
       return payload as AttemptRecord[]
+    })
+  }
+
+  getMastery(materialId?: string, skillTag?: string): Promise<MasteryProjection[]> {
+    return this.run(async () => {
+      const params = new URLSearchParams()
+      if (materialId) params.set('materialId', materialId)
+      if (skillTag) params.set('skillTag', skillTag)
+      const query = params.toString()
+      const payload = await this.fetchLike.fetchJson(`/v1/mastery${query ? `?${query}` : ''}`)
+      return payload as MasteryProjection[]
     })
   }
 

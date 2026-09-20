@@ -256,6 +256,40 @@ def _dispatch(inp: dict) -> Any:
             inp["today"],
         )
 
+    if fn == "projectMastery":
+        from py_progress.mastery import MasteryObservation, project_mastery
+
+        observations = [
+            MasteryObservation(
+                skillTag=o["skillTag"],
+                correct=o["correct"],
+                score=o.get("score", 1.0),
+            )
+            for o in inp["observations"]
+        ]
+        return project_mastery(inp["materialId"], observations)
+
+    if fn == "projectMasteryChain":
+        from py_progress.mastery import MasteryObservation, project_mastery
+
+        observations = [
+            MasteryObservation(skillTag=o["skillTag"], correct=o["correct"])
+            for o in inp["observations"]
+        ]
+        first = project_mastery(inp["materialId"], observations)
+        rebuilt = project_mastery(inp["materialId"], observations)
+        return {"equal": first.mastery == rebuilt.mastery, "projection": rebuilt}
+
+    if fn == "recommendBand":
+        from py_progress.mastery import MasteryObservation, project_mastery, recommend_band
+
+        observations = [
+            MasteryObservation(skillTag=o["skillTag"], correct=o["correct"])
+            for o in inp["observations"]
+        ]
+        projection = project_mastery("mat-1", observations)
+        return recommend_band(projection, inp["currentBand"])
+
     raise ValueError(f"Unknown fixture function: {fn}")
 
 

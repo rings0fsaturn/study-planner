@@ -5,11 +5,16 @@ import { PracticeThis } from './PracticeThis'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
-import { FakeAssessmentClient, queuedJob } from '../../assessments/testing/fakeAssessmentClient'
+import {
+  FakeAssessmentClient,
+  masteryProjection,
+  queuedJob,
+} from '../../assessments/testing/fakeAssessmentClient'
 import { AssessmentServiceError } from '../../assessments/types'
 import type { MaterialRecord } from '../../materials/types'
 
 const mockAppend = vi.fn().mockResolvedValue(1)
+const mockTablePut = vi.fn().mockResolvedValue(undefined)
 const mockNavigate = vi.fn()
 
 vi.mock('../../lib/supabase', () => ({
@@ -17,7 +22,7 @@ vi.mock('../../lib/supabase', () => ({
 }))
 
 vi.mock('../../events/useEventStore', () => ({
-  useEventStore: () => ({ append: mockAppend }),
+  useEventStore: () => ({ append: mockAppend, table: () => ({ put: mockTablePut }) }),
 }))
 
 vi.mock('react-router-dom', async () => {
@@ -105,6 +110,7 @@ describe('PracticeThis', () => {
   afterEach(() => {
     mockAppend.mockClear()
     mockNavigate.mockClear()
+    mockTablePut.mockClear()
   })
 
   it('renders the configuration page for a ready material', async () => {
@@ -118,7 +124,7 @@ describe('PracticeThis', () => {
     expect(screen.getByRole('button', { name: 'Add another material' })).toBeInTheDocument()
   })
 
-  it('offers only the written family and bands 1-5, with the rest disabled', async () => {
+  it('offers only the written family and bands 1-5, with adaptive now enabled', async () => {
     const client = new FakeMaterialClient([material({})])
 
     renderPractice(client)
@@ -128,7 +134,7 @@ describe('PracticeThis', () => {
     expect(screen.getByRole('button', { name: 'Written' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Coding' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Mixed' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Adaptive' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Adaptive' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '3' })).toHaveClass('selected')
     expect(screen.getByRole('button', { name: '5' })).toBeEnabled()
   })
@@ -272,6 +278,71 @@ describe('PracticeThis', () => {
 
     const [{ runId }] = mockAppend.mock.calls[0].slice(1)
     expect(mockNavigate).toHaveBeenCalledWith(`/materials/mat-1/practice/${runId}`)
+  })
+
+  it('adaptive runs pick the recommended band from the mastery projection', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    // mat-1 is mastered (high p), mat-2 is weak (low p): one band up, one
+    // band down from the mid-band reference.
+    assessments.scriptGetMastery([
+      masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 }),
+      masteryProjection({ materialId: 'mat-2', mastery: 0.1, n: 3 }),
+    ])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([4, 2])
+    // The fetched projections are cached in the derived masteryCache.
+    expect(mockTablePut).toHaveBeenCalledTimes(2)
+  })
+
+  it('adaptive cold start keeps the mid band when there are no projections', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetMastery([])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await screen.findByText('Focus')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([3, 3])
+  })
+
+  it('adaptive falls back to the mid band when the mastery fetch fails', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetMastery(new AssessmentServiceError('network', 'request failed', true))
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await screen.findByText('Focus')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([3, 3])
+    expect(mockTablePut).not.toHaveBeenCalled()
   })
 
   it('keeps the problems that generated when some generations fail', async () => {

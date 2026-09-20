@@ -50,3 +50,6 @@ These fixtures target schemas declared inline in `openapi.yaml`, which the JSON-
 | `written-attempt-submit.json` | `AttemptSubmit` with `WrittenAnswer` | a learner's free-text written submission |
 | `written-attempt-record.json` | `AttemptRecord` with `WrittenAnswer` and `QuestionGraded` | a graded written attempt with the per-criterion `rubricBreakdown` |
 | `assessment-recipe-scoped.json` | `AssessmentRecipe` with `AssessmentScope` | a chapter-scoped generation request (PDF pages plus the section label that steers retrieval) |
+| `mastery-projection.json` | `MasteryProjection` | a rebuildable per-(material, skill) mastery projection with model-version context |
+| `adaptive-recommendation.json` | `AdaptiveRecommendation` | a one-band difficulty recommendation targeting ~0.7 expected correctness |
+| `mastery-snapshot.json` | `MasterySnapshot` | the client-supplied mastery snapshot that rides a `GenerationRequest` (the server stores no mastery) |

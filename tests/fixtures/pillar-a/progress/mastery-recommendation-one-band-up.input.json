@@ -1,0 +1,30 @@
+{
+  "fn": "recommendBand",
+  "observations": [
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    }
+  ],
+  "currentBand": 3
+}

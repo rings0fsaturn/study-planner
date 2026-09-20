@@ -7,6 +7,7 @@ import type {
   AttemptRecord,
   AttemptSubmitInput,
   GenerationRequest,
+  MasteryProjection,
   Question,
   QuestionGradedResult,
 } from '../types'
@@ -46,6 +47,12 @@ export class FakeAssessmentClient implements AssessmentClientLike {
   listAssessmentAttempts = vi.fn(async (_assessmentId: string): Promise<AttemptRecord[]> => {
     throw new Error('listAssessmentAttempts not scripted')
   })
+
+  getMastery = vi.fn(
+    async (_materialId?: string, _skillTag?: string): Promise<MasteryProjection[]> => {
+      throw new Error('getMastery not scripted')
+    },
+  )
 
   /** AttemptTransport view over the scripted calls (attemptFlow DI seam). */
   readonly transport = {
@@ -87,8 +94,15 @@ export class FakeAssessmentClient implements AssessmentClientLike {
     })
   }
 
-  scriptListAttempts(result: AttemptRecord[] | Error): void {
+scriptListAttempts(result: AttemptRecord[] | Error): void {
     this.listAssessmentAttempts.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptGetMastery(result: MasteryProjection[] | Error): void {
+    this.getMastery.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })
@@ -149,6 +163,26 @@ export function queuedJob(overrides: Partial<AsyncJob> = {}): AsyncJob {
     attempt: 1,
     resultId: 'assessment-1',
     createdAt: '2026-08-14T00:00:00Z',
+    ...overrides,
+  }
+}
+
+/**
+ * A rebuildable mastery projection (#43): the derived per-(material, skill)
+ * BKT output, keyed by modelVersion.
+ */
+export function masteryProjection(
+  overrides: Partial<MasteryProjection> = {},
+): MasteryProjection {
+  return {
+    materialId: 'mat-1',
+    skillTag: 'Exam structure',
+    mastery: 0.852,
+    uncertainty: 0.201,
+    confidence: 0.799,
+    n: 6,
+    modelVersion: 'bkt-v1',
+    recentTrend: 0.031,
     ...overrides,
   }
 }

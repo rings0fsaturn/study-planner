@@ -1,0 +1,38 @@
+{
+  "fn": "projectMastery",
+  "materialId": "mat-1",
+  "observations": [
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    },
+    {
+      "skillTag": "s",
+      "correct": true
+    }
+  ]
+}

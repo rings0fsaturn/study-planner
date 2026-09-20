@@ -655,3 +655,56 @@ def test_assessment_scope_rejects_malformed_ranges() -> None:
     ):
         with pytest.raises(jsonschema.ValidationError):
             _validate_against_openapi(document, "AssessmentScope", invalid)
+
+
+# --- #43 mastery and adaptive difficulty ---
+
+
+def test_mastery_fixtures_validate_against_openapi() -> None:
+    document = _openapi()
+    projection = load_json(ROOT / "fixtures/mastery-projection.json")
+    _validate_against_openapi(document, "MasteryProjection", projection)
+    assert 0.0 <= projection["mastery"] <= 1.0
+    assert 0.0 <= projection["uncertainty"] <= 1.0
+    assert 0.0 <= projection["confidence"] <= 1.0
+    assert projection["modelVersion"]
+
+    recommendation = load_json(ROOT / "fixtures/adaptive-recommendation.json")
+    _validate_against_openapi(document, "AdaptiveRecommendation", recommendation)
+    assert abs(recommendation["recommendedBand"] - recommendation["currentBand"]) <= 1
+    assert recommendation["targetExpectedCorrectness"] == 0.7
+
+    snapshot = load_json(ROOT / "fixtures/mastery-snapshot.json")
+    _validate_against_openapi(document, "MasterySnapshot", snapshot)
+    assert snapshot["version"]
+    for entry in snapshot["entries"]:
+        _validate_against_openapi(document, "MasterySnapshotEntry", entry)
+
+
+def test_generation_request_accepts_mastery_snapshot() -> None:
+    document = _openapi()
+    snapshot = load_json(ROOT / "fixtures/mastery-snapshot.json")
+    request = {
+        "clientId": "client-43",
+        "materialIds": [entry["materialId"] for entry in snapshot["entries"]],
+        "recipe": {"formats": ["objective"], "questionCount": 1, "difficulty": 3},
+        "correlationId": "corr-43",
+        "masterySnapshot": snapshot,
+    }
+    _validate_against_openapi(document, "GenerationRequest", request)
+    assert request["masterySnapshot"]["version"] == "bkt-v1"
+
+
+def test_mastery_recommendations_route_is_typed() -> None:
+    document = _openapi()
+    paths = document["paths"]
+    assert "/v1/mastery/recommendations" in paths
+    operation = paths["/v1/mastery/recommendations"]["get"]
+    assert operation["operationId"] == "getMasteryRecommendations"
+    assert operation["security"], "recommendations must be owner-scoped"
+    assert operation["parameters"][0]["$ref"].endswith("RequestId")
+    schema = document["components"]["schemas"]["AdaptiveRecommendation"]
+    assert schema["additionalProperties"] is False
+    assert "currentBand" in schema["required"]
+    assert "recommendedBand" in schema["required"]
+    assert "modelVersion" in schema["required"]
