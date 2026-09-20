@@ -1,11 +1,11 @@
 # State – logging-tracing
 
-_Spec: none (infra task, plan is contract) · Plan: `active/logging-tracing/plan/PLAN.md` · STATUS row: logging-tracing · Status: done (code complete, uncommitted) · Updated: 2026-09-15_
+_Spec: none (infra task, plan is contract) · Plan: `active/logging-tracing/plan/PLAN.md` · STATUS row: logging-tracing · Status: done · Updated: 2026-09-20_
 
 ## Current state & next
 
-- P1–P4 all implemented and verified; changes uncommitted on `phase2/issue-44-written-practice-runs`.
-- Next: add STATUS row, commit (or fold into the branch's next commit), then session-end distill.
+- P1–P4 all implemented and verified; committed as `703a97b` (39 files) on `project/phase-2`.
+- Next: none — wrapping (archive + STATUS flip) is the only remaining step.
 
 ## Done so far
 
@@ -45,5 +45,4 @@ _Spec: none (infra task, plan is contract) · Plan: `active/logging-tracing/plan
 
 ## Open
 
-- Commit decision: fold into branch's next commit or separate commit.
-- STATUS row still to add (work-journal owns STATUS.md).
+- none.
