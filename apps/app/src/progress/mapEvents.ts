@@ -311,6 +311,29 @@ export function materialTitleIndex(
   return byId
 }
 
+/**
+ * The roadmaps a library material currently feeds, as user-facing labels.
+ * A roadmap counts when its latest attach/detach state for this material is
+ * attached, so the list matches what the roadmap surfaces show.
+ */
+export function materialUsageLabels(events: Event[], materialId: string | undefined): string[] {
+  if (!materialId) return []
+  return deriveRoadmapLifecycle(events).all
+    .filter((entry) =>
+      roadmapMaterialPayloads(events, entry.payload, entry.roadmapCreatedAt).some(
+        (material) => material.materialId === materialId,
+      ),
+    )
+    .map((entry) => `${entry.title} · ${formatUsageDate(entry.deadline)}`)
+}
+
+function formatUsageDate(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime())
+    ? iso
+    : date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export function capacityWeeklyTarget(payload: RoadmapCreatedPayload, weekStartDate: string): number {
   let total = 0
   for (let offset = 0; offset < 7; offset += 1) {

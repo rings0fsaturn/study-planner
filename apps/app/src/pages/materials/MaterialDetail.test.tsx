@@ -3,11 +3,16 @@ import { act, fireEvent, render, screen, waitFor, within } from '@testing-librar
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MaterialDetail } from './MaterialDetail'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
+import { useMaterialUsage } from '../../materials/useMaterialUsage'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
 
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
+}))
+
+vi.mock('../../materials/useMaterialUsage', () => ({
+  useMaterialUsage: vi.fn(() => []),
 }))
 
 function material(overrides: Partial<MaterialRecord>): MaterialRecord {
@@ -53,6 +58,7 @@ describe('MaterialDetail', () => {
   afterEach(() => {
     vi.useRealTimers()
     vi.restoreAllMocks()
+    vi.mocked(useMaterialUsage).mockReturnValue([])
   })
 
   it('renders a ready material with Practice this and attach actions', async () => {
@@ -124,6 +130,20 @@ describe('MaterialDetail', () => {
     renderDetail(client)
 
     expect(await screen.findByText(/Not attached to any roadmap yet/)).toBeInTheDocument()
+  })
+
+  it('names the roadmaps the material feeds in the usage section and delete warning', async () => {
+    vi.mocked(useMaterialUsage).mockReturnValue(['Networks · Jul 1, 2026'])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client)
+
+    expect(await screen.findByText('Networks · Jul 1, 2026')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Delete' }))
+    const dialog = await screen.findByRole('dialog', { name: 'Delete material' })
+    expect(within(dialog).getByText('Networks · Jul 1, 2026')).toBeInTheDocument()
+    expect(within(dialog).getByRole('button', { name: 'Delete anyway' })).toBeInTheDocument()
   })
 
   it('archives and restores from the detail page', async () => {

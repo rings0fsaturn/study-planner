@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
+import { useMaterialUsage } from '../../materials/useMaterialUsage'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { IngestionProgress, MaterialStatusBadge } from '../../materials/StatusBadge'
 import '../../materials/materials.css'
@@ -160,9 +161,7 @@ export function MaterialDetail() {
     }
   }, [client, material?.id])
 
-  // Library materials are not yet linked to roadmaps or assessments; the
-  // attachment pointers arrive with the assessment slice (#38).
-  const usage: string[] = []
+  const usage = useMaterialUsage(materialId)
 
   if (!materialId) return null
 

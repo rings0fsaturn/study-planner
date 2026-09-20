@@ -1,18 +1,17 @@
 # State – roadmap-material-attach
 
-_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: P1–P4 done; P5 next · Updated: 2026-09-12_
+_Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS row: roadmap-material-attach · Status: P1–P5 done; wayfinder exit next · Updated: 2026-09-20_
 
 ## Current state & next
 
-- **#63 filed + claimed 2026-09-12**; branch `phase2/issue-63-roadmap-material-attach` cut off `2091d8e` in a fresh worktree (`/mnt/d/study/git/study-planner-web-issue-63`). Phase 0 done.
-- **P4 done 2026-09-12 (unit + live E2E).** The booking sheets' empty material picker no longer dead-ends: it offers `Add a material to this roadmap`, which closes the sheet and opens the roadmap's "+" picker in one click (D-10). `e2e/roadmap-material-attach-live.spec.ts` runs the whole story on the real stack at 1280 and 375 (`--workers=1`, 2 passed, ~29 s, zero page errors) and **closes all three P1–P3 deferrals**: the fresh 375 attach, OQ-07, and AC6's booked-bubble leg.
-- **OQ-07 resolved: the per-row minutes + role controls stay.** Measured at 375x812 — 158 px each inside a 375 px sheet, longest role label (`Foundations`) fully rendered, `scrollWidth === clientWidth`; 196 px each at 1280. D-06's batch-role fallback is not needed. Evidence: `research/2026-09-12-p4-oq07-375.png`.
-- **The shared account's roadmap is clean again:** only its own two materials (`Introduction to Spring Data JPA …`, `Designing-Data-Intensive-Applications`) and its own two bookings. The *library*, however, still carries two `E2E P2 attach <epoch-ms>` materials left by the P2 live run (P3's note about deleting "the throwaway library material" was true for one of the two) — left alone on purpose; deleting them is the user's call.
-- **Branch state:** `d2f3176` (P1), `33c46d9` (P1 records), `6e4d142` (P2), `9f7aecc` (P3), `34655be` (session-end docs), plus the P4 feat + records commits. Per-phase commits with the `.work/` records riding along in the same commit.
-- Five phases: P1 attach + shared reader (done), P2 minutes + role at attach time (done), P3 detach (done), P4 session surfaces + live E2E (**done**), P5 library usage (next).
+- **P5 done 2026-09-20 (AC5 closed).** `materialUsageLabels(events, materialId)` in `progress/mapEvents.ts` reuses the canonical `deriveRoadmapLifecycle` + `roadmapMaterialPayloads` (no third attach/detach join), `materials/useMaterialUsage.ts` is a thin `useEventStore` + `useLiveQuery` wrapper, and `MaterialDetail.tsx` drops the `const usage: string[] = []` stub. `mapEvents.test.ts` 23 passed, `MaterialDetail.test.tsx` 14 passed, typecheck + lint clean; live `e2e/roadmap-material-attach-live.spec.ts` **2/2** with `--workers=1`, the desktop scenario now asserting the material detail's `Used by` names the roadmap.
+- **All seven ACs are ticked and all five phases are done.** Next: the wayfinder exit (resolution comment on #63, close it, map #4 line, STATUS flip to Done, archive this folder).
+- **Shared account is clean:** the two leftover `E2E P2 attach <epoch>` library materials were deleted via the service role on 2026-09-20, and a leftover `probe coding material` attach from a failed P5 live run was detached in the same session. No test residue remains.
+- **#63 filed + claimed 2026-09-12**; branch `phase2/issue-63-roadmap-material-attach` cut off `2091d8e`. The P1–P4 code already lives on `project/phase-2` (`d2f3176`, `6e4d142`, `9f7aecc`, `5bd942a`); the worktree `/mnt/d/study/git/study-planner-web-issue-63` is a stale ancestor.
 
 ## Done so far
 
+- 2026-09-20 (P5): **a library material now names the roadmaps it feeds.** `materialUsageLabels(events, materialId)` lives beside the other event readers in `progress/mapEvents.ts` and returns `${roadmap.title} · ${deadline}` for every roadmap whose latest attach/detach state for the material is attached — it reuses `deriveRoadmapLifecycle` and `roadmapMaterialPayloads` rather than adding a fourth attach/detach scan. `materials/useMaterialUsage.ts` is a thin `useEventStore` + `useLiveQuery` wrapper; `MaterialDetail.tsx` replaces the `const usage: string[] = []` stub with the hook, so the `Used by` block and the delete warning needed no markup change. Three new `mapEvents.test.ts` cases (two roadmaps, detach/re-attach, unrelated/undefined id) and a `MaterialDetail.test.tsx` case for the non-empty usage plus the delete dialog. Live: the desktop scenario of `e2e/roadmap-material-attach-live.spec.ts` opens the attached material's detail page and asserts the `Used by` list names the active roadmap.
 - 2026-09-12 (session c, P4): **the session surfaces never dead-end, and the flow is live-verified.** `MaterialPickerSheet` gained an optional `onRequestAddMaterial`; with an empty roadmap it renders a first-class `Add a material to this roadmap` row above `No material · pick at start` (`.chooser-row.chooser-add`), `AddSessionSheet`/`BookingEditorSheet` pass it through, and `RoadmapCalendar.handleRequestAddMaterial` closes the open sheet and opens the "+" picker. The new `e2e/roadmap-material-attach-live.spec.ts` covers attach (90 min / `practice`) → directory `of 1h 30m` → New session → Attach → book → detach from the badge → the booked bubble keeps its title → booking removed, at 1280, and the same attach measured at 375. Both scenarios undo their own writes. All red-first where unit-level.
 - 2026-09-12 (session b, P3): **a material can be taken back out of the roadmap's set.** On the user's instruction the affordance is the row's material badge: hover it and a `×` fades in (also on keyboard focus), its tooltip reads `Detach material from roadmap?` plus how many upcoming sessions keep their label and logged time, and one click logs `MaterialDetached`. No confirm sheet and no cascade (OQ-06 resolved as "no"), so the plan's `MaterialRemoveSheet` was dropped. The reader's mask from P1 was already in place, so nothing else moved. Live at 1280: opacity 0 -> 1 on hover, row and header count dropped on click, re-attach restored both. AC6 ticked; the booked-bubble leg was unit-covered until P4 made it live.
 - 2026-09-12 (session b, P2): **minutes + role are chosen at attach time.** `MaterialPicker` gained `withPlan`, seeding a minutes field (`estimatedMinutes ?? 60`) and a role select (`ROLE_TO_LABEL`) per selected row and handing the plan back keyed by selected ids; the controls sit in a `.checkbox-entry` wrapper beside the row label, because a control nested inside the label would also toggle the checkbox. `RoadmapCalendar` passes `withPlan`. Live at 1280: attached at 90 minutes as `practice` -> directory row `0m of 1h 30m` and session setup `Practice`. AC2 ticked. Deviation: the planned `defaultMinutes` prop was dropped (the caller has no library rows to build it from).
@@ -46,13 +45,18 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 - `apps/app/src/session/session.css` — `.chooser-add` (dashed row) for that CTA.
 - `apps/app/src/roadmap/roadmap.css` — the `.dir-add`/detach-control styles.
 - `apps/app/src/pages/materials/MaterialLibrary.tsx`, `MaterialDetail.tsx`, `PracticeThis.tsx` — picker call sites moved to selection records.
+- `apps/app/src/progress/mapEvents.ts` (P5) — `materialUsageLabels` + `formatUsageDate`.
+- `apps/app/src/materials/useMaterialUsage.ts` (P5, new) — the event-log hook.
+- `apps/app/src/pages/materials/MaterialDetail.tsx` (P5) — the `usage` stub replaced by the hook.
+- `apps/app/src/progress/mapEvents.test.ts`, `apps/app/src/pages/materials/MaterialDetail.test.tsx` (P5) — usage cases.
+- `e2e/roadmap-material-attach-live.spec.ts` (P5) — the desktop scenario's AC5 leg.
 - `e2e/roadmap-material-attach-live.spec.ts` — new live spec (desktop 1280 + phone 375).
 
 ## Pitfalls & rules
 
 - **A booking does not move the material ledger.** `buildMaterialLedger` consumes **logged sessions** (`activeMinutesLogged`/`materialConsumedMinutes`) and progress marks only (`packages/progress/src/materialLedger.ts:49-90`); booking a session changes nothing in `consumed/remaining`. Do not write live assertions that expect a booking to move the directory's minutes.
 - **The repo Playwright config does run in this worktree.** P4 ran `pnpm exec playwright test -c e2e/playwright.config.ts ...` repeatedly here (app project and marketing project) with both webServers coming up; the P1 note about the marketing webServer never becoming reachable did not reproduce, and no throwaway config was needed. If it fails another time, capture the webServer output before assuming the config is at fault.
-- **`smoke.spec.ts:53` fails on this branch, unrelated to #63:** `getByRole('button', { name: 'Continue' })` matches both the submit button and "Continue with Google" (strict mode). Pre-existing; fix separately with `exact: true`.
+- **`smoke.spec.ts:53` failure (historical, fixed):** `getByRole('button', { name: 'Continue' })` used to match both the submit button and "Continue with Google"; `e2e/smoke.spec.ts:61` now uses `exact: true` and the file is 10/10 green.
 - **`locator.filter({ hasText: /^Title/ })` does not work on `.dir-row`** — the row's inner text starts with the `×` detach glyph, so an anchored regex never matches. Filter on a substring, or target `.dir-title`.
 - **A live spec must wait out the event-log replay.** The first `/study/roadmap` load after sign-in can take longer than the 5 s default expect timeout on the shared account (the second test in a file is the common victim); give the readiness assertion an explicit timeout (~20 s).
 - **A control whose accessible name carries a material title breaks unscoped locators.** The detach button's `aria-label` contains the title, so unscoped `getByRole('button', { name: /Operating Systems/ })` queries become strict-mode hazards. Scope such queries to the dialog or list they mean (`within(...)`).
@@ -66,7 +70,7 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 - **Progress is global per materialId.** `buildMaterialLedger` matches sessions by `materialId` across all roadmaps, so the same library material attached to two roadmaps shares its consumed minutes (pre-existing behaviour; note it, do not "fix" it here). This is also why a re-attach resurrects the removed material's logged minutes.
 - **Nested interactive elements are invalid.** `dir-head` was a single `<button>`, so the "+" became its sibling (D-05); the detach `×` sits beside the badge, not inside it; the picker's minutes/role fields sit beside the row `<label>`, because a control nested in a label also fires the label's click.
 - **WSL/drvfs staleness (rule 53).** Vite misses edits on `/mnt/d`; after frontend changes run `./full-app restart app` and hard-reload before judging the UI.
-- **Live runs leave library rows behind.** A live spec that creates library materials must delete them; the shared account currently still carries two `E2E P2 attach <epoch-ms>` rows from the P2 session.
+- **Live runs leave library rows behind.** A live spec that creates library materials must delete them. The shared account's two `E2E P2 attach <epoch-ms>` rows were deleted via the service role on 2026-09-20.
 - **Rule 30/33 boundaries.** New kinds are additive rows on the event log; no direct page-level Supabase writes, no Dexie schema change.
 
 ## Decisions in force
@@ -84,6 +88,5 @@ _Spec: GitHub #63 · Plan: active/roadmap-material-attach/plan/PLAN.md · STATUS
 
 ## Open
 
-- **P5 and AC5 remain**: `useMaterialUsage` + `MaterialDetail` must name the roadmaps a library material feeds (the usage block and the delete warning are still hardcoded empty).
-- **Two leftover library materials on the shared account**: `E2E P2 attach 1789200978749` and `E2E P2 attach 1789200922951` (P2 live-run artifacts). Deleting them is unreversible, so it was left to the user; they also mean every live attach run picks up throwaway rows.
-- **Pre-existing `smoke.spec.ts:53` failure** (strict-mode `Continue` vs `Continue with Google`) — unrelated to #63, fix with `exact: true` when someone is in that file.
+- **Wayfinder exit**: push, resolution comment on #63, close it, map #4 line, STATUS flip to Done, archive this folder.
+- **Pre-existing `smoke.spec.ts:53` failure is resolved**: `e2e/smoke.spec.ts:61` already carries `exact: true` (with the comment at `:59-60`); the whole smoke file runs 10/10 green (verified 2026-09-20). The pitfall below is historical.

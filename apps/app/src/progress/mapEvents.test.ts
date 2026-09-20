@@ -10,6 +10,7 @@ import {
   mapMaterialsForRoadmap,
   mapSessions,
   materialTitleIndex,
+  materialUsageLabels,
   roadmapMaterialPayloads,
 } from './mapEvents'
 
@@ -482,6 +483,70 @@ describe('roadmapMaterialPayloads', () => {
     expect(roadmapMaterialPayloads(events, scope, roadmapA).map((m) => m.materialId)).toEqual([
       'mat-lib',
     ])
+  })
+})
+
+describe('materialUsageLabels', () => {
+  const roadmapA = '2026-06-01T00:00:00.000Z'
+  const roadmapB = '2026-07-01T00:00:00.000Z'
+
+  function attached(roadmapCreatedAt: string, materialId: string, createdAt: string): Event {
+    return event(
+      'MaterialAttached',
+      {
+        roadmapCreatedAt,
+        materialId,
+        title: 'OSTEP',
+        estimatedDuration: 60,
+        kind: 'file',
+        role: 'foundation',
+      },
+      createdAt,
+    )
+  }
+
+  it('names every roadmap whose latest state for the material is attached', () => {
+    const events = [
+      event('RoadmapCreated', roadmapPayload({ purpose: 'Networks', materialIds: [] }), roadmapA),
+      event(
+        'RoadmapMarkedComplete',
+        { roadmapCreatedAt: roadmapA, resolvedAt: '2026-06-30T00:00:00.000Z' },
+        '2026-06-30T00:00:00.000Z',
+      ),
+      event('RoadmapCreated', roadmapPayload({ purpose: 'Databases', materialIds: [] }), roadmapB),
+      attached(roadmapA, 'mat-lib', '2026-06-02T00:00:00.000Z'),
+      attached(roadmapB, 'mat-lib', '2026-07-02T00:00:00.000Z'),
+    ]
+
+    expect(materialUsageLabels(events, 'mat-lib')).toEqual([
+      'Databases · Jul 1, 2026',
+      'Networks · Jul 1, 2026',
+    ])
+  })
+
+  it('drops a roadmap after a detach and returns it on re-attach', () => {
+    const scope = roadmapPayload({ purpose: 'Networks', materialIds: [] })
+    const events = [
+      event('RoadmapCreated', scope, roadmapA),
+      attached(roadmapA, 'mat-lib', '2026-06-02T00:00:00.000Z'),
+      event('MaterialDetached', { roadmapCreatedAt: roadmapA, materialId: 'mat-lib' }, '2026-06-03T00:00:00.000Z'),
+    ]
+
+    expect(materialUsageLabels(events, 'mat-lib')).toEqual([])
+
+    const reattached = [...events, attached(roadmapA, 'mat-lib', '2026-06-04T00:00:00.000Z')]
+    expect(materialUsageLabels(reattached, 'mat-lib')).toEqual(['Networks · Jul 1, 2026'])
+  })
+
+  it('ignores an unrelated material and an undefined id', () => {
+    const scope = roadmapPayload({ purpose: 'Networks', materialIds: [] })
+    const events = [
+      event('RoadmapCreated', scope, roadmapA),
+      attached(roadmapA, 'mat-lib', '2026-06-02T00:00:00.000Z'),
+    ]
+
+    expect(materialUsageLabels(events, 'mat-other')).toEqual([])
+    expect(materialUsageLabels(events, undefined)).toEqual([])
   })
 })
 

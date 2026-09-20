@@ -5,9 +5,9 @@ import { test, expect, type Locator, type Page } from '@playwright/test';
  *
  * Two real scenarios against the running app plus a real Supabase login:
  *   desktop 1280 - attach a library material with its own minutes and role, see
- *     it in the directory and in the New session picker, book a session on it,
- *     detach it from the row badge, and confirm the booked bubble keeps its
- *     label (AC6's booked-bubble leg).
+ *     it in the directory and in the New session picker, confirm the material's
+ *     detail page names the roadmap (AC5), book a session on it, detach it from
+ *     the row badge, and confirm the booked bubble keeps its label (AC6).
  *   phone 375 - the same attach, measuring the per-row minutes/role controls
  *     (OQ-07) and confirming the plan row does not overflow the sheet.
  *
@@ -133,6 +133,22 @@ test.describe('roadmap material attach (live, desktop 1280)', () => {
 
     await expect(directoryRow(page, title)).toContainText('of 1h 30m');
     expect(await header.innerText()).not.toEqual(before);
+
+    // AC5: the library material's own detail page names the roadmap it feeds.
+    const roadmapTitle = (await page.locator('.roadmap-title').innerText()).trim();
+    await page.goto(`${APP_URL}/study/materials`);
+    await expect(page.getByRole('heading', { name: 'Material library' })).toBeVisible();
+    await page
+      .locator('.material-card')
+      .filter({ hasText: title })
+      .getByRole('button', { name: 'View' })
+      .click();
+    await expect(page.getByRole('heading', { name: title })).toBeVisible();
+    await expect(page.locator('.material-ref-list')).toContainText(roadmapTitle);
+    await page.goto(`${APP_URL}/study/roadmap`);
+    await expect(page.getByLabel('Projected finish')).toContainText('provisional', {
+      timeout: 20000,
+    });
 
     // A booking on the attached material, on a day that keeps the bubble editable.
     const day = await futureEmptyDay(page);
