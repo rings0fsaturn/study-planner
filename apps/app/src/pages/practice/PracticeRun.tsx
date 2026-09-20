@@ -7,9 +7,10 @@ import {
   type LocalAttemptRow,
 } from '../../assessments/attemptFlow'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
+import { saveMasteryProjections } from '../../assessments/masteryCache'
 import { PRACTICE_RUN_FINISHED, type Event } from '../../events/EventStore'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
-import type { Assessment } from '../../assessments/types'
+import type { Assessment, MasteryProjection } from '../../assessments/types'
 import {
   AttemptHistoryBlock,
   QuestionNavigator,
@@ -66,6 +67,8 @@ export function PracticeRun() {
   /** In-flight generation retry for a stuck problem (warnings present). */
   const [regenerating, setRegenerating] = useState(false)
   const [regenerateError, setRegenerateError] = useState<string | null>(null)
+  /** Rebuilt projections for the summary advisory (#44 AC3); null until fetched. */
+  const [mastery, setMastery] = useState<MasteryProjection[] | null>(null)
 
   // ---- Pointer ------------------------------------------------------------
   useEffect(() => {
@@ -159,6 +162,34 @@ export function PracticeRun() {
   useEffect(() => {
     void hydrate()
   }, [hydrate])
+
+  // ---- Mastery refresh (#44 AC3): every fresh grade rebuilds the projection
+  // behind the next Adaptive run's band. Only graded attempts are observations:
+  // unsubmitted, paused, or abandoned work never reaches a server grade, so it
+  // never triggers a rebuild and never creates an observation.
+  const gradedRowCount = useMemo(
+    () => Object.values(rowsByAssessment).flat().filter((row) => row.grade != null).length,
+    [rowsByAssessment],
+  )
+  useEffect(() => {
+    if (gradedRowCount === 0 || !eventStore) return
+    let cancelled = false
+    void (async () => {
+      try {
+        const projections = await assessments.getMastery()
+        if (cancelled) return
+        await saveMasteryProjections(eventStore, projections)
+        if (!cancelled) setMastery(projections)
+      } catch (error) {
+        // Advisory: a failed rebuild leaves the summary without guidance
+        // instead of blocking the run.
+        logger.warn('[practice] mastery refresh failed', error)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [assessments, eventStore, gradedRowCount])
 
   // ---- Model ---------------------------------------------------------------
   const model = useMemo(() => {
@@ -410,6 +441,7 @@ export function PracticeRun() {
           activeIndex={summaryActiveIndex}
           onSelect={setSummaryActive}
           materialTitles={materialTitles}
+          mastery={mastery}
           panelSlot={summarySlot}
           onRetryQuestion={handleRetryQuestion}
           onBackToProblems={() => setSummaryDismissed(true)}

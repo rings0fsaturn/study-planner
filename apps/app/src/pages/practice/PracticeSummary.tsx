@@ -14,6 +14,8 @@
 
 import type { ReactNode } from 'react'
 import type { QuestionDisplayStatus } from '../assessments/review/reviewModel'
+import type { MasteryProjection } from '../../assessments/types'
+import { DEFAULT_BAND, bandGuidanceByMaterial } from '../../assessments/masteryBands'
 import {
   AttemptHistoryBlock,
   QuestionNavigator,
@@ -30,6 +32,8 @@ export interface PracticeSummaryProps {
   activeIndex: number
   onSelect: (index: number) => void
   materialTitles: Record<string, string>
+  /** Rebuilt mastery projections for the advisory next-run band (#44 AC3). */
+  mastery?: MasteryProjection[] | null
   /** Inline retry: the taking UI for the active problem while one is retrying. */
   panelSlot?: ReactNode
   onRetryQuestion: (questionId: string) => void
@@ -110,12 +114,61 @@ function ProblemBody({
   )
 }
 
+/**
+ * Per-material adaptive guidance for the next run: the same reader the
+ * practice config uses, so the summary never invents a second band model.
+ * A material with no observations reads as an honest cold start.
+ */
+function AdaptiveAdvisory({
+  materialIds,
+  materialTitles,
+  mastery,
+}: {
+  materialIds: string[]
+  materialTitles: Record<string, string>
+  mastery: MasteryProjection[]
+}) {
+  const guidance = bandGuidanceByMaterial(mastery)
+  const entries = [...new Set(materialIds)].filter(Boolean).map((materialId) => {
+    const found = guidance.get(materialId)
+    return {
+      materialId,
+      recommendedBand: found?.recommendedBand ?? DEFAULT_BAND,
+      observations: found?.observations ?? 0,
+      modelVersion: found?.modelVersion,
+    }
+  })
+
+  return (
+    <section className="practice-summary-adaptive" aria-label="Adaptive difficulty">
+      <h3 className="practice-summary-adaptive-title">Adaptive difficulty</h3>
+      <ul className="practice-summary-adaptive-list">
+        {entries.map((entry) => (
+          <li key={entry.materialId} className="t-body-sm">
+            <strong>{materialTitles[entry.materialId] ?? 'This material'}</strong>:{' '}
+            {entry.observations > 0
+              ? `next run band ${entry.recommendedBand}, based on ${entry.observations} graded answer${
+                  entry.observations === 1 ? '' : 's'
+                } · ${entry.modelVersion}`
+              : `no graded observations yet, the next run stays at band ${entry.recommendedBand}`}
+          </li>
+        ))}
+      </ul>
+      <p className="t-body-sm practice-summary-adaptive-note">
+        Advisory only: rebuilt from your graded answers, and it never changes pinned roadmap
+        decisions.
+      </p>
+    </section>
+  )
+}
+
 export function PracticeSummary({
   model,
   problems,
   activeIndex,
   onSelect,
   materialTitles,
+  mastery,
   panelSlot,
   onRetryQuestion,
   onBackToProblems,
@@ -148,6 +201,14 @@ export function PracticeSummary({
               ` · ${model.missingCount} problem${model.missingCount === 1 ? '' : 's'} were not generated`}
           </p>
         </section>
+
+        {mastery != null && (
+          <AdaptiveAdvisory
+            materialIds={model.materialIds}
+            materialTitles={materialTitles}
+            mastery={mastery}
+          />
+        )}
 
         {problem == null || !problem.group ? (
           <section className="card card-large" role="status">

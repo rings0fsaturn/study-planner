@@ -35,6 +35,37 @@
   color: var(--text-secondary);
 }
 
+/* ---- adaptive advisory (#44 AC3) — one compact line per run material ---- */
+.practice-summary-adaptive {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--surface-recessed);
+  border: 1px solid var(--border-subtle);
+  border-left: 3px solid var(--accent, var(--terracotta));
+  border-radius: var(--radius-md);
+}
+
+.practice-summary-adaptive-title {
+  margin: 0;
+  font: 0.95rem var(--font-display);
+}
+
+.practice-summary-adaptive-list {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  color: var(--text-secondary);
+}
+
+.practice-summary-adaptive-note {
+  margin: 0;
+  color: var(--text-tertiary);
+}
+
 /* Honest state for an attempt that could not be graded (no grade to review). */
 .practice-failed-note {
   display: flex;

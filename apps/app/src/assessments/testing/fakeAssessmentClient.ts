@@ -48,10 +48,13 @@ export class FakeAssessmentClient implements AssessmentClientLike {
     throw new Error('listAssessmentAttempts not scripted')
   })
 
+  /**
+   * Defaults to no observations: the mastery refresh runs in the background of
+   * any graded flow, and cold start is the honest answer for a fake that was
+   * not scripted with projections. Script `scriptGetMastery` to change it.
+   */
   getMastery = vi.fn(
-    async (_materialId?: string, _skillTag?: string): Promise<MasteryProjection[]> => {
-      throw new Error('getMastery not scripted')
-    },
+    async (_materialId?: string, _skillTag?: string): Promise<MasteryProjection[]> => [],
   )
 
   /** AttemptTransport view over the scripted calls (attemptFlow DI seam). */

@@ -6,6 +6,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import type { LocalAttemptRow } from '../../assessments/attemptFlow'
 import type { Assessment, Question, QuestionGradedResult } from '../../assessments/types'
 import type { PracticeRunStartedPayload } from '../../sync/types'
+import { masteryProjection } from '../../assessments/testing/fakeAssessmentClient'
 import { buildPracticeRunModel, isSummaryEligible } from './practiceRunModel'
 import { PracticeSummary } from './PracticeSummary'
 
@@ -244,5 +245,46 @@ describe('PracticeSummary', () => {
     expect(view.container.innerHTML).not.toMatch(
       /answerBlock|answer_block|correctIndex|correct_index|referenceSolution|hiddenTest|referenceAnswer|rubricVersion|maxPoints/i,
     )
+  })
+
+  it('shows the next-run adaptive band rebuilt from the grades (#44 AC3)', () => {
+    renderSummary(
+      {
+        assessmentIds: ['a-1'],
+        assessments: [assessmentRecord('a-1', [question('q1')])],
+        attemptsByAssessment: { 'a-1': [row('ca-1', 'q1', 'a-1', 'graded', grade('q1', 1))] },
+      },
+      { mastery: [masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 })] },
+    )
+
+    const advisory = screen.getByRole('region', { name: 'Adaptive difficulty' })
+    expect(advisory).toHaveTextContent('Operating Systems: next run band 4')
+    expect(advisory).toHaveTextContent('8 graded answers')
+    expect(advisory).toHaveTextContent('bkt-v1')
+  })
+
+  it('shows an honest cold start when there are no observations yet', () => {
+    renderSummary(
+      {
+        assessmentIds: ['a-1'],
+        assessments: [assessmentRecord('a-1', [question('q1')])],
+        attemptsByAssessment: { 'a-1': [row('ca-1', 'q1', 'a-1', 'graded', grade('q1', 1))] },
+      },
+      { mastery: [] },
+    )
+
+    const advisory = screen.getByRole('region', { name: 'Adaptive difficulty' })
+    expect(advisory).toHaveTextContent('no graded observations yet')
+    expect(advisory).toHaveTextContent('band 3')
+  })
+
+  it('omits the adaptive advisory when no mastery data is available', () => {
+    renderSummary({
+      assessmentIds: ['a-1'],
+      assessments: [assessmentRecord('a-1', [question('q1')])],
+      attemptsByAssessment: { 'a-1': [row('ca-1', 'q1', 'a-1', 'graded', grade('q1', 1))] },
+    })
+
+    expect(screen.queryByRole('region', { name: 'Adaptive difficulty' })).not.toBeInTheDocument()
   })
 })

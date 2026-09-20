@@ -10,6 +10,7 @@ import { PRACTICE_RUN_FINISHED, PRACTICE_RUN_STARTED } from '../../events/EventS
 import {
   FakeAssessmentClient,
   attemptRecord,
+  masteryProjection,
   queuedJob,
 } from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
@@ -513,5 +514,53 @@ describe('PracticeRun', () => {
     renderRun(client, undefined, 'run-nope')
 
     expect(await screen.findByText(/could not be found on this device/i)).toBeInTheDocument()
+  })
+
+  it('rebuilds and caches mastery once a grade lands (#44 AC3)', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 7 })])
+
+    renderRun(client)
+    await screen.findByText('Prompt for q1')
+    // No grade yet: nothing to observe, nothing to fetch (AC3).
+    expect(client.getMastery).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Your answer'), {
+      target: { value: 'A graded answer.' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Submit answer' }))
+
+    await waitFor(() => {
+      expect(client.getMastery).toHaveBeenCalled()
+    })
+    const store = createEventStore(USER)
+    await waitFor(async () => {
+      const rows = await store.table('masteryCache').toArray()
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ materialId: 'mat-1', n: 7 })
+    })
+    store.close()
+  })
+
+  it('creates no mastery observation for abandoned, ungraded work (#44 AC3)', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 7 })])
+
+    renderRun(client)
+    await screen.findByText('Prompt for q1')
+    fireEvent.click(await screen.findByRole('button', { name: 'Abandon run' }))
+    await screen.findByText(/Run abandoned/)
+
+    expect(client.getMastery).not.toHaveBeenCalled()
+    const store = createEventStore(USER)
+    expect(await store.table('masteryCache').toArray()).toHaveLength(0)
+    store.close()
   })
 })

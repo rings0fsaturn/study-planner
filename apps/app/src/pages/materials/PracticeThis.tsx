@@ -7,13 +7,13 @@ import {
   type GenerationRequest,
 } from '../../assessments/types'
 import { saveMasteryProjections } from '../../assessments/masteryCache'
+import { DEFAULT_BAND, bandGuidanceByMaterial } from '../../assessments/masteryBands'
 import { PRACTICE_RUN_STARTED } from '../../events/EventStore'
 import { useEventStore } from '../../events/useEventStore'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
 import { logger } from '../../lib/logger'
-import { recommendBand } from '@study-tracker/progress'
 import '../../materials/materials.css'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
 
@@ -28,8 +28,6 @@ const GENERATION_CONCURRENCY = 2
 const MAX_QUESTIONS = 20
 /** D-10: the primary material plus up to four more, distributed round-robin. */
 const MAX_MATERIALS = 5
-/** The band assumed before any evidence (no attempts yet, #43). */
-const DEFAULT_BAND = 3
 
 function formatMinutes(mins: number | null): string {
   if (!mins) return 'Unknown duration'
@@ -160,13 +158,12 @@ export function PracticeThis() {
       try {
         const projections = await assessments.getMastery()
         await saveMasteryProjections(eventStore, projections)
+        const guidance = bandGuidanceByMaterial(projections)
         bandByMaterial = new Map(
-          runMaterials.map((entry) => {
-            const own = projections.filter((p) => p.materialId === entry.id)
-            if (own.length === 0) return [entry.id, DEFAULT_BAND]
-            const highest = own.reduce((best, p) => (p.mastery > best.mastery ? p : best))
-            return [entry.id, recommendBand(highest, DEFAULT_BAND).recommendedBand]
-          }),
+          runMaterials.map((entry) => [
+            entry.id,
+            guidance.get(entry.id)?.recommendedBand ?? DEFAULT_BAND,
+          ]),
         )
       } catch (masteryError) {
         // Adaptive is advisory: a failed mastery fetch falls back to the mid
