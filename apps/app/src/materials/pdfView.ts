@@ -88,8 +88,11 @@ export function pagesInWindow(rects: SlotRect[], frameTop: number, frameHeight: 
 /** The page the learner is reading is the one at the top edge of the frame. */
 export function pageAtTop(rects: SlotRect[], frameTop: number, numPages: number): number {
   let current = 1
+  // A 2px tolerance: a chapter/page jump sets the target slot's top to the
+  // frame's top, but fractional scroll and device-pixel rounding can leave it
+  // just below. With the tolerance at 1px a jump to page 156 reported 155.
   for (const rect of rects) {
-    if (rect.top <= frameTop + 1) current = rect.page
+    if (rect.top <= frameTop + 2) current = rect.page
   }
   return clampPage(current, numPages)
 }

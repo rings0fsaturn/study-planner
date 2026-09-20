@@ -114,4 +114,4 @@ The PDF response is range-capable at the server (`accept-ranges: bytes`, `conten
 - `services/intelligence/Dockerfile` — LibreOffice headless (+ Pillow if D3 ships).
 - `apps/app/supabase/migrations/031_*.sql` — `sha256` / derivations (D1 only; nothing for D2-D4).
 - `services/intelligence/tests/` — conversion fixtures, text-identity and page-order assertions.
-- `docker/nginx.conf` + `apps/app/vite.config.ts` — the `/material-file/` route (shared with #62 P7).
+- ~~`docker/nginx.conf` + `apps/app/vite.config.ts` — the `/material-file/` route (shared with #62 P7).~~ **Superseded:** #62 P7 built and reverted that route (no first-open win on a non-linearised corpus; the Vercel deploy has no nginx), shipping a session document cache instead. A serving route belongs to this task if it still needs one.

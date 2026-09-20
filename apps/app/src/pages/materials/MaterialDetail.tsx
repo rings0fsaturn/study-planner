@@ -228,6 +228,19 @@ export function MaterialDetail() {
     }
   }
 
+  // Warm the viewer's document cache on intent (hover or press) so the 1.9 s of
+  // record + signed-URL latency happens under the click. The dynamic import
+  // keeps pdf.js out of the main bundle (the viewer route is lazy for the same
+  // reason); a failed prefetch is silently ignored and retried by the viewer.
+  function prefetchViewer() {
+    if (record.kind !== 'file') return
+    void import('../../materials/documentCache')
+      .then(({ loadMaterialDocument }) =>
+        loadMaterialDocument(() => client.getMaterialFileUrl(record), record.id),
+      )
+      .catch(() => undefined)
+  }
+
   async function submitReplace() {
     if (!replaceSource) return
     setBusy(true)
@@ -354,7 +367,12 @@ export function MaterialDetail() {
                   Generate assessment
                 </Link>
                 {material.kind === 'file' && (
-                  <Link className="btn btn-secondary" to={`/materials/${material.id}/view`}>
+                  <Link
+                    className="btn btn-secondary"
+                    to={`/materials/${material.id}/view`}
+                    onPointerEnter={prefetchViewer}
+                    onPointerDown={prefetchViewer}
+                  >
                     Open in viewer
                   </Link>
                 )}

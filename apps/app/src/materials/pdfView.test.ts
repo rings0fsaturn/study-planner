@@ -129,6 +129,14 @@ describe('pageAtTop', () => {
     expect(pageAtTop([{ page: 1, top: 0, bottom: 400 }], 0, 572)).toBe(1)
   })
 
+  it('tolerates a jump that lands a fraction below the frame top', () => {
+    const jumped = [
+      { page: 155, top: -490, bottom: -1.5 },
+      { page: 156, top: 1.5, bottom: 490 },
+    ]
+    expect(pageAtTop(jumped, 0, 572)).toBe(156)
+  })
+
   it('falls back to page 1 when no slot sits above the frame top', () => {
     expect(pageAtTop([{ page: 7, top: 500, bottom: 900 }], 0, 572)).toBe(1)
   })

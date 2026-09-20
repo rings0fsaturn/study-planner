@@ -418,16 +418,23 @@ test.describe('material viewer (live)', () => {
     await expect(page.getByText('Assess pages 156–213')).toBeVisible();
 
     // 11. Re-fitting survives a viewport change (the measure-once defect). The
-    //     poll also demands a real raster: an idle canvas is 300x150 and would
-    //     satisfy a bare "<= 375".
+    //     poll must wait for the *narrow* frame and a real raster: an idle canvas
+    //     is 300x150, and the desktop canvas is already 335px wide, so a bare
+    //     "canvasWidth <= 375" is satisfied before the refit and reads a
+    //     mid-transition canvas.
     await page.setViewportSize({ width: 375, height: 812 });
     await expect
       .poll(
         async () => {
           const metrics = await frameMetrics(page);
-          return metrics && metrics.canvasBitmapWidth > 100 && metrics.canvasWidth <= 375
+          const fits =
+            metrics &&
+            metrics.clientWidth <= 400 &&
+            metrics.canvasBitmapWidth > 100 &&
+            metrics.canvasHeight <= metrics.clientHeight + 1;
+          return fits
             ? 'fit'
-            : `${metrics?.canvasWidth}x${metrics?.canvasBitmapWidth}`;
+            : `${metrics?.clientWidth}w ${metrics?.canvasWidth}x${metrics?.canvasHeight} in ${metrics?.clientHeight}`;
         },
         { timeout: 30_000 },
       )

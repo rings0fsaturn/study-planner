@@ -273,7 +273,7 @@ Reported by the user right after the P6 pass, about **their own material**, not 
 
 **Verification:** on the user's material the worker fetches `/study/pdfjs-wasm/jbig2.wasm` (200) and `/study/pdfjs-wasm/openjpeg.wasm` (200); decode warnings on pages 104/96/35/26 = **0** (the same pages logged one per image before the fix, per the user's console); the rendered pages show the hand-drawn hash-function and array-partitioning diagrams intact, checked by screenshot. The corpus path is unaffected (it never requests the wasm). `pnpm --filter app build` emits `dist/pdfjs-wasm/`; typecheck + lint clean; the viewer spec 2/2 with `--workers=1`. Full numbers: `research/2026-09-12-p6-live-verification.md` §7.
 
-### Phase 7 — Streaming: same-origin ranges, prefetch, session cache `⏳ Planned`
+### Phase 7 — Streaming: same-origin ranges, prefetch, session cache `✅ Done 2026-09-20 (mechanism corrected by measurement)`
 
 **Baseline measured 2026-09-12** with a throwaway probe (`e2e/tmp-viewer-timings.spec.ts`, currently untracked, CDP Network timeline on the live stack, desktop 1280):
 
@@ -297,6 +297,8 @@ Reported by the user right after the P6 pass, about **their own material**, not 
 5. Re-run the probe as the before/after gate, write `research/2026-09-12-p6p7-live-verification.md`, then delete the throwaway probe in the same commit.
 
 **Verification:** the probe's phase table before/after (expect first ink ≈ 1.0-1.5 s and 50-200 KB per additional page); the live viewer spec green with the route on and with the fallback; a repeat-open byte count from the network log proving the browser cache is used.
+
+**Outcome (2026-09-20):** the same-origin route was built, served 206s, and was **reverted** - first ink did not move on this non-linearised corpus (6,789 ms vs 6,772 ms), range-only mode was worse (134 requests / 15.8 s), and the production deploy is Vercel static with no nginx, so the route would have broken the deployed viewer. Shipped instead: `documentCache.ts` (2-entry LRU of pdf.js loading tasks) + prefetch-on-intent on "Open in viewer". A repeat open drops from one 22.9 MB GET to 3.4 KB and paints in 897 ms. A mixed-page-size fit defect was fixed alongside (`largestPageBox`). Full numbers: `research/2026-09-20-p7-live-verification.md`.
 
 ### Phase 8 — Viewer interaction round 2, and the extracted-content removal `✅ Done 2026-09-12`
 

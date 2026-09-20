@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import * as pdfjs from 'pdfjs-dist'
-import type { PDFDocumentLoadingTask, PDFDocumentProxy } from 'pdfjs-dist'
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url'
+import type { PDFDocumentProxy } from 'pdfjs-dist'
 import { useMaterialsClient } from './MaterialsProvider'
+import { loadMaterialDocument } from './documentCache'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from './types'
 import {
   ZOOM_LEVELS,
@@ -18,15 +18,30 @@ import {
 } from './pdfView'
 import './materials.css'
 
-// Without workerSrc pdf.js paints a blank canvas and only warns in the console.
-pdfjs.GlobalWorkerOptions.workerSrc = workerUrl
-
 const samePages = (a: number[], b: number[]): boolean =>
   a.length === b.length && a.every((page, index) => page === b[index])
 
 /**
- * The material's own pages, rendered with pdf.js from a short-lived signed URL,
- * so the learner reads the page numbers they are about to scope a question to.
+ * The largest page viewport in the document. The whole-page fit and the slot
+ * placeholders both use this box, so a corpus with mixed page sizes cannot have
+ * a page render taller or wider than its slot.
+ */
+async function largestPageBox(doc: PDFDocumentProxy): Promise<{ width: number; height: number }> {
+  let width = 0
+  let height = 0
+  for (let pageNumber = 1; pageNumber <= doc.numPages; pageNumber += 1) {
+    const page = await doc.getPage(pageNumber)
+    const viewport = page.getViewport({ scale: 1 })
+    if (viewport.width > width) width = viewport.width
+    if (viewport.height > height) height = viewport.height
+  }
+  return { width, height }
+}
+
+/**
+ * The material's own pages, rendered with pdf.js from a short-lived signed URL
+ * (adopted from the shared document cache so a reopen is instant), so the
+ * learner reads the page numbers they are about to scope a question to.
  *
  * Reading is one vertical scroll of page slots (P6): a `ResizeObserver` is the
  * single source of the frame's width and height, every slot is laid out from
@@ -95,48 +110,28 @@ export function PdfViewer() {
     }
   }, [client, materialId])
 
-  // Each run owns its loading task and destroys it on cleanup; a cancelled run
-  // never publishes its document (StrictMode double-invokes this effect).
+  // The document is loaded through the shared cache (P7): a repeat open adopts
+  // the in-flight or loaded task instead of paying the 22.9 MB download and
+  // parse again (measured 6.8 s first open, 0.9 s reopen). The cache owns
+  // destruction (a 2-entry LRU), so unmounting the viewer must NOT destroy the
+  // task - that is what makes a reopen instant.
   useEffect(() => {
     if (!material) return
     let cancelled = false
-    let task: PDFDocumentLoadingTask | null = null
-    const open = async () => {
-      const url = await client.getMaterialFileUrl(material)
-      if (cancelled) return null
-      // The signed URL is range-capable (a browser fetch with a Range header
-      // gets 206), but pdf.js cannot see `Accept-Ranges` through Supabase
-      // Storage's CORS, so it falls back to one whole-file GET. Measured on the
-      // 572-page corpus: 22,919,258 bytes, 4.6-7.5 s per open. An explicit
-      // PDFDataRangeTransport was tried and is worse (123 requests, 30.8 MB,
-      // 12.9 s): pdf.js walks the file backwards from the trailer and v6 never
-      // passes `disableAutoFetch` to the transport stream. Details:
-      // research/2026-09-11-p5-live-verification.md; P7 serves ranges from a
-      // same-origin route instead.
-      //
-      // wasmUrl is the jbig2/openjpeg/qcms decoders, fetched by the worker at
-      // runtime (scripts/sync-pdfjs-wasm.mjs copies them into public/). Without
-      // it every JBIG2 image fails with "JBig2 failed to initialize" and the
-      // page silently loses its figures.
-      return pdfjs.getDocument({
-        url,
-        wasmUrl: `${import.meta.env.BASE_URL}pdfjs-wasm/`,
-      })
-    }
-    void open()
-      .then((started) => {
-        if (!started) return null
-        task = started
-        return started.promise
-      })
+    const task = loadMaterialDocument(() => client.getMaterialFileUrl(material), material.id)
+    void task
+      .then((loading) => loading.promise)
       .then(async (loaded) => {
         if (cancelled || !loaded) return
-        // Page 1's viewport sizes every slot placeholder, so the scroll height
-        // is correct before a single page has been rasterised.
-        const first = await loaded.getPage(1)
+        // The fit box is the *largest* page in the document, not page 1: a
+        // corpus can mix page sizes (this one's page 1 CropBox is 583x835 while
+        // pages 2+ are 595x842), and fitting to page 1 let the taller pages
+        // overflow the frame. Reading every page's viewport is cheap (measured
+        // 32 ms for 572 pages). Slots are laid out from this box too, so a
+        // page's canvas always fits inside its slot.
+        const box = await largestPageBox(loaded)
         if (cancelled) return
-        const viewport = first.getViewport({ scale: 1 })
-        setBase({ width: viewport.width, height: viewport.height })
+        setBase(box)
         setDoc(loaded)
       })
       .catch((err) => {
@@ -145,8 +140,6 @@ export function PdfViewer() {
       })
     return () => {
       cancelled = true
-      const pending = task
-      if (pending) void pending.destroy()
     }
   }, [client, material])
 
