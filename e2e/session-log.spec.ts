@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { createClient } from '@supabase/supabase-js';
 
 const APP_URL = 'http://localhost:5173';
@@ -32,6 +32,32 @@ function generateTestEmail(prefix: string): string {
   return `${prefix}+${timestamp}@test.studytracker.app`;
 }
 
+async function signIn(page: Page, email: string, password: string): Promise<void> {
+  await page.goto(`${APP_URL}/study/sign-in`);
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
+  await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  // A brand-new account has no roadmap, so the onboarding gate takes it. Either
+  // landing is a successful sign-in; the caller decides what to do next.
+  await page.waitForURL(/\/study\/(home|onboarding)/, { timeout: 20000 });
+}
+
+/**
+ * A fresh test account is gated into onboarding, so seed a roadmap through the
+ * dev seeder (available whenever the app runs in DEV) before asserting on the
+ * app shell. The seeder wipes and rewrites this account's own event log only.
+ */
+async function seedRoadmap(page: Page): Promise<void> {
+  await page.waitForFunction(
+    () => typeof (window as unknown as { __seed?: unknown }).__seed === 'function',
+    undefined,
+    { timeout: 15000 },
+  );
+  await page.evaluate(() => (window as unknown as { __seed: () => Promise<void> }).__seed());
+  await page.goto(`${APP_URL}/study/home`);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 20000 });
+}
+
 test.describe('Session log lifecycle', () => {
   test.beforeEach(() => {
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -44,77 +70,42 @@ test.describe('Session log lifecycle', () => {
   const password = 'TestPassword123!';
 
   test('full session-log lifecycle across accounts', async ({ browser }) => {
-    test.setTimeout(120000);
+    test.setTimeout(180000);
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    try {
-      await createTestUser(userAEmail, password);
-      await createTestUser(userBEmail, password);
+    await createTestUser(userAEmail, password);
+    await createTestUser(userBEmail, password);
 
-      await page.goto(`${APP_URL}/study/sign-in`);
-      await page.waitForTimeout(2000);
+    // User A: sign in, seed a roadmap, log a session, see it, and sign out.
+    await signIn(page, userAEmail, password);
+    await seedRoadmap(page);
 
-      await page.getByLabel('Email').fill(userAEmail);
-      await page.getByLabel('Password').fill(password);
-      await page.getByRole('button', { name: 'Sign in' }).click();
-      await page.waitForTimeout(2000);
+    await page.goto(`${APP_URL}/study/log`);
+    await page.getByLabel('Duration (minutes)').fill('45');
+    await page.getByLabel('Date').fill('2024-01-15');
+    await page.getByLabel('What did you study?').fill('Chapter 3: Integration');
+    await page.getByRole('button', { name: 'Log session' }).click();
+    await expect(page).toHaveURL(/.*home/, { timeout: 15000 });
+    await expect(page.getByText('Chapter 3: Integration')).toBeVisible({ timeout: 15000 });
 
-      await expect(page).toHaveURL(/.*home/);
+    await page.reload();
+    await expect(page.getByText('Chapter 3: Integration')).toBeVisible({ timeout: 15000 });
 
-      await page.goto(`${APP_URL}/study/log`);
-      await page.waitForTimeout(1000);
+    // Sign out lives on Settings with a confirm step: the row opens it, the
+    // confirm commits. Both share the name "Sign out" and only one is mounted
+    // at a time. This block used to look for the button on Home and silently
+    // skip, leaving the account-switch wipe untested.
+    await page.goto(`${APP_URL}/study/settings`);
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.getByRole('button', { name: 'Sign out' }).click();
+    await page.waitForURL(/\/study\/sign-in/, { timeout: 15000 });
 
-      await page.getByLabel('Duration (minutes)').fill('45');
-      await page.getByLabel('Date').fill('2024-01-15');
-      await page.getByLabel('What did you study?').fill('Chapter 3: Integration');
-      await page.getByRole('button', { name: 'Log session' }).click();
+    // User B: a separate account must not inherit user A's session.
+    await signIn(page, userBEmail, password);
+    await seedRoadmap(page);
+    await expect(page.getByText('Chapter 3: Integration')).toHaveCount(0);
 
-      await page.waitForTimeout(2000);
-      await expect(page).toHaveURL(/.*home/);
-
-      await expect(page.locator('.stat-value')).toContainText('45 min');
-      await expect(page.locator('.card-title')).toContainText('Chapter 3: Integration');
-
-      await page.reload();
-      await page.waitForTimeout(2000);
-
-      await expect(page.locator('.stat-value')).toContainText('45 min');
-      await expect(page.locator('.card-title')).toContainText('Chapter 3: Integration');
-
-      // Sign out lives on Settings with a confirm step: the row opens it, the
-      // confirm commits. Both share the name "Sign out" and only one is mounted
-      // at a time. This block used to look for the button on Home and silently
-      // skip, leaving the account-switch wipe untested.
-      await page.goto(`${APP_URL}/study/settings`);
-      await page.waitForTimeout(1000);
-      await page.getByRole('button', { name: 'Sign out' }).click();
-      await page.getByRole('button', { name: 'Sign out' }).click();
-      await page.waitForURL(/\/study\/sign-in/, { timeout: 15000 });
-
-      await page.goto(`${APP_URL}/study/sign-in`);
-      await page.waitForTimeout(2000);
-
-      await page.getByLabel('Email').fill(userBEmail);
-      await page.getByLabel('Password').fill(password);
-      await page.getByRole('button', { name: 'Sign in' }).click();
-      await page.waitForTimeout(2000);
-
-      await page.goto(`${APP_URL}/study/home`);
-      await page.waitForTimeout(2000);
-
-      await expect(page.locator('.stat-value')).toContainText('0 min');
-      const activitySection = page.locator('text=Recent activity');
-      await expect(activitySection).toBeVisible();
-
-    } catch (error) {
-      console.error('Test failed:', error);
-    } finally {
-      try {
-        await context.close();
-      } catch {
-        // Context may already be closed
-      }
-    }
+    await context.close();
   });
 });
