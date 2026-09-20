@@ -4,8 +4,8 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
 - Implementable: #36 material library (done + live-verified), #37 ingestion (done); #38 grounded assessment (done + live-verified, its own task). Provider prep #52–#56 closed; #57 contract neutralization landed.
-- Open frontier: #34 Assessment Review (prototype) · #35 Roadmap Feedback · #50 LLM learner-feedback contract decision (surfaced, previously untracked) · #12 inline-hint live guide (Wave 1).
-- Next: pick the next frontier ticket on map #4 (`gh issue list --label wayfinder:phase2 --state open`).
+- Open frontier: #45 Coding Practice Runs (unblocked by #44) · #35 Roadmap Feedback prototype (claimed) · #48 Generation Quality Harness · #12 inline-hint live guide (Wave 1) · #50 learner-feedback contract decision (blocked by #35).
+- Next: #45 Coding Practice Runs (unblocked 2026-09-20 when #44 closed); #48 is the other unblocked ticket.
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).
