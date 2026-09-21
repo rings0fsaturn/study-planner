@@ -1,6 +1,6 @@
 # Coding generation: code-aware context + derived contracts
 
-_Written: 2026-09-21 · Status: not started · Origin: #48 resolution finding · Parent spec: #32 · Map: #4_
+_Written: 2026-09-21 · Status: Complete - working tree (uncommitted) · Origin: #48 resolution finding · Parent spec: #32 · Map: #4 · Issue: #67 · Verification: `plan/VERIFICATION.md`_
 
 ## How to use this plan (read this first, agent)
 
@@ -103,6 +103,7 @@ worker._coding_self_check        (worker.py:642)   <-- unchanged correctness gua
 | `services/intelligence/app/generation/prompts.py` | P3 | `coding-v2` template: derive the contract from an explanation |
 | `services/intelligence/tests/test_generation_prompts.py` | P3 | Template/version tests |
 | `services/intelligence/app/generation/worker.py` | P2, P4 | Thread the coding mode into context; bounded resample |
+| `services/intelligence/app/worker_main.py` | P2 | Thread `code_seeking`/exclude through the injected context-builder closure (found live) |
 | `services/intelligence/tests/test_generation_worker.py` | P2, P4 | Wiring + resample tests |
 | `services/intelligence/tests/test_generation_coding.py` | P3 | Contract tests for the reframed bar |
 | `services/intelligence/scripts/eval_golds_coding.json` | P5 | Re-pin the gold expectation if the finding changes |
@@ -112,7 +113,7 @@ worker._coding_self_check        (worker.py:642)   <-- unchanged correctness gua
 
 ## Phase P0 - Open the task contract
 
-**Status: Not started**
+**Status: Complete**
 
 1. Create one GitHub issue as a child of spec #32 (parent map #4): "Coding generation: code-aware context + derived contracts". Body = the TL;DR plus the acceptance criteria below. Reference this plan.
 2. Add a `.work/STATUS.md` row (Active) pointing at this plan file.
@@ -135,7 +136,7 @@ worker._coding_self_check        (worker.py:642)   <-- unchanged correctness gua
 
 ## Phase P1 - Code-proximity scorer
 
-**Status: Not started**
+**Status: Complete**
 
 ### What
 
@@ -194,7 +195,7 @@ Delete the added function and its tests. No callers yet, so nothing else changes
 
 ## Phase P2 - Code-aware context for the coding arm
 
-**Status: Not started**
+**Status: Complete**
 
 ### What
 
@@ -243,7 +244,7 @@ The flag defaults to false; reverting the call site restores today's behavior wi
 
 ## Phase P3 - Reframe the suitability bar (`coding-v1` -> `coding-v2`)
 
-**Status: Not started**
+**Status: Complete**
 
 ### What
 
@@ -286,7 +287,7 @@ Revert the two prompt constants. Existing stored questions keep their own `promp
 
 ## Phase P4 - Bounded resample before `code_not_derivable`
 
-**Status: Not started**
+**Status: Complete**
 
 ### What
 
@@ -329,7 +330,7 @@ Set `max_windows = 1` to restore today's one-shot behavior with no other change.
 
 ## Phase P5 - Live verification and harness re-run
 
-**Status: Not started**
+**Status: Complete**
 
 Rule 80 order: unit tests, then a minimal live dry run, then the full check. Rule 54: the GPU sidecar is demand-started and stopped after.
 

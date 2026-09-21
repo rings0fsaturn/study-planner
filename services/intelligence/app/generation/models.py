@@ -37,7 +37,7 @@ class AssessmentScope:
     section_label: str = ""
 
     @classmethod
-    def from_recipe(cls, recipe: dict) -> "AssessmentScope | None":
+    def from_recipe(cls, recipe: dict) -> AssessmentScope | None:
         """The recipe's `scope` object, or None when the request is unscoped."""
         raw = recipe.get("scope")
         if not isinstance(raw, dict):
@@ -48,7 +48,7 @@ class AssessmentScope:
             return None
         return cls(start, end, str(raw.get("sectionLabel") or ""))
 
-    def widened(self, pad: int) -> "AssessmentScope":
+    def widened(self, pad: int) -> AssessmentScope:
         """The same scope padded by `pad` pages on both sides (D-06)."""
         return AssessmentScope(
             max(1, self.page_start - pad), self.page_end + pad, self.section_label

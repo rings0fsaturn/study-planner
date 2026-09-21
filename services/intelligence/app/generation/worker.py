@@ -35,8 +35,8 @@ from __future__ import annotations
 
 import logging
 import uuid
-from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Protocol
 
 from app.generation.context import CONTEXT_TOP_K
 from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
@@ -201,12 +201,28 @@ class GenerationWorkerConfig:
 # The context builder is keyed on the steer parts and the learner's scope: the
 # material title is document context for the prompt, never the retrieval query
 # (D-01), and the scope's page bounds decide which part of the material is
-# eligible (D-05).
-ContextBuilder = Callable[[str, tuple[str, ...], AssessmentScope | None], list[RetrievedChunk]]
+# eligible (D-05). The keyword-only `code_seeking`/`exclude_chunk_ids` are the
+# coding arm's seams (D-06/D-07); objective and written callers pass neither.
+class ContextBuilder(Protocol):
+    def __call__(
+        self,
+        material_id: str,
+        skill_tags: tuple[str, ...],
+        scope: AssessmentScope | None,
+        *,
+        code_seeking: bool = False,
+        exclude_chunk_ids: frozenset[str] = frozenset(),
+    ) -> list[RetrievedChunk]: ...
+
 
 # D-06: a scoped context thinner than this widens to neighbouring pages.
 WIDEN_STEPS = 2
 WIDEN_MIN_PAD = 5
+
+# D-02: a coding generation retries with a different code-dense window up to
+# this many times before a terminal `code_not_derivable`. The success path is
+# unchanged; only the refusal path spends the extra provider calls.
+MAX_CODING_WINDOWS = 3
 
 
 class GenerationWorker:
@@ -258,9 +274,7 @@ class GenerationWorker:
                     )
                     self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
                 else:
-                    logger.exception(
-                        "generation message %s failed transiently", message.msg_id
-                    )
+                    logger.exception("generation message %s failed transiently", message.msg_id)
                     self._queue.complete(GENERATION_QUEUE, message.msg_id, False)
             except Exception:
                 logger.exception("generation message %s failed", message.msg_id)
@@ -328,67 +342,107 @@ class GenerationWorker:
             )
             return
 
-        try:
-            chunks = self._context_builder(material_id, skill_tags, scope)
-            if not chunks:
-                # D-06's only rejection: a scope (or a material) with no chunk
-                # to ground on cannot produce a grounded question.
-                raise IngestionError(
-                    "validation_failed",
-                    (
-                        f"pages {scope.page_start}-{scope.page_end} contain no content"
-                        if scope is not None
-                        else "this material has no content chunks"
-                    ),
-                    retryable=False,
-                )
-            chunks, scope_warnings = self._widen_thin_context(
-                material_id, skill_tags, scope, chunks
-            )
-        except IngestionError as exc:
-            if exc.retryable:
-                self._mark_job_retryable(job_id, exc)
-                self._repo.update_assessment_status(
-                    assessment_id,
-                    "generating",
-                    [{"code": exc.code, "message": exc.message}],
-                )
-                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
-                return
-            # A non-retryable context fault (no topic steer to ground on)
-            # cannot succeed on a retry, so fail the assessment outright
-            # instead of leaving it spinning with a warning.
-            self._fail_assessment(
-                blueprint,
-                warnings=[{"code": exc.code, "message": exc.message}],
-                error_code=exc.code,
-                error_message=exc.message,
-                retryable=False,
-                outcome=outcome_for_error_code(exc.code),
-                latency_ms=0.0,
-                repair_attempted=False,
-                message_id=message.msg_id,
-            )
-            return
-
-        context_ids = {chunk.chunk_id for chunk in chunks}
-        chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
         build, schema_for, validate = _arm(question_format)
-        schema = schema_for(context_ids)
-        messages = build(blueprint, chunks, title=material.title)
-        response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
-        repair_attempted = False
+        tried_chunk_ids: set[str] = set()
+        max_windows = MAX_CODING_WINDOWS if coding else 1
+        last_refusal_reason: str | None = None
+        response = None
         accepted = None
-        warnings: list[dict] = list(scope_warnings)
+        warnings: list[dict] = []
+        repair_attempted = False
 
-        if response.outcome == "ok" and response.structured_output is not None:
-            accepted, warnings = validate(
-                response.structured_output, blueprint, context_ids, chunk_texts
-            )
-            # The scope's own warnings (D-06's widen) travel with the question.
-            warnings = [*scope_warnings, *warnings]
-            if accepted is None and any(w["code"] == "malformed_output" for w in warnings):
-                repair_feedback = "; ".join(str(w["message"]) for w in warnings)
+        for window in range(1, max_windows + 1):
+            try:
+                chunks = self._build_context(
+                    material_id,
+                    skill_tags,
+                    scope,
+                    coding=coding,
+                    exclude=frozenset(tried_chunk_ids),
+                )
+                if not chunks:
+                    if last_refusal_reason is not None:
+                        # The resample excluded every remaining candidate; use
+                        # the last honest reason instead of "no content".
+                        break
+                    # D-06's only rejection: a scope (or a material) with no
+                    # chunk to ground on cannot produce a grounded question.
+                    raise IngestionError(
+                        "validation_failed",
+                        (
+                            f"pages {scope.page_start}-{scope.page_end} contain no content"
+                            if scope is not None
+                            else "this material has no content chunks"
+                        ),
+                        retryable=False,
+                    )
+                chunks, scope_warnings = self._widen_thin_context(
+                    material_id,
+                    skill_tags,
+                    scope,
+                    chunks,
+                    coding=coding,
+                    exclude=frozenset(tried_chunk_ids),
+                )
+            except IngestionError as exc:
+                if exc.retryable:
+                    self._mark_job_retryable(job_id, exc)
+                    self._repo.update_assessment_status(
+                        assessment_id,
+                        "generating",
+                        [{"code": exc.code, "message": exc.message}],
+                    )
+                    self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                    return
+                # A non-retryable context fault (no topic steer to ground on)
+                # cannot succeed on a retry, so fail the assessment outright
+                # instead of leaving it spinning with a warning.
+                self._fail_assessment(
+                    blueprint,
+                    warnings=[{"code": exc.code, "message": exc.message}],
+                    error_code=exc.code,
+                    error_message=exc.message,
+                    retryable=False,
+                    outcome=outcome_for_error_code(exc.code),
+                    latency_ms=0.0,
+                    repair_attempted=False,
+                    message_id=message.msg_id,
+                )
+                return
+
+            context_ids = {chunk.chunk_id for chunk in chunks}
+            chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
+            schema = schema_for(context_ids)
+            messages = build(blueprint, chunks, title=material.title)
+            response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
+            repair_attempted = False
+            accepted = None
+            warnings = list(scope_warnings)
+
+            if response.outcome == "ok" and response.structured_output is not None:
+                accepted, warnings = validate(
+                    response.structured_output, blueprint, context_ids, chunk_texts
+                )
+                # The scope's own warnings (D-06's widen) travel with the question.
+                warnings = [*scope_warnings, *warnings]
+                if accepted is None and any(w["code"] == "malformed_output" for w in warnings):
+                    repair_feedback = "; ".join(str(w["message"]) for w in warnings)
+                    accepted, warnings = self._repair_once(
+                        blueprint,
+                        chunks,
+                        material.title,
+                        response,
+                        context_ids,
+                        chunk_texts,
+                        repair_feedback=repair_feedback,
+                        question_format=question_format,
+                    )
+                    warnings = [*scope_warnings, *warnings]
+                    repair_attempted = True
+            elif response.outcome == "malformed_output":
+                repair_feedback = str(
+                    (response.error or {}).get("message") or "output failed validation"
+                )
                 accepted, warnings = self._repair_once(
                     blueprint,
                     chunks,
@@ -401,47 +455,83 @@ class GenerationWorker:
                 )
                 warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
-        elif response.outcome == "malformed_output":
-            repair_feedback = str(
-                (response.error or {}).get("message") or "output failed validation"
-            )
-            accepted, warnings = self._repair_once(
-                blueprint,
-                chunks,
-                material.title,
-                response,
-                context_ids,
-                chunk_texts,
-                repair_feedback=repair_feedback,
-                question_format=question_format,
-            )
-            warnings = [*scope_warnings, *warnings]
-            repair_attempted = True
 
-        if accepted is None and any(
-            w["code"] == "code_not_derivable" for w in warnings
-        ):
-            # The provider judged the material unsuitable (D-04): a legitimate
-            # answer, not a format failure, so no repair. The learner-facing
-            # reason rides the warning; the assessment fails with no question.
-            reason = next(
-                str(w["message"])
-                for w in warnings
-                if w["code"] == "code_not_derivable"
-            )
-            logger.info(
-                "coding generation %s unsuitable: %s",
-                assessment_id,
-                reason,
-                extra={"trace_id": correlation_id},
-            )
+            if accepted is not None:
+                break
+
+            if any(w["code"] == "code_not_derivable" for w in warnings):
+                # The provider judged the material unsuitable (D-04): a
+                # legitimate answer, not a format failure, so no repair. Try a
+                # different code-dense window first (D-02); only the last
+                # window's reason reaches the learner.
+                last_refusal_reason = next(
+                    str(w["message"]) for w in warnings if w["code"] == "code_not_derivable"
+                )
+                if window < max_windows:
+                    tried_chunk_ids.update(context_ids)
+                    logger.info(
+                        "coding generation %s window %d/%d unsuitable; resampling (%s)",
+                        assessment_id,
+                        window,
+                        max_windows,
+                        last_refusal_reason,
+                        extra={"trace_id": correlation_id},
+                    )
+                    continue
+                break
+
+            if response.outcome in ("quota_failure", "timeout", "provider_error"):
+                retryable = bool((response.error or {}).get("retryable", False))
+                error_code = str((response.error or {}).get("code") or "provider_error")
+                error_message = str((response.error or {}).get("message") or "generation failed")
+                self._repo.update_job_status(
+                    job_id,
+                    "failed",
+                    error_code=error_code,
+                    error_message=error_message,
+                    retryable=retryable,
+                    retry_after=(response.error or {}).get("retryAfterSeconds"),
+                )
+                # The assessment stays `generating` (D-06) so the UI can offer
+                # retry/resume; surface the retryable failure as a warning so the
+                # page is not stuck on an eternal spinner.
+                self._repo.update_assessment_status(
+                    blueprint.assessment_id,
+                    "generating",
+                    [{"code": error_code, "message": error_message}],
+                )
+                self._emit_telemetry(blueprint, response.outcome, response, repair_attempted, 0)
+                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                return
+
+            if response.outcome == "safety_block":
+                self._fail_assessment(
+                    blueprint,
+                    warnings=[{"code": "safety_block", "message": "provider safety block"}],
+                    error_code="safety_block",
+                    error_message="provider safety block",
+                    retryable=False,
+                    outcome=response.outcome,
+                    latency_ms=response.latency_ms,
+                    repair_attempted=repair_attempted,
+                    message_id=message.msg_id,
+                )
+                return
+
+            if not warnings:
+                warnings = [
+                    {
+                        "code": "malformed_output",
+                        "message": "generation produced no usable output",
+                    }
+                ]
             self._fail_assessment(
                 blueprint,
-                warnings=[{"code": "code_not_derivable", "message": reason}],
-                error_code="code_not_derivable",
-                error_message=reason,
+                warnings=warnings,
+                error_code="malformed_output",
+                error_message="; ".join(w["message"] for w in warnings),
                 retryable=False,
-                outcome="partial",
+                outcome=("malformed_output" if response.outcome == "ok" else response.outcome),
                 latency_ms=response.latency_ms,
                 repair_attempted=repair_attempted,
                 message_id=message.msg_id,
@@ -449,6 +539,14 @@ class GenerationWorker:
             return
 
         if accepted is not None:
+            if window > 1:
+                logger.info(
+                    "coding generation %s accepted on window %d/%d",
+                    assessment_id,
+                    window,
+                    max_windows,
+                    extra={"trace_id": correlation_id},
+                )
             if coding:
                 try:
                     failure = self._coding_self_check(blueprint, accepted)
@@ -522,59 +620,49 @@ class GenerationWorker:
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
 
-        if response.outcome in ("quota_failure", "timeout", "provider_error"):
-            retryable = bool((response.error or {}).get("retryable", False))
-            error_code = str((response.error or {}).get("code") or "provider_error")
-            error_message = str((response.error or {}).get("message") or "generation failed")
-            self._repo.update_job_status(
-                job_id,
-                "failed",
-                error_code=error_code,
-                error_message=error_message,
-                retryable=retryable,
-                retry_after=(response.error or {}).get("retryAfterSeconds"),
-            )
-            # The assessment stays `generating` (D-06) so the UI can offer
-            # retry/resume; surface the retryable failure as a warning so the
-            # page is not stuck on an eternal spinner.
-            self._repo.update_assessment_status(
-                blueprint.assessment_id,
-                "generating",
-                [{"code": error_code, "message": error_message}],
-            )
-            self._emit_telemetry(blueprint, response.outcome, response, repair_attempted, 0)
-            self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
-            return
-
-        if response.outcome == "safety_block":
-            self._fail_assessment(
-                blueprint,
-                warnings=[{"code": "safety_block", "message": "provider safety block"}],
-                error_code="safety_block",
-                error_message="provider safety block",
-                retryable=False,
-                outcome=response.outcome,
-                latency_ms=response.latency_ms,
-                repair_attempted=repair_attempted,
-                message_id=message.msg_id,
-            )
-            return
-
-        if not warnings:
-            warnings = [
-                {"code": "malformed_output", "message": "generation produced no usable output"}
-            ]
+        # Every window returned unsuitable (or a resample ran out of candidates):
+        # fail terminal with the last honest reason, exactly as the one-shot path
+        # did. The refusal path is preserved (D-04).
+        reason = last_refusal_reason or (
+            "this material does not support a grounded coding question"
+        )
+        logger.info(
+            "coding generation %s unsuitable: %s",
+            assessment_id,
+            reason,
+            extra={"trace_id": correlation_id},
+        )
         self._fail_assessment(
             blueprint,
-            warnings=warnings,
-            error_code="malformed_output",
-            error_message="; ".join(w["message"] for w in warnings),
+            warnings=[{"code": "code_not_derivable", "message": reason}],
+            error_code="code_not_derivable",
+            error_message=reason,
             retryable=False,
-            outcome="malformed_output" if response.outcome == "ok" else response.outcome,
-            latency_ms=response.latency_ms,
+            outcome="partial",
+            latency_ms=response.latency_ms if response is not None else 0.0,
             repair_attempted=repair_attempted,
             message_id=message.msg_id,
         )
+
+    def _build_context(
+        self,
+        material_id: str,
+        skill_tags: tuple[str, ...],
+        scope: AssessmentScope | None,
+        *,
+        coding: bool,
+        exclude: frozenset[str] = frozenset(),
+    ) -> list[RetrievedChunk]:
+        """Call the injected context builder; only coding opts into code-seeking."""
+        if coding:
+            return self._context_builder(
+                material_id,
+                skill_tags,
+                scope,
+                code_seeking=True,
+                exclude_chunk_ids=exclude,
+            )
+        return self._context_builder(material_id, skill_tags, scope)
 
     def _widen_thin_context(
         self,
@@ -582,6 +670,9 @@ class GenerationWorker:
         skill_tags: tuple[str, ...],
         scope: AssessmentScope | None,
         chunks: list[RetrievedChunk],
+        *,
+        coding: bool,
+        exclude: frozenset[str] = frozenset(),
     ) -> tuple[list[RetrievedChunk], list[dict]]:
         """D-06: a thin scoped context widens to neighbouring pages and warns.
 
@@ -589,7 +680,8 @@ class GenerationWorker:
         (a three-page range), and grounding a question on almost nothing is how
         the original front-matter defect hid. The widened range is a superset
         of the requested one, so the result can only grow; when it does not, the
-        learner still gets the honest count in the warning.
+        learner still gets the honest count in the warning. A coding widen keeps
+        code-seeking so the widened window is not a plain even spread.
         """
         if scope is None or len(chunks) >= CONTEXT_TOP_K:
             return chunks, []
@@ -597,7 +689,9 @@ class GenerationWorker:
         widened = scope
         for _ in range(WIDEN_STEPS):
             widened = widened.widened(WIDEN_MIN_PAD)
-            chunks = self._context_builder(material_id, skill_tags, widened)
+            chunks = self._build_context(
+                material_id, skill_tags, widened, coding=coding, exclude=exclude
+            )
             if len(chunks) >= CONTEXT_TOP_K:
                 break
         return chunks, [
@@ -639,9 +733,7 @@ class GenerationWorker:
             return validate(repaired.structured_output, blueprint, context_ids, chunk_texts)
         return None, [{"code": "malformed_output", "message": "repair validation failed"}]
 
-    def _coding_self_check(
-        self, blueprint: GenerationBlueprint, accepted: dict
-    ) -> dict | None:
+    def _coding_self_check(self, blueprint: GenerationBlueprint, accepted: dict) -> dict | None:
         """Run the reference solution over every authored test (D-05).
 
         Returns None when the reference passes all tests, a `self_check_failed`

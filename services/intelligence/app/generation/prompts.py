@@ -24,7 +24,7 @@ prompt_template_version = "v1"
 # Written generation is a different prompt over the same pipeline, so it
 # carries its own version label in telemetry.
 WRITTEN_PROMPT_TEMPLATE_VERSION = "written-v1"
-CODING_PROMPT_TEMPLATE_VERSION = "coding-v1"
+CODING_PROMPT_TEMPLATE_VERSION = "coding-v2"
 
 
 def _citation_schema(citation_ids: Iterable[str] | None = None) -> dict:
@@ -120,6 +120,7 @@ def written_schema(citation_ids: Iterable[str] | None = None) -> dict:
         ],
         "additionalProperties": False,
     }
+
 
 # D-02: both arms carry this blocklist verbatim. Nothing forbade exam-format
 # questions before, so on a front-matter steer the model authored them for
@@ -411,7 +412,11 @@ CODING_SYSTEM_TEMPLATE = (
     f"one to {MAX_HIDDEN_TESTS} hiddenTests that cover edge cases; every expectedOutput is the "
     "exact stdout the reference prints for that stdin, so the reference solution must pass every "
     "test you author. "
-    "If the chunks cannot support any grounded coding question, return exactly "
+    "If the chunks describe an algorithm or a technique but do not state an exercise, you may "
+    "author the question yourself: name the algorithm in the stem, and let the tests and the "
+    "reference solution define the contract. The contract must follow the behaviour described in "
+    "the cited chunks. Refuse only when the chunks contain no code, no algorithm, and no "
+    "implementable technique: return exactly "
     '{{"unsuitable": true, "reason": "<one or two learner-facing sentences naming what the '
     'material lacks>"}} instead of a question. '
     "Target difficulty {difficulty_hint}; respond only with the required JSON object."

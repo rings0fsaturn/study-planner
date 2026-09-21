@@ -54,7 +54,12 @@ def test_build_context_returns_retrieved_chunks(monkeypatch: pytest.MonkeyPatch)
         ],
     )
     chunks = build_context(
-        "m1", ("core", "recall"), None, "https://supabase.example", "svc-key", rest  # type: ignore[arg-type]
+        "m1",
+        ("core", "recall"),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
     )
     assert [chunk.chunk_id for chunk in chunks] == ["c1", "c2"]
     assert chunks[0].text == "body one"
@@ -173,7 +178,12 @@ def test_build_context_spread_is_bounded_by_the_scope_pages(
         ]
     )
     chunks = build_context(
-        "m1", (), AssessmentScope(100, 140), "https://supabase.example", "svc-key", rest  # type: ignore[arg-type]
+        "m1",
+        (),
+        AssessmentScope(100, 140),
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
     )
     assert [chunk.chunk_id for chunk in chunks] == ["c1"]
     assert rest.calls[0]["url"].endswith("&page_start=lte.140&page_end=gte.100")
@@ -232,3 +242,99 @@ def test_build_context_rpc_error_body_is_retryable(monkeypatch: pytest.MonkeyPat
     with pytest.raises(IngestionError) as excinfo:
         build_context("m1", ("core",), None, "https://supabase.example", "svc-key", rest)  # type: ignore[arg-type]
     assert excinfo.value.retryable is True
+
+
+# --- code-seeking spread (coding arm only, D-07) ---------------------------
+
+
+def _prose(row_id: str, ordinal: int) -> dict:
+    return {"id": row_id, "ordinal": ordinal, "text": "a plain sentence of prose"}
+
+
+def _code(row_id: str, ordinal: int) -> dict:
+    return {"id": row_id, "ordinal": ordinal, "text": "def f(x):\n    return x"}
+
+
+def test_code_seeking_picks_the_code_dense_chunk_in_each_band() -> None:
+    """Five ordinal bands, the top code-proximity chunk from each."""
+    rows = [
+        _prose("c0", 0),
+        _prose("c1", 1),
+        _prose("c2", 2),
+        _code("c3", 3),
+        _code("c4", 4),
+        _prose("c5", 5),
+        _prose("c6", 6),
+        _prose("c7", 7),
+        _prose("c8", 8),
+        _prose("c9", 9),
+    ]
+    rest = FakeRest([httpx.Response(200, json=rows)])
+    chunks = build_context(
+        "m1",
+        (),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
+        code_seeking=True,
+    )
+    assert [chunk.chunk_id for chunk in chunks] == ["c0", "c3", "c4", "c6", "c8"]
+    # The single listing request widened its select to carry the text.
+    assert rest.calls[0]["url"].startswith(
+        "https://supabase.example/rest/v1/content_chunks"
+        "?material_id=eq.m1&select=id,ordinal,text,page_start,page_end&"
+    )
+
+
+def test_code_seeking_exclusion_removes_tried_chunks() -> None:
+    rows = [_code(f"c{index}", index) for index in range(6)]
+    rest = FakeRest([httpx.Response(200, json=rows)])
+    chunks = build_context(
+        "m1",
+        (),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
+        code_seeking=True,
+        exclude_chunk_ids=frozenset({"c0"}),
+    )
+    assert [chunk.chunk_id for chunk in chunks] == ["c1", "c2", "c3", "c4", "c5"]
+
+
+def test_code_seeking_spread_is_bounded_by_the_scope_pages() -> None:
+    rest = FakeRest([httpx.Response(200, json=[_code("c1", 1)])])
+    chunks = build_context(
+        "m1",
+        (),
+        AssessmentScope(100, 140),
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
+        code_seeking=True,
+    )
+    assert [chunk.chunk_id for chunk in chunks] == ["c1"]
+    assert rest.calls[0]["url"].endswith("&page_start=lte.140&page_end=gte.100")
+
+
+def test_default_spread_is_unchanged_by_the_code_seeking_seam() -> None:
+    """D-07: no flag means the original two-request even spread."""
+    listing = httpx.Response(
+        200, json=[{"id": f"c{index}", "ordinal": index} for index in range(10)]
+    )
+    detail = httpx.Response(
+        200,
+        json=[{"id": f"c{index}", "ordinal": index, "text": "body"} for index in (0, 2, 4, 6, 8)],
+    )
+    rest = FakeRest([listing, detail])
+    chunks = build_context(
+        "m1",
+        (),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
+    )
+    assert [chunk.chunk_id for chunk in chunks] == ["c0", "c2", "c4", "c6", "c8"]
+    assert "select=id,ordinal&" in rest.calls[0]["url"]

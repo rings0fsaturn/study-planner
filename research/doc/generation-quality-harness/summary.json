@@ -9,7 +9,7 @@
       "dimensions": 768
     },
     "attemptGateK": 5,
-    "generatedAt": "2026-09-21T09:33:41Z",
+    "generatedAt": "2026-09-21T15:03:14Z",
     "evidenceDir": "research/doc/deepseek-generation-probe",
     "liveSource": "cache"
   },
@@ -248,37 +248,43 @@
     }
   },
   "coding": {
-    "coding_attempts": 4,
-    "judged_attempts": 3,
-    "code_not_derivable": 3,
-    "failed_other": 1,
-    "derivable_rate": 0.0,
+    "coding_attempts": 8,
+    "judged_attempts": 6,
+    "code_not_derivable": 4,
+    "failed_other": 2,
+    "derivable_rate": 0.3333,
     "by_material": {
+      "ac8e4730-00eb-447d-bffd-81e81dd43bb4": {
+        "attempts": 1,
+        "refused": 1
+      },
+      "80c8b138-b544-4095-8dc0-1c390ac70da2": {
+        "attempts": 1,
+        "refused": 0
+      },
       "b5f51eab-c11d-4505-80db-88bb3627801d": {
-        "attempts": 3,
+        "attempts": 4,
         "refused": 3
       }
     },
     "gold": {
-      "checked": 1,
-      "agreed": 0,
-      "agreement_rate": 0.0,
-      "disagreements": [
-        "grokking-algorithms (code-bearing): expected derivable=True but 3/3 refused"
-      ]
+      "checked": 2,
+      "agreed": 2,
+      "agreement_rate": 1.0,
+      "disagreements": []
     }
   },
   "telemetry": {
-    "records": 184,
+    "records": 190,
     "outcomes": {
       "provider_error": 2,
-      "malformed_output": 21,
-      "ok": 141,
-      "partial": 20
+      "malformed_output": 22,
+      "ok": 145,
+      "partial": 21
     },
-    "questions_requested": 184,
-    "questions_accepted": 141,
-    "acceptance_rate": 0.7663,
-    "repair_rate": 0.0435
+    "questions_requested": 190,
+    "questions_accepted": 145,
+    "acceptance_rate": 0.7632,
+    "repair_rate": 0.0474
   }
 }

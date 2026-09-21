@@ -12,9 +12,9 @@
     "expectedDerivable": true
   },
   {
-    "label": "acca-apm (no code)",
+    "label": "acca-apm (prose + worked procedure)",
     "materialId": "80c8b138-b544-4095-8dc0-1c390ac70da2",
-    "concept": "management accounting discussion",
-    "expectedDerivable": false
+    "concept": "linear trend forecast with seasonal adjustment",
+    "expectedDerivable": true
   }
 ]

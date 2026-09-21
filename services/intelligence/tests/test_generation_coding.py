@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 import pytest
 
 from app.generation.models import (
@@ -82,8 +84,8 @@ def blueprint(difficulty: int = 3) -> GenerationBlueprint:
 # --- prompts ---
 
 
-def test_coding_prompt_template_version_is_coding_v1() -> None:
-    assert CODING_PROMPT_TEMPLATE_VERSION == "coding-v1"
+def test_coding_prompt_template_version_is_coding_v2() -> None:
+    assert CODING_PROMPT_TEMPLATE_VERSION == "coding-v2"
 
 
 def test_coding_schema_branches_and_chunk_binding() -> None:
@@ -124,6 +126,9 @@ def test_coding_system_prompt_carries_the_authoring_contract() -> None:
         "band 3 (1..5)",
         "visibleTests",
         "hiddenTests",
+        # coding-v2: the derivation rule and the narrower codeless refusal.
+        "you may author the question yourself",
+        "Refuse only when the chunks contain no code, no algorithm, and no implementable technique",
     ):
         assert needle in system
 
@@ -196,9 +201,7 @@ def test_validate_coding_accepts_output_prediction_candidate() -> None:
         (lambda c: c.update(skillTags=[]), "skillTags_invalid"),
     ],
 )
-def test_coding_format_gate_rejects_each_tests_bearing_failure(
-    mutator, expected: str
-) -> None:
+def test_coding_format_gate_rejects_each_tests_bearing_failure(mutator, expected: str) -> None:
     candidate = dict(VALID_CODING)
     mutator(candidate)
     failures = coding_format_failures(candidate, blueprint())
@@ -214,9 +217,7 @@ def test_coding_format_gate_rejects_each_tests_bearing_failure(
         (lambda c: c.pop("acceptedValue"), "accepted_value_invalid"),
     ],
 )
-def test_coding_format_gate_rejects_each_prediction_failure(
-    mutator, expected: str
-) -> None:
+def test_coding_format_gate_rejects_each_prediction_failure(mutator, expected: str) -> None:
     candidate = dict(VALID_OUTPUT_PREDICTION)
     mutator(candidate)
     failures = coding_format_failures(candidate, blueprint())
@@ -256,9 +257,7 @@ def test_validate_coding_leaves_interior_fences_alone() -> None:
 
 def test_validate_coding_citation_drop_and_unverified_warning() -> None:
     out_of_context = {**VALID_CODING, "citations": [{"chunkId": "nope", "quote": "x"}]}
-    accepted, warnings = validate_coding(
-        out_of_context, blueprint(), CONTEXT_IDS, CHUNK_TEXTS
-    )
+    accepted, warnings = validate_coding(out_of_context, blueprint(), CONTEXT_IDS, CHUNK_TEXTS)
     assert accepted is None
     assert warnings[0]["code"] == "citation_missing"
 
@@ -266,9 +265,7 @@ def test_validate_coding_citation_drop_and_unverified_warning() -> None:
         **VALID_CODING,
         "citations": [{"chunkId": "c1", "quote": "not in the source"}],
     }
-    accepted, warnings = validate_coding(
-        unverifiable, blueprint(), CONTEXT_IDS, CHUNK_TEXTS
-    )
+    accepted, warnings = validate_coding(unverifiable, blueprint(), CONTEXT_IDS, CHUNK_TEXTS)
     assert accepted is not None
     assert warnings[0]["code"] == "citation_unverified"
 
@@ -446,7 +443,7 @@ def make_worker(repo, queue, adapter, telemetry, sandbox=None, **config_override
         adapter=adapter,
         telemetry=telemetry,
         config=config,
-        context_builder=lambda material_id, skill_tags, scope: chunks(),
+        context_builder=lambda material_id, skill_tags, scope, **_: chunks(),
         sandbox=sandbox,
     )
 
@@ -535,19 +532,20 @@ def test_coding_format_failure_repairs_with_coding_schema() -> None:
     assert telemetry.records[0].questions_accepted == 1
 
 
-def test_coding_unsuitable_fails_without_repair() -> None:
+def test_coding_unsuitable_after_all_windows_fails_without_repair() -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
     reason = "the material explains theory but never specifies an algorithm"
     adapter = FakeAdapter(
-        [ok_response(structured_output={"unsuitable": True, "reason": reason})]
+        [ok_response(structured_output={"unsuitable": True, "reason": reason})] * 3
     )
     telemetry = FakeTelemetry()
 
     run_worker(repo, queue, adapter, telemetry)
 
-    assert len(adapter.calls) == 1
+    # MAX_CODING_WINDOWS = 3: two resamples, then the terminal refusal (D-02/D-04).
+    assert len(adapter.calls) == 3
     assert repo.questions == []
     assert repo.assessment_updates == [
         ("a1", "failed", [{"code": "code_not_derivable", "message": reason}])
@@ -556,6 +554,107 @@ def test_coding_unsuitable_fails_without_repair() -> None:
     assert repo.job_updates[-1]["retryable"] is False
     assert telemetry.records[0].outcome == "partial"
     assert telemetry.records[0].questions_accepted == 0
+
+
+def test_coding_resample_accepts_a_later_window(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output={"unsuitable": True, "reason": "no contract"}),
+            ok_response(),
+        ]
+    )
+    telemetry = FakeTelemetry()
+
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        run_worker(repo, queue, adapter, telemetry, FakeSandbox())
+
+    assert len(adapter.calls) == 2  # first window refused, second accepted
+    assert len(repo.questions) == 1
+    assert repo.assessment_updates == []  # never fails
+    assert repo.completed[0][2] == "ready"
+    assert "window 2/3" in caplog.text
+
+
+def test_coding_resample_excludes_the_tried_window() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    quote = "the shortfall between forecast and target"
+    accepted = {
+        **VALID_CODING,
+        "citations": [{"chunkId": "c2", "quote": quote}],
+    }
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output={"unsuitable": True, "reason": "no contract"}),
+            ok_response(structured_output=accepted),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    seen: list[frozenset[str]] = []
+
+    def context_builder(
+        material_id, skill_tags, scope, *, code_seeking=False, exclude_chunk_ids=frozenset()
+    ):
+        seen.append(exclude_chunk_ids)
+        chunk_id = "c1" if len(seen) == 1 else "c2"
+        return [RetrievedChunk(chunk_id=chunk_id, material_id="m1", text=quote, ordinal=0)]
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+        sandbox=FakeSandbox(),
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    worker.run_once()
+
+    assert seen == [frozenset(), frozenset({"c1"})]
+    assert len(repo.questions) == 1
+    assert repo.questions[0]["citations"][0]["chunkId"] == "c2"
+
+
+def test_coding_format_reaches_the_context_builder_as_code_seeking() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response()])
+    telemetry = FakeTelemetry()
+    seen: list[tuple] = []
+
+    def context_builder(
+        material_id, skill_tags, scope, *, code_seeking=False, exclude_chunk_ids=frozenset()
+    ):
+        seen.append((material_id, skill_tags, scope, code_seeking))
+        return chunks()
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+        sandbox=FakeSandbox(),
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    worker.run_once()
+
+    assert seen == [("m1", (), None, True)]
 
 
 def test_coding_self_check_runs_reference_through_the_sandbox() -> None:
@@ -659,9 +758,7 @@ def test_output_prediction_skips_the_sandbox_and_writes_accepted_value() -> None
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
-    adapter = FakeAdapter(
-        [ok_response(structured_output=VALID_OUTPUT_PREDICTION)]
-    )
+    adapter = FakeAdapter([ok_response(structured_output=VALID_OUTPUT_PREDICTION)])
     telemetry = FakeTelemetry()
     sandbox = FakeSandbox()
 

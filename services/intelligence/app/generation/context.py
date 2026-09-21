@@ -6,11 +6,12 @@ There are two honest ways to ground a question:
   embedded and sent to `match_content_chunks` with the service role - exactly
   the proven path in `app/routers/retrieval.py` - bounded by the scope's pages
   when the learner chose a scope;
-- **no steer at all** falls back to an evenly spread sample of the material's
-  chunks, inside the chosen pages when there is a scope. An empty steer is
-  never embedded: it degenerates into fragments (measured 2026-09-11:
-  "likes". / "produced." / "369"), which is why a page-only scope spreads
-  instead of querying (D-08).
+- **no steer at all** falls back to a spread sample of the material's chunks,
+  inside the chosen pages when there is a scope: evenly spread by default, or
+  code-dense per ordinal band when the coding arm opts in (`code_seeking`).
+  An empty steer is never embedded: it degenerates into fragments (measured
+  2026-09-11: "likes". / "produced." / "369"), which is why a page-only scope
+  spreads instead of querying (D-08).
 
 The material title is deliberately NOT part of the steer: it matches the
 cover, the contents page and the index, so a title-bearing query retrieves
@@ -29,6 +30,7 @@ from __future__ import annotations
 import httpx
 
 from app.generation.models import AssessmentScope, RetrievedChunk
+from app.ingestion.code_signal import code_proximity
 from app.ingestion.models import IngestionError
 from app.query_embedder import embed_queries
 
@@ -43,11 +45,28 @@ def build_context(
     supabase_url: str,
     service_key: str,
     client: httpx.Client,
+    *,
+    code_seeking: bool = False,
+    exclude_chunk_ids: frozenset[str] = frozenset(),
 ) -> list[RetrievedChunk]:
-    """Retrieve up to CONTEXT_TOP_K owner-scoped chunks for the steer or scope."""
+    """Retrieve up to CONTEXT_TOP_K owner-scoped chunks for the steer or scope.
+
+    `code_seeking` is opt-in on the coding arm (D-07): with no steer it picks
+    the most code-dense chunk in each ordinal band instead of an even spread,
+    so an algorithms listing is not missed in favour of chapter summaries.
+    `exclude_chunk_ids` lets the coding resample ask for a different window.
+    """
     steer = _steer(skill_tags, scope)
     if not steer:
-        return _spread_context(material_id, scope, supabase_url, service_key, client)
+        return _spread_context(
+            material_id,
+            scope,
+            supabase_url,
+            service_key,
+            client,
+            code_seeking=code_seeking,
+            exclude_chunk_ids=exclude_chunk_ids,
+        )
 
     vectors = embed_queries([steer], client=client)
     if not vectors or vectors[0] is None:
@@ -98,22 +117,38 @@ def _spread_context(
     supabase_url: str,
     service_key: str,
     client: httpx.Client,
+    *,
+    code_seeking: bool = False,
+    exclude_chunk_ids: frozenset[str] = frozenset(),
 ) -> list[RetrievedChunk]:
-    """No steer: CONTEXT_TOP_K chunks spread evenly over the material or scope.
+    """No steer: CONTEXT_TOP_K chunks spread over the material or scope.
 
-    Two light requests instead of shipping every chunk's text: the id/ordinal
-    list decides the spread, then only the chosen rows are fetched with text.
+    The default is an even spread. It sends two light requests instead of
+    shipping every chunk's text: the id/ordinal list decides the spread, then
+    only the chosen rows are fetched with text. `code_seeking` (coding arm
+    only) fetches the candidate text and leans on `code_proximity`.
     """
-    base = f"{supabase_url.rstrip('/')}/rest/v1/{CHUNKS_TABLE}"
+    select = "id,ordinal,text,page_start,page_end" if code_seeking else "id,ordinal"
     query = (
-        f"{base}?material_id=eq.{material_id}&select=id,ordinal&order=ordinal.asc&limit=10000"
+        f"{supabase_url.rstrip('/')}/rest/v1/{CHUNKS_TABLE}"
+        f"?material_id=eq.{material_id}&select={select}&order=ordinal.asc&limit=10000"
     )
     if scope is not None:
         query += f"&page_start=lte.{scope.page_end}&page_end=gte.{scope.page_start}"
+    if code_seeking:
+        return _code_seeking_context(
+            query,
+            material_id,
+            exclude_chunk_ids,
+            supabase_url,
+            service_key,
+            client,
+        )
     rows = _json_rows(
         _request(client, "get", query, service_key=service_key),
         "chunk listing",
     )
+    rows = [row for row in rows if str(row.get("id") or "") not in exclude_chunk_ids]
     picks = _evenly_spaced(rows, CONTEXT_TOP_K)
     if not picks:
         return []
@@ -122,22 +157,56 @@ def _spread_context(
         _request(
             client,
             "get",
-            f"{base}?id=in.({ids})&select=id,ordinal,text,page_start,page_end&order=ordinal.asc",
+            (
+                f"{supabase_url.rstrip('/')}/rest/v1/{CHUNKS_TABLE}"
+                f"?id=in.({ids})&select=id,ordinal,text,page_start,page_end&order=ordinal.asc"
+            ),
             service_key=service_key,
         ),
         "chunk listing",
     )
-    return [
-        RetrievedChunk(
-            chunk_id=str(row.get("id") or ""),
-            material_id=material_id,
-            text=str(row.get("text") or ""),
-            ordinal=int(row.get("ordinal") or 0),
-            page_start=_optional_int(row.get("page_start")),
-            page_end=_optional_int(row.get("page_end")),
-        )
-        for row in detail
-    ]
+    return [_retrieved_chunk(row, material_id) for row in detail]
+
+
+def _code_seeking_context(
+    listing_query: str,
+    material_id: str,
+    exclude_chunk_ids: frozenset[str],
+    supabase_url: str,
+    service_key: str,
+    client: httpx.Client,
+) -> list[RetrievedChunk]:
+    """Code-dense spread: one request with text, score in memory (D-03).
+
+    The caller's listing query already carries the text in its `select`, so the
+    scorer runs on candidate rows without a stored code column or a second
+    fetch.
+    """
+    rows = _json_rows(
+        _request(client, "get", listing_query, service_key=service_key),
+        "chunk listing",
+    )
+    rows = [row for row in rows if str(row.get("id") or "") not in exclude_chunk_ids]
+    return [_retrieved_chunk(row, material_id) for row in _top_code_picks(rows)]
+
+
+def _top_code_picks(rows: list[dict]) -> list[dict]:
+    """Highest code-proximity chunk in each of CONTEXT_TOP_K ordinal bands.
+
+    Bands keep the five picks spread across the material instead of five
+    adjacent chunks of one listing. Ties take the earliest ordinal in the band,
+    so an all-prose candidate set degrades to the even spread.
+    """
+    if len(rows) <= CONTEXT_TOP_K:
+        return list(rows)
+    step = len(rows) / CONTEXT_TOP_K
+    picks: list[dict] = []
+    for band in range(CONTEXT_TOP_K):
+        start = int(band * step)
+        end = len(rows) if band == CONTEXT_TOP_K - 1 else int((band + 1) * step)
+        window = rows[start:end]
+        picks.append(max(window, key=lambda row: code_proximity(str(row.get("text") or ""))))
+    return picks
 
 
 def _evenly_spaced(rows: list[dict], count: int) -> list[dict]:
@@ -146,6 +215,17 @@ def _evenly_spaced(rows: list[dict], count: int) -> list[dict]:
         return list(rows)
     step = len(rows) / count
     return [rows[int(index * step)] for index in range(count)]
+
+
+def _retrieved_chunk(row: dict, material_id: str) -> RetrievedChunk:
+    return RetrievedChunk(
+        chunk_id=str(row.get("id") or ""),
+        material_id=material_id,
+        text=str(row.get("text") or ""),
+        ordinal=int(row.get("ordinal") or 0),
+        page_start=_optional_int(row.get("page_start")),
+        page_end=_optional_int(row.get("page_end")),
+    )
 
 
 def _request(

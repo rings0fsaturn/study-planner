@@ -2,7 +2,7 @@
 
 - Gold version: `1` · Attempt gate K: 5
 - Corpus: `80c8b138-b544-4095-8dc0-1c390ac70da2` (754 chunks, sidecar)
-- Generated: 2026-09-21T09:33:41Z · Activation gate: off
+- Generated: 2026-09-21T15:03:14Z · Activation gate: off
 - Live arms: cache
 
 ## Gate verdict
@@ -10,7 +10,7 @@
 FAIL - 2 gate(s) breached:
 
 - `difficultyMeanAbsBandError`: difficultyMeanAbsBandError unmeasured (no eligible evidence) - collect data or lower the gate
-- `codingDerivableMin`: codingDerivableMin 0.0 < 0.5
+- `codingDerivableMin`: codingDerivableMin 0.3333 < 0.5
 
 ## Objective (recorded #56 evidence)
 
@@ -53,12 +53,11 @@ FAIL - 2 gate(s) breached:
 
 ## Coding suitability
 
-- attempts: 4 (judged: 3) · `code_not_derivable`: 3 · derivable rate: 0.0
-- gold agreement: 0.0 (0/1 labeled materials)
-  - grokking-algorithms (code-bearing): expected derivable=True but 3/3 refused
+- attempts: 8 (judged: 6) · `code_not_derivable`: 4 · derivable rate: 0.3333
+- gold agreement: 1.0 (2/2 labeled materials)
 
 ## Telemetry (redacted)
 
-- records: 184 · acceptance: 0.7663 · repair rate: 0.0435
-- outcomes: {'provider_error': 2, 'malformed_output': 21, 'ok': 141, 'partial': 20}
+- records: 190 · acceptance: 0.7632 · repair rate: 0.0474
+- outcomes: {'provider_error': 2, 'malformed_output': 22, 'ok': 145, 'partial': 21}
 

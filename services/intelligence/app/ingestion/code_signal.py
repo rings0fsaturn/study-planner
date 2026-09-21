@@ -33,3 +33,37 @@ def scan_code_blocks(text: str) -> tuple[bool, list[str]]:
         if info:
             languages.add(info.split()[0])
     return has_code, sorted(languages)
+
+
+# Signals that survive PDF text extraction. Fences and leading indentation are
+# flattened by the extractor (measured 2026-09-21 on grokking-algorithms: 0/260
+# chunks carry a fence, 0/260 carry a newline + 4-space indent), so the scorer
+# reads what does survive: code keywords, call/assignment shapes, and the
+# operator punctuation prose does not use in runs.
+_CODE_SIGNAL_RE = re.compile(
+    r"\b(?:def|class|return|import|while|elif|None|True|False)\b"
+    r"|\b(?:print|len)\s*\("
+    r"|\bfor\s+\w+\s+in\b"
+    r"|\belse\s*:"
+    r"|\w+\s*=\s*[^=\s]"
+    r"|->|==|!=|<=|>=|:=|\[\]|\{\}"
+)
+
+# Density multiplier: hits per word is small, so scale it into 0..1. Chosen so
+# a dense listing saturates while a chapter that merely mentions code does not.
+_PROXIMITY_DENSITY_SCALE = 20.0
+
+
+def code_proximity(text: str) -> float:
+    """0.0 (prose) .. 1.0 (dense code) for one chunk. Pure and deterministic.
+
+    Scores signals that survive PDF extraction, not fences: code keywords, call
+    and assignment shapes, and operator punctuation. Uses signal density (hits
+    per word) with a saturating cap, so a dense listing outranks a chapter that
+    merely mentions code, and front matter with no signals scores 0.
+    """
+    hits = len(_CODE_SIGNAL_RE.findall(text or ""))
+    if hits == 0:
+        return 0.0
+    words = max(1, len((text or "").split()))
+    return min(1.0, (hits / words) * _PROXIMITY_DENSITY_SCALE)
