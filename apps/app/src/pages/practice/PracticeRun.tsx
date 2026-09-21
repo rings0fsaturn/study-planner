@@ -234,7 +234,8 @@ export function PracticeRun() {
   }
 
   // The shared navigator is driven by review groups, so a problem that has not
-  // loaded yet carries a placeholder group: same position, honestly pending.
+  // loaded yet carries a placeholder group: same position, honestly pending and
+  // labelled with the family the run planned for it (#45), never a guess.
   const navigatorGroups = useMemo(
     () =>
       problems.map(
@@ -244,7 +245,7 @@ export function PracticeRun() {
               id: problem.assessmentId,
               assessmentId: problem.assessmentId,
               materialId: problem.materialId,
-              format: 'written' as const,
+              format: problem.family,
               prompt: '',
               options: [],
               skillTags: [],
@@ -381,6 +382,9 @@ export function PracticeRun() {
 
   const allGraded = totalProblems > 0 && (model?.completedCount ?? 0) === totalProblems
   const currentQuestion = current?.group?.question
+  // The loaded question's own format is the server's answer; the pointer's
+  // record only labels a problem that has not loaded yet (#45).
+  const currentFamily = currentQuestion?.format ?? current?.family
   // Never-attempted problems answer through the slot by default; retried ones
   // re-enter it until their fresh attempt resolves (the #40 pattern).
   const showSlot =
@@ -463,6 +467,7 @@ export function PracticeRun() {
               <section className="ar-panel" aria-label={`Problem ${current.number}`}>
                 <div className="ar-panel-meta">
                   <span className="tag tag-sm">Problem {current.number}</span>
+                  {currentFamily && <span className="tag tag-sm">{currentFamily}</span>}
                   {materialTitles[current.materialId] && (
                     <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
                       from {materialTitles[current.materialId]}
@@ -514,6 +519,22 @@ export function PracticeRun() {
                         ))}
                       </ul>
                     )}
+                    {/*
+                      A `failed` assessment is terminal by contract (#42 D-04:
+                      the worker's re-entry guard drops messages for
+                      non-`generating` rows and the regenerate route answers
+                      `conflict`), so this run cannot finish that problem. The
+                      honest retry is a fresh run, which mints new assessments;
+                      re-enqueueing a terminal row would be a lie.
+                    */}
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      style={{ marginTop: '0.75rem' }}
+                      onClick={() => navigate(`/materials/${materialId}/practice`)}
+                    >
+                      Start a new run
+                    </button>
                   </>
                 )}
 

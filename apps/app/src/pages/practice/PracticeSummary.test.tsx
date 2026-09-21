@@ -2,11 +2,15 @@
 // Pure component: no Dexie, no providers, no events (rule 32 stays out).
 
 import { describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import type { LocalAttemptRow } from '../../assessments/attemptFlow'
 import type { Assessment, Question, QuestionGradedResult } from '../../assessments/types'
 import type { PracticeRunStartedPayload } from '../../sync/types'
-import { masteryProjection } from '../../assessments/testing/fakeAssessmentClient'
+import {
+  codingGrade,
+  codingQuestion,
+  masteryProjection,
+} from '../../assessments/testing/fakeAssessmentClient'
 import { buildPracticeRunModel, isSummaryEligible } from './practiceRunModel'
 import { PracticeSummary } from './PracticeSummary'
 
@@ -166,6 +170,25 @@ describe('PracticeSummary', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Retry question' }))
     expect(onRetryQuestion).toHaveBeenCalledWith('q1')
+  })
+
+  it('renders a coding problem’s verdicts and labels its family (#45)', () => {
+    renderSummary({
+      assessmentIds: ['a-1'],
+      assessments: [assessmentRecord('a-1', [codingQuestion({ assessmentId: 'a-1' })])],
+      attemptsByAssessment: {
+        'a-1': [row('ca-1', 'q-coding-1', 'a-1', 'graded', codingGrade())],
+      },
+    })
+
+    const panel = screen.getByRole('region', { name: 'Problem 1' })
+    // The family the server authored, on its own tag inside the panel.
+    expect(within(panel).getByText('coding')).toBeInTheDocument()
+    // The public verdict table: visible rows named, hidden rows veiled.
+    expect(screen.getByRole('table', { name: 'Test results' })).toBeInTheDocument()
+    expect(screen.getByText('adds small list')).toBeInTheDocument()
+    expect(screen.getByText('Hidden test 2')).toBeInTheDocument()
+    expect(screen.getByText('Passed 3 of 4 tests. Failed: Hidden test 2.')).toBeInTheDocument()
   })
 
   it('shows an ungradable attempt honestly instead of the review model’s processing state', () => {

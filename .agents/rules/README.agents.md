@@ -45,6 +45,7 @@ Read each selected rule file completely.
 |---|---|
 | [`40-onboarding-flow.agents.md`](40-onboarding-flow.agents.md) | Changing onboarding, roadmap creation, booking generation, or re-entrant setup. |
 | [`41-roadmap-engine.agents.md`](41-roadmap-engine.agents.md) | Changing roadmap or booking algorithms, public engine types, or cross-language parity. |
+| [`42-assessment-and-practice-generation.agents.md`](42-assessment-and-practice-generation.agents.md) | Changing assessment or practice generation, attempt submission, grading authority, run pointers, or the assessment job/queue contract. |
 
 ## Build and Local Infrastructure
 

@@ -47,6 +47,7 @@ export interface SyncMeta {
 }
 
 import type { DayOfWeek, Slot } from '@study-tracker/roadmap-engine'
+import type { AssessmentFormat } from '../assessments/types'
 
 export interface PlaylistVideoInfo {
   youtubeVideoId: string
@@ -93,6 +94,13 @@ export interface AssessmentCreatedPayload {
 }
 
 /**
+ * The run's focus (#45). `mixed` alternates written and coding per problem;
+ * every generation call still carries exactly one family, because the server
+ * admits one family per call.
+ */
+export type PracticeRunMode = 'written' | 'coding' | 'mixed'
+
+/**
  * Thin local-first pointer to a practice run (D-02). No `questionIds`: at
  * Start time generation has only returned assessment ids, and the questions
  * are resolved lazily by polling `getAssessment` while it is generating.
@@ -100,9 +108,15 @@ export interface AssessmentCreatedPayload {
 export interface PracticeRunStartedPayload {
   runId: string
   materialIds: string[]
-  mode: 'written'
+  mode: PracticeRunMode
   assessmentIds: string[]
   count: number
+  /**
+   * Per-problem family, aligned with `assessmentIds` (#45). Absent on pointers
+   * written before #45, so every reader falls back to `mode` instead of
+   * assuming a family.
+   */
+  families?: AssessmentFormat[]
 }
 
 /** Terminal half of the run pointer. Neither outcome invents an observation. */

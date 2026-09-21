@@ -462,4 +462,55 @@ describe('buildPracticeRunModel', () => {
       expect(result.problems[0].materialId).toBe('')
     })
   })
+
+  describe('per-problem family (#45)', () => {
+    it('reads each problem’s family from the pointer record', () => {
+      const result = model({
+        started: {
+          mode: 'mixed',
+          assessmentIds: ['a-1', 'a-2', 'a-3'],
+          families: ['written', 'coding', 'written'],
+          count: 3,
+        },
+        assessments: [null, null, null],
+      })
+
+      expect(result.problems.map((problem) => problem.family)).toEqual([
+        'written',
+        'coding',
+        'written',
+      ])
+    })
+
+    it('falls back to the run mode for a legacy pointer with no families', () => {
+      const coding = model({
+        started: { mode: 'coding', assessmentIds: ['a-1', 'a-2'], count: 2 },
+        assessments: [null, null],
+      })
+      expect(coding.problems.map((problem) => problem.family)).toEqual(['coding', 'coding'])
+
+      // Pre-#45 pointers carried `mode: 'written'` and no families at all.
+      const legacy = model({ started: { assessmentIds: ['a-1'], count: 1 }, assessments: [null] })
+      expect(legacy.problems[0].family).toBe('written')
+
+      // A mixed mode without a record cannot invent a coding problem, so it
+      // reads as written rather than guessing an unsupported family.
+      const mixedNoRecord = model({
+        started: { mode: 'mixed', assessmentIds: ['a-1'], count: 1 },
+        assessments: [null],
+      })
+      expect(mixedNoRecord.problems[0].family).toBe('written')
+    })
+
+    it('keeps the planned family when the assessment has not loaded yet', () => {
+      const result = model({
+        started: { mode: 'coding', assessmentIds: ['a-1'], families: ['coding'], count: 1 },
+        assessments: [assessmentRecord('a-1', 'mat-1', 'generating')],
+      })
+
+      // No group yet, so the pointer's record is the only honest label.
+      expect(result.problems[0].group).toBeNull()
+      expect(result.problems[0].family).toBe('coding')
+    })
+  })
 })

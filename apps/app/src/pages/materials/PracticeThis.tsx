@@ -16,18 +16,36 @@ import { MaterialStatusBadge } from '../../materials/StatusBadge'
 import { logger } from '../../lib/logger'
 import '../../materials/materials.css'
 import { SOURCE_LABELS, isReady, type MaterialRecord } from '../../materials/types'
+import type { PracticeRunMode } from '../../sync/types'
 
-const FOCUS_OPTIONS = ['Written', 'Coding', 'Mixed'] as const
+const FOCUS_OPTIONS: Array<{ label: string; mode: PracticeRunMode }> = [
+  { label: 'Written', mode: 'written' },
+  { label: 'Coding', mode: 'coding' },
+  { label: 'Mixed', mode: 'mixed' },
+]
 const DIFFICULTY_OPTIONS = ['Adaptive', '1', '2', '3', '4', '5'] as const
 
-/** D-07: only the written family has a generator today. */
-const FOCUS = 'Written'
-const FORMAT: AssessmentFormat = 'written'
+const FOCUS_COPY: Record<PracticeRunMode, string> = {
+  written: 'Start a guided practice run grounded in',
+  coding: 'Start a coding practice run grounded in',
+  mixed: 'Start a mixed practice run grounded in',
+}
+
 /** D-06: one single-material call per problem, two in flight at a time. */
 const GENERATION_CONCURRENCY = 2
 const MAX_QUESTIONS = 20
 /** D-10: the primary material plus up to four more, distributed round-robin. */
 const MAX_MATERIALS = 5
+
+/**
+ * #45 D-01: the family one problem's generation call carries. The server
+ * admits exactly one family per call, so `mixed` alternates per problem
+ * instead of asking a single call for two families.
+ */
+function familyForProblem(mode: PracticeRunMode, index: number): AssessmentFormat {
+  if (mode === 'mixed') return index % 2 === 0 ? 'written' : 'coding'
+  return mode
+}
 
 function formatMinutes(mins: number | null): string {
   if (!mins) return 'Unknown duration'
@@ -47,6 +65,7 @@ export function PracticeThis() {
   const [material, setMaterial] = useState<MaterialRecord | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [questionCount, setQuestionCount] = useState(5)
+  const [focus, setFocus] = useState<PracticeRunMode>('written')
   const [difficulty, setDifficulty] = useState<(typeof DIFFICULTY_OPTIONS)[number]>('3')
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<AssessmentServiceError | null>(null)
@@ -173,16 +192,20 @@ export function PracticeThis() {
       }
     }
 
-    const generated: Array<string | undefined> = new Array(total).fill(undefined)
+    const generated: Array<{ id: string; family: AssessmentFormat } | undefined> = new Array(
+      total,
+    ).fill(undefined)
     let firstError: AssessmentServiceError | null = null
 
     const generateOne = async (index: number) => {
       const source = runMaterials[index % runMaterials.length]
+      // #45 D-01: one family per call, `mixed` alternating written/coding.
+      const family = familyForProblem(focus, index)
       const request: GenerationRequest = {
         clientId: crypto.randomUUID(),
         materialIds: [source.id],
         recipe: {
-          formats: [FORMAT],
+          formats: [family],
           // The slice gate accepts exactly one question per call, so an
           // N-problem run is N calls (D-06).
           questionCount: 1,
@@ -192,7 +215,7 @@ export function PracticeThis() {
       }
       try {
         const job = await assessments.generateAssessment(request)
-        generated[index] = job.resultId ?? request.correlationId
+        generated[index] = { id: job.resultId ?? request.correlationId, family }
       } catch (err) {
         firstError ??=
           err instanceof AssessmentServiceError
@@ -210,7 +233,10 @@ export function PracticeThis() {
       Array.from({ length: Math.min(GENERATION_CONCURRENCY, total) }, () => worker()),
     )
 
-    const assessmentIds = generated.filter((id): id is string => Boolean(id))
+    const accepted = generated.filter(
+      (entry): entry is { id: string; family: AssessmentFormat } => entry != null,
+    )
+    const assessmentIds = accepted.map((entry) => entry.id)
     if (assessmentIds.length === 0) {
       // Nothing generated, so there is no run to open: stay put and say why.
       setError(
@@ -228,9 +254,12 @@ export function PracticeThis() {
       await eventStore.append(PRACTICE_RUN_STARTED, {
         runId,
         materialIds: runMaterials.map((entry) => entry.id),
-        mode: 'written',
+        mode: focus,
         assessmentIds,
         count: total,
+        // The run's own record of each problem's family (#45), so a pending
+        // problem is labelled from the pointer rather than a guess.
+        families: accepted.map((entry) => entry.family),
       })
     } catch (appendError) {
       // The pointer is what a resumed run reads, so a failed append is loud;
@@ -249,7 +278,7 @@ export function PracticeThis() {
         Practice this
       </h1>
       <p className="t-body" style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
-        Start a guided practice run grounded in <strong>{material.title}</strong>.
+        {FOCUS_COPY[focus]} <strong>{material.title}</strong>.
       </p>
 
       <div className="card card-large" aria-busy={generating} style={{ maxWidth: '640px' }}>
@@ -281,19 +310,33 @@ export function PracticeThis() {
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
             <label className="field-label">Focus</label>
-            <div className="chip-row">
+            <div className="chip-row" role="group" aria-label="Practice focus">
               {FOCUS_OPTIONS.map((option) => (
                 <button
-                  key={option}
+                  key={option.mode}
                   type="button"
-                  className={`chip${option === FOCUS ? ' selected' : ''}`}
-                  disabled={option !== FOCUS}
+                  className={`chip${focus === option.mode ? ' selected' : ''}`}
+                  aria-pressed={focus === option.mode}
+                  onClick={() => setFocus(option.mode)}
                 >
-                  {option}
+                  {option.label}
                 </button>
               ))}
             </div>
-            <p className="field-hint">Coding and mixed practice arrive with #45.</p>
+            <p className="field-hint">
+              {focus === 'written' &&
+                'Written answers grade against a rubric with per-criterion feedback.'}
+              {focus === 'coding' &&
+                'Coding problems grade in a server sandbox against hidden tests.'}
+              {focus === 'mixed' && 'Problems alternate written and coding, in turn.'}
+              {(focus === 'coding' || focus === 'mixed') && material.hasCode === false && (
+                <>
+                  {' '}
+                  No code blocks detected - the generator judges from concepts and may not be able
+                  to write a coding problem from this material.
+                </>
+              )}
+            </p>
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
             <label className="field-label">Difficulty</label>

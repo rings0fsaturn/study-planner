@@ -21,6 +21,19 @@ not use it for Docker work.
 If a published port is unreachable, verify the service inside the container
 (`docker compose exec -T intelligence ...`) before changing application code.
 
+## When the docker client is absent from WSL
+
+Some sessions run without WSL integration, so `docker` is not on `PATH` in this
+distro and `/var/run/docker.sock` does not exist.
+Docker Desktop is still reachable through its Windows client at
+`/mnt/c/Program Files/Docker/Docker/resources/bin/docker.exe`.
+Invoke that binary directly for `compose up`, `ps`, `logs`, and `images`, and do
+not read the missing Linux client as a broken stack or as a reason to skip
+containerized verification.
+Published container ports are reachable from this distro on `127.0.0.1`, so a
+host-run service keeps using `http://localhost:<port>` URLs (rule 54's sidecar on
+`:8200` and the Piston sandbox on `:2000` both behave this way).
+
 Use public registries for all base images by default.
 Keep corporate mirrors or private CA bundles as operator-local overrides: never
 commit them, bake them into an image layer, or make disabled TLS verification the

@@ -354,8 +354,10 @@ function CitationList({ question }: { question: Question }) {
       </button>
       {open && (
         <ul className="ar-citation-list">
-          {question.citations.map((citation) => (
-            <li key={citation.chunkId} className="ar-citation">
+          {/* One question can legitimately cite the same chunk twice (two
+              different quotes), so chunkId alone is not a unique key (#45). */}
+          {question.citations.map((citation, index) => (
+            <li key={`${citation.chunkId}-${index}`} className="ar-citation">
               <code className="ar-citation-chunk">chunk {citation.chunkId.slice(0, 8)}</code>
               <span className="ar-citation-quote">&ldquo;{citation.quote}&rdquo;</span>
             </li>

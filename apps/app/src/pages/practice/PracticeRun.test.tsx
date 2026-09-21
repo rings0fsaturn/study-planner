@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach, beforeEach } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Dexie from 'dexie'
 import { PracticeRun } from './PracticeRun'
@@ -10,6 +10,7 @@ import { PRACTICE_RUN_FINISHED, PRACTICE_RUN_STARTED } from '../../events/EventS
 import {
   FakeAssessmentClient,
   attemptRecord,
+  codingQuestion,
   masteryProjection,
   queuedJob,
 } from '../../assessments/testing/fakeAssessmentClient'
@@ -308,6 +309,75 @@ describe('PracticeRun', () => {
     expect(screen.getByText('generation interrupted')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Retry generation' }))
     expect(client.regenerateAssessment).toHaveBeenCalledWith('a-1')
+  })
+
+  it('takes a coding problem through the code editor, not the written textarea', async () => {
+    await seedRun({
+      mode: 'coding',
+      families: ['coding'],
+      assessmentIds: ['a-1'],
+      count: 1,
+    })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [codingQuestion({ assessmentId: 'a-1' })]),
+    })
+
+    renderRun(client)
+
+    expect(await screen.findByRole('textbox', { name: 'Your code' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run visible tests' })).toBeInTheDocument()
+    // The written path never mounts for a coding problem.
+    expect(screen.queryByLabelText('Your answer')).not.toBeInTheDocument()
+    // The panel labels the family from the server's own question.
+    const panel = screen.getByRole('region', { name: 'Problem 1' })
+    expect(within(panel).getByText('coding')).toBeInTheDocument()
+  })
+
+  it('labels a pending problem with the family the run planned, not a guess', async () => {
+    await seedRun({
+      mode: 'mixed',
+      families: ['written', 'coding'],
+      assessmentIds: ['a-1', 'a-2'],
+      count: 2,
+    })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [], 'generating'),
+      'a-2': assessment('a-2', 'mat-1', [], 'generating'),
+    })
+
+    renderRun(client)
+
+    // Neither problem has loaded, so only the pointer's own record can label them.
+    const tabs = await screen.findAllByRole('tab')
+    expect(within(tabs[0]).getByText('written')).toBeInTheDocument()
+    expect(within(tabs[1]).getByText('coding')).toBeInTheDocument()
+  })
+
+  it('sends a problem that failed to generate to a fresh run', async () => {
+    await seedRun({
+      mode: 'coding',
+      families: ['coding'],
+      assessmentIds: ['a-1'],
+      count: 1,
+    })
+    const client = new FakeAssessmentClient()
+    client.getAssessment.mockImplementation(async () =>
+      assessment('a-1', 'mat-1', [], 'failed', [
+        { code: 'code_not_derivable', message: 'no code in this material' },
+      ]),
+    )
+    client.listAssessmentAttempts.mockImplementation(async () => [])
+
+    renderRun(client)
+
+    expect(await screen.findByText('Problem 1 could not be generated.')).toBeInTheDocument()
+    expect(screen.getByRole('listitem')).toHaveTextContent('no code in this material')
+    // A failed assessment is terminal by contract (#42 D-04), so the honest
+    // recovery is a fresh run rather than a re-enqueue of a terminal row.
+    fireEvent.click(screen.getByRole('button', { name: 'Start a new run' }))
+    expect(client.regenerateAssessment).not.toHaveBeenCalled()
   })
 
   it('reports a problem the run declared but never generated', async () => {

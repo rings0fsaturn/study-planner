@@ -124,16 +124,15 @@ describe('PracticeThis', () => {
     expect(screen.getByRole('button', { name: 'Add another material' })).toBeInTheDocument()
   })
 
-  it('offers only the written family and bands 1-5, with adaptive now enabled', async () => {
+  it('offers all three focus families and bands 1-5, with adaptive enabled', async () => {
     const client = new FakeMaterialClient([material({})])
 
     renderPractice(client)
 
     await screen.findByText('Focus')
     expect(screen.getByRole('button', { name: 'Written' })).toHaveClass('selected')
-    expect(screen.getByRole('button', { name: 'Written' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'Coding' })).toBeDisabled()
-    expect(screen.getByRole('button', { name: 'Mixed' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Coding' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Mixed' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Adaptive' })).toBeEnabled()
     expect(screen.getByRole('button', { name: '3' })).toHaveClass('selected')
     expect(screen.getByRole('button', { name: '5' })).toBeEnabled()
@@ -273,11 +272,90 @@ describe('PracticeThis', () => {
       mode: 'written',
       assessmentIds: ['a-1', 'a-2', 'a-3'],
       count: 3,
+      families: ['written', 'written', 'written'],
     })
     expect(mockAppend).not.toHaveBeenCalledWith('AssessmentCreated', expect.anything())
 
     const [{ runId }] = mockAppend.mock.calls[0].slice(1)
     expect(mockNavigate).toHaveBeenCalledWith(`/materials/mat-1/practice/${runId}`)
+  })
+
+  it('generates a coding-only run and records each problem’s family', async () => {
+    const client = new FakeMaterialClient([material({ hasCode: true })])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    fireEvent.click(await screen.findByRole('button', { name: 'Coding' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.formats)).toEqual([['coding'], ['coding']])
+    expect(mockAppend).toHaveBeenCalledWith(
+      'PracticeRunStarted',
+      expect.objectContaining({
+        mode: 'coding',
+        assessmentIds: ['a-1', 'a-2'],
+        families: ['coding', 'coding'],
+      }),
+    )
+  })
+
+  it('alternates one family per call for a mixed run, never two in one request', async () => {
+    const client = new FakeMaterialClient([material({ hasCode: true })])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2', 'a-3'])
+
+    renderPractice(client, assessments)
+    fireEvent.click(await screen.findByRole('button', { name: 'Mixed' }))
+    await startRun(3)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(3)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    // The server admits exactly one family per call, so a mixed run alternates
+    // rather than sending ['written', 'coding'] in a single recipe.
+    expect(requests.map((request) => request.recipe.formats)).toEqual([
+      ['written'],
+      ['coding'],
+      ['written'],
+    ])
+    for (const request of requests) {
+      expect(request.recipe.formats).toHaveLength(1)
+    }
+    expect(mockAppend).toHaveBeenCalledWith(
+      'PracticeRunStarted',
+      expect.objectContaining({
+        mode: 'mixed',
+        families: ['written', 'coding', 'written'],
+      }),
+    )
+  })
+
+  it('warns that a material with no code blocks may not yield a coding problem', async () => {
+    const client = new FakeMaterialClient([material({ hasCode: false })])
+
+    renderPractice(client)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Coding' }))
+    expect(await screen.findByText(/No code blocks detected/i)).toBeInTheDocument()
+    // The coding family stays selectable: the note informs, it does not block.
+    expect(screen.getByRole('button', { name: 'Coding' })).toHaveClass('selected')
+  })
+
+  it('stays silent about code blocks on unscanned materials, matching the assessment flow', async () => {
+    for (const overrides of [{}, { hasCode: null }, { hasCode: true }]) {
+      const client = new FakeMaterialClient([material(overrides)])
+      const view = renderPractice(client)
+
+      fireEvent.click(await screen.findByRole('button', { name: 'Coding' }))
+      expect(screen.queryByText(/No code blocks detected/i)).not.toBeInTheDocument()
+      view.unmount()
+    }
   })
 
   it('adaptive runs pick the recommended band from the mastery projection', async () => {

@@ -87,8 +87,10 @@ export function AnswerSlot({
           <p className="t-body-sm">No citations recorded for this question.</p>
         ) : (
           <ul className="material-ref-list">
-            {question.citations.map((citation) => (
-              <li key={`${question.id}-cite-${citation.chunkId}`}>
+            {/* The same chunk can be cited twice with different quotes, so
+                the index keeps the key unique within a question (#45). */}
+            {question.citations.map((citation, index) => (
+              <li key={`${question.id}-cite-${citation.chunkId}-${index}`}>
                 <span className="t-body-sm" style={{ color: 'var(--text-secondary)' }}>
                   chunk {citation.chunkId.slice(0, 8)}: “{citation.quote}”
                 </span>

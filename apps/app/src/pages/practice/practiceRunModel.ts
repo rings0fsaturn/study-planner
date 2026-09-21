@@ -11,7 +11,7 @@
 
 import type { Event } from '../../events/EventStore'
 import type { LocalAttemptRow } from '../../assessments/attemptFlow'
-import type { Assessment, AssessmentStatus } from '../../assessments/types'
+import type { Assessment, AssessmentFormat, AssessmentStatus } from '../../assessments/types'
 import { PRACTICE_RUN_FINISHED, PRACTICE_RUN_STARTED } from '../../events/EventStore'
 import type { PracticeRunFinishedPayload, PracticeRunStartedPayload } from '../../sync/types'
 import {
@@ -34,6 +34,14 @@ export interface PracticeRunProblem {
   assessmentStatus: AssessmentStatus | null
   /** The source material for this problem (D-10 attribution). */
   materialId: string
+  /**
+   * The family this problem's generation call used (#45). Read from the
+   * pointer's per-problem record so a problem that has not loaded yet is
+   * labelled honestly; a legacy pointer without `families` falls back to
+   * `mode`. The loaded question's own `format` is the server's answer and
+   * wins wherever a group exists.
+   */
+  family: AssessmentFormat
 }
 
 export interface PracticeRunModel {
@@ -150,6 +158,19 @@ function isGraded(problem: PracticeRunProblem): boolean {
 }
 
 /**
+ * The family planned for one problem (#45). The pointer's `families` array is
+ * aligned with `assessmentIds`; a pointer written before #45 has none, so the
+ * run's own `mode` answers instead of assuming a family.
+ */
+function plannedFamily(
+  mode: PracticeRunStartedPayload['mode'],
+  families: AssessmentFormat[] | undefined,
+  index: number,
+): AssessmentFormat {
+  return families?.[index] ?? (mode === 'coding' ? 'coding' : 'written')
+}
+
+/**
  * Derive the run's state. `assessments` is positionally aligned with
  * `started.assessmentIds`; a null entry means the envelope has not loaded.
  */
@@ -174,6 +195,7 @@ export function buildPracticeRunModel(input: {
       group,
       assessmentStatus: assessment?.status ?? null,
       materialId: attributeMaterial(index, started.materialIds, assessment?.questions),
+      family: plannedFamily(started.mode, started.families, index),
     }
   })
 

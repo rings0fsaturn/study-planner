@@ -22,6 +22,14 @@ Gate one scenario with `test.skip()` only inside a `test.describe()` that owns t
 Check skip reasons in `--reporter=json` output (annotations) before assuming env variables were lost.
 Workers inherit the shell environment: if a spec skips with vars exported, the reason is in the annotations, not the env.
 
+## Wait, never sample
+
+Set `actionTimeout` in the suite's `test.use` so an unresolvable action fails with a clear error instead of hanging to the test timeout.
+A Playwright action (`click`, `fill`) has no default timeout in this repo's config, so acting on a control that never appears burns the whole test budget.
+`isVisible()` is an instantaneous check, not an auto-waiting one: it reads false for a lazy chunk that has not mounted and for a page whose React tree has not painted, and the else branch then hangs on the next action.
+Wait for a control with `waitFor({ state: 'visible', timeout })` or `expect(...).toBeVisible({ timeout })` before branching on it.
+After `page.goto`, wait for a rendered element before asserting, because `goto` resolves before the app fetches and paints.
+
 ## Viewport scoping
 
 `test.use({ viewport })` at file scope applies to every test in the file, including tests declared before it.

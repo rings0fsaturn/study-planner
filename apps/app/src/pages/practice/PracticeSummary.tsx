@@ -218,6 +218,9 @@ export function PracticeSummary({
           <section className="ar-panel" aria-label={`Problem ${problem.number}`}>
             <div className="ar-panel-meta">
               <span className="tag tag-sm">Problem {problem.number}</span>
+              {/* #45: the server's own question format, so a mixed run's
+                  problems are distinguishable at a glance. */}
+              <span className="tag tag-sm">{problem.group.question.format}</span>
               {materialTitle && (
                 <span className="t-body-sm" style={{ color: 'var(--text-tertiary)' }}>
                   from {materialTitle}
