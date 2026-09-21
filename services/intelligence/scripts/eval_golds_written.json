@@ -1,0 +1,32 @@
+[
+  {
+    "label": "information quality criteria",
+    "question": "State the conditions that information provided in a performance report must satisfy.",
+    "answerSnippet": "match the purpose of the performance report"
+  },
+  {
+    "label": "cash flow versus profit early stage",
+    "question": "Explain why cash flow measures may matter more than profit measures during an organisation's early stages.",
+    "answerSnippet": "Cash flow measures may be more important than profit measures at this stage."
+  },
+  {
+    "label": "non-financial performance indicators",
+    "question": "Describe how non-financial performance indicators are used to measure performance.",
+    "answerSnippet": "Non-financial performance indicators"
+  },
+  {
+    "label": "customer satisfaction KPIs",
+    "question": "Give examples of customer satisfaction key performance indicators.",
+    "answerSnippet": "Numbers of complaints"
+  },
+  {
+    "label": "customer retention KPI",
+    "question": "Which key performance indicator tracks whether customers return to buy again?",
+    "answerSnippet": "Repeat purchases"
+  },
+  {
+    "label": "determinants of success focus",
+    "question": "What should management focus on when success is judged by its determinants rather than its results?",
+    "answerSnippet": "is a focus of management on the determinants of success as opposed to the results of success"
+  }
+]

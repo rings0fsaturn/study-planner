@@ -4,8 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.grading.grader import grade_objective, GraderInputError
-
+from app.grading.grader import GraderInputError, grade_objective
 
 QUESTION_MCQ = {
     "id": "question-01",

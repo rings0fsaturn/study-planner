@@ -1,0 +1,166 @@
+{
+  "retrieval": {
+    "n": 30,
+    "recall1": 0.6,
+    "recall3": 0.7333,
+    "recall5": 0.8667,
+    "mrr": 0.7033
+  },
+  "groundedness": {
+    "judged": 30,
+    "answerable": 26,
+    "groundedness_rate": 0.8667,
+    "verdicts": [
+      {
+        "key": "S:1",
+        "answerable": true,
+        "reason": "The cited chunk explicitly defines the term: 'The difference between these two is known as a planning gap.'"
+      },
+      {
+        "key": "S:1",
+        "answerable": true,
+        "reason": "The cited chunks explicitly state that the difference between the forecast position and long-term targets is known as a planning gap, which directly answers the question."
+      },
+      {
+        "key": "S:1",
+        "answerable": false,
+        "reason": "The cited chunks do not contain any information about the term described in the question, which is the 'planning gap' or any related concepts. The question asks for a term defined by the difference between forecast performance and long-term targets, but the chunks are empty and provide no source tex"
+      },
+      {
+        "key": "S:1",
+        "answerable": true,
+        "reason": "The cited chunks explicitly state that after strategic analysis, the difference between the forecast position and long-term targets is known as a 'planning gap'."
+      },
+      {
+        "key": "S:2",
+        "answerable": true,
+        "reason": "The chunks explicitly state that the planning gap 'may be measured in terms of earnings, demand, return on capital employed (ROCE) etc.' This directly matches the first option: 'Earnings, demand, and return on capital employed'. The other options include metrics like customer satisfaction, employee "
+      },
+      {
+        "key": "S:1",
+        "answerable": true,
+        "reason": "The cited chunks explicitly define the difference between the forecast position and long-term targets as 'a planning gap' (in chunk e54cb3cac7bc4d6ca7c5dba213563b75) and further describe how the planning gap is composed of efficiency, expansion, and diversification gaps (in chunk 58a676cab2884dc5b54"
+      },
+      {
+        "key": "S:2",
+        "answerable": true,
+        "reason": "The chunk explicitly lists 'earnings, demand, return on capital employed (ROCE) etc.' as measures for expressing a planning gap, which matches the first option in the question."
+      },
+      {
+        "key": "S:2",
+        "answerable": true,
+        "reason": "The cited chunk explicitly states 'The gap may be measured in terms of earnings, demand, return on capital employed (ROCE) etc.', which directly matches one of the options in the question."
+      },
+      {
+        "key": "S:2",
+        "answerable": false,
+        "reason": "The cited chunks are empty, so there is no source material to determine any measure for quantifying a planning gap."
+      },
+      {
+        "key": "S:3",
+        "answerable": true,
+        "reason": "The chunks explicitly state that environmental prevention costs are 'Costs of implementing a quality improvement programme to prevent the negative impact of an organisation\u2019s processes or activities in relation to the environment.', which directly matches the correct option 'To implement quality imp"
+      },
+      {
+        "key": "S:3",
+        "answerable": true,
+        "reason": "The chunks define environmental prevention costs and provide the exact example of 'designing products or services with built in quality to minimise waste.' The option 'Redesigning a product to reduce raw material waste and embed quality improvements' matches this description, while the other options"
+      },
+      {
+        "key": "S:3",
+        "answerable": true,
+        "reason": "The cited chunk 091cd3885c75402998d5be1dc8b971d6 explicitly defines environmental prevention costs as 'Costs of implementing a quality improvement programme to prevent the negative impact of an organisation\u2019s processes or activities in relation to the environment' and provides the example 'designing"
+      },
+      {
+        "key": "S:3",
+        "answerable": true,
+        "reason": "The chunks explicitly define environmental prevention costs and give the example of 'the cost of designing products or services with built in quality to minimise waste,' which matches the option 'Investing in product redesign to incorporate waste-minimizing features during manufacture.'"
+      },
+      {
+        "key": "S:3",
+        "answerable": true,
+        "reason": "The cited chunk explicitly lists 'Designing products with built-in quality to minimise waste' as an example of environmental prevention costs, which directly matches option B."
+      },
+      {
+        "key": "S:3",
+        "answerable": false,
+        "reason": "The cited chunks do not contain any text, and therefore the question about environmental prevention costs cannot be answered from them."
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The cited chunks explicitly state that incremental and ZBB budgets 'prevent managers from responding quickly to changes in today\u2019s business environment but instead place undue focus on creating a budget for a fixed, rigid period.' This directly matches the option 'They lock managers into a fixed, ri"
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The chunks explicitly state a criticism of fixed, rigid budgets: they 'prevent managers from responding quickly to changes in today's business environment' and place 'undue focus on creating a budget for a fixed, rigid period.' This corresponds to the drawback in the question: 'It can prevent manage"
+      },
+      {
+        "key": "S:2",
+        "answerable": true,
+        "reason": "Option B is explicitly supported by the chunks. The first two chunks define the planning gap and identify its components: efficiency gap, expansion gap, and diversification gap."
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The chunks explicitly state that fixed-period budgeting methods (incremental and ZBB) 'prevent managers from responding quickly to changes in today\u2019s business environment but instead place undue focus on creating a budget for a fixed, rigid period', which directly matches the first option in the que"
+      },
+      {
+        "key": "S:5",
+        "answerable": true,
+        "reason": "The cited chunk explicitly defines liquidity as 'the ability of the company to meet its short-term liabilities using its current assets, which can readily (or hopefully quickly) be turned into cash.' This exactly matches the first option provided in the question."
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The cited chunks explicitly state that incremental and ZBB budgets 'prevent managers from responding quickly to changes in today\u2019s business environment but instead place undue focus on creating a budget for a fixed, rigid period,' and rolling budgets are described as 'kept continuously up to date by"
+      },
+      {
+        "key": "S:5",
+        "answerable": true,
+        "reason": "The first option accurately aligns with the chunk's definition: 'Liquidity the ability of the company to meet its short-term liabilities using its current assets, which can readily (or hopefully quickly) be turned into cash.' The other options introduce concepts not present in the chunks."
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The chunks explicitly state that a criticism of incremental and ZBB budgets is that they 'prevent managers from responding quickly to changes in today's business environment but instead place undue focus on creating a budget for a fixed, rigid period.' This matches the option 'They prevent managers "
+      },
+      {
+        "key": "S:5",
+        "answerable": true,
+        "reason": "The correct answer is directly stated in the cited chunk: 'Liquidity the ability of the company to meet its short-term liabilities using its current assets, which can readily (or hopefully quickly) be turned into cash.' This matches the option about meeting short-term obligations with assets convert"
+      },
+      {
+        "key": "S:4",
+        "answerable": true,
+        "reason": "The chunks explicitly state that incremental and ZBB methods 'prevent managers from responding quickly to changes in today\u2019s business environment' by focusing on a fixed, rigid period, and rolling budgets are introduced as a method kept continuously up to date, directly addressing that criticism."
+      },
+      {
+        "key": "S:6",
+        "answerable": true,
+        "reason": "The chunks explicitly describe the learning curve effect: 'As workers become more familiar with the production of a new product, the average labour time (and average labour cost) per unit will decline' and 'Wright's Law states that as output doubles, the average time per unit falls to a fixed percen"
+      },
+      {
+        "key": "S:5",
+        "answerable": true,
+        "reason": "The chunks explicitly define liquidity as the ability of the company to meet its short-term liabilities using its current assets, which can readily be turned into cash, matching the first option verbatim."
+      },
+      {
+        "key": "S:5",
+        "answerable": true,
+        "reason": "The first chunk explicitly defines liquidity as 'the ability of the company to meet its short-term liabilities using its current assets, which can readily (or hopefully quickly) be turned into cash,' which matches the first option exactly. Other options are not supported by any chunk."
+      },
+      {
+        "key": "S:6",
+        "answerable": true,
+        "reason": "The chunks explicitly state that the learning curve model forecasts the average labour time/unit or labour cost/unit, and the correct option 'Average labour time (or cost) per unit as output increases' is directly supported by the text. Other options are not addressed in the chunks."
+      },
+      {
+        "key": "S:6",
+        "answerable": false,
+        "reason": "The cited chunks are empty, so the question cannot be answered from the provided source material."
+      }
+    ]
+  }
+}

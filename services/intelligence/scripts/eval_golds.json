@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "generatedAt": "2026-09-21",
+  "corpus": {
+    "materialId": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+    "title": "ACCA APM Study Text",
+    "expectedChunks": 754,
+    "embeddingProvider": "sidecar",
+    "dimensions": 768
+  },
+  "objectiveGold": "probe_questions.json",
+  "writtenGold": "eval_golds_written.json",
+  "codingGold": "eval_golds_coding.json",
+  "folds": [
+    {
+      "name": "nips2020",
+      "path": "research/kt-bench/folds/nips2020_folds.json",
+      "sha256": "7dad3f50a0d9b790cf7a98232c65443fc26ee22c5c81d1ed7b0dc1178c66d6e3"
+    },
+    {
+      "name": "accoding",
+      "path": "research/kt-bench/folds/accoding_folds.json",
+      "sha256": "b7d5fa161a7d14d2033fb848b3f908d8ec8dd4bb37e4a47e01266eb36f88079d"
+    },
+    {
+      "name": "poj",
+      "path": "research/kt-bench/folds/poj_folds.json",
+      "sha256": "03455ec24809b0fce44c648f803f830f17e8aa9e33720e36194dd125cd15c44f"
+    }
+  ],
+  "attemptGateK": 5,
+  "judge": {
+    "model": "deepseek/deepseek-v4-flash-0731",
+    "timeoutSeconds": 60,
+    "maxItems": 30
+  },
+  "baselines": {
+    "objective": {
+      "source": "recorded #56 DeepSeek x Qwen probe (research/doc/deepseek-generation-probe)",
+      "schema_valid": 0.9611,
+      "citation_valid": 0.9133,
+      "gold_support": 0.7803,
+      "near_dup_rate": 0.0044
+    },
+    "retrieval": {
+      "source": "harness retrieval arm on the frozen 754-chunk corpus, measured 2026-09-21",
+      "recall3": 0.7333,
+      "mrr": 0.7033,
+      "note": "hybrid and dense rank identically on this query set; rule 54's 0.83/0.79 figure is the older 788-chunk dense baseline"
+    },
+    "mastery": {
+      "source": "#43 bake-off gate (mean AUC >= 0.60)",
+      "auc": 0.6
+    }
+  },
+  "thresholds": {
+    "schemaValid": 0.9,
+    "citationValid": 0.85,
+    "goldSupport": 0.7,
+    "retrievalRecall3": 0.7,
+    "retrievalMrr": 0.67,
+    "nearDupMax": 0.05,
+    "difficultyMeanAbsBandError": 1.0,
+    "masteryMinAuc": 0.6,
+    "codingDerivableMin": 0.5
+  }
+}

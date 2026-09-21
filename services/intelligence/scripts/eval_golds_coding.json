@@ -1,0 +1,20 @@
+[
+  {
+    "label": "grokking-algorithms (code-bearing)",
+    "materialId": "b5f51eab-c11d-4505-80db-88bb3627801d",
+    "concept": "binary search / selection sort implementation",
+    "expectedDerivable": true
+  },
+  {
+    "label": "designing-data-intensive-applications (code-bearing)",
+    "materialId": "ef3abfa1-99c7-4166-8ba7-6560c862f49f",
+    "concept": "log-structured storage implementation",
+    "expectedDerivable": true
+  },
+  {
+    "label": "acca-apm (no code)",
+    "materialId": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+    "concept": "management accounting discussion",
+    "expectedDerivable": false
+  }
+]
