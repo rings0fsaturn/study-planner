@@ -3,8 +3,8 @@ _Spec: https://github.com/rings0fsaturn/study-planner/issues/67 (parent #32, map
 
 ## Current state & next
 - Done 2026-09-21: P0-P5 all complete and live-verified; AC1-AC6 all pass (see `plan/VERIFICATION.md`).
-- Working tree uncommitted: code + tests + `eval_golds_coding.json` + `.work` record are staged only on disk.
-- Next: commit (plan says per-phase commits) and wrap the task via work-journal (archive + STATUS Done). Not done here because the operator must authorize commits.
+- Committed as `b6e286b` on `project/phase-2` (code + tests + `eval_golds_coding.json` + `.work` record).
+- Next: wrap the task via work-journal (archive the folder + flip the STATUS row to Done).
 
 ## Done so far
 - P0: issue #67 opened (child of #32, map #4), task folder + STATUS Active row, plan moved to `plan/PLAN.md`.
@@ -45,6 +45,6 @@ _Spec: https://github.com/rings0fsaturn/study-planner/issues/67 (parent #32, map
 - Window count is logged with `trace_id`, not stored in telemetry, to honor AC3 (no migration); telemetry contract is `additionalProperties: false`.
 
 ## Open
-- Commit the working tree and wrap the task (archive + STATUS Done).
+- Wrap the task (archive + STATUS Done); commit is `b6e286b`.
 - The durable coding gold set no longer has a negative case; AC2's refusal path is guarded by unit tests + the live codeless run.
 - Low: code-seeking fetches all candidate text in one request; PostgREST row cap could truncate very large materials.

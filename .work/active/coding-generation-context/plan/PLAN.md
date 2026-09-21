@@ -1,6 +1,6 @@
 # Coding generation: code-aware context + derived contracts
 
-_Written: 2026-09-21 · Status: Complete - working tree (uncommitted) · Origin: #48 resolution finding · Parent spec: #32 · Map: #4 · Issue: #67 · Verification: `plan/VERIFICATION.md`_
+_Written: 2026-09-21 · Status: Complete - b6e286b · Origin: #48 resolution finding · Parent spec: #32 · Map: #4 · Issue: #67 · Verification: `plan/VERIFICATION.md`_
 
 ## How to use this plan (read this first, agent)
 
