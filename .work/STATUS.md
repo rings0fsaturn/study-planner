@@ -15,6 +15,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Queued
 | Tag | Task | Note (one line) | Detail |
 |---|---|---|---|
+| [APP][RESEARCH] | coding-generation-context | Planned 2026-09-21 from the #48 finding: code-rich `grokking-algorithms` refuses 3/3 `code_not_derivable` because the coding arm has no code-seeking retrieval and the suitability bar demands a stated I/O contract; fix = in-memory code-proximity scorer + code-seeking spread + `coding-v2` derivation rule + bounded resample (max 3 windows). No schema change. | plans/active/2026-09-21-coding-generation-context.md |
 | [APP][RESEARCH] | retrieval-followups-2nd-corpus | Second corpus to confirm retrieval levers generalize (rerank wiring itself is DONE). | specs/issues/ |
 | [APP][RESEARCH] | full-book-pdf-e2e-sidecar | Full-book PDF E2E through the Qwen3 sidecar — scheduled when the Gemini re-run closed as superseded. | specs/issues/ |
 | [APP] | learner-growth-wayfinder | Charted 2026-08-09; frontier #24 (scope/release) with blocked #25–#31, all OPEN. | https://github.com/rings0fsaturn/study-planner/issues/23 |
