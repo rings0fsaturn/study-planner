@@ -2,7 +2,7 @@
 
 - Gold version: `1` · Attempt gate K: 5
 - Corpus: `80c8b138-b544-4095-8dc0-1c390ac70da2` (754 chunks, sidecar)
-- Generated: 2026-09-21T09:26:54Z · Activation gate: off
+- Generated: 2026-09-21T09:33:41Z · Activation gate: off
 - Live arms: cache
 
 ## Gate verdict

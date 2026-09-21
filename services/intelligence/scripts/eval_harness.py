@@ -258,12 +258,18 @@ def diversity_metrics(records: list[dict]) -> dict:
 def coding_suitability(rows: list[dict]) -> dict:
     """rows = [{materialId, formats: [str], warnings: [str], status: str}].
 
-    Only attempts that reached the suitability judge count: an attempt that
-    failed for another reason (for example an empty material) carries a
-    different warning code and is excluded from the derivable rate.
+    Only terminal attempts that reached the suitability judge count: a pending
+    (`generating`) row has not decided yet, and a failure for another reason
+    (for example an empty material) carries a different warning code. Both are
+    excluded from the derivable rate.
     """
     coding = [r for r in rows if "coding" in (r.get("formats") or [])]
-    judged = [r for r in coding if not (set(r.get("warnings") or []) - {"code_not_derivable"})]
+    judged = [
+        r
+        for r in coding
+        if r.get("status") in ("ready", "failed")
+        and not (set(r.get("warnings") or []) - {"code_not_derivable"})
+    ]
     refused = [r for r in judged if "code_not_derivable" in (r.get("warnings") or [])]
     failed_other = [r for r in coding if r not in judged]
     by_material: dict[str, dict] = {}
@@ -548,10 +554,7 @@ class SupabaseReader:
         return self.select(
             "generation_telemetry",
             {
-                "select": (
-                    "task,outcome,questions_requested,questions_accepted,"
-                    "repair_attempted,input_tokens,output_tokens"
-                ),
+                "select": "task,outcome,questions_requested,questions_accepted,repair_attempted",
                 "task": "eq.assessment_generation",
                 "limit": str(limit),
             },

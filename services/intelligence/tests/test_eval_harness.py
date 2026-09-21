@@ -100,11 +100,21 @@ def test_coding_suitability_and_gold_agreement():
             "status": "failed",
         },
         {"materialId": "prose-mat", "formats": ["written"], "warnings": [], "status": "ready"},
+        # Pending and non-suitability failures never reach the judge.
+        {"materialId": "code-mat", "formats": ["coding"], "warnings": [], "status": "generating"},
+        {
+            "materialId": "empty-mat",
+            "formats": ["coding"],
+            "warnings": ["validation_failed"],
+            "status": "failed",
+        },
     ]
     metrics = eh.coding_suitability(rows)
-    assert metrics["coding_attempts"] == 3
+    assert metrics["coding_attempts"] == 5
+    assert metrics["judged_attempts"] == 3
     assert metrics["code_not_derivable"] == 1
     assert metrics["derivable_rate"] == round(2 / 3, 4)
+    assert metrics["failed_other"] == 2
 
     gold = [
         {"label": "code mat", "materialId": "code-mat", "expectedDerivable": True},
