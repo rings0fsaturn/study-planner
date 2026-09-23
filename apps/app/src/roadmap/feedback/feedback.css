@@ -1,0 +1,421 @@
+/* Roadmap feedback section (#47) - Marginalia tokens only.
+   Small accent text uses the darker terracotta so it clears 4.5:1 on the cream card. */
+
+.rfb-section {
+  margin-top: var(--space-6);
+  color: var(--text-primary);
+}
+
+.rfb-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: end;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.rfb-kicker,
+.rfb-version {
+  color: var(--text-tertiary);
+  font: 0.7rem var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rfb-title {
+  margin: var(--space-1) 0 var(--space-2);
+  font: 1.6rem var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.rfb-muted {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.rfb-state-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.rfb-state {
+  border-radius: 999px;
+  padding: 0.45rem 0.7rem;
+  font: 0.72rem var(--font-mono);
+  background: color-mix(in srgb, var(--moss) 16%, transparent);
+  color: var(--moss);
+}
+
+.rfb-state-cold {
+  background: color-mix(in srgb, var(--ink-faint) 18%, transparent);
+  color: var(--ink-soft);
+}
+
+.rfb-state-stale {
+  background: color-mix(in srgb, var(--terracotta-d) 16%, transparent);
+  color: var(--terracotta-d);
+}
+
+.rfb-state-rebuilding {
+  background: color-mix(in srgb, var(--ink-faint) 18%, transparent);
+  color: var(--ink-soft);
+}
+
+.rfb-button,
+.rfb-link-button {
+  border: 1px solid var(--border-default);
+  border-radius: 999px;
+  padding: 0.6rem 0.85rem;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  font: 0.78rem var(--font-mono);
+}
+
+.rfb-button-dark {
+  border-color: var(--surface-inverted);
+  background: var(--surface-inverted);
+  color: var(--text-on-inverted);
+}
+
+.rfb-button-dark:hover:not(:disabled) {
+  background: var(--action-primary-hover);
+}
+
+.rfb-link-button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--terracotta-d);
+  text-decoration: underline;
+}
+
+.rfb-button:focus-visible,
+.rfb-link-button:focus-visible,
+.rfb-choice:focus-visible,
+.rfb-evidence-row:focus-visible,
+.rfb-model-context summary:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+}
+
+@media (pointer: coarse) {
+  .rfb-button,
+  .rfb-link-button {
+    min-height: 44px;
+  }
+}
+
+.rfb-story-card {
+  padding: var(--space-5);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-inverted);
+  color: var(--text-on-inverted);
+}
+
+.rfb-story-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.rfb-story-badge {
+  display: inline-block;
+  padding: 0.35rem 0.55rem;
+  border: 1px solid color-mix(in srgb, var(--text-on-inverted) 30%, transparent);
+  border-radius: 999px;
+  font: 0.68rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.rfb-story-source {
+  color: var(--text-on-inverted-dim);
+  font: 0.7rem var(--font-mono);
+}
+
+.rfb-story-summary {
+  max-width: 44rem;
+  margin: var(--space-4) 0;
+  font: 1.45rem var(--font-display);
+  line-height: 1.2;
+  letter-spacing: -0.015em;
+}
+
+.rfb-story-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+.rfb-story-columns > div {
+  padding-top: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--text-on-inverted) 24%, transparent);
+}
+
+.rfb-story-columns strong {
+  display: block;
+  margin: var(--space-1) 0;
+}
+
+.rfb-story-columns p {
+  margin: 0;
+  color: var(--text-on-inverted-dim);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.rfb-story-columns .rfb-kicker {
+  color: var(--text-on-inverted-eyebrow);
+}
+
+.rfb-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(240px, 0.9fr);
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  align-items: start;
+}
+
+.rfb-evidence,
+.rfb-advisory,
+.rfb-pinned {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  background: var(--surface-card);
+}
+
+.rfb-evidence-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: var(--space-3);
+  padding-bottom: var(--space-2);
+}
+
+.rfb-evidence-head h3 {
+  margin: var(--space-1) 0 0;
+  font: 1.2rem var(--font-display);
+}
+
+.rfb-evidence-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.2rem var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-subtle);
+  color: inherit;
+  text-decoration: none;
+}
+
+.rfb-evidence-row:last-child {
+  border-bottom: 0;
+}
+
+.rfb-evidence-skill {
+  font-weight: 600;
+}
+
+.rfb-evidence-material {
+  grid-column: 1;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
+.rfb-evidence-meta {
+  grid-column: 1;
+  color: var(--text-tertiary);
+  font: 0.72rem var(--font-mono);
+}
+
+.rfb-mark {
+  grid-row: 1 / span 3;
+  grid-column: 2;
+  align-self: center;
+  font: 0.68rem var(--font-mono);
+  text-transform: uppercase;
+}
+
+.rfb-evidence-more {
+  margin: var(--space-3) 0 0;
+  color: var(--text-tertiary);
+  font: 0.72rem var(--font-mono);
+}
+
+.rfb-mark-clear {
+  color: var(--moss);
+}
+
+.rfb-mark-mixed {
+  color: var(--text-tertiary);
+}
+
+.rfb-mark-revisit {
+  color: var(--terracotta-d);
+}
+
+.rfb-aside {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.rfb-advisory {
+  border-left: 3px solid var(--terracotta);
+  background: color-mix(in srgb, var(--terracotta) 7%, var(--surface-card));
+}
+
+.rfb-advisory strong,
+.rfb-pinned strong {
+  display: block;
+  margin: var(--space-1) 0;
+}
+
+.rfb-advisory p,
+.rfb-pinned p {
+  color: var(--text-secondary);
+}
+
+.rfb-pinned {
+  border-top: 3px solid var(--ink-faint);
+}
+
+.rfb-pin-mark {
+  display: block;
+  color: var(--text-tertiary);
+  font: 0.72rem var(--font-mono);
+}
+
+.rfb-model-context {
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-recessed);
+}
+
+.rfb-model-context summary {
+  cursor: pointer;
+  color: var(--text-tertiary);
+  font: 0.72rem var(--font-mono);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.rfb-model-context dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: var(--space-3) 0 0;
+}
+
+.rfb-model-context dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.rfb-model-context dt {
+  color: var(--text-tertiary);
+  font: 0.72rem var(--font-mono);
+}
+
+.rfb-model-context dd {
+  margin: 0;
+  color: var(--text-primary);
+  font: 0.78rem var(--font-mono);
+}
+
+.rfb-model-context p {
+  margin: var(--space-3) 0 0;
+  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+.rfb-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-3);
+  background: rgb(42 31 24 / 55%);
+}
+
+.rfb-dialog {
+  width: min(100%, 520px);
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-modal);
+}
+
+.rfb-dialog h2 {
+  margin: var(--space-1) 0;
+  font: 1.6rem var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.rfb-dialog p {
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.rfb-choice-list {
+  display: grid;
+  gap: 0.6rem;
+  margin: var(--space-4) 0;
+}
+
+.rfb-choice {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.8rem;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rfb-choice span {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+.rfb-choice.is-selected {
+  border-color: var(--terracotta);
+  background: color-mix(in srgb, var(--terracotta) 8%, transparent);
+}
+
+.rfb-dialog-actions {
+  display: flex;
+  justify-content: end;
+  gap: var(--space-2);
+}
+
+@media (max-width: 780px) {
+  .rfb-grid,
+  .rfb-story-columns {
+    grid-template-columns: 1fr;
+  }
+
+  .rfb-head {
+    display: block;
+  }
+
+  .rfb-state-row {
+    margin-top: var(--space-3);
+  }
+
+  .rfb-story-summary {
+    font-size: 1.25rem;
+  }
+}

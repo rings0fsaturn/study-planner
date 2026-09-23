@@ -36,6 +36,7 @@ import { MonthNav } from './MonthNav'
 import { deriveRoadmapLifecycle } from './roadmapLifecycle'
 import { DayDetailModal, SessionDetailModal } from './SessionDetailModal'
 import { RoadmapEndedBanner } from './RoadmapEndedBanner'
+import { RoadmapFeedbackSection } from './feedback/RoadmapFeedbackSection'
 import { summarizeRoadmapProgress } from './roadmapProgress'
 import { resolveRoadmap as resolveRoadmapEvent, type RoadmapResolutionKind } from './resolveRoadmap'
 import { deriveRoadmapEndedState } from './useRoadmapEndedState'
@@ -169,6 +170,15 @@ export function RoadmapCalendar({
   const materialKindById = useMemo(() => {
     const byId = new Map<string, MaterialKind>()
     for (const material of materialPayloads) byId.set(material.materialId, material.kind)
+    return byId
+  }, [materialPayloads])
+  const materialIds = useMemo(
+    () => materialPayloads.map((material) => material.materialId),
+    [materialPayloads],
+  )
+  const materialTitlesById = useMemo(() => {
+    const byId = new Map<string, string>()
+    for (const material of materialPayloads) byId.set(material.materialId, material.title)
     return byId
   }, [materialPayloads])
   const materialProgressMarks = useMemo(
@@ -464,15 +474,6 @@ export function RoadmapCalendar({
           </div>
           <h1 className="roadmap-title">{title}</h1>
           <p className="roadmap-subtitle">{dateRange}</p>
-          {import.meta.env.DEV && (
-            <Link
-              className="btn btn-secondary btn-sm"
-              to={`/roadmap-feedback-prototype?roadmap=${encodeURIComponent(selectedRoadmap?.roadmapCreatedAt ?? '')}`}
-              data-testid="roadmap-feedback-prototype-link"
-            >
-              See learning feedback
-            </Link>
-          )}
         </div>
 
         <section className="roadmap-eta-card" aria-label="Projected finish">
@@ -585,6 +586,15 @@ export function RoadmapCalendar({
           })}
         </div>
       </section>
+
+      {!readOnly && (
+        <RoadmapFeedbackSection
+          materialIds={materialIds}
+          materialTitlesById={materialTitlesById}
+          pinnedTitle={title}
+          pinnedDetail={`${studyDays.join(', ')} · ${bookings.length} session${bookings.length === 1 ? '' : 's'} booked`}
+        />
+      )}
 
       <section className={`dir-panel${directoryCollapsed ? ' collapsed' : ''}`} aria-label="Materials directory">
         <div className="dir-head">

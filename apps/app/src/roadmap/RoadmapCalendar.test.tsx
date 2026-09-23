@@ -8,6 +8,12 @@ import { FakeMaterialClient } from '../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../materials/types'
 import { RoadmapCalendar } from './RoadmapCalendar'
 
+// The feedback section has its own suite (feedback/RoadmapFeedbackSection.test.tsx)
+// and fetches mastery asynchronously; stub it so these calendar tests stay focused.
+vi.mock('./feedback/RoadmapFeedbackSection', () => ({
+  RoadmapFeedbackSection: () => null,
+}))
+
 vi.mock('../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
 }))

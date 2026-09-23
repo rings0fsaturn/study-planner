@@ -1,13 +1,15 @@
 # State – phase2-wayfinder
-_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-08-31_
+_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-09-23_
 
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
 - Implementable: #36 material library (done + live-verified), #37 ingestion (done); #38 grounded assessment (done + live-verified, its own task). Provider prep #52–#56 closed; #57 contract neutralization landed.
 - #62 scoped question generation and #63 roadmap material attachment closed 2026-09-20; #45 coding practice runs closed 2026-09-21 (wayfinder exit run: resolution comment, map #4 Decisions-so-far line, task archived).
 - #48 generation-quality evaluation harness closed 2026-09-21 (offline harness + gold registry + report; wayfinder exit run). Its own resolution answers the #45 coding-suitability handoff: `grokking-algorithms` is refused 3/3 with reasons naming the retrieved front matter, not the material.
-- Open frontier (2026-09-21 query): #35 Roadmap Feedback prototype (claimed) · #46 Socratic Guide and Gated Reveal · #47 Roadmap Feedback Implementation · #49 Phase 2 Integrated Verification · #50 learner-feedback contract decision · #57.
-- Next: #46 Socratic Guide and Gated Reveal (off the assessment-taking spine); #35 stays with the user.
+- #35 Roadmap Feedback prototype closed 2026-09-23 (wayfinder exit run: HITL chose Variant B, resolution comment, map #4 decision line + #21 cluster annotation, task archived). This unblocked #47 Roadmap Feedback implementation.
+- #47 Roadmap Feedback Implementation closed 2026-09-23 (wayfinder exit run: Variant B section shipped on the Roadmap detail page, resolution comment, ACs ticked, map #4 decision line + #21 annotation, task archived). Closing it unblocks #49 Phase 2 Integrated Verification.
+- Open frontier (2026-09-23 query): #46 Socratic Guide and Gated Reveal · #49 Phase 2 Integrated Verification (now unblocked) · #50 learner-feedback contract decision · #57.
+- Next: #46 Socratic Guide and Gated Reveal, or #49 Phase 2 Integrated Verification.
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).
