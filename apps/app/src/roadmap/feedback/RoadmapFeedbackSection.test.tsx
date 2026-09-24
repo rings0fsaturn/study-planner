@@ -1,5 +1,5 @@
 import { describe, expect, it, afterEach, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Dexie from 'dexie'
 import { RoadmapFeedbackSection } from './RoadmapFeedbackSection'
@@ -13,8 +13,10 @@ import {
 import { saveMasteryProjections } from '../../assessments/masteryCache'
 import {
   FakeAssessmentClient,
+  feedbackCopy,
   masteryProjection,
 } from '../../assessments/testing/fakeAssessmentClient'
+import type { MasteryProjection } from '../../assessments/types'
 
 const USER = 'roadmap-feedback-section-user'
 const DB_NAME = `StudyTracker_${USER}`
@@ -91,6 +93,36 @@ describe('RoadmapFeedbackSection', () => {
     const evidence = screen.getByRole('link', { name: /Exam structure/ })
     expect(evidence).toHaveAttribute('href', '/materials/mat-1')
     expect(screen.getByTestId('rfb-model-context')).not.toHaveAttribute('open')
+  })
+
+  it('renders the LLM copy when the provider resolves it (#68 AC1)', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetFeedbackCopy(feedbackCopy({ summary: 'LLM test summary.' }))
+    renderSection(client)
+
+    expect(await screen.findByText('LLM test summary.')).toBeInTheDocument()
+    expect(client.getFeedbackCopy).toHaveBeenCalledTimes(1)
+  })
+
+  it('holds the render until the mastery fetch settles (no cold flash)', async () => {
+    const client = new FakeAssessmentClient()
+    let resolveFetch: (rows: MasteryProjection[]) => void = () => {}
+    client.getMastery.mockImplementation(
+      () =>
+        new Promise<MasteryProjection[]>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+    renderSection(client)
+
+    await waitFor(() => expect(client.getMastery).toHaveBeenCalled())
+    expect(screen.queryByTestId('roadmap-feedback')).not.toBeInTheDocument()
+    await act(async () => {
+      resolveFetch([])
+    })
+    expect(await screen.findByTestId('roadmap-feedback')).toBeInTheDocument()
   })
 
   it('marks a stale projection and rebuilds it from grades', async () => {

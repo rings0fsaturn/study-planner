@@ -1,5 +1,6 @@
 import { vi } from 'vitest'
 import type { AssessmentClientLike } from '../assessmentClient'
+import type { FeedbackCopy, FeedbackCopyInput } from '../../roadmap/feedback/types'
 import type {
   Assessment,
   AsyncJob,
@@ -57,6 +58,12 @@ export class FakeAssessmentClient implements AssessmentClientLike {
     async (_materialId?: string, _skillTag?: string): Promise<MasteryProjection[]> => [],
   )
 
+  getFeedbackCopy = vi.fn(
+    async (_input: FeedbackCopyInput, _materialIds: string[]): Promise<FeedbackCopy> => {
+      throw new Error('getFeedbackCopy not scripted')
+    },
+  )
+
   /** AttemptTransport view over the scripted calls (attemptFlow DI seam). */
   readonly transport = {
     submitAttempt: (
@@ -106,6 +113,13 @@ scriptListAttempts(result: AttemptRecord[] | Error): void {
 
   scriptGetMastery(result: MasteryProjection[] | Error): void {
     this.getMastery.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptGetFeedbackCopy(result: FeedbackCopy | Error): void {
+    this.getFeedbackCopy.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })
@@ -186,6 +200,21 @@ export function masteryProjection(
     n: 6,
     modelVersion: 'bkt-v1',
     recentTrend: 0.031,
+    ...overrides,
+  }
+}
+
+/** An LLM-rendered learner-feedback copy (#68): exact FeedbackCopy shape. */
+export function feedbackCopy(overrides: Partial<FeedbackCopy> = {}): FeedbackCopy {
+  return {
+    summary: 'You are becoming more consistent with the core ideas.',
+    knowTitle: 'Exam structure is looking steady',
+    knowBody: 'You handled Exam structure reliably across 6 graded attempts.',
+    watchTitle: 'Timing needs another look',
+    watchBody: 'This is the weakest signal right now.',
+    advisory: 'Try a slightly harder challenge next.',
+    advisoryNote: 'This suggestion does not edit your roadmap.',
+    source: 'meta/muse-spark-1.3-contributor',
     ...overrides,
   }
 }

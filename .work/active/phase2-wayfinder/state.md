@@ -8,8 +8,9 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - #48 generation-quality evaluation harness closed 2026-09-21 (offline harness + gold registry + report; wayfinder exit run). Its own resolution answers the #45 coding-suitability handoff: `grokking-algorithms` is refused 3/3 with reasons naming the retrieved front matter, not the material.
 - #35 Roadmap Feedback prototype closed 2026-09-23 (wayfinder exit run: HITL chose Variant B, resolution comment, map #4 decision line + #21 cluster annotation, task archived). This unblocked #47 Roadmap Feedback implementation.
 - #47 Roadmap Feedback Implementation closed 2026-09-23 (wayfinder exit run: Variant B section shipped on the Roadmap detail page, resolution comment, ACs ticked, map #4 decision line + #21 annotation, task archived). Closing it unblocks #49 Phase 2 Integrated Verification.
-- Open frontier (2026-09-23 query): #46 Socratic Guide and Gated Reveal · #49 Phase 2 Integrated Verification (now unblocked) · #50 learner-feedback contract decision · #57.
-- Next: #46 Socratic Guide and Gated Reveal, or #49 Phase 2 Integrated Verification.
+- #68 LLM feedback copy provider closed 2026-09-24 (endpoint + `feedback-v1` + client + provider swap + live E2E 3/3 at 1280/375; wayfinder exit run: resolution comment, map #4 decision line, task archived). Closing it unblocks #49 Phase 2 Integrated Verification.
+- Open frontier (2026-09-24 query): #49 Phase 2 Integrated Verification · #57.
+- Next: #49 Phase 2 Integrated Verification.
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).

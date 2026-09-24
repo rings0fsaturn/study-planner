@@ -10,7 +10,19 @@ import {
   type AsyncJob,
   type GenerationRequest,
 } from './types'
-import { masteryProjection } from './testing/fakeAssessmentClient'
+import { masteryProjection, feedbackCopy } from './testing/fakeAssessmentClient'
+import type { FeedbackCopyInput } from '../roadmap/feedback/types'
+
+function copyInput(overrides: Partial<FeedbackCopyInput> = {}): FeedbackCopyInput {
+  return {
+    state: 'updated',
+    materialTitles: ['Operating Systems'],
+    projections: [],
+    recommendation: null,
+    evidence: [],
+    ...overrides,
+  }
+}
 
 function request(overrides: Partial<GenerationRequest> = {}): GenerationRequest {
   return {
@@ -117,6 +129,35 @@ describe('AssessmentClient', () => {
 
     await client.getMastery('mat-1', 'Exam structure')
     expect(fetchLike.calls[0].path).toBe('/v1/mastery?materialId=mat-1&skillTag=Exam+structure')
+  })
+
+  it('getFeedbackCopy posts the copy input with material ids', async () => {
+    const copy = feedbackCopy()
+    const fetchLike = new FakeFetch(async () => copy)
+    const client = new AssessmentClient(fetchLike)
+
+    const result = await client.getFeedbackCopy(copyInput(), ['mat-1'])
+
+    expect(result).toEqual(copy)
+    expect(fetchLike.calls[0].path).toBe('/v1/feedback/copy')
+    const init = fetchLike.calls[0].init!
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers['Idempotency-Key']).toBeDefined()
+    expect(headers['X-Request-ID']).toBeDefined()
+    expect(JSON.parse(String(init.body))).toEqual({ ...copyInput(), materialIds: ['mat-1'] })
+  })
+
+  it('getFeedbackCopy surfaces a provider failure as a typed error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new AssessmentServiceError('service', 'feedback copy unavailable', true)
+      }),
+    )
+    await expect(client.getFeedbackCopy(copyInput(), ['mat-1'])).rejects.toMatchObject({
+      code: 'service',
+      retryable: true,
+    })
   })
 
   it('regenerateAssessment posts to the assessment and returns the AsyncJob', async () => {

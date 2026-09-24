@@ -17,6 +17,7 @@ import type {
   GenerationRequest,
   MasteryProjection,
 } from './types'
+import type { FeedbackCopy, FeedbackCopyInput } from '../roadmap/feedback/types'
 
 export interface AssessmentFetchLike {
   fetchJson(path: string, init?: RequestInit): Promise<unknown>
@@ -35,6 +36,8 @@ export interface AssessmentClientLike {
   listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]>
   /** Rebuildable mastery projections from the owner's durable grades (#43). */
   getMastery(materialId?: string, skillTag?: string): Promise<MasteryProjection[]>
+  /** LLM learner-feedback copy for owned materials in the updated state (#68). */
+  getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy>
   /** AttemptTransport view (attemptFlow's DI seam) — same calls, fewer args. */
   readonly transport: {
     submitAttempt(
@@ -302,6 +305,21 @@ export class AssessmentClient implements AssessmentClientLike {
       const query = params.toString()
       const payload = await this.fetchLike.fetchJson(`/v1/mastery${query ? `?${query}` : ''}`)
       return payload as MasteryProjection[]
+    })
+  }
+
+  getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy> {
+    return this.run(async () => {
+      const payload = await this.fetchLike.fetchJson('/v1/feedback/copy', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Request-ID': crypto.randomUUID(),
+          'Idempotency-Key': crypto.randomUUID(),
+        },
+        body: JSON.stringify({ ...input, materialIds }),
+      })
+      return payload as FeedbackCopy
     })
   }
 

@@ -30,6 +30,13 @@ export interface RoadmapFeedback {
   recommendation: DifficultyRecommendation | null
   evidence: FeedbackEvidence[]
   rebuild: () => void
+  /**
+   * True once the first `GET /v1/mastery` settles (success or failure).
+   * Before that the state is a guess from an empty cache, so the section
+   * holds its render instead of flashing a cold copy that a later LLM
+   * copy would replace (#68 live-found).
+   */
+  settled: boolean
 }
 
 export function useRoadmapFeedback(
@@ -50,6 +57,7 @@ export function useRoadmapFeedback(
 
   const [server, setServer] = useState<MasteryProjection[] | null>(null)
   const [rebuilding, setRebuilding] = useState(false)
+  const [settled, setSettled] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -61,6 +69,8 @@ export function useRoadmapFeedback(
       } catch (error) {
         // Advisory: a failed fetch keeps the cached projection and never blocks.
         if (!cancelled) logger.warn('[roadmap-feedback] mastery fetch failed', error)
+      } finally {
+        if (!cancelled) setSettled(true)
       }
     })()
     return () => {
@@ -133,5 +143,6 @@ export function useRoadmapFeedback(
     recommendation,
     evidence,
     rebuild,
+    settled,
   }
 }

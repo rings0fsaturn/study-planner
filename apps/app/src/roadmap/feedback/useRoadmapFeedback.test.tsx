@@ -7,6 +7,7 @@ import {
   FakeAssessmentClient,
   masteryProjection,
 } from '../../assessments/testing/fakeAssessmentClient'
+import type { MasteryProjection } from '../../assessments/types'
 import { useRoadmapFeedback } from './useRoadmapFeedback'
 
 const USER = 'roadmap-feedback-user'
@@ -97,6 +98,37 @@ describe('useRoadmapFeedback', () => {
     const { result } = renderHook(() => useRoadmapFeedback(eventStore, client, ['mat-1']))
     await waitFor(() => expect(result.current.state).toBe('cold'))
     expect(result.current.evidence).toEqual([])
+    eventStore.close()
+  })
+
+  it('reports unsettled until the first fetch resolves', async () => {
+    const eventStore = createEventStore(USER)
+    const client = new FakeAssessmentClient()
+    let resolveFetch: (rows: MasteryProjection[]) => void = () => {}
+    client.getMastery.mockImplementation(
+      () =>
+        new Promise<MasteryProjection[]>((resolve) => {
+          resolveFetch = resolve
+        }),
+    )
+
+    const { result } = renderHook(() => useRoadmapFeedback(eventStore, client, ['mat-1']))
+    expect(result.current.settled).toBe(false)
+    act(() => {
+      resolveFetch([])
+    })
+    await waitFor(() => expect(result.current.settled).toBe(true))
+    eventStore.close()
+  })
+
+  it('settles when the first fetch fails', async () => {
+    const eventStore = createEventStore(USER)
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery(new Error('offline'))
+
+    const { result } = renderHook(() => useRoadmapFeedback(eventStore, client, ['mat-1']))
+    await waitFor(() => expect(result.current.settled).toBe(true))
+    expect(result.current.state).toBe('cold')
     eventStore.close()
   })
 })

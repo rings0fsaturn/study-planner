@@ -5,16 +5,17 @@
  * acknowledgement (the one-band guidance already feeds the next Adaptive run);
  * Open replan navigates to the existing replan flow.
  *
- * The learner-facing copy comes from a `FeedbackCopyProvider`; #47 ships the
- * static provider and #50 swaps in the LLM one behind the same seam.
+ * The learner-facing copy comes from a `FeedbackCopyProvider`; #68 defaults
+ * to the LLM provider with static fallback, and callers may inject the
+ * static provider (or a fake) behind the same seam.
  */
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEventStore } from '../../events/useEventStore'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import { useRoadmapFeedback } from './useRoadmapFeedback'
-import { staticFeedbackProvider } from './feedbackCopy'
+import { makeLlmFeedbackProvider } from './llmFeedbackProvider'
 import type {
   FeedbackCopy,
   FeedbackCopyProvider,
@@ -211,7 +212,7 @@ export function RoadmapFeedbackSection({
   materialTitlesById,
   pinnedTitle,
   pinnedDetail,
-  copyProvider = staticFeedbackProvider,
+  copyProvider,
 }: RoadmapFeedbackSectionProps) {
   const eventStore = useEventStore()
   const client = useAssessmentClient()
@@ -219,19 +220,31 @@ export function RoadmapFeedbackSection({
   const feedback = useRoadmapFeedback(eventStore, client, materialIds)
   const [copy, setCopy] = useState<FeedbackCopy | null>(null)
   const [reviewing, setReviewing] = useState(false)
+  // A stable key so a fresh array identity each render does not rebuild the
+  // provider and refire the copy effect (mirrors useRoadmapFeedback).
+  const materialKey = useMemo(() => [...materialIds].sort().join('|'), [materialIds])
+  const llmProvider = useMemo(
+    () => makeLlmFeedbackProvider(client, materialKey ? materialKey.split('|') : []),
+    [client, materialKey],
+  )
+  const provider = copyProvider ?? llmProvider
 
-  const { state, projections, recommendation, evidence, headline, rebuild } = feedback
+  const { state, projections, recommendation, evidence, headline, rebuild, settled } = feedback
 
   useEffect(() => {
+    // Hold the copy until the first mastery fetch settles: the pre-fetch
+    // state is a cold guess that would paint stale words under the real
+    // badge (#68 live-found).
+    if (!settled) return
     let cancelled = false
-    const result = copyProvider({
+    const result = provider({
       state,
       materialTitles: [...materialTitlesById.values()],
       projections,
       recommendation,
       evidence,
     })
-    // Sync providers resolve on the spot; an async provider (#50) lands later.
+    // Sync providers resolve on the spot; an async provider (#68) lands later.
     if (typeof (result as Promise<FeedbackCopy>).then === 'function') {
       void (result as Promise<FeedbackCopy>).then((next) => {
         if (!cancelled) setCopy(next)
@@ -242,9 +255,11 @@ export function RoadmapFeedbackSection({
     return () => {
       cancelled = true
     }
-  }, [copyProvider, state, projections, recommendation, evidence, materialTitlesById])
+  }, [provider, settled, state, projections, recommendation, evidence, materialTitlesById])
 
-  if (!copy) return null
+  // Hold the render until the first mastery fetch settles: the pre-fetch
+  // state is a guess that would flash a cold copy the LLM copy replaces.
+  if (!settled || !copy) return null
 
   const totalObservations = projections.reduce((sum, projection) => sum + projection.n, 0)
 
