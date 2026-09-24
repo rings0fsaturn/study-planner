@@ -48,6 +48,7 @@ def build_context(
     *,
     code_seeking: bool = False,
     exclude_chunk_ids: frozenset[str] = frozenset(),
+    steer_override: str | None = None,
 ) -> list[RetrievedChunk]:
     """Retrieve up to CONTEXT_TOP_K owner-scoped chunks for the steer or scope.
 
@@ -55,8 +56,10 @@ def build_context(
     the most code-dense chunk in each ordinal band instead of an even spread,
     so an algorithms listing is not missed in favour of chapter summaries.
     `exclude_chunk_ids` lets the coding resample ask for a different window.
+    `steer_override` replaces the section-label/skill-tag steer when a caller
+    has its own query text (the guide steers by the question and learner work).
     """
-    steer = _steer(skill_tags, scope)
+    steer = steer_override.strip() if steer_override else _steer(skill_tags, scope)
     if not steer:
         return _spread_context(
             material_id,

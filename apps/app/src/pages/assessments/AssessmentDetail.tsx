@@ -71,14 +71,28 @@ export function AnswerSlot({
   assessment,
   question,
   onAttemptRecorded,
+  onWorkChange,
+  onActiveLineChange,
+  onAdvisoryResults,
 }: {
   assessment: Assessment
   question: Question
   onAttemptRecorded: () => void
+  /** Optional practice-coach taps (#46); the assessment surface omits them. */
+  onWorkChange?: (work: string) => void
+  onActiveLineChange?: (line: number) => void
+  onAdvisoryResults?: (results: { name: string; passed: boolean }[]) => void
 }) {
   return (
     <>
-      <AttemptTaker assessment={assessment} question={question} onAttemptRecorded={onAttemptRecorded} />
+      <AttemptTaker
+        assessment={assessment}
+        question={question}
+        onAttemptRecorded={onAttemptRecorded}
+        onWorkChange={onWorkChange}
+        onActiveLineChange={onActiveLineChange}
+        onAdvisoryResults={onAdvisoryResults}
+      />
       <div className="material-detail-block" style={{ marginTop: '1rem' }}>
         <h3 className="t-display-3" style={{ fontSize: '15px', marginBottom: '0.5rem' }}>
           Citations

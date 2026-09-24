@@ -41,6 +41,7 @@ import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentR
 import PracticeSummaryPrototype from './prototype/practice-summary/PracticeSummaryPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
+import { GuideProvider } from './guide/GuideProvider';
 import { MaterialLibrary } from './pages/materials/MaterialLibrary';
 import { MaterialCreate } from './pages/materials/MaterialCreate';
 import { MaterialDetail } from './pages/materials/MaterialDetail';
@@ -261,14 +262,16 @@ function App() {
         <EventStoreRouter>
           <MaterialsProvider>
             <AssessmentProvider>
-              {import.meta.env.DEV && <DevSeeder />}
-              <SyncRouter>
-                <div className="app">
-                  <ErrorBoundary>
-                    <AppRoutes />
-                  </ErrorBoundary>
-                </div>
-              </SyncRouter>
+              <GuideProvider>
+                {import.meta.env.DEV && <DevSeeder />}
+                <SyncRouter>
+                  <div className="app">
+                    <ErrorBoundary>
+                      <AppRoutes />
+                    </ErrorBoundary>
+                  </div>
+                </SyncRouter>
+              </GuideProvider>
             </AssessmentProvider>
           </MaterialsProvider>
         </EventStoreRouter>

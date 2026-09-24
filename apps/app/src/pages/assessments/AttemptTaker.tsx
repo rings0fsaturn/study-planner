@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useRef, useState } from 'react'
 import {
   QUESTION_ATTEMPTED,
   QUESTION_GRADED,
@@ -36,23 +36,46 @@ interface AttemptTakerProps {
   assessment: Assessment
   question: Question
   onAttemptRecorded?: () => void
+  /**
+   * Optional practice-coach taps (#46): the current work, the active editor
+   * line, and the advisory test results. All optional, so the assessment
+   * review surface is unaffected.
+   */
+  onWorkChange?: (work: string) => void
+  onActiveLineChange?: (line: number) => void
+  onAdvisoryResults?: (results: { name: string; passed: boolean }[]) => void
 }
 
 type TakingPhase = 'answering' | 'submitting' | 'queued-offline' | 'grading' | 'graded' | 'failed'
 
-export function AttemptTaker({ assessment, question, onAttemptRecorded }: AttemptTakerProps) {
+export function AttemptTaker({
+  assessment,
+  question,
+  onAttemptRecorded,
+  onWorkChange,
+  onActiveLineChange,
+  onAdvisoryResults,
+}: AttemptTakerProps) {
   const { eventStore } = useEventStoreContext()
   const [phase, setPhase] = useState<TakingPhase>('answering')
   const [answer, setAnswer] = useState<ObjectiveAnswer>({})
   const [text, setText] = useState('')
   const [attempts, setAttempts] = useState<LocalAttemptRow[]>([])
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const onWorkChangeRef = useRef(onWorkChange)
+  onWorkChangeRef.current = onWorkChange
   const isWritten = question.format === 'written'
   const isCoding = question.format === 'coding'
   // The fourth coding subtype never runs the sandbox (D-01): it renders the
   // read-only snippet + value input instead of the editor branch.
   const isOutputPrediction = isCoding && question.subtype === OUTPUT_PREDICTION_SUBTYPE
   const writtenProblem = isWritten ? writtenAnswerProblem(text) : null
+
+  // Report the written answer to the practice coach (#46); the coding branch
+  // reports its own editor source.
+  useEffect(() => {
+    if (isWritten) onWorkChangeRef.current?.(text)
+  }, [isWritten, text])
 
   // Local flow bound to this render's event store (per-user Dexie).
   const [flow, setFlow] = useState<AttemptFlow | null>(null)
@@ -169,6 +192,9 @@ export function AttemptTaker({ assessment, question, onAttemptRecorded }: Attemp
               onSubmitting={() => setPhase('submitting')}
               onSubmitted={(result) => void afterSubmit(result)}
               onAttemptRecorded={onAttemptRecorded}
+              onWorkChange={onWorkChange}
+              onActiveLineChange={onActiveLineChange}
+              onAdvisoryResults={onAdvisoryResults}
             />
           </Suspense>
         )}

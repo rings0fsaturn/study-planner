@@ -15,6 +15,8 @@ import {
   queuedJob,
 } from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
+import { GuideProvider } from '../../guide/GuideProvider'
+import { FakeGuideClient } from '../../guide/testing/fakeGuideClient'
 import type { MaterialRecord } from '../../materials/types'
 import type {
   Assessment,
@@ -27,6 +29,14 @@ import type { PracticeRunStartedPayload } from '../../sync/types'
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn() } },
 }))
+
+// The coding advisory run loads Pyodide; the coach integration only needs its
+// verdicts, so the wasm boundary is stubbed (as advisoryRunner.test.ts does).
+const advisoryRun = vi.hoisted(() => ({ runAdvisoryTests: vi.fn() }))
+vi.mock('../assessments/advisoryRunner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../assessments/advisoryRunner')>()
+  return { ...actual, runAdvisoryTests: advisoryRun.runAdvisoryTests }
+})
 
 const USER = 'practice-user'
 const DB_NAME = `StudyTracker_${USER}`
@@ -127,16 +137,19 @@ function renderRun(
   assessments: FakeAssessmentClient,
   materials = new FakeMaterialClient([material('mat-1', 'Operating Systems')]),
   runId = 'run-1',
+  guide = new FakeGuideClient(),
 ) {
   return render(
     <MemoryRouter initialEntries={[`/materials/mat-1/practice/${runId}`]}>
       <EventStoreProvider userId={USER}>
         <MaterialsProvider client={materials}>
           <AssessmentProvider client={assessments}>
-            <Routes>
-              <Route path="/materials/:materialId/practice/:runId" element={<PracticeRun />} />
-              <Route path="/materials/:materialId" element={<div data-testid="material-page" />} />
-            </Routes>
+            <GuideProvider client={guide}>
+              <Routes>
+                <Route path="/materials/:materialId/practice/:runId" element={<PracticeRun />} />
+                <Route path="/materials/:materialId" element={<div data-testid="material-page" />} />
+              </Routes>
+            </GuideProvider>
           </AssessmentProvider>
         </MaterialsProvider>
       </EventStoreProvider>
@@ -632,5 +645,124 @@ describe('PracticeRun', () => {
     const store = createEventStore(USER)
     expect(await store.table('masteryCache').toArray()).toHaveLength(0)
     store.close()
+  })
+})
+
+describe('PracticeRun coach (#46)', () => {
+  beforeEach(async () => {
+    await Dexie.delete(DB_NAME)
+    serverRecords = new Map()
+    advisoryRun.runAdvisoryTests.mockReset()
+  })
+
+  afterEach(async () => {
+    cleanup()
+    await Dexie.delete(DB_NAME)
+  })
+
+  const HINT_FRAMES = [
+    { frame: 'start' as const, sequence: 0, correlationId: 'c', text: 'What does ' },
+    { frame: 'delta' as const, sequence: 1, correlationId: 'c', text: 'this loop do?' },
+    { frame: 'done' as const, sequence: 2, correlationId: 'c' },
+  ]
+
+  it("offers help from I'm stuck and streams the hint only on accept", async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+    const guide = new FakeGuideClient()
+    guide.scriptStream(HINT_FRAMES)
+
+    renderRun(client, undefined, 'run-1', guide)
+    await screen.findByText('Prompt for q1')
+
+    fireEvent.click(screen.getByRole('button', { name: /stuck/i }))
+    // Offer-never-force: the popover asks before any stream is issued.
+    expect(await screen.findByRole('region', { name: 'Practice coach' })).toBeInTheDocument()
+    expect(screen.getByText('You asked for a hand')).toBeInTheDocument()
+    expect(guide.streamHint).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, help me' }))
+    expect(await screen.findByText(/What does this loop do\?/)).toBeInTheDocument()
+    expect(guide.streamHint).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers help when an advisory visible test fails', async () => {
+    await seedRun({ mode: 'coding', families: ['coding'], assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [codingQuestion({ assessmentId: 'a-1' })]),
+    })
+    advisoryRun.runAdvisoryTests.mockResolvedValue([
+      { name: 'adds small list', passed: false, actual: '5' },
+    ])
+
+    renderRun(client)
+    await screen.findByRole('textbox', { name: 'Your code' })
+    fireEvent.click(screen.getByRole('button', { name: 'Run visible tests' }))
+
+    expect(await screen.findByRole('region', { name: 'Practice coach' })).toBeInTheDocument()
+    expect(screen.getByText('A test just failed')).toBeInTheDocument()
+  })
+
+  /** Escalate the ladder to the gated reveal, settling each stream first. */
+  async function climbToReveal() {
+    fireEvent.click(screen.getByRole('button', { name: /stuck/i }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Yes, help me' }))
+    const deeper = () => screen.getByRole('button', { name: 'Go deeper' })
+    await waitFor(() => expect(deeper()).toBeEnabled())
+    fireEvent.click(deeper())
+    await waitFor(() => expect(deeper()).toBeEnabled())
+    fireEvent.click(deeper())
+    await waitFor(() => expect(deeper()).toBeEnabled())
+    fireEvent.click(deeper())
+    expect(await screen.findByText('Reveal (gated)')).toBeInTheDocument()
+  }
+
+  it('keeps the reveal gate closed until an attempt exists', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+    const guide = new FakeGuideClient()
+    guide.scriptStream(HINT_FRAMES)
+
+    renderRun(client, undefined, 'run-1', guide)
+    await screen.findByText('Prompt for q1')
+    await climbToReveal()
+
+    expect(screen.getByText(/submit an attempt first/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Reveal a worked step' })).not.toBeInTheDocument()
+    expect(guide.reveal).not.toHaveBeenCalled()
+  })
+
+  it('opens the reveal gate once an owned attempt exists', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    seedGrade('a-1', 'q1')
+    const client = new FakeAssessmentClient()
+    scriptSubmitting(client, {
+      'a-1': assessment('a-1', 'mat-1', [question('q1', 'a-1', 'mat-1')]),
+    })
+    const guide = new FakeGuideClient()
+    guide.scriptStream(HINT_FRAMES)
+    guide.scriptReveal()
+
+    renderRun(client, undefined, 'run-1', guide)
+    // Re-enter the taker through an explicit retry so the coach sees the
+    // owned attempt and the gate can bind to it.
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry question' }))
+    await screen.findByLabelText('Your answer')
+    await climbToReveal()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal a worked step' }))
+    await waitFor(() =>
+      expect(guide.reveal).toHaveBeenCalledWith(
+        expect.objectContaining({ attemptId: 'att-q1', confirmation: true }),
+      ),
+    )
+    expect(await screen.findByText(/reference to check against, not to paste/i)).toBeInTheDocument()
   })
 })

@@ -59,6 +59,10 @@ interface CodingTakerProps {
     submitError: string | null
   }) => void
   onAttemptRecorded?: () => void
+  /** Optional practice-coach taps (#46); all optional. */
+  onWorkChange?: (work: string) => void
+  onActiveLineChange?: (line: number) => void
+  onAdvisoryResults?: (results: AdvisoryResult[]) => void
 }
 
 export function CodingTaker({
@@ -69,12 +73,21 @@ export function CodingTaker({
   onSubmitting,
   onSubmitted,
   onAttemptRecorded,
+  onWorkChange,
+  onActiveLineChange,
+  onAdvisoryResults,
 }: CodingTakerProps) {
   const tests: VisibleTestCase[] = question.visibleTests ?? []
   const [source, setSource] = useState(question.starterCode ?? '')
   const [advisoryPhase, setAdvisoryPhase] = useState<AdvisoryPhase>('idle')
   const [advisoryError, setAdvisoryError] = useState<string | null>(null)
   const [advisoryResults, setAdvisoryResults] = useState<AdvisoryResult[] | null>(null)
+  const onWorkChangeRef = useRef(onWorkChange)
+  onWorkChangeRef.current = onWorkChange
+  const onActiveLineChangeRef = useRef(onActiveLineChange)
+  onActiveLineChangeRef.current = onActiveLineChange
+  const onAdvisoryResultsRef = useRef(onAdvisoryResults)
+  onAdvisoryResultsRef.current = onAdvisoryResults
   const problem = codingAnswerProblem(source)
   const editing = phase === 'answering'
   const editorHostRef = useRef<HTMLDivElement | null>(null)
@@ -108,13 +121,25 @@ export function CodingTaker({
           keymap.of([...defaultKeymap, ...historyKeymap]),
           python(),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged) setSource(update.state.doc.toString())
+            if (update.docChanged) {
+              const next = update.state.doc.toString()
+              setSource(next)
+              onWorkChangeRef.current?.(next)
+            }
+            if (update.docChanged || update.selectionSet) {
+              const line = update.state.doc.lineAt(update.state.selection.main.head).number
+              onActiveLineChangeRef.current?.(line)
+            }
           }),
           editableRef.current.of(EditorView.editable.of(editing)),
         ],
       }),
     })
     viewRef.current = view
+    // The coach anchors to the caret line and sees the starter code from the
+    // first render (#46).
+    onActiveLineChangeRef.current?.(1)
+    onWorkChangeRef.current?.(sourceRef.current)
     return () => {
       view.destroy()
       viewRef.current = null
@@ -143,6 +168,7 @@ export function CodingTaker({
       setAdvisoryPhase('running')
       const results = await runAdvisoryTests(source, tests)
       setAdvisoryResults(results)
+      onAdvisoryResultsRef.current?.(results)
       setAdvisoryPhase('done')
     } catch (err) {
       logger.warn('[assessments] advisory run failed', err)

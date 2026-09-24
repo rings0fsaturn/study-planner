@@ -17,6 +17,7 @@ _STATUS_BY_CODE = {
     "conflict": 409,
     "invalid_request": 400,
     "validation_failed": 409,
+    "forbidden": 403,
 }
 
 

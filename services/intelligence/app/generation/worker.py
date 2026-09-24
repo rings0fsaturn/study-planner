@@ -34,9 +34,10 @@ cause, the code is the public bucket.
 from __future__ import annotations
 
 import logging
+import re
 import uuid
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from app.generation.context import CONTEXT_TOP_K
 from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
@@ -196,6 +197,9 @@ class GenerationWorkerConfig:
     # message is archived (the ingestion worker's max_deliveries precedent).
     max_deliveries: int = 3
     model: str = DEFAULT_MODEL
+    # Slice-1 Jev gate (#70): one env flag covering the suitability pre-gate
+    # plus citation middle-only adjudication. Off = current behavior exactly.
+    jev_slice1_enabled: bool = False
 
 
 # The context builder is keyed on the steer parts and the learner's scope: the
@@ -224,6 +228,12 @@ WIDEN_MIN_PAD = 5
 # unchanged; only the refusal path spends the extra provider calls.
 MAX_CODING_WINDOWS = 3
 
+# Slice-1 Jev gate (#70): suitability state is the joined window text, capped
+# so the judgment stays narrow (Jev skill: small relevant state). Citation
+# adjudication keys unverified warnings back to chunk ids via this pattern.
+_SUITABILITY_STATE_CHARS = 4000
+_CITATION_CHUNK_RE = re.compile(r"citation for chunk (\S+) could not be verified")
+
 
 class GenerationWorker:
     """One queue arm; poll `assessment_generate` and process one message."""
@@ -238,6 +248,7 @@ class GenerationWorker:
         config: GenerationWorkerConfig,
         context_builder: ContextBuilder,
         sandbox: PistonClient | None = None,
+        jev: Any | None = None,
     ) -> None:
         self._repo = repo
         self._queue = queue
@@ -248,6 +259,9 @@ class GenerationWorker:
         # The generation-time self-check runs the reference solution through
         # the same sandbox client the grading arm uses (#42 P3).
         self._sandbox = sandbox
+        # Slice-1 Jev judge (#70). Duck-typed (JevClient) so unit tests can
+        # pass a fake; None or flag-off means zero decide() calls.
+        self._jev = jev
 
     def run_once(self) -> int:
         messages = self._queue.poll(
@@ -412,6 +426,28 @@ class GenerationWorker:
 
             context_ids = {chunk.chunk_id for chunk in chunks}
             chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
+            if self.config.jev_slice1_enabled and self._jev is not None:
+                blocked, refusal = self._jev_suitability_blocks(
+                    chunks, coding=coding, correlation_id=correlation_id
+                )
+                if blocked:
+                    # Jev judged the window unsuitable (coding only; other
+                    # families are advisory and never block). Ride the D-02
+                    # resample path exactly like a provider refusal.
+                    last_refusal_reason = refusal or (
+                        "this material does not support a grounded coding question"
+                    )
+                    if window < max_windows:
+                        tried_chunk_ids.update(context_ids)
+                        logger.info(
+                            "coding generation %s window %d/%d jev-unsuitable; resampling",
+                            assessment_id,
+                            window,
+                            max_windows,
+                            extra={"trace_id": correlation_id},
+                        )
+                        continue
+                    break
             schema = schema_for(context_ids)
             messages = build(blueprint, chunks, title=material.title)
             response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
@@ -455,6 +491,14 @@ class GenerationWorker:
                 )
                 warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
+
+            if accepted is not None and self.config.jev_slice1_enabled and self._jev is not None:
+                # Middle-only adjudication: string-match passes never reach
+                # here (no citation_unverified warning); Jev judges only the
+                # uncertain middle. A rejection drops without repair.
+                accepted, warnings = self._jev_adjudicate_citations(
+                    accepted, warnings, chunk_texts, correlation_id=correlation_id
+                )
 
             if accepted is not None:
                 break
@@ -704,6 +748,133 @@ class GenerationWorker:
                 ),
             }
         ]
+
+    def _jev_suitability_blocks(
+        self, chunks: list[RetrievedChunk], *, coding: bool, correlation_id: str
+    ) -> tuple[bool, str | None]:
+        """Slice-1 suitability pre-gate (#70): True means skip prose for this window.
+
+        Shared across families but terminal for coding only; objective/written
+        `not_derivable` stays advisory (the builder is coding-calibrated until
+        #74 retunes it). Every Jev failure fails open: log and proceed.
+        """
+        from app.jev.questions import route_suitability, suitability_questions
+
+        state = {"chunk_text": "\n\n".join(c.text for c in chunks)[:_SUITABILITY_STATE_CHARS]}
+        try:
+            result = self._jev.decide(
+                state,
+                suitability_questions(),
+                request_id=correlation_id,
+                trace_id=correlation_id,
+            )
+        except Exception as exc:  # JevError: fail-open, never block on Jev
+            logger.warning(
+                "jev suitability fail-open (%s)",
+                getattr(exc, "code", "provider_error"),
+                extra={"trace_id": correlation_id},
+            )
+            return False, None
+        ans = (result.answers or {}).get("suitability") or {}
+        try:
+            confidence = float(ans.get("confidence") or 0.0)
+        except (TypeError, ValueError):
+            confidence = 0.0
+        verdict = route_suitability(str(ans.get("choice") or ""), confidence)
+        logger.info(
+            "jev suitability %s (choice=%s conf=%.2f tokens=%d)",
+            verdict,
+            ans.get("choice"),
+            confidence,
+            result.input_tokens,
+            extra={"trace_id": correlation_id},
+        )
+        if verdict == "not_derivable" and coding:
+            return True, "this material does not support a grounded coding question"
+        return False, None
+
+    def _jev_adjudicate_citations(
+        self,
+        accepted: dict,
+        warnings: list[dict],
+        chunk_texts: dict[str, str],
+        *,
+        correlation_id: str,
+    ) -> tuple[dict | None, list[dict]]:
+        """Slice-1 citation adjudication (#70): judge only the unverified middle.
+
+        Returns (accepted | None, warnings). A confident Jev rejection drops
+        the candidate with `citation_missing` (existing split: warning carries
+        the cause, the job records `malformed_output`, never a repair). A
+        confident `supports` clears the soft warning. Anything else (low
+        confidence, missing quote/section, Jev error) keeps the soft warning
+        and proceeds: fail-open.
+        """
+        from app.jev.questions import citation_questions, route_citation
+
+        if not any(w.get("code") == "citation_unverified" for w in warnings):
+            return accepted, warnings
+        cites = {
+            str(c.get("chunkId")): c
+            for c in (accepted.get("citations") or [])
+            if isinstance(c, dict)
+        }
+        kept: list[dict] = []
+        for warning in warnings:
+            if warning.get("code") != "citation_unverified":
+                kept.append(warning)
+                continue
+            match = _CITATION_CHUNK_RE.search(str(warning.get("message") or ""))
+            chunk_id = match.group(1) if match else ""
+            quote = str((cites.get(chunk_id) or {}).get("quote") or "")
+            section = chunk_texts.get(chunk_id, "")
+            if not quote or not section:
+                kept.append(warning)
+                continue
+            try:
+                result = self._jev.decide(
+                    {"claim": quote, "section": section},
+                    citation_questions(),
+                    request_id=correlation_id,
+                    trace_id=correlation_id,
+                )
+            except Exception as exc:  # JevError: fail-open, keep soft warning
+                logger.warning(
+                    "jev citation fail-open (%s)",
+                    getattr(exc, "code", "provider_error"),
+                    extra={"trace_id": correlation_id},
+                )
+                kept.append(warning)
+                continue
+            ans = (result.answers or {}).get("relation") or {}
+            try:
+                confidence = float(ans.get("confidence") or 0.0)
+            except (TypeError, ValueError):
+                confidence = 0.0
+            verdict, stands = route_citation(str(ans.get("choice") or ""), confidence)
+            logger.info(
+                "jev citation %s stands=%s (chunk=%s conf=%.2f tokens=%d)",
+                verdict,
+                stands,
+                chunk_id,
+                confidence,
+                result.input_tokens,
+                extra={"trace_id": correlation_id},
+            )
+            if verdict == "verified" and stands:
+                continue
+            if verdict in ("contradicted", "unsupported") and stands:
+                return None, [
+                    {
+                        "code": "citation_missing",
+                        "message": (
+                            "jev citation adjudication rejected the candidate's "
+                            f"citations (chunk {chunk_id}: {verdict})"
+                        ),
+                    }
+                ]
+            kept.append(warning)
+        return accepted, kept
 
     def _repair_once(
         self,

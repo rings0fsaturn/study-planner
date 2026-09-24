@@ -10,10 +10,9 @@ Gate the whole suite on `E2E_LIVE_EMAIL` / `E2E_LIVE_PASSWORD` and keep credenti
 
 ## Test credentials
 
-`.work/specs/test-login-cred.txt` holds the shared dev account's `email` and `password` lines, each value wrapped in backticks.
-Strip the backticks before use, together with any surrounding quotes.
+`.work/specs/test-login-cred.txt` holds the shared dev account's `email` and `password` lines. They are of format email=<emailValue>
+password=<passowrd>
 A Supabase password grant sent the raw wrapped value answers `invalid_credentials` for an account that is perfectly valid, which reads exactly like a stale credential and sends you hunting for the wrong problem.
-The same backtick rule applies to any script or probe that signs in with that file.
 
 ## Skip scoping
 

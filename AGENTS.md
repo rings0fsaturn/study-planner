@@ -18,15 +18,80 @@ Before planning, editing, reviewing, or running project workflows:
 The live checkout is the source of truth.
 If a rule or planning document conflicts with the code, verify the behavior and record the discrepancy instead of guessing.
 
-## Project-Local Agent Resources
+## Project Agent Resources
 
-Use only the repository-local rules and skills for work in this checkout:
+Rules and skills for work in this checkout:
 
 - Rules: [`.agents/rules/`](.agents/rules/)
-- Skills: [`.agents/skills/`](.agents/skills/), [`.opencode/skills/`](.opencode/skills/)
+- Project Local Skills: [`.agents/skills/`](.agents/skills/), [`.opencode/skills/`](.opencode/skills/)
+- Global Skills: [`~/.agents/skills/`](~/.agents/skills/)
+
+<agent_configuration>
+
+  <mandatory_skills>
+    <skill purpose="ui_ux_decisions">impeccable</skill>
+    <skill purpose="code_review">
+      <tool>open-code-review-delegate</tool>
+      <tool>thermo-nuclear-code-quality-review</tool>
+    </skill>
+    <skill purpose="code_writing_principles">
+      <tool>tdd</tool>
+      <tool>ponytail</tool>
+    </skill>
+    <skill purpose="task_tracking">work-journal-orchestrator</skill>
+  </mandatory_skills>
+
+  <development_loop>
+
+    <phase order="1" name="gather_context">
+      <action>Always gather context first before taking any action.</action>
+    </phase>
+
+    <phase order="2" name="create_plan">
+      <action>Create a plan based on the gathered context.</action>
+    </phase>
+
+    <phase order="3" name="implement">
+      <action>Follow test-first development.</action>
+      <action>Apply coding practices.</action>
+      <uses_skills>
+        <skill>tdd</skill>
+        <skill>ponytail</skill>
+      </uses_skills>
+    </phase>
+
+    <phase order="4" name="code_review" recurring="after_each_phase">
+      <action>Run code review checks.</action>
+      <uses_skills>
+        <skill>open-code-review-delegate</skill>
+        <skill>thermo-nuclear-code-quality-review</skill>
+      </uses_skills>
+    </phase>
+
+    <phase order="5" name="ui_check" condition="if development involves UI">
+      <action>Always load UI/UX skill before proceeding.</action>
+      <uses_skills>
+        <skill>impeccable</skill>
+      </uses_skills>
+    </phase>
+
+    <phase order="6" name="update_scratchpad" recurring="after_every_phase">
+      <action>Update SCRATCHPAD with current progress and state.</action>
+    </phase>
+
+    <phase order="7" name="close_session" condition="after all planned phases complete">
+      <action>Close out the session.</action>
+      <uses_skills>
+        <skill>work-journal-orchestrator</skill>
+      </uses_skills>
+    </phase>
+
+  </development_loop>
+
+</agent_configuration>
 
 
-When a <skill> is named or triggered, read `.agents/skills/<skill>/SKILL.md` and follow that.
+When a <skill> is named or triggered, read `<skill>/SKILL.md` and follow that.
 Do not use `.codex/`, `.claude/`, plugin-cache, user-home, or sibling-checkout copies unless the user explicitly requests an external fallback.
 Use `$add-project-rule` for any addition, update, rename, split, or reorganization under `.agents/rules/`.
 

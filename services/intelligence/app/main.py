@@ -11,6 +11,7 @@ from app.routers import (
     assessments,
     calibration,
     feedback,
+    guide,
     jobs,
     mastery,
     materials,
@@ -96,4 +97,5 @@ app.include_router(jobs.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(assessments.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(retrieval.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(mastery.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(guide.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(feedback.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)

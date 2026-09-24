@@ -8,7 +8,7 @@ import pytest
 from openai import APIConnectionError, APIError, APIStatusError, APITimeoutError
 
 import app.generation.openrouter_client as adapter_module
-from app.generation.openrouter_client import OpenRouterGenerationClient
+from app.generation.openrouter_client import GenerationStreamError, OpenRouterGenerationClient
 from app.generation.prompts import mcq_schema
 
 # Adapter tests only need a representative schema; the worker binds the real one
@@ -320,3 +320,106 @@ def test_repair_flag_is_adapter_detail_not_a_kwarg(fake: FakeClient) -> None:
     response = _client().generate([{"role": "user", "content": "hi"}], MCQ_SCHEMA, repair=True)
     assert response.outcome == "ok"
     assert "repair" not in fake.calls[0]
+
+
+# --- #46 guide stream ---
+
+
+class _Delta:
+    def __init__(self, content: str | None) -> None:
+        self.content = content
+
+
+class _StreamChoice:
+    def __init__(self, content: str | None) -> None:
+        self.delta = _Delta(content)
+
+
+class _StreamChunk:
+    def __init__(self, content: str | None) -> None:
+        self.choices = [_StreamChoice(content)]
+
+
+class FakeStream:
+    """Yields text chunks then optionally raises (mid-stream failure)."""
+
+    def __init__(self, texts: list[str], error: Exception | None = None) -> None:
+        self._texts = texts
+        self._error = error
+
+    def __iter__(self):
+        for text in self._texts:
+            yield _StreamChunk(text)
+        if self._error is not None:
+            raise self._error
+
+
+class _StreamCompletions:
+    def __init__(self, fake: FakeStreamClient) -> None:
+        self._fake = fake
+
+    def create(self, **kwargs: Any):
+        return self._fake._next(kwargs)
+
+
+class _StreamChat:
+    def __init__(self, fake: FakeStreamClient) -> None:
+        self._fake = fake
+
+    @property
+    def completions(self) -> _StreamCompletions:
+        return _StreamCompletions(self._fake)
+
+
+class FakeStreamClient:
+    """OpenAI-shaped double for the streaming `completions.create` path."""
+
+    def __init__(self, streams: list[Any]) -> None:
+        self._streams = list(streams)
+        self.calls: list[dict] = []
+        self._chat = _StreamChat(self)
+
+    @property
+    def chat(self) -> _StreamChat:
+        return self._chat
+
+    def _next(self, kwargs: dict) -> Any:
+        self.calls.append(kwargs)
+        item = self._streams.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+@pytest.fixture
+def stream_fake(monkeypatch: pytest.MonkeyPatch):
+    client = FakeStreamClient([])
+    monkeypatch.setattr(adapter_module, "OpenAI", lambda **kwargs: client)
+    monkeypatch.setattr(adapter_module.time, "sleep", lambda seconds: seconds)
+    return client
+
+
+def test_stream_text_yields_deltas_without_response_format(stream_fake: FakeStreamClient) -> None:
+    stream_fake._streams.append(FakeStream(["Hel", "lo"]))
+    deltas = list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert deltas == ["Hel", "lo"]
+    assert stream_fake.calls[0]["stream"] is True
+    assert "response_format" not in stream_fake.calls[0]
+
+
+def test_stream_text_retries_before_first_delta(stream_fake: FakeStreamClient) -> None:
+    request = httpx.Request("POST", "http://test")
+    stream_fake._streams.append(APIConnectionError(request=request))
+    stream_fake._streams.append(FakeStream(["ok"]))
+    deltas = list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert deltas == ["ok"]
+    assert len(stream_fake.calls) == 2
+
+
+def test_stream_text_does_not_retry_after_a_delta(stream_fake: FakeStreamClient) -> None:
+    request = httpx.Request("POST", "http://test")
+    stream_fake._streams.append(FakeStream(["Hel"], error=APITimeoutError(request=request)))
+    with pytest.raises(GenerationStreamError) as excinfo:
+        list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert excinfo.value.code == "provider_timeout"
+    assert len(stream_fake.calls) == 1

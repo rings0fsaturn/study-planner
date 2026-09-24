@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Iterator
 from typing import Any
 
 import jsonschema
@@ -31,6 +32,21 @@ DEFAULT_BASE_URL = "https://openrouter.ai/api/v1"
 DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731"
 MAX_RETRY_AFTER_SECONDS = 60
 RETRY_DELAY_SECONDS = 0.25
+
+
+class GenerationStreamError(RuntimeError):
+    """A guide stream failure carrying the normalized error code (D-03).
+
+    The guide stream is prose, so it has no schema outcome; this is the one
+    failure channel the SSE router turns into an `error` frame.
+    """
+
+    def __init__(self, code: str, message: str, retryable: bool) -> None:
+        super().__init__(message)
+        self.code = code
+        self.message = message
+        self.retryable = retryable
+
 
 # finish_reason -> outcome; `stop` is decided after local schema validation.
 FINISH_TO_OUTCOME = {
@@ -189,6 +205,89 @@ class OpenRouterGenerationClient:
                 correlation_id,
                 response_schema,
             )
+
+    def _text_kwargs(self, messages: list[dict]) -> dict:
+        """Plain-prose streaming request: no `response_format`, reasoning knob kept."""
+        reasoning: dict[str, object] = {"enabled": False}
+        if self._reasoning_effort != "off":
+            reasoning = {"enabled": True, "effort": self._reasoning_effort}
+        return {
+            "model": self._model,
+            "messages": messages,
+            "max_tokens": self._max_output_tokens,
+            "temperature": self._temperature,
+            "timeout": self._timeout_s,
+            "stream": True,
+            "extra_body": {
+                "provider": {"require_parameters": True},
+                "reasoning": reasoning,
+            },
+        }
+
+    def stream_text(
+        self,
+        messages: list[dict],
+        *,
+        request_id: str = "",
+        correlation_id: str = "",
+    ) -> Iterator[str]:
+        """Yield plain-text deltas with at most one retry before the first delta.
+
+        Prose tasks (the guide) have no schema, so this skips `response_format`
+        and streams raw content. Once a delta has been yielded the stream cannot
+        be retried (the client already rendered it); a later failure raises
+        `GenerationStreamError` and the caller emits an `error` frame (D-03).
+        """
+        kwargs = self._text_kwargs(messages)
+        attempt = 0
+        while True:
+            attempt += 1
+            emitted = False
+            try:
+                stream = self._client.chat.completions.create(**kwargs)
+                for chunk in stream:
+                    text = self._delta_text(chunk)
+                    if text:
+                        emitted = True
+                        yield text
+                return
+            except APITimeoutError:
+                if attempt == 1 and not emitted:
+                    time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                raise GenerationStreamError(
+                    "provider_timeout", "provider deadline exceeded", True
+                ) from None
+            except APIStatusError as exc:
+                retryable_status = exc.status_code == 429 or exc.status_code >= 500
+                if attempt == 1 and not emitted and retryable_status:
+                    delay = (
+                        self._retry_after_delay(exc)
+                        if exc.status_code == 429
+                        else RETRY_DELAY_SECONDS
+                    )
+                    time.sleep(delay)
+                    continue
+                _outcome, code, retryable = self._classify_status(exc)
+                raise GenerationStreamError(code, self._message(exc), retryable) from None
+            except APIConnectionError:
+                if attempt == 1 and not emitted:
+                    time.sleep(RETRY_DELAY_SECONDS)
+                    continue
+                raise GenerationStreamError(
+                    "provider_unavailable", "provider connection failed", True
+                ) from None
+            except APIError as exc:
+                raise GenerationStreamError("provider_error", str(exc)[:300], False) from None
+
+    @staticmethod
+    def _delta_text(chunk: Any) -> str:
+        choices = getattr(chunk, "choices", None) or []
+        if not choices:
+            return ""
+        delta = getattr(choices[0], "delta", None)
+        content = getattr(delta, "content", None) if delta is not None else None
+        return content or ""
 
     @staticmethod
     def _failure(

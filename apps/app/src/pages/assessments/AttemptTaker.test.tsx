@@ -6,6 +6,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, cleanup } from '@testing-library/react'
+import { EditorView } from '@codemirror/view'
 import Dexie from 'dexie'
 import { EventStoreProvider } from '../../events/EventStoreProvider'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
@@ -16,6 +17,13 @@ import type { AttemptRecord } from '../../assessments/types'
 vi.mock('../../lib/supabase', () => ({
   supabase: { auth: { getSession: vi.fn(async () => ({ data: { session: null } })) } },
 }))
+
+// The advisory run loads Pyodide; the coach tap test only needs its verdicts.
+const advisoryRun = vi.hoisted(() => ({ runAdvisoryTests: vi.fn() }))
+vi.mock('./advisoryRunner', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./advisoryRunner')>()
+  return { ...actual, runAdvisoryTests: advisoryRun.runAdvisoryTests }
+})
 
 const ASSESSMENT = readyAssessment()
 const QUESTION = ASSESSMENT.questions[0]
@@ -333,6 +341,49 @@ describe('AttemptTaker coding (#42)', () => {
     mountCoding()
     expect(await screen.findByRole('button', { name: 'Run visible tests' })).toBeInTheDocument()
     expect(screen.getByText(/the server grade is authoritative/)).toBeInTheDocument()
+  })
+
+  it('taps work, caret line, and advisory verdicts for the practice coach (#46)', async () => {
+    const onWorkChange = vi.fn()
+    const onActiveLineChange = vi.fn()
+    const onAdvisoryResults = vi.fn()
+    const question = codingQuestion({ assessmentId: ASSESSMENT.id })
+    const assessment = readyAssessment({ questions: [question] })
+    render(
+      <EventStoreProvider userId="taker-user">
+        <AssessmentProvider client={codingClient}>
+          <AttemptTaker
+            assessment={assessment}
+            question={question}
+            onWorkChange={onWorkChange}
+            onActiveLineChange={onActiveLineChange}
+            onAdvisoryResults={onAdvisoryResults}
+          />
+        </AssessmentProvider>
+      </EventStoreProvider>,
+    )
+
+    const editor = await screen.findByRole('textbox', { name: 'Your code' })
+    // The caret anchors on mount so the coach knows the active line at once,
+    // and the starter code is reported as the initial work.
+    expect(onActiveLineChange).toHaveBeenCalledWith(1)
+    expect(onWorkChange).toHaveBeenCalledWith(question.starterCode)
+
+    const view = EditorView.findFromDOM(editor)
+    act(() => {
+      view?.dispatch({ changes: { from: 0, insert: '# edited\n' } })
+    })
+    expect(onWorkChange).toHaveBeenCalled()
+
+    advisoryRun.runAdvisoryTests.mockResolvedValue([
+      { name: 'adds small list', passed: false, actual: '5' },
+    ])
+    fireEvent.click(screen.getByRole('button', { name: 'Run visible tests' }))
+    await waitFor(() =>
+      expect(onAdvisoryResults).toHaveBeenCalledWith([
+        expect.objectContaining({ name: 'adds small list', passed: false }),
+      ]),
+    )
   })
 })
 

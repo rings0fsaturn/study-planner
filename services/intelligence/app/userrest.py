@@ -92,6 +92,20 @@ class UserScopedClient:
             f"?assessment_id=eq.{assessment_id}&select={QUESTION_PUBLIC_COLUMNS}"
         )
 
+    def get_question(self, question_id: str) -> dict[str, Any]:
+        """Read one question's column-granted public columns only (D-05).
+
+        RLS scopes the read to the owner and `answer_block` is never selected,
+        so a guide read can never carry hidden grading content.
+        """
+        rows = self._get_rows(
+            f"{self._base}/rest/v1/{QUESTIONS_TABLE}"
+            f"?id=eq.{question_id}&select={QUESTION_PUBLIC_COLUMNS}"
+        )
+        if not rows:
+            raise IngestionError("not_found", "question not found")
+        return rows[0]
+
     def insert_assessment(self, row: dict[str, Any]) -> None:
         response = self._http.post(
             f"{self._base}/rest/v1/{ASSESSMENTS_TABLE}", json=row, headers=self._headers()

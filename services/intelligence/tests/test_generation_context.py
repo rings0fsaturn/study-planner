@@ -75,6 +75,29 @@ def test_build_context_returns_retrieved_chunks(monkeypatch: pytest.MonkeyPatch)
     assert call["headers"]["Authorization"] == "Bearer svc-key"
 
 
+def test_build_context_steer_override_replaces_skill_tag_steer(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The guide steers by its own query text, not the skill-tag steer (D-06)."""
+    embedded: list[list[str]] = []
+    monkeypatch.setattr(
+        context_module, "embed_queries", lambda texts, client: embedded.append(texts) or [[0.1]]
+    )
+    rest = FakeRest()
+    rest.response = httpx.Response(200, json=[])
+    build_context(
+        "m1",
+        ("core",),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,  # type: ignore[arg-type]
+        steer_override="What does this function return?",
+    )
+    assert embedded == [["What does this function return?"]]
+    assert rest.calls[0]["json"]["query_text"] == "What does this function return?"
+
+
 def test_build_context_bounds_the_query_to_the_scope_pages(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

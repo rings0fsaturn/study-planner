@@ -26,6 +26,8 @@ import {
 } from './practiceRunModel'
 import { PracticeSummary } from './PracticeSummary'
 import { AnswerSlot } from '../assessments/AssessmentDetail'
+import { PracticeCoach } from '../../guide/PracticeCoach'
+import { usePracticeGuide } from '../../guide/usePracticeGuide'
 import './practice.css'
 
 /**
@@ -343,6 +345,38 @@ export function PracticeRun() {
     setRetryingIds((previous) => new Set(previous).add(questionId))
   }
 
+  // ---- Practice coach (#46) ------------------------------------------------
+  // The hook must run before any early return, so its inputs are derived here
+  // rather than at the render site below.
+  const coachQuestion = current?.group?.question
+  const coachAttemptId = current?.group?.latest?.attemptId ?? null
+  const [coachWork, setCoachWork] = useState('')
+  const [coachLine, setCoachLine] = useState<number | undefined>(undefined)
+  const coachQuestionId = coachQuestion?.id
+  // Work and caret line belong to one problem; clear them when it changes so a
+  // stale answer never grounds the next question's hint (objective takers
+  // report neither).
+  useEffect(() => {
+    setCoachWork('')
+    setCoachLine(undefined)
+  }, [coachQuestionId])
+  // The taker slot and the coach share one "still answerable" invariant: the
+  // problem is loaded and either never attempted or explicitly retried.
+  const problemIsAnswerable =
+    current != null &&
+    coachQuestion != null &&
+    currentEnvelope != null &&
+    currentEnvelope.status !== 'generating' &&
+    ((current.group?.attempts.length ?? 0) === 0 || retryingIds.has(coachQuestion.id))
+  const guide = usePracticeGuide({
+    questionId: coachQuestion?.id ?? '',
+    work: coachWork,
+    activeLine: coachLine,
+    materialIds: current ? [current.materialId] : undefined,
+    attemptId: coachAttemptId,
+    enabled: problemIsAnswerable,
+  })
+
   if (!materialId || !runId) return null
 
   if (events == null) {
@@ -381,19 +415,13 @@ export function PracticeRun() {
   }
 
   const allGraded = totalProblems > 0 && (model?.completedCount ?? 0) === totalProblems
-  const currentQuestion = current?.group?.question
+  const currentQuestion = coachQuestion
   // The loaded question's own format is the server's answer; the pointer's
   // record only labels a problem that has not loaded yet (#45).
   const currentFamily = currentQuestion?.format ?? current?.family
   // Never-attempted problems answer through the slot by default; retried ones
   // re-enter it until their fresh attempt resolves (the #40 pattern).
-  const showSlot =
-    current != null &&
-    currentQuestion != null &&
-    envelopes[current.assessmentId] != null &&
-    envelopes[current.assessmentId].status !== 'generating' &&
-    ((current.group?.attempts.length ?? 0) === 0 ||
-      retryingIds.has(currentQuestion.id))
+  const showSlot = problemIsAnswerable
 
   // ---- Summary (P3): terminal problems, inline retry -----------------------
   const summaryProblems = model?.problems.filter(isSummaryEligible) ?? []
@@ -473,6 +501,16 @@ export function PracticeRun() {
                       from {materialTitles[current.materialId]}
                     </span>
                   )}
+                  {problemIsAnswerable && (
+                    <button
+                      type="button"
+                      className="btn btn-ghost btn-sm"
+                      style={{ marginLeft: 'auto' }}
+                      onClick={guide.ask}
+                    >
+                      I&rsquo;m stuck
+                    </button>
+                  )}
                 </div>
 
                 {current.assessmentStatus === 'generating' && (
@@ -548,6 +586,17 @@ export function PracticeRun() {
                       assessment={envelopes[current.assessmentId]}
                       question={currentQuestion}
                       onAttemptRecorded={() => void handleAttemptRecorded()}
+                      onWorkChange={(work) => {
+                        setCoachWork(work)
+                        guide.poke()
+                      }}
+                      onActiveLineChange={(line) => {
+                        setCoachLine(line)
+                        guide.poke()
+                      }}
+                      onAdvisoryResults={(results) => {
+                        if (results.some((result) => !result.passed)) guide.notifyFailedTest()
+                      }}
                     />
                   </div>
                 )}
@@ -611,6 +660,8 @@ export function PracticeRun() {
           </div>
         </div>
       )}
+
+      {coachQuestion && !showSummary && <PracticeCoach guide={guide} activeLine={coachLine} />}
     </div>
   )
 }
