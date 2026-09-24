@@ -184,7 +184,8 @@ def test_citation_supports_clears_unverified() -> None:
     assert len(jev.calls) == 2
 
 
-def test_citation_contradicted_drops_without_repair() -> None:
+def test_citation_contradicted_shadows_without_drop() -> None:
+    """#71 shadow-first: a confident reject keeps the soft warning (no drop)."""
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
     jev = ScriptJev(
         [
@@ -195,12 +196,32 @@ def test_citation_contradicted_drops_without_repair() -> None:
     adapter = FakeAdapter([ok_response(structured_output=BAD_QUOTE_MCQ)])
     send(repo, queue)
     slice1_worker(repo, queue, adapter, telemetry, jev).run_once()
-    assert repo.completed == []
-    assert len(adapter.calls) == 1  # citation drops never trigger repair
-    _, status, warnings = repo.assessment_updates[-1]
-    assert status == "failed"
-    assert warnings[0]["code"] == "citation_missing"
-    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert len(repo.completed) == 1  # shadow: completes, never drops
+    assert len(adapter.calls) == 1  # shadow path never triggers repair
+    _, _, _, warnings = repo.completed[0]
+    assert [w["code"] for w in warnings] == ["citation_unverified"]
+    assert repo.assessment_updates == []  # no failure recorded
+    assert all(j.get("error_code") != "malformed_output" for j in repo.job_updates)
+
+
+def test_citation_unsupported_shadows_without_drop() -> None:
+    """#71 shadow-first: confident `says_nothing` also keeps the soft warning."""
+    repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
+    jev = ScriptJev(
+        [
+            ("answer", {"suitability": _answer("derivable", 0.95)}),
+            ("answer", {"relation": _answer("says_nothing", 0.93)}),
+        ]
+    )
+    adapter = FakeAdapter([ok_response(structured_output=BAD_QUOTE_MCQ)])
+    send(repo, queue)
+    slice1_worker(repo, queue, adapter, telemetry, jev).run_once()
+    assert len(repo.completed) == 1
+    assert len(adapter.calls) == 1
+    _, _, _, warnings = repo.completed[0]
+    assert [w["code"] for w in warnings] == ["citation_unverified"]
+    assert repo.assessment_updates == []
+    assert all(j.get("error_code") != "malformed_output" for j in repo.job_updates)
 
 
 def test_citation_error_keeps_soft_warning() -> None:

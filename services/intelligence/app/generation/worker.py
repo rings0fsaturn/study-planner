@@ -801,14 +801,16 @@ class GenerationWorker:
         *,
         correlation_id: str,
     ) -> tuple[dict | None, list[dict]]:
-        """Slice-1 citation adjudication (#70): judge only the unverified middle.
+        """Slice-1 citation adjudication (#70 gate, #71 shadow policy).
 
-        Returns (accepted | None, warnings). A confident Jev rejection drops
-        the candidate with `citation_missing` (existing split: warning carries
-        the cause, the job records `malformed_output`, never a repair). A
-        confident `supports` clears the soft warning. Anything else (low
-        confidence, missing quote/section, Jev error) keeps the soft warning
-        and proceeds: fail-open.
+        Returns (accepted | None, warnings). #71 shadow-first: a confident
+        Jev rejection is logged with structured fields and keeps the soft
+        `citation_unverified` warning instead of dropping (the
+        `citation_missing` / `malformed_output` split is preserved for the
+        future enforce flip after #74 reports). A confident `supports`
+        clears the soft warning. Anything else (low confidence, missing
+        quote/section, Jev error) keeps the soft warning and proceeds:
+        fail-open.
         """
         from app.jev.questions import citation_questions, route_citation
 
@@ -859,20 +861,34 @@ class GenerationWorker:
                 chunk_id,
                 confidence,
                 result.input_tokens,
-                extra={"trace_id": correlation_id},
+                extra={
+                    "trace_id": correlation_id,
+                    "jev_verdict": verdict,
+                    "jev_stands": stands,
+                    "jev_confidence": round(confidence, 4),
+                    "jev_chunk_id": chunk_id,
+                    "jev_input_tokens": result.input_tokens,
+                },
             )
             if verdict == "verified" and stands:
                 continue
             if verdict in ("contradicted", "unsupported") and stands:
-                return None, [
-                    {
-                        "code": "citation_missing",
-                        "message": (
-                            "jev citation adjudication rejected the candidate's "
-                            f"citations (chunk {chunk_id}: {verdict})"
-                        ),
-                    }
-                ]
+                # #71 shadow-first: log above, keep the soft warning; the
+                # enforce flip (drop with citation_missing) waits on #74.
+                logger.info(
+                    "jev citation shadow-drop suppressed (chunk=%s verdict=%s)",
+                    chunk_id,
+                    verdict,
+                    extra={
+                        "trace_id": correlation_id,
+                        "jev_verdict": verdict,
+                        "jev_stands": stands,
+                        "jev_confidence": round(confidence, 4),
+                        "jev_chunk_id": chunk_id,
+                    },
+                )
+                kept.append(warning)
+                continue
             kept.append(warning)
         return accepted, kept
 
