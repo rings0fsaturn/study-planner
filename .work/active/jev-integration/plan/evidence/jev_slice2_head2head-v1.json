@@ -1,0 +1,114 @@
+{
+ "classes": {
+  "jev-keep/sidecar-keep": 21,
+  "jev-drop/sidecar-drop": 6,
+  "jev-keep/sidecar-drop": 10,
+  "jev-drop/sidecar-keep": 3
+ },
+ "disagreements": [
+  {
+   "window": "s2-sweep-win1",
+   "row": "s2-sweep-w1-94adce9b",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 4,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-sweep-win1",
+   "row": "s2-sweep-w1-51447f9f",
+   "label": "exclude",
+   "jev": "include",
+   "sidecar_rank": 5,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-sweep-win2",
+   "row": "s2-sweep-w2-4096a759",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 4,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-sweep-win2",
+   "row": "s2-sweep-w2-a86c8e96",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 5,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-sweep-win3",
+   "row": "s2-sweep-w3-ee31c257",
+   "label": "exclude",
+   "jev": "exclude",
+   "sidecar_rank": 3,
+   "class": "jev-drop/sidecar-keep"
+  },
+  {
+   "window": "s2-sweep-win3",
+   "row": "s2-sweep-w3-1a791167",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 4,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-sweep-win3",
+   "row": "s2-sweep-w3-063b477a",
+   "label": "exclude",
+   "jev": "include",
+   "sidecar_rank": 5,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-final-win4",
+   "row": "s2-final-w4-553b7442",
+   "label": "exclude",
+   "jev": "include",
+   "sidecar_rank": 4,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-final-win4",
+   "row": "s2-final-w4-c2754479",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 5,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-final-win5",
+   "row": "s2-final-w5-9f02f94a",
+   "label": "exclude",
+   "jev": "exclude",
+   "sidecar_rank": 2,
+   "class": "jev-drop/sidecar-keep"
+  },
+  {
+   "window": "s2-final-win6",
+   "row": "s2-final-w6-ec4a2680",
+   "label": "exclude",
+   "jev": "exclude",
+   "sidecar_rank": 3,
+   "class": "jev-drop/sidecar-keep"
+  },
+  {
+   "window": "s2-final-win7",
+   "row": "s2-final-w7-8aecc301",
+   "label": "include",
+   "jev": "include",
+   "sidecar_rank": 4,
+   "class": "jev-keep/sidecar-drop"
+  },
+  {
+   "window": "s2-final-win7",
+   "row": "s2-final-w7-acd6ad7f",
+   "label": "exclude",
+   "jev": "include",
+   "sidecar_rank": 5,
+   "class": "jev-keep/sidecar-drop"
+  }
+ ]
+}
