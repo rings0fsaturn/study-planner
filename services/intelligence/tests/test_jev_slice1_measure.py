@@ -10,6 +10,8 @@ from __future__ import annotations
 import pytest
 
 from app.jev.measure_slice1 import summarize_citation, summarize_suitability
+from scripts.jev_sweep_slice1 import load_rows, sweep_rows
+from tests.test_generation_jev_slice1 import ScriptJev
 
 
 def _s_call(row_id, label, choice, confidence, *, scored=True):
@@ -104,3 +106,90 @@ def test_citation_low_confidence_never_confident_reject() -> None:
     assert report["stands_true"] == 0
     assert report["reject_precision"] is None
     assert report["reject_recall"] == pytest.approx(0.0)
+
+
+def _sweep_jev(script):
+    """ScriptJev answers need choice/confidence/type shape like worker tests."""
+    shaped = []
+    for kind, payload in script:
+        if kind == "error":
+            shaped.append((kind, payload))
+            continue
+        shaped.append(
+            (
+                kind,
+                {
+                    key: {
+                        "choice": value["choice"],
+                        "confidence": value["confidence"],
+                        "type": "choice",
+                    }
+                    for key, value in payload.items()
+                },
+            )
+        )
+    return ScriptJev(shaped)
+
+
+def _s_row(row_id, *, split="sweep"):
+    return {
+        "row_id": row_id,
+        "split": split,
+        "kind": "suitability",
+        "family": "coding",
+        "label": "derivable",
+        "chunk_text": "Write a function parse_log(lines) that yields (level, message).",
+    }
+
+
+def _c_row(row_id, *, split="sweep"):
+    return {
+        "row_id": row_id,
+        "split": split,
+        "kind": "citation",
+        "label": "verified",
+        "claim": "The default access token expiry is 1 hour.",
+        "section": "The default and recommended access token expiry is 1 hour.",
+    }
+
+
+def test_sweep_rows_spends_one_call_per_row_per_repeat() -> None:
+    jev = _sweep_jev(
+        [
+            ("answer", {"suitability": {"choice": "derivable", "confidence": 0.95}}),
+            ("answer", {"suitability": {"choice": "derivable", "confidence": 0.87}}),
+            ("answer", {"relation": {"choice": "supports", "confidence": 0.93}}),
+            ("answer", {"relation": {"choice": "supports", "confidence": 0.91}}),
+        ]
+    )
+    outcome = sweep_rows(jev, [_s_row("s1"), _c_row("c1")], repeats=2)
+    assert outcome["n_calls"] == 4
+    assert len(jev.calls) == 4
+    assert "chunk_text" in jev.calls[0]["state"]
+    assert set(jev.calls[2]["state"]) == {"claim", "section"}
+    assert len(outcome["suitability_grid"]) == 9
+    assert len(outcome["citation_grid"]) == 3
+    assert outcome["suitability_calls"][0]["variant"] == "v1"
+    assert outcome["spent_input_tokens"] == 40
+    assert outcome["errors"] == []
+
+
+def test_sweep_rows_fail_open_marks_call_unscored() -> None:
+    from app.jev.client import JevError
+
+    jev = _sweep_jev([("error", JevError("timeout", "deadline", True, "r1"))])
+    outcome = sweep_rows(jev, [_s_row("s1")], repeats=1)
+    assert outcome["n_calls"] == 0
+    assert outcome["errors"] == ["timeout"]
+    assert outcome["suitability_calls"][0]["scored"] is False
+
+
+def test_load_rows_filters_split(tmp_path) -> None:
+    import json
+
+    payload = {"rows": [_s_row("s1", split="sweep"), _s_row("s2", split="final")]}
+    path = tmp_path / "rows.json"
+    path.write_text(json.dumps(payload))
+    assert [r["row_id"] for r in load_rows(str(path), "sweep")] == ["s1"]
+    assert [r["row_id"] for r in load_rows(str(path), "final")] == ["s2"]
+    assert len(load_rows(str(path), "all")) == 2
