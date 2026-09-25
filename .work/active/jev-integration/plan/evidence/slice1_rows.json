@@ -1,0 +1,527 @@
+{
+ "note": "Phase A stress sweep rows (#75 A1): suitability (coding/objective/written x derivable/not_derivable x sweep/final, incl. codeless + solved worksheets + borderline) + citation (exact/paraphrase/off-context/missing-quote/uncertain x sweep/final). Split by material: sweep uses mat-sweep-*, final uses mat-final-*. No chunk or claim shared across splits. No overlap with #74 rubric_rows.json question_ids (those are llm_rubric attempts, these are synthetic windows/claims); bias: hand labels skew to textbook-clear cases, sweep split tunes bands, band rows never report final agreement. Suitability chunk_text is the joined window capped at 4000 chars (matches _jev_suitability_blocks). Citation rows come only from the uncertain middle that today yields citation_unverified; citation_missing/malformed_output rows excluded (accepted None never reaches Jev).",
+ "rows": [
+  {
+   "row_id": "s-sweep-coding-derivable-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-sweep-code-01",
+   "chunk_text": "Write a function `merge_logs(streams)` that merges k sorted log iterators into one timestamp-ordered stream. Input: list of iterables of (ts, msg). Output: generator of (ts, msg) in ascending ts. Example: [[(1,'a'),(4,'c')],[(2,'b')]] -> [(1,'a'),(2,'b'),(4,'c')]."
+  },
+  {
+   "row_id": "s-sweep-coding-derivable-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-sweep-code-02",
+   "chunk_text": "Implement `rate_limit(events, n, window_s)` using a sliding window: return True if fewer than n events fall inside the trailing window_s seconds. Input: list of epoch ints, n int, window_s int. Starter code holds only the signature and docstring."
+  },
+  {
+   "row_id": "s-sweep-coding-derivable-03",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-sweep-code-03",
+   "chunk_text": "Write `parse_log(lines)` that yields (level, message) tuples. Input lines look like `[INFO] started`. Malformed lines must be skipped. Example: `[INFO] started` -> `('INFO', 'started')`."
+  },
+  {
+   "row_id": "s-sweep-coding-codeless-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-notes-01",
+   "chunk_text": "A stack is a last-in-first-out data structure. Push adds an element, pop removes the most recent one. Example trace: push(1), push(2), pop() -> 2. No input/output contract is stated and no function is requested."
+  },
+  {
+   "row_id": "s-sweep-coding-codeless-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-notes-02",
+   "chunk_text": "Photosynthesis converts light energy into chemical energy stored as glucose. Chlorophyll absorbs red and blue light. The Calvin cycle fixes carbon dioxide in the stroma. Study notes with no coding contract."
+  },
+  {
+   "row_id": "s-sweep-coding-solved-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-worksheet-01",
+   "chunk_text": "Worksheet with answers filled in: Q1 reverse a string -> `s[::-1]`. Q2 count vowels -> `sum(c in 'aeiou' for c in s)`. Q3 flatten a list -> `[x for row in m for x in row]`. Complete solutions are present, nothing is left to the learner."
+  },
+  {
+   "row_id": "s-sweep-coding-solved-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-worksheet-02",
+   "chunk_text": "Solved exercise: binary search on a sorted list. Solution: `def bsearch(a, x): lo, hi = 0, len(a)` with full loop and trace. Fully worked with trace."
+  },
+  {
+   "row_id": "s-sweep-objective-derivable-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "derivable",
+   "material_id": "mat-sweep-networks-01",
+   "chunk_text": "Explain the difference between TCP and UDP: TCP is connection-oriented with delivery guarantees and ordering; UDP is connectionless with no guarantees but lower overhead. Suitable for an objective question on transport protocols."
+  },
+  {
+   "row_id": "s-sweep-objective-derivable-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "derivable",
+   "material_id": "mat-sweep-db-01",
+   "chunk_text": "State the three normal forms: 1NF atomic values, 2NF no partial dependency, 3NF no transitive dependency. Each rule is named with a checkable membership test for an objective question."
+  },
+  {
+   "row_id": "s-sweep-objective-codeless-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-vague-01",
+   "chunk_text": "Mitochondria are the powerhouse of the cell. This saying is popular but states no mechanism, no contrast, and no checkable proposition beyond a metaphor."
+  },
+  {
+   "row_id": "s-sweep-objective-codeless-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-vague-02",
+   "chunk_text": "Water is wet. The sky is blue. Disconnected trivia sentences with no shared topic and no proposition a question could ground on."
+  },
+  {
+   "row_id": "s-sweep-written-derivable-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "written",
+   "label": "derivable",
+   "material_id": "mat-sweep-systems-01",
+   "chunk_text": "Compare load balancing against consistent hashing for request routing: state when each spreads load evenly, what breaks when a node is added, and how each re-maps keys. Grounds a written analysis question."
+  },
+  {
+   "row_id": "s-sweep-written-derivable-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "written",
+   "label": "derivable",
+   "material_id": "mat-sweep-case-01",
+   "chunk_text": "Evaluate variance analysis for the case firm: judge performance on financial and non-financial measures, then identify which critical success factor the shortfall comes from. Grounds a written evaluation."
+  },
+  {
+   "row_id": "s-sweep-written-codeless-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "written",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-motiv-01",
+   "chunk_text": "Good notes are important. Studying hard matters. Effort leads to success. Motivational prose with no factual proposition to examine."
+  },
+  {
+   "row_id": "s-sweep-written-codeless-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "written",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-filler-01",
+   "chunk_text": "In conclusion, many things are relevant and various factors play a role. Further details depend on the situation. Filler paragraph with no claim."
+  },
+  {
+   "row_id": "s-sweep-coding-borderline-01",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-sweep-code-04",
+   "chunk_text": "Borderline: implement `retry(op, times)` with backoff. The contract is stated but the failure modes (which exceptions retry, jitter bounds) are left vague, so judges may split between derivable and review."
+  },
+  {
+   "row_id": "s-final-coding-derivable-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-final-code-01",
+   "chunk_text": "Write a function `top_k(counter, k)` returning the k most common elements. Input: collections.Counter plus int k. Ties broken by first-seen order. Only the signature and examples are given."
+  },
+  {
+   "row_id": "s-final-coding-derivable-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-final-code-02",
+   "chunk_text": "Implement `dedup(xs)` preserving order: return a list with repeats removed, keeping first occurrences. Input list of hashables. Example: [3,1,3,2] -> [3,1,2]. Body left to the learner."
+  },
+  {
+   "row_id": "s-final-coding-codeless-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-final-notes-01",
+   "chunk_text": "The French Revolution began in 1789. Causes included fiscal crisis, Estates-General, and the storming of the Bastille. Pure history notes with no coding contract."
+  },
+  {
+   "row_id": "s-final-coding-solved-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-final-worksheet-01",
+   "chunk_text": "Tutorial with full answers: Q1 two-sum -> hashmap solution shown. Q2 valid parentheses -> stack solution shown. Q3 merge intervals -> sort+merge shown. Nothing left unimplemented."
+  },
+  {
+   "row_id": "s-final-objective-derivable-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "derivable",
+   "material_id": "mat-final-db-01",
+   "chunk_text": "Define ACID: atomicity all-or-nothing, consistency valid transitions, isolation concurrent safety, durability committed writes. Each property is a checkable objective stem."
+  },
+  {
+   "row_id": "s-final-objective-derivable-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "derivable",
+   "material_id": "mat-final-networks-01",
+   "chunk_text": "Name the OSI layers in order: physical, data link, network, transport, session, presentation, application. A list question grounds directly."
+  },
+  {
+   "row_id": "s-final-objective-codeless-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "not_derivable",
+   "material_id": "mat-final-vague-01",
+   "chunk_text": "Some people think databases are useful sometimes. Opinions differ and no assertion is made about any mechanism."
+  },
+  {
+   "row_id": "s-final-objective-codeless-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "not_derivable",
+   "material_id": "mat-final-vague-02",
+   "chunk_text": "Things happen for reasons. Outcomes vary by context. Generic hedging with no proposition."
+  },
+  {
+   "row_id": "s-final-written-derivable-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "written",
+   "label": "derivable",
+   "material_id": "mat-final-case-01",
+   "chunk_text": "Assess Mendelow's matrix for the case stakeholder: map power against interest, place the regulator, and recommend manage-closely versus keep-satisfied with reasons. Grounds a written case answer."
+  },
+  {
+   "row_id": "s-final-written-derivable-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "written",
+   "label": "derivable",
+   "material_id": "mat-final-systems-01",
+   "chunk_text": "Contrast TCP against UDP for live video: justify the choice with latency, loss tolerance, and ordering needs. Grounds a written trade-off."
+  },
+  {
+   "row_id": "s-final-written-codeless-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "written",
+   "label": "not_derivable",
+   "material_id": "mat-final-motiv-01",
+   "chunk_text": "Study tips: sleep well, eat breakfast, stay positive. Advice with no examinable claim."
+  },
+  {
+   "row_id": "s-final-written-codeless-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "written",
+   "label": "not_derivable",
+   "material_id": "mat-final-filler-01",
+   "chunk_text": "This section covers important concepts that will be discussed. Details follow in later parts. Placeholder prose with no content."
+  },
+  {
+   "row_id": "s-final-coding-borderline-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "derivable",
+   "material_id": "mat-final-code-03",
+   "chunk_text": "Borderline: deduplicate while preserving the first-seen order; the tie rule is implied by the example but not stated, so confidence should sit mid-band."
+  },
+  {
+   "row_id": "s-final-objective-borderline-01",
+   "split": "final",
+   "kind": "suitability",
+   "family": "objective",
+   "label": "not_derivable",
+   "material_id": "mat-final-notes-02",
+   "chunk_text": "Borderline history note: the fiscal crisis is narrated with dates and figures that could seed an objective stem, but no question target is stated."
+  },
+  {
+   "row_id": "s-sweep-coding-borderline-02",
+   "split": "sweep",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-sweep-worksheet-03",
+   "chunk_text": "Borderline tutorial: two-sum is described with pseudocode steps but the reference code is elided; judges may split on whether the solution is already present."
+  },
+  {
+   "row_id": "s-final-coding-borderline-02",
+   "split": "final",
+   "kind": "suitability",
+   "family": "coding",
+   "label": "not_derivable",
+   "material_id": "mat-final-worksheet-02",
+   "chunk_text": "Borderline worksheet: merge-intervals steps are narrated with one worked line but full code withheld; judges may split on solved versus derivable."
+  },
+  {
+   "row_id": "c-sweep-exact-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-01",
+   "claim": "The default access token expiry is 1 hour.",
+   "section": "The default and recommended access token expiry is 1 hour. Values above 1 hour are discouraged."
+  },
+  {
+   "row_id": "c-sweep-exact-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "JWT signing keys rotate every 90 days.",
+   "section": "Rotate JWT signing keys every 90 days. Keep the previous key for 1 hour after rotation."
+  },
+  {
+   "row_id": "c-sweep-paraphrase-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-01",
+   "claim": "Access tokens should live about an hour; longer lifetimes are discouraged.",
+   "section": "The default and recommended access token expiry is 1 hour. Values above 1 hour are discouraged."
+  },
+  {
+   "row_id": "c-sweep-paraphrase-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "Old signing keys stay valid briefly so active sessions survive rotation.",
+   "section": "Rotate JWT signing keys every 90 days. Keep the previous key for 1 hour after rotation so active sessions survive."
+  },
+  {
+   "row_id": "c-sweep-offcontext-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-sweep-auth-01",
+   "claim": "The default access token expiry is 24 hours.",
+   "section": "The default and recommended access token expiry is 1 hour. Values above 1 hour are discouraged."
+  },
+  {
+   "row_id": "c-sweep-offcontext-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "Signing keys never rotate.",
+   "section": "Rotate JWT signing keys every 90 days. Keep the previous key for 1 hour after rotation."
+  },
+  {
+   "row_id": "c-sweep-missing-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-sweep-auth-03",
+   "claim": "Refresh tokens live for 30 days.",
+   "section": "Access tokens expire after 1 hour. Refresh flows use a separate rotation schedule described elsewhere."
+  },
+  {
+   "row_id": "c-sweep-missing-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-sweep-strategy-01",
+   "claim": "The planning gap equals forecast minus target.",
+   "section": "Variance analysis compares actual cost against the flexed budget. No planning-gap definition appears here."
+  },
+  {
+   "row_id": "c-sweep-quote-near-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-01",
+   "claim": "The recommended expiry is 1 hour.",
+   "section": "Recommended expiry values: the default access token expiry is 1 hour, and operators should not extend it."
+  },
+  {
+   "row_id": "c-sweep-quote-near-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "Keys rotate quarterly.",
+   "section": "Key rotation happens every 90 days, roughly once per quarter, with overlap for live sessions."
+  },
+  {
+   "row_id": "c-sweep-uncertain-01",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-sweep-auth-04",
+   "claim": "Expiry below 5 minutes causes refresh load.",
+   "section": "Values below 5 minutes cause refresh load; the floor depends on traffic shape and clock skew."
+  },
+  {
+   "row_id": "c-sweep-uncertain-02",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "The previous key is kept for exactly one hour.",
+   "section": "Keep the previous key briefly after rotation so active sessions survive; the overlap window is operational."
+  },
+  {
+   "row_id": "c-sweep-uncertain-03",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-sweep-auth-04",
+   "claim": "Expiry guidance depends only on clock skew.",
+   "section": "Values below 5 minutes cause refresh load; the floor depends on traffic shape and clock skew."
+  },
+  {
+   "row_id": "c-sweep-uncertain-04",
+   "split": "sweep",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-sweep-auth-02",
+   "claim": "The overlap window is exactly 60 minutes.",
+   "section": "Keep the previous key briefly after rotation so active sessions survive; the overlap window is operational."
+  },
+  {
+   "row_id": "c-final-exact-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-patterns-01",
+   "claim": "Load balancing shares work among consumers.",
+   "section": "Load balancing shares the work among consumers by routing each request to the least-loaded node."
+  },
+  {
+   "row_id": "c-final-exact-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-db-02",
+   "claim": "2NF forbids partial dependency.",
+   "section": "Second normal form (2NF): no partial dependency of a non-key attribute on part of a composite key."
+  },
+  {
+   "row_id": "c-final-paraphrase-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-patterns-01",
+   "claim": "Requests spread across nodes so no single consumer is overloaded.",
+   "section": "Load balancing shares the work among consumers by routing each request to the least-loaded node."
+  },
+  {
+   "row_id": "c-final-paraphrase-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-db-02",
+   "claim": "Non-key attributes must depend on the whole key, not part of it.",
+   "section": "Second normal form (2NF): no partial dependency of a non-key attribute on part of a composite key."
+  },
+  {
+   "row_id": "c-final-offcontext-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-final-patterns-01",
+   "claim": "Load balancing sends every request to the same node.",
+   "section": "Load balancing shares the work among consumers by routing each request to the least-loaded node."
+  },
+  {
+   "row_id": "c-final-offcontext-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-final-db-02",
+   "claim": "2NF allows partial dependency.",
+   "section": "Second normal form (2NF): no partial dependency of a non-key attribute on part of a composite key."
+  },
+  {
+   "row_id": "c-final-missing-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-final-patterns-02",
+   "claim": "Consistent hashing uses virtual nodes.",
+   "section": "Round-robin routing cycles requests in fixed order. Virtual-node schemes are covered in the next chapter."
+  },
+  {
+   "row_id": "c-final-missing-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-final-db-03",
+   "claim": "3NF is about atomic values.",
+   "section": "Third normal form (3NF): no transitive dependency. Atomicity belongs to first normal form."
+  },
+  {
+   "row_id": "c-final-quote-near-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-patterns-01",
+   "claim": "Each request goes to the least-loaded node.",
+   "section": "Routing: each request is sent to the least-loaded node, rebalancing as load shifts."
+  },
+  {
+   "row_id": "c-final-quote-near-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "verified",
+   "material_id": "mat-final-db-02",
+   "claim": "Non-key attributes cannot ride on part of the key.",
+   "section": "Rule: a non-key attribute must not depend on only part of a composite key."
+  },
+  {
+   "row_id": "c-final-uncertain-01",
+   "split": "final",
+   "kind": "citation",
+   "label": "contradicted",
+   "material_id": "mat-final-patterns-01",
+   "claim": "Rebalancing never moves existing assignments.",
+   "section": "Rebalancing shifts assignments as load changes; stickiness settings bound how much moves."
+  },
+  {
+   "row_id": "c-final-uncertain-02",
+   "split": "final",
+   "kind": "citation",
+   "label": "unsupported",
+   "material_id": "mat-final-db-03",
+   "claim": "Every transitive dependency violates 1NF.",
+   "section": "Third normal form (3NF): no transitive dependency. First normal form covers atomic values only."
+  }
+ ]
+}
