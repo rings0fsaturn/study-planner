@@ -1,0 +1,28 @@
+{
+  "report": {
+    "cutoff": 0.6,
+    "n": 39,
+    "n_scored": 39,
+    "malformed_rate": 0.0,
+    "agreement": 0.9743589743589743,
+    "agree_met": 1.0,
+    "agree_notmet": 0.972972972972973,
+    "n_review": 5,
+    "latency_p50_ms": 664.9988359995405,
+    "latency_p95_ms": 2396.4651363995463
+  },
+  "n_answers": 10,
+  "n_calls": 10,
+  "spent_input_tokens": 7125,
+  "disagreements": [
+    {
+      "answer_id": "2f5f79b4-8bac-4d94-bac1-f65b5dbda241",
+      "index": 3,
+      "criterion": "Provides a coherent, well-structured answer that demonstrates integrated understanding, as expected at APM level.",
+      "jev_score": 0.695,
+      "grade_met": false
+    }
+  ],
+  "errors": [],
+  "spent_usd_estimated": 0.000299
+}

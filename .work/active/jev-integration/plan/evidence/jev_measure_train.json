@@ -1,0 +1,49 @@
+{
+  "report": {
+    "cutoff": 0.6,
+    "n": 36,
+    "n_scored": 36,
+    "malformed_rate": 0.0,
+    "agreement": 0.8888888888888888,
+    "agree_met": 1.0,
+    "agree_notmet": 0.8787878787878788,
+    "n_review": 7,
+    "latency_p50_ms": 647.2529934999329,
+    "latency_p95_ms": 1372.0636487506454
+  },
+  "n_answers": 10,
+  "n_calls": 10,
+  "spent_input_tokens": 6660,
+  "disagreements": [
+    {
+      "answer_id": "c3173206-7cad-41ad-92db-d662518ad1fb",
+      "index": 3,
+      "criterion": "Clearly contrasts the two patterns, showing understanding of the difference.",
+      "jev_score": 0.965,
+      "grade_met": false
+    },
+    {
+      "answer_id": "0575e557-4559-468e-9913-da5a3dc104cc",
+      "index": 3,
+      "criterion": "Provides a coherent, well-structured answer within the expected length.",
+      "jev_score": 0.89,
+      "grade_met": false
+    },
+    {
+      "answer_id": "832f4e85-bb78-41f6-98c2-9124e11b76b2",
+      "index": 1,
+      "criterion": "Explains the purpose of the case study in terms of applying strategic management accounting techniques and professional skills.",
+      "jev_score": 0.665,
+      "grade_met": false
+    },
+    {
+      "answer_id": "4bf5f5c1-0471-473c-ad37-29cee778b29f",
+      "index": 1,
+      "criterion": "Explains the focus on strategic management accounting techniques and the case study's role in planning, control, and evaluation.",
+      "jev_score": 0.61,
+      "grade_met": false
+    }
+  ],
+  "errors": [],
+  "spent_usd_estimated": 0.00028
+}

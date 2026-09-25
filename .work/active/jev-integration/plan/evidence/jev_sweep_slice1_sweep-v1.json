@@ -1,0 +1,809 @@
+{
+  "prompt_variant": "v1",
+  "repeats": 2,
+  "n_rows": 31,
+  "n_calls": 62,
+  "spent_input_tokens": 27992,
+  "latencies_ms": [
+    1009.2742880005972,
+    679.9019390018657,
+    625.243534999754,
+    624.4096270020236,
+    595.9434960022918,
+    624.3287340003008,
+    683.5263879984268,
+    672.4924099980853,
+    692.8919469974062,
+    599.3256439978722,
+    695.0799389996973,
+    593.8902689995302,
+    619.367830997362,
+    643.1507839988626,
+    636.5740510009346,
+    638.4861189981166,
+    611.9158629990125,
+    1832.2551300007035,
+    706.8234830003348,
+    693.2887729999493,
+    587.9555669998808,
+    691.5154089983844,
+    657.7230959992448,
+    605.780911999318,
+    618.9824270004465,
+    635.7023099990329,
+    607.7169160016638,
+    616.4031900007103,
+    769.5688489984605,
+    617.2502850022283,
+    690.9705090001808,
+    609.81510000056,
+    633.8723890003166,
+    672.5706149991311,
+    685.7354259991553,
+    638.8113620014337,
+    627.2488389986393,
+    603.8526490010554,
+    616.5738339987001,
+    717.7598339985707,
+    592.8902189989458,
+    657.7606530008779,
+    600.3209810005501,
+    670.4807090027316,
+    616.1202430012054,
+    626.306480000494,
+    644.0604020026512,
+    633.0518920003669,
+    640.9181090020866,
+    625.624318003247,
+    676.7018309983541,
+    657.6053429998865,
+    608.6211189976893,
+    667.0783330009726,
+    647.2985020009219,
+    663.3632830016722,
+    593.1703290007135,
+    615.3150600002846,
+    616.1583020002581,
+    645.905353998387,
+    638.2344129997364,
+    686.6436189993692
+  ],
+  "suitability_calls": [
+    {
+      "row_id": "s-sweep-coding-derivable-01",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-derivable-01",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-derivable-02",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-derivable-02",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-derivable-03",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-derivable-03",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-codeless-01",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-codeless-01",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-codeless-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.98,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-codeless-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-solved-01",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-solved-01",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-solved-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.98,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-solved-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-derivable-01",
+      "family": "objective",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.96,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-derivable-01",
+      "family": "objective",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.96,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-derivable-02",
+      "family": "objective",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.68,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-derivable-02",
+      "family": "objective",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.64,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-codeless-01",
+      "family": "objective",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-codeless-01",
+      "family": "objective",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.98,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-codeless-02",
+      "family": "objective",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-objective-codeless-02",
+      "family": "objective",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-derivable-01",
+      "family": "written",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.74,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-derivable-01",
+      "family": "written",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.7,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-derivable-02",
+      "family": "written",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.64,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-derivable-02",
+      "family": "written",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.57,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-codeless-01",
+      "family": "written",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-codeless-01",
+      "family": "written",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-codeless-02",
+      "family": "written",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.98,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-written-codeless-02",
+      "family": "written",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-borderline-01",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 0.71,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-borderline-01",
+      "family": "coding",
+      "label": "derivable",
+      "variant": "v1",
+      "choice": "derivable",
+      "confidence": 0.72,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-borderline-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.21,
+      "scored": true
+    },
+    {
+      "row_id": "s-sweep-coding-borderline-02",
+      "family": "coding",
+      "label": "not_derivable",
+      "variant": "v1",
+      "choice": "not_derivable",
+      "confidence": 0.21,
+      "scored": true
+    }
+  ],
+  "citation_calls": [
+    {
+      "row_id": "c-sweep-exact-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-exact-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-exact-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-exact-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-paraphrase-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-paraphrase-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-paraphrase-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-paraphrase-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-offcontext-01",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-offcontext-01",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-offcontext-02",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-offcontext-02",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-missing-01",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.97,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-missing-01",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.98,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-missing-02",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-missing-02",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-quote-near-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-quote-near-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-quote-near-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-quote-near-02",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-01",
+      "label": "verified",
+      "variant": "v1",
+      "choice": "supports",
+      "confidence": 1.0,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-02",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.88,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-02",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.92,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-03",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-03",
+      "label": "unsupported",
+      "variant": "v1",
+      "choice": "contradicts",
+      "confidence": 0.99,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-04",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.97,
+      "scored": true
+    },
+    {
+      "row_id": "c-sweep-uncertain-04",
+      "label": "contradicted",
+      "variant": "v1",
+      "choice": "says_nothing",
+      "confidence": 0.95,
+      "scored": true
+    }
+  ],
+  "suitability_grid": [
+    {
+      "approve_at": 0.85,
+      "block_at": 0.05,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.85,
+      "block_at": 0.1,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.85,
+      "block_at": 0.15,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.9,
+      "block_at": 0.05,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.9,
+      "block_at": 0.1,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.9,
+      "block_at": 0.15,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.95,
+      "block_at": 0.05,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.95,
+      "block_at": 0.1,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "approve_at": 0.95,
+      "block_at": 0.15,
+      "n": 34,
+      "n_scored": 34,
+      "malformed_rate": 0.0,
+      "approve": 6,
+      "block": 18,
+      "review": 10,
+      "reject_precision": 0.8888888888888888,
+      "reject_recall": 0.8888888888888888,
+      "jitter_mean": 0.011764705882352951,
+      "jitter_max": 0.07000000000000006,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    }
+  ],
+  "citation_grid": [
+    {
+      "stands_at": 0.75,
+      "n": 28,
+      "n_scored": 28,
+      "malformed_rate": 0.0,
+      "stands_true": 28,
+      "stands_false": 0,
+      "reject_precision": 1.0,
+      "reject_recall": 1.0,
+      "jitter_mean": 0.0050000000000000044,
+      "jitter_max": 0.040000000000000036,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "stands_at": 0.8,
+      "n": 28,
+      "n_scored": 28,
+      "malformed_rate": 0.0,
+      "stands_true": 28,
+      "stands_false": 0,
+      "reject_precision": 1.0,
+      "reject_recall": 1.0,
+      "jitter_mean": 0.0050000000000000044,
+      "jitter_max": 0.040000000000000036,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    },
+    {
+      "stands_at": 0.85,
+      "n": 28,
+      "n_scored": 28,
+      "malformed_rate": 0.0,
+      "stands_true": 28,
+      "stands_false": 0,
+      "reject_precision": 1.0,
+      "reject_recall": 1.0,
+      "jitter_mean": 0.0050000000000000044,
+      "jitter_max": 0.040000000000000036,
+      "flip_rate": 0.0,
+      "latency_p50_ms": null,
+      "latency_p95_ms": null
+    }
+  ],
+  "errors": [],
+  "spent_usd_estimated": 0.001176
+}
