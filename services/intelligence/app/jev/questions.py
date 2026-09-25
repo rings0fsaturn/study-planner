@@ -212,8 +212,9 @@ def relevance_question() -> dict[str, Any]:
 def criterion_score_questions(criteria: list[str]) -> dict[str, Any]:
     """Slice 4: one Score per authored rubric criterion (calibration starting point).
 
-    Levels are deliberately coarse: use the expectation only for pass/fail against
-    a threshold tuned on graded app data, never for exact magnitudes.
+    Levels are deliberately coarse: use the score (0..top level, normalized by
+    the top level in code) only for pass/fail against a threshold tuned on
+    graded app data, never for exact magnitudes.
     """
     levels = [
         "Not met: the answer does not satisfy the criterion.",

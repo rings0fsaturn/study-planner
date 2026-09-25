@@ -1,5 +1,5 @@
 # State – jev-integration
-_Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Plan: active/jev-integration/plan/ · STATUS row: jev-integration · Status: active · Updated: 2026-09-24_
+_Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Plan: active/jev-integration/plan/ · STATUS row: jev-integration · Status: active · Updated: 2026-09-25_
 
 ## Current state & next
 - JevClient + question builders + unit tests + probe landed and verified 2026-09-24 (9/9 tests, ruff clean, live dry-run green).
@@ -7,7 +7,7 @@ _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Pla
 - Citation shadow-first implemented per #71 decisions (existing `JEV_SLICE1_ENABLED` flag, `AUTO_ACCEPT=0.8` held, confident rejects keep the soft warning with structured `jev_*` log fields; `citation_missing`/`malformed_output` split preserved for the post-#74 enforce flip): 11/11 slice-1 tests (new `says_nothing` shadow case), 145 worker/validation/jev/coding green, ruff clean. Live probe dry run blocked credential-side (`provider_credentials`, key present len 73 but API 401 x2, unrelated to the change - builders/client untouched).
 - Live spend ~$0.0004 of the $0.5 budget (dashboard $0.0003 confirmed by user).
 - #72 RAG scope closed 2026-09-24 (grilled + built same session): both slots staged with worker shadow first, shadow-first vs the sidecar, `JEV_SLICE2_TIMEOUT_MS=15000` ceiling on a dedicated client reusing `JEV_SLICE1_ENABLED`, top-by-relevance floor, one batched `decide()` per proceeded window; retrieval slot spec-only. 28/28 focused tests, 211 worker/validation/coding/jev green, ruff clean; probe dry run `provider_credentials` $0.00 (pre-existing). Uncommitted worktree.
-- Next: #73 rubric runs parallel; #74 measurement waits on #73 after #72 closed; no live probe spent (builders unchanged).
+- Next: #74 threshold + cost measurement (now unblocked: flag-shape #70, citation #71, RAG #72, rubric #73 all closed; 7 anti-shortcut gates + graduation bar posted on #74).
 
 ## Done so far
 - Plan-mode research: Jev primitives/confidence/API, OpenRouter Decisions + SystemOne surfaces, cost monitoring, cookbooks, jaggedness; app LLM + retrieval maps via explore agents.
@@ -18,12 +18,14 @@ _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Pla
 - Slice-1 wiring (`GenerationWorkerConfig.jev_slice1_enabled` + `jev` duck-typed client, wired in `worker_main._build_generation_worker` only when the flag is on; off = zero `decide()` calls).
 - Suitability pre-gate per window after widen, before prose: coding `not_derivable` rides the D-02 resample path to terminal `code_not_derivable`; objective/written stays advisory; every Jev failure fails open (log + proceed, never job-retryable).
 - Citation middle-only adjudication after validate+repair: confident `supports` clears the soft warning, confident reject drops with the existing `citation_missing`/`malformed_output` split and no repair, rest keeps the soft warning; `validation.py` stays pure.
+- #73 rubric shadow closed 2026-09-25 (grilled + built same session): grading-path shadow after `grade_written` composes (`_jev_shadow_rubric`, one batched decide, fail-open, `jev_*` log fields), reuses `JEV_SLICE1_ENABLED` with 15 s ceiling; Score read corrected to score-not-expectation (live docs; stale docstring fixed); graduation bar 0.8/30 pairs locked, mapping/gates deferred post-#74; 7 anti-shortcut gates posted on #74. 5 new tests + 115 related green, ruff clean; probe dry run `provider_credentials` $0.00 (pre-existing). Uncommitted worktree.
 
 ## Flow trace
 1. All LLM prose flows through `OpenRouterGenerationClient` (services/intelligence/app/generation/openrouter_client.py:80), built by `factory.py:16` from `<PREFIX>_*` env vars.
 2. Jev entry: `services/intelligence/app/jev/client.py::JevClient.from_env` reads `OPENROUTER_JEV_API_KEY` + `JEV_MODEL/_BASE_URL/_TIMEOUT_MS` (template in `.env.example`); SDK retries 429/5xx internally, wrapper classifies to typed codes.
 3. Slices: suitability `app/jev/questions.py::suitability_questions` (Choice) + `route_suitability`; citations `citation_questions` (Choice) after free string-match; RAG `passage_questions` (4 Nouls) + `route_passage`; rerank `relevance_question` (Noul, sort desc); rubric `criterion_score_questions` (Score per criterion).
 4. Probe: `services/intelligence/scripts/jev_probe.py --limit N --max-spend 0.40` loads `.env`, batches per state, aborts over budget.
+5. Rubric shadow: `app/grading/worker.py::_jev_shadow_rubric` runs one batched `criterion_score_questions` decide() after `grade_written` composes; `_summarize_rubric_shadow` (pure) normalizes Score `score`/2 onto 0..1 and marks agree vs `CORRECT_THRESHOLD` (0.6); client built in `worker_main._build_grading_worker` only when `JEV_SLICE1_ENABLED` is on.
 
 ## Files affected
 - services/intelligence/app/jev/__init__.py, client.py, questions.py – Jev adapter + builders (new); #72 adds the batched passage builder + shared `_route_nouls` core + `from_env` timeout default.
@@ -42,6 +44,10 @@ _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Pla
 - services/intelligence/app/worker_main.py – #72 second client (`JEV_SLICE2_TIMEOUT_MS`, default 15000).
 - services/intelligence/.env.example – #72 `JEV_SLICE2_TIMEOUT_MS=15000` template.
 - services/intelligence/tests/test_generation_jev_slice1.py – #71 shadow tests (contradicts + says_nothing).
+- services/intelligence/app/grading/worker.py – #73 `jev_shadow_enabled` + duck-typed `jev` + `_summarize_rubric_shadow` pure + `_jev_shadow_rubric` log-only hook.
+- services/intelligence/app/worker_main.py – #73 grading shadow client (`from_env("JEV", 15000)`, flag-gated).
+- services/intelligence/app/jev/questions.py – #73 Score docstring fix (score, not expectation).
+- services/intelligence/tests/test_grading_jev_rubric_shadow.py – #73 5 offline tests (flag-off, pairs, fail-open, unscored, agree).
 
 ## Pitfalls & rules
 - Must keep API credentials server-side; never ship keys to the browser (Jev skill + rule 20 pattern).
@@ -51,14 +57,17 @@ _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Pla
 - Jev jaggedness: no math/counting/dates in questions; one narrow judgment per question; small relevant state; thresholds tuned per question + pinned model version.
 - OpenRouter SystemOne returns TypeSafe-shaped responses only (no cost/id/provider); estimate spend, do not expect usage.cost (verified live 2026-09-24).
 - Full-suite v1 golden failures are order-dependent (pass in isolation); retrieval-probe import failure pre-exists on clean tree (verified 2026-09-24).
+- Score answers carry `score` (0..top level), not `expectation`: live docs beat memory and stale docstrings (found 2026-09-25, questions.py fixed).
+- `ruff format` may reflow untouched hunks in an edited file; keep the reflow (file ends format-clean) rather than hand-reverting.
 
 ## Decisions in force
 - Decided slices 1+2+4 first (suitability+citations, RAG/rerank fallback, rubric calibration); guardrails deferred (user, 2026-09-24).
 - Decided official typesafe_sdk pointed at OpenRouter (`base_url=https://openrouter.ai/api`, model `jev-1.13` pinned) over thin httpx (user, 2026-09-24).
 - Decided dedicated `OPENROUTER_JEV_API_KEY` from services/intelligence/.env (user, 2026-09-24); live halt at $0.40 estimated of the $0.5 budget.
+- Decided slice-4 as grading-path shadow now, graduation on #74 evidence (user, 2026-09-25): reuses `JEV_SLICE1_ENABLED`, 15 s ceiling; graduation bar 0.80 agree/30 pairs/<2% malformed/±20% spend; mapping + aggregation + harness gates deferred post-#74.
 
 ## Open
-- Frontier: #72 resolved + closed 2026-09-24 (grilled, built, resolution comment, map #69 Decisions-so-far line) + #73 rubric calibration (grilling, unblocked, parallel).
-- Blocked: #74 measurement task on #73 (passage rows unblocked by #72; rubric rows depend on #73).
+- Frontier: #74 threshold + cost measurement (unblocked 2026-09-25; 7 anti-shortcut gates + graduation bar posted on the ticket).
+- Blocked: none.
 - `client.models.list()` unusable against OpenRouter (documented SDK wrinkle); use Models API directly if ever needed.
 - Jev price on OpenRouter not listed in the public models catalog (458 entries, no typesafe entry 2026-09-24); estimate held at TypeSafe list $0.042/Mtok until dashboard says otherwise.

@@ -35,7 +35,7 @@ from app.grading.coding_grader import (
     hidden_tests,
     visible_tests,
 )
-from app.grading.grader import GraderInputError, grade_objective
+from app.grading.grader import CORRECT_THRESHOLD, GraderInputError, grade_objective
 from app.grading.piston_client import RUN_COMPILE_ERROR, RUN_FAILED, PistonClient
 from app.grading.rubric_grader import (
     GRADER_NAME as RUBRIC_GRADER_NAME,
@@ -72,6 +72,9 @@ class GradingWorkerConfig:
     # message is archived (the ingestion worker's max_deliveries precedent).
     max_deliveries: int = 3
     model: str = DEFAULT_MODEL
+    # Slice-4 rubric shadow (#73): log-only Jev calibration after a written
+    # grade composes. Off (the default) means zero decide() calls.
+    jev_shadow_enabled: bool = False
 
 
 class GradingRepo(Protocol):
@@ -88,11 +91,7 @@ class GradingRepo(Protocol):
 
 
 def _now_iso() -> str:
-    return (
-        dt.datetime.now(dt.UTC)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z")
-    )
+    return dt.datetime.now(dt.UTC).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 def _ungradable(
@@ -133,6 +132,44 @@ def _grader_label(coding: bool, written: bool) -> str:
     return RUBRIC_GRADER_NAME if written else OBJECTIVE_FORMAT
 
 
+def _summarize_rubric_shadow(
+    answers: dict, breakdown: list[dict], *, top_level: int = 2
+) -> list[dict]:
+    """Per-criterion (jev score, grade met, agree) pairs for the #73 shadow log.
+
+    Pure: a Score `score` runs 0..top_level (the probability-weighted mean of
+    the level numbers, per the TypeSafe docs), so dividing by top_level puts
+    it on the 0..1 scale the CORRECT_THRESHOLD cutoff reads on. A missing or
+    non-numeric answer marks the pair unscored instead of guessing.
+    """
+    pairs = []
+    for index, item in enumerate(breakdown):
+        raw = (answers.get(f"criterion_{index}") or {}).get("score")
+        met = bool(item.get("met"))
+        if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+            pairs.append(
+                {
+                    "index": index,
+                    "scored": False,
+                    "jev_score": None,
+                    "grade_met": met,
+                    "agree": None,
+                }
+            )
+            continue
+        normalized = round(min(max(float(raw) / top_level, 0.0), 1.0), 4)
+        pairs.append(
+            {
+                "index": index,
+                "scored": True,
+                "jev_score": normalized,
+                "grade_met": met,
+                "agree": (normalized >= CORRECT_THRESHOLD) == met,
+            }
+        )
+    return pairs
+
+
 class GradingWorker:
     """One queue arm; poll `assessment_grade` and process one message."""
 
@@ -144,11 +181,13 @@ class GradingWorker:
         config: GradingWorkerConfig,
         adapter: RubricAdapter | None = None,
         sandbox: PistonClient | None = None,
+        jev=None,
     ) -> None:
         self._repo = repo
         self._queue = queue
         self._adapter = adapter
         self._sandbox = sandbox
+        self._jev = jev
         self.config = config
 
     def run_once(self) -> int:
@@ -311,14 +350,10 @@ class GradingWorker:
                 retry_after=exc.retry_after,
             )
             if exc.retryable:
-                logger.warning(
-                    "coding grading for attempt %s deferred (%s)", attempt_id, exc.code
-                )
+                logger.warning("coding grading for attempt %s deferred (%s)", attempt_id, exc.code)
                 self._queue.complete(GRADING_QUEUE, message.msg_id, False)
                 return
-            logger.error(
-                "coding grading for attempt %s failed closed: %s", attempt_id, exc.code
-            )
+            logger.error("coding grading for attempt %s failed closed: %s", attempt_id, exc.code)
             grade = _ungradable(
                 attempt_id,
                 question_id,
@@ -355,7 +390,7 @@ class GradingWorker:
         )
         if response.outcome != "ok" or response.structured_output is None:
             raise RubricProviderError(classify_provider_failure(response))
-        return grade_written(
+        grade = grade_written(
             question_id=str(question.get("id") or ""),
             material_id=str(question.get("material_id") or ""),
             skill_tags=list(question.get("skill_tags") or []),
@@ -365,6 +400,58 @@ class GradingWorker:
             graded_at=graded_at,
             attempt_id=attempt_id,
             model_version=self.config.model,
+        )
+        self._jev_shadow_rubric(
+            question=question,
+            answer_text=answer_text,
+            grade=grade,
+            correlation_id=str(attempt.get("correlation_id") or ""),
+        )
+        return grade
+
+    def _jev_shadow_rubric(
+        self, *, question: dict, answer_text: str, grade: dict, correlation_id: str
+    ) -> None:
+        """Slice-4 rubric shadow (#73): log-only, never changes the grade.
+
+        One batched decide() over the authored criteria runs after the grade
+        composes; the per-criterion (jev score, grade met, agree) pairs are
+        logged with structured jev_* fields for #74. Every failure fails open:
+        log and return with the grade untouched. Off (the default) or a
+        missing client means zero decide() calls.
+        """
+        from app.jev.questions import criterion_score_questions
+
+        if not self.config.jev_shadow_enabled or self._jev is None:
+            return
+        try:
+            criteria = [label for label, _ in rubric_criteria(question.get("answer_block"))]
+            result = self._jev.decide(
+                {"learner_answer": answer_text},
+                criterion_score_questions(criteria),
+                request_id=correlation_id,
+                trace_id=correlation_id,
+            )
+            pairs = _summarize_rubric_shadow(
+                result.answers or {}, grade.get("rubricBreakdown") or []
+            )
+        except Exception as exc:  # JevError: fail-open, grade untouched
+            logger.warning(
+                "jev rubric shadow fail-open (%s)",
+                getattr(exc, "code", "provider_error"),
+                extra={"trace_id": correlation_id},
+            )
+            return
+        logger.info(
+            "jev rubric shadow agree=%d/%d tokens=%d",
+            sum(1 for pair in pairs if pair["agree"]),
+            len(pairs),
+            result.input_tokens,
+            extra={
+                "trace_id": correlation_id,
+                "jev_pairs": pairs,
+                "jev_input_tokens": result.input_tokens,
+            },
         )
 
     def _grade_coding(
@@ -407,8 +494,7 @@ class GradingWorker:
         ]
         hidden = hidden_tests(question.get("answer_block"))
         tests.extend(
-            (hidden_test_name(index), False, test)
-            for index, test in enumerate(hidden, start=1)
+            (hidden_test_name(index), False, test) for index, test in enumerate(hidden, start=1)
         )
         verdicts: list[TestVerdict] = []
         for name, visible, test in tests:
@@ -427,7 +513,7 @@ class GradingWorker:
                 break
         verdicts.extend(
             TestVerdict(name=name, visible=visible, outcome=RUN_FAILED)
-            for name, visible, _test in tests[len(verdicts):]
+            for name, visible, _test in tests[len(verdicts) :]
         )
         grade = grade_coding(
             question_id=str(question.get("id") or ""),
