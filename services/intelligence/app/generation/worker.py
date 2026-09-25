@@ -894,16 +894,16 @@ class GenerationWorker:
         *,
         correlation_id: str,
     ) -> tuple[dict | None, list[dict]]:
-        """Slice-1 citation adjudication (#70 gate, #71 shadow policy).
+        """Slice-1 citation adjudication (#70 gate, #75 enforce).
 
-        Returns (accepted | None, warnings). #71 shadow-first: a confident
-        Jev rejection is logged with structured fields and keeps the soft
-        `citation_unverified` warning instead of dropping (the
-        `citation_missing` / `malformed_output` split is preserved for the
-        future enforce flip after #74 reports). A confident `supports`
-        clears the soft warning. Anything else (low confidence, missing
-        quote/section, Jev error) keeps the soft warning and proceeds:
-        fail-open.
+        Returns (accepted | None, warnings). A confident Jev rejection
+        (contradicted/unsupported with stands true) returns accepted=None
+        with the existing `citation_missing` split and no repair: the caller
+        only repairs `malformed_output`, so dropping here never triggers a
+        second repair. A confident `supports` clears the soft warning.
+        Anything else (low confidence, missing quote/section, Jev error)
+        keeps the soft warning and proceeds: fail-open. `validation.py`
+        stays pure with its exact substring gate unchanged.
         """
         from app.jev.questions import citation_questions, route_citation
 
@@ -966,10 +966,11 @@ class GenerationWorker:
             if verdict == "verified" and stands:
                 continue
             if verdict in ("contradicted", "unsupported") and stands:
-                # #71 shadow-first: log above, keep the soft warning; the
-                # enforce flip (drop with citation_missing) waits on #74.
+                # #75 enforce: drop with the existing citation_missing split
+                # and no repair (adjudication runs post-repair; the caller
+                # only repairs malformed_output).
                 logger.info(
-                    "jev citation shadow-drop suppressed (chunk=%s verdict=%s)",
+                    "jev citation drop (chunk=%s verdict=%s)",
                     chunk_id,
                     verdict,
                     extra={
@@ -980,8 +981,15 @@ class GenerationWorker:
                         "jev_chunk_id": chunk_id,
                     },
                 )
-                kept.append(warning)
-                continue
+                return None, [
+                    {
+                        "code": "citation_missing",
+                        "message": (
+                            f"jev rejected citation for chunk {chunk_id} "
+                            f"as {verdict} (conf={confidence:.2f})"
+                        ),
+                    }
+                ]
             kept.append(warning)
         return accepted, kept
 
