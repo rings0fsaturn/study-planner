@@ -193,8 +193,8 @@ def test_suitability_not_derivable_advisory_for_written() -> None:
 @pytest.mark.parametrize(
     ("family", "seed", "response", "enforce"),
     [
-        ("coding", coding_seed, None, True),
-        ("objective", assessment, None, False),
+        ("coding", coding_seed, VALID_MCQ, True),
+        ("objective", assessment, VALID_MCQ, False),
         ("written", written_assessment, VALID_WRITTEN, False),
     ],
 )
@@ -207,7 +207,10 @@ def test_suitability_family_matrix(family, seed, response, enforce) -> None:
     """
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
     assert (family in SUITABILITY_ENFORCE_FAMILIES) is enforce
-    jev = ScriptJev([("answer", {"suitability": _answer("not_derivable", 0.95)})] * 3)
+    unsuit = ("answer", {"suitability": _answer("not_derivable", 0.95)})
+    # Blocked families walk the D-02 resample windows (one verdict each);
+    # advisory families ask once and then run the passage shadow.
+    jev = ScriptJev([unsuit] * 3 if enforce else [unsuit, _shadow_include()])
     adapter = FakeAdapter([] if enforce else [ok_response(structured_output=response)])
     repo.seed(seed(), material())
     queue.send(
