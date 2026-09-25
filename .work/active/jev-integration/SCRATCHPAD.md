@@ -28,3 +28,5 @@ _state.md: active/jev-integration/state.md · Updated: 2026-09-25T10:15_
 - 11:45 NEXT post Step-0 + baseline update to #76, then design the full sweep (rows + grid + sidecar head-to-head) under TDD
 - 11:50 DONE Step-0 + baseline posted to #76 (comment 5834061427)
 - 11:50 NEXT full sweep design: slice2_rows.json (sweep/final by material, include/exclude/conflicting_evidence, premise-denying windows) + sweep runner extension + offline grid + sidecar head-to-head
+- 12:10 DONE rows drafted: slice2_rows.json 44 rows (8 windows x 5 + 4 authored conflict pairs; sweep 15/5/2, final 13/7/2); dry --limit 2 windows clean: 7/10 OK, verdicts separate (include Nouls 0.54-0.97, exclude 0.13-0.24); 3 misses are boundary cases (a3916c8b log-prereq 0.56/0.73 FP, 22f9e95f log-steps 0.17/0.24 FN, 51447f9f D&C-mention 0.65/0.63 FP); spend $0.000219, lat 672-966 ms
+- 12:10 NEXT extend the sweep runner (slice-2 path in jev_sweep_slice1.py shape) under TDD, then full sweep v1 + offline grid + sidecar head-to-head

@@ -70,6 +70,18 @@ def test_passage_starvation_and_floor_rates() -> None:
     assert report["include_recall"] == pytest.approx(1.0)
 
 
+def test_passage_grid_reruns_offline_over_thresholds() -> None:
+    from app.jev.measure_slice2 import PASSAGE_GRID
+
+    calls = [
+        _p_call("r1", "include", _nouls(0.99, 0.98)),
+        _p_call("r2", "exclude", _nouls(0.10, 0.10)),
+    ]
+    cells = [summarize_passage(calls, thresholds=dict(thresholds)) for thresholds in PASSAGE_GRID]
+    assert len(cells) == len(PASSAGE_GRID)
+    assert all(cell["n_scored"] == 2 for cell in cells)
+
+
 def test_passage_malformed_and_latency() -> None:
     calls = [
         _p_call("r1", "include", _nouls(0.99, 0.98)),

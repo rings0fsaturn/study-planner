@@ -1,0 +1,665 @@
+{
+ "note": "#76 slice-2 sweep rows: 8 real retrieval windows (4 sweep + 4 final) x 5 passages on grokking + CSAPP with scored-query steers via sidecar match_content_chunks. Hand-labeled before any Jev call. Split by window (sweep tunes, final reports). Overlap declared: same ACCA/grokking/CSAPP corpus as #75 but different judgment (passage relevance vs suitability/citation); no overlap with #74 rubric_rows question_ids. conflicting_evidence rows are controlled premise-denying pairs authored alongside (declared below), not retrieval windows. Plus 4 authored premise-denying pairs (2 sweep + 2 final, query_source=authored-premise-denying-pair) for the conflicting_evidence class, which does not occur in dense top-5 windows.",
+ "rows": [
+  {
+   "row_id": "s2-sweep-w0-0c239a91",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win0",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does binary search behave when the target item is absent from the list?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "0c239a91879d40d9bb7a23d84172d00d",
+    "ordinal": 24,
+    "text": "Binary search 9\nEach time, you check the middle element:\nmid = (low + high) // 2 mid is rounded down by Python\nautomatically if (low + high) isn\u2019t\nan even number.guess = arr[mid]\nIf the guess is too low, you update low accordingly:\nif guess < item:\nlow = mid + 1\nAnd if the guess is too high, you update high. Here\u2019s the full code:\ndef binary_search(arr, item):\nlow = 0\nhigh = len(arr)\u20141\nwhile low <= high:\nmid = (low + high) // 2\nguess = arr[mid]\nif guess == item:\nreturn mid\nelif guess > item:\nhigh = mid - 1\nelse:\nlow = mid + 1\nreturn None\nmy_list = [1, 3, 5, 7, 9]\nprint(binary_search(my_list, 3)) # => 1\nprint(binary_search(my_list, -1)) # => None\nEXERCISES\n1.1 Suppose you have a sorted list of 128 names, and you\u2019re searching\nthrough it using binary search. What\u2019s the maximum number of\nsteps it would take?\n1.2 Suppose you double the size of the list. What\u2019s the maximum\nnumber of steps now?\nlow and high keep track of which\npart of the list you\u2019ll search in.\nWhile you haven\u2019t narrowed it\ndown to one element . . .\n. . . check the middle element.\nFound the item.\nThe guess was too high.\nThe guess was too low.\nThe item doesn\u2019t exist.\nLet\u2019s test it!\nRemember, lists start at 0.\nThe second slot has index 1.\nNone means null in Python. It indicates\nthat the item wasn\u2019t found."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w0-e8143f74",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win0",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does binary search behave when the target item is absent from the list?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "e8143f74e31f47f6a762808c7f697011",
+    "ordinal": 19,
+    "text": "Binary search 3\nWhat you need to know\nYou\u2019ll need to know basic algebra before starting this book. In particular,\ntake this function: f( x) = x \u00d7 2. What is f(5)? If you answered 10, you\u2019re set.\nAdditionally, this chapter (and this book) will be easier to follow if you\u2019re\nfamiliar with one programming language. All the examples in this book\nare in Python. If you don\u2019t know any programming languages and want\nto learn one, choose Python\u2014it\u2019s great for beginners. If you know another\nlanguage, like JavaScript, you\u2019ll be fine.\nBinary search\nSuppose you\u2019re searching for a person in the phone book (what an old-\nfashioned sentence!). Their name starts with K. Y ou could start at the\nbeginning and keep flipping pages until you get to the Ks. But you\u2019re\nmore likely to start at a page in the middle because you know the Ks\nare going to be near the middle of the phone book.\nOr suppose you\u2019re searching for a word in a dictionary, and it\nstarts with O. Again, you\u2019ll start near the middle.\nNow, suppose you log on to Facebook. When you do, Facebook\nhas to verify that you have an account on the site. So it needs to\nsearch for your username in its database. Suppose your username\nis karlmageddon. Facebook could start from the As and search for\nyour name\u2014but it makes more sense for it to begin somewhere in\nthe middle.\nThis is a search problem. And all these cases use the same\nalgorithm to solve the problem: binary search.\nBinary search is an algorithm; its input is a sorted\nlist of elements (I\u2019ll"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-sweep-w0-a138fd14",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win0",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does binary search behave when the target item is absent from the list?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "a138fd1446a9478893e1e3c3ed9ab83c",
+    "ordinal": 20,
+    "text": "If an element you\u2019re looking for is in that list,\nbinary search returns the position where it\u2019s located.\nOtherwise, binary search returns null.\n\nChapter 1 I introduction to algorithms4\nHere\u2019s an example.\nNow here\u2019s an example of how binary search works. I\u2019m thinking of a\nnumber between 1 and 100.\nY ou have to try to guess my number in the fewest tries possible. With\nevery guess, I\u2019ll tell you if your guess is too low, too high, or correct.\nSuppose you start guessing like this: 1, 2, 3, 4, .\u00a0.\u00a0.\u00a0. Here\u2019s how it would go.\nLooking for companies\nin a phone book with\nbinary search\n\nBinary search 5\nThis is simple search (maybe stupid search would be a better term). With\neach guess, you\u2019re eliminating only one number. If my number was 99,\nit could take you 99 guesses to get there!\nA better way to search\nHere\u2019s a better technique. Start with 50.\nToo low, but you just eliminated half the numbers! Now you know that\n1\u201350 are all too low. Next guess: 75.\nToo high, but again you cut down half the remaining numbers! With\nbinary search, you guess the middle number and eliminate half the\nremaining numbers every time. Next is 63 (halfway between 50 and 75).\nA bad approach to\nnumber guessing"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w0-a3916c8b",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win0",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does binary search behave when the target item is absent from the list?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "a3916c8bbf3a41e7bc65e9bdd9f9e2d4",
+    "ordinal": 23,
+    "text": "of logarithms. If you don\u2019t, Khan Academy (https://khanacademy.org)\nhas a nice video that makes it clear.\n\nChapter 1 I introduction to algorithms8\nNote\nBinary search only works when your list is in sorted order. For example, the\nnames in a phone book are sorted in alphabetical order, so you can use\nbinary search to look for a name. What would happen if the names weren\u2019t\nsorted?\nLet\u2019s see how to write binary search in Python. The code sample here\nuses arrays. If you don\u2019t know how arrays work, don\u2019t worry; they\u2019re\ncovered in the next chapter. Y ou just need to know that you can store\na sequence of elements in a row of consecutive buckets called an array.\nThe buckets are numbered starting with 0: the first bucket is at position\n0, the second is at 1, the third is at 2, and so on.\nNote\nYou will see me use the terms list and array interchangeably in the code.\nThis is because in Python, arrays are called lists.\nThe binary_search function takes a sorted array and an item. If the\nitem is in the array, the function returns its position. Y ou\u2019ll keep track\nof what part of the array you have to search through. At the beginning,\nthis is the entire array:\nlow = 0\nhigh = len(arr) - 1"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-sweep-w0-22f9e95f",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win0",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does binary search behave when the target item is absent from the list?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "22f9e95f5ccc4b4d9c523995c585da81",
+    "ordinal": 22,
+    "text": "Binary search 7\nSo binary search will take 18 steps\u2014a big difference! In general, for any\nlist of n, binary search will take log2 n steps to run in the worst case,\nwhereas simple search will take n steps.\nLogarithms\nYou may not remember what logarithms are, but you probably know what\nexponentials are. log 10 100 is like asking, \u201cHow many 10s do we multiply\ntogether to get 100?\u201d The answer is 2: 10 \u00d7 10. So log10 100 = 2. Logs are the\ninverse of exponentials.\nLogs are the inverse of exponentials.\nIn this book, when I talk about running time in big O notation (explained\na little later), log always means log2. When you search for an element using\nsimple search, in the worst case, you might have to look at every single\nelement. So for a list of eight numbers, you\u2019d have to check eight numbers\nat most. For binary search, you have to check log n elements in the worst\ncase. For a list of eight elements, log 8 == 3, because 23 == 8. So for a list of\neight numbers, you would have to check three numbers at most. For a list\nof 1,024 elements, log 1,024 = 10, because 210 == 1,024. So for a list of 1,024\nnumbers, you\u2019d have to check 10 numbers at most.\nNote\nI\u2019ll talk about log time a lot in this book, so you should understand the con-\ncept of logarithms. If you don\u2019t, Khan Academy (https://khanacademy.org)\nhas a nice video that makes it clear."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w1-10de83d1",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win1",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "Why does quicksort pick a pivot and partition the array around it?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "10de83d1e8824422aacae8518c13f726",
+    "ordinal": 72,
+    "text": "10]) + [33] + quicksort([])\n> [10, 15, 33] A sorted array\n\nChapter 4 I quicksort66\nThis strategy will work with any pivot. Suppose you choose 15 as the\npivot instead.\nBoth sub-arrays have only one element, and you know how to sort\nthose. So now you know how to sort an array of three elements. Here\nare the steps:\n1. Pick a pivot.\n2. Partition the array into two sub-arrays: elements less than the pivot\nand elements greater than the pivot.\n3. Call quicksort recursively on the two sub-arrays.\nWhat about an array of four elements?\nSuppose you choose 33 as the pivot again.\nThe array on the left has three elements. Y ou already know how to sort\nan array of three elements: call quicksort on it recursively.\n\nQuicksort 67\nSo you can sort an array of four elements. And if you can sort an array\nof four elements, you can sort an array of five elements. Why is that?\nSuppose you have this array of five elements.\nHere are all the ways you can partition this array, depending on what\npivot you choose.\nNotice that all of these sub-arrays have somewhere between zero and\nfour elements. And you already know how to sort an array of zero to\nfour elements using quicksort! So no matter what pivot you pick, you\ncan call quicksort recursively on the two sub-arrays."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w1-1ab4ef23",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win1",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "Why does quicksort pick a pivot and partition the array around it?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "1ab4ef23bc4b4319bf741690ee97a94f",
+    "ordinal": 73,
+    "text": "to\nfour elements using quicksort! So no matter what pivot you pick, you\ncan call quicksort recursively on the two sub-arrays.\n\nChapter 4 I quicksort68\nFor example, suppose you pick 3 as the pivot. Y ou call quicksort on the\nsub-arrays.\nThe sub-arrays get sorted, and then you combine the whole thing to get\na sorted array. This works even if you choose 5 as the pivot.\nThis works with any element as the pivot. So you can sort an array\nof five elements. Using the same logic, you can sort an array of six\nelements and so on."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w1-54638dc3",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win1",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "Why does quicksort pick a pivot and partition the array around it?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "54638dc3f9b84b8d9400c467a7687018",
+    "ordinal": 71,
+    "text": "talk about how to pick a good pivot later. For now, let\u2019s\nsay the first item in the array is the pivot.\n\nQuicksort 65\nNow find the elements smaller than the pivot and the elements larger\nthan the pivot.\nThis is called partitioning. Now you have\n\u2022 A sub-array of all the numbers less than the pivot\n\u2022 The pivot\n\u2022 A sub-array of all the numbers greater than the pivot\nThe two sub-arrays aren\u2019t sorted. They\u2019re just partitioned. But if they\nwere sorted, then sorting the whole array would be pretty easy.\nIf the sub-arrays are sorted, then you can combine the whole thing as\nleft array + pivot + right array, and you get a sorted array. In\nthis case, it\u2019s [10, 15] + [33] + [] = [10, 15, 33], which is a sorted\narray.\nHow do you sort the sub-arrays? Well, the quicksort base case already\nknows how to sort empty arrays (the right sub-array), and it can\nrecursively sort arrays of two elements (the left sub-array). So if you call\nquicksort on the two sub-arrays and then combine the results, you get a\nsorted array:\nquicksort([15, 10]) + [33] + quicksort([])\n> [10, 15, 33] A sorted array"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w1-51447f9f",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win1",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "Why does quicksort pick a pivot and partition the array around it?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "51447f9ffbb1420c9173b987db49d831",
+    "ordinal": 70,
+    "text": "from chapter 1? It\u2019s a D&C algorithm,\ntoo. Can you come up with the base case and recursive case for\nbinary search?\n\nChapter 4 I quicksort64\nQuicksort\nQuicksort is a sorting algorithm. It\u2019s much faster than selection sort and\nis frequently used in real life. Quicksort also uses D&C.\nLet\u2019s use quicksort to sort an array. What\u2019s the simplest array that a\nsorting algorithm can handle (remember my tip from the previous\nsection)? Well, some arrays don\u2019t need to be sorted at all.\nEmpty arrays and arrays with just one element will be the base case. Y ou\ncan just return those arrays as is\u2014there\u2019s nothing to sort:\ndef quicksort(array):\nif len(array) < 2:\nreturn array\nLet\u2019s look at bigger arrays. An array with two elements is pretty easy to\nsort, too.\nWhat about an array of three elements?\nRemember, you\u2019re using D&C. So you\nwant to break down this array until you\u2019re at the base case. Here\u2019s how\nquicksort works. First, pick an element from the array. This element is\ncalled the pivot.\nWe\u2019ll talk about how to pick a good pivot later. For now, let\u2019s\nsay the first item in the array is the pivot."
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-sweep-w1-94adce9b",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win1",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "Why does quicksort pick a pivot and partition the array around it?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "94adce9bc1814ee7be9aba69478b29fc",
+    "ordinal": 75,
+    "text": "array\nelse:\npivot = array[0] Recursive case\nless = [i for i in array[1:] if i <= pivot]\n\ngreater = [i for i in array[1:] if i > pivot]\nreturn quicksort(less) + [pivot] + quicksort(greater)\nprint(quicksort([10, 5, 2, 3]))\nBase case: arrays with 0 or 1 element are already sorted.\nSub-array of all the elements\nless than the pivot\nSub-array of all the elements\ngreater than the pivot\n\nChapter 4 I quicksort70\nBig O notation revisited\nQuicksort is unique because its speed depends on the pivot you choose.\nBefore I talk about quicksort, let\u2019s look at the most common big O run\ntimes again.\nEstimates based on a slow computer that performs 10 operations per second\nThe example times in this chart are estimates if you perform 10\noperations per second. These graphs aren\u2019t precise\u2014they\u2019re just there\nto give you a sense of how different these run times are. In reality, your\ncomputer can do way more than 10 operations per second.\nEach run time also has an example algorithm attached. Check out\nselection sort, which you learned in chapter 2. It\u2019s O(n2). That\u2019s a pretty\nslow algorithm.\nThere\u2019s another sorting algorithm called merge sort, which is O(n log\nn). Much faster! Quicksort is a tricky case. In the worst case, quicksort\ntakes O(n2) time.\nIt\u2019s as slow as selection sort! But that\u2019s the worst case. In the average\ncase, quicksort takes O(n log n) time. So you might be wondering:\nWhat do worst case and average case mean here?\nIf quicksort is O(n log n) on average, but merge sort is O(n log n)\na"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w2-da8ed3a7",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win2",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Riesling pipeline resolve data hazards between stages?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "da8ed3a7a0514615b1bcebf11b5ed8f8",
+    "ordinal": 858,
+    "text": "472 Chapter 4 Processor Architecture\nthe execute stage. We will look at the detailed mechanisms for making the pipeline\nstall and for injecting bubbles in Section 4.5.8.\nIn using stalling to handle data hazards, we effectively execute programs\nprog2 and prog4 by dynamically generating the pipeline \ufb02ow seen forprog1 (Fig-\nure 4.43). Injecting one bubble for prog2 and three for prog4 has the same effect\nas having three nop instructions between the second irmovq instruction and the\naddq instruction. This mechanism can be implemented fairly easily (see Problem\n4.53), but the resulting performance is not very good. There are numerous cases\nin which one instruction updates a register and a closely following instruction uses\nthe same register. This will cause the pipeline to stall for up to three cycles, reduc-\ning the overall throughput signi\ufb01cantly.\nAvoiding Data Hazards by Forwarding\nOur design for PIPE\u2212 reads source operands from the register \ufb01le in the decode\nstage, but there can also be a pending write to one of these source registers in\nthe write-back stage. Rather than stalling until the write has completed, it can\nsimply pass the value that is about to be written to pipeline register E as the\nsource operand. Figure 4.49 shows this strategy with an expanded view of the\npipeline diagram for cycle 6 ofprog2. The decode-stage logic detects that register\n. . .\n0x000: irmovq $10,%rdx\n# prog2# prog2\n0x00a: irmovq $3,%rax\n0x014: nop\n0x015: nop\n0x016: addq %rdx,%rax\n0x018: halt\nsrcA"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w2-4096a759",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win2",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Riesling pipeline resolve data hazards between stages?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "4096a759d1d24ff683d115b2c616b517",
+    "ordinal": 852,
+    "text": "Section 4.5 Pipelined Y86-64 Implementations 469\ne_valE 0 + 3 = 3\nE_dstE = %rax\nM_valE = 10\nM_dstE =\n%rdx\nD\nvalA R[%rdx] = 0\nvalB R[%rax] = 0\nF0x000: irmovq $10,%rdx\n# prog4# prog4\n0x00a: irmovq $3,%rax\n0x014: addq %rdx,%rax\n0x016: halt\nDEM W\nFDEM W\nFDEM W\nFDEM W\nCycle 4\n12345 6 7 8\nM\nE\nError\nFigure 4.46 Pipelined execution of prog4 without special pipeline control. In cycle\n4, the addq instruction reads its source operands from the register \ufb01le. The pending\nwrite to register %rdx is still in the memory stage, and the new value for register %rax\nis just being computed in the execute stage. Both operands valA and valB get incorrect\nvalues.\nAvoiding Data Hazards by Stalling\nOne very general technique for avoiding hazards involves stalling, where the\nprocessor holds back one or more instructions in the pipeline until the hazard\ncondition no longer holds. Our processor can avoid data hazards by holding back\nan instruction in the decode stage until the instructions generating its source op-\nerands have passed through the write-back stage. The details of this mechanism\nwill be discussed in Section 4.5.8. It involves simple enhancements to the pipeline\ncontrol logic. The effect of stalling is diagrammed in Figure 4.47 (prog2) and Fig-\nure 4.48 (prog4). (We omit prog3 from this discussion, since it operates similarly\nto the other two examples.) When the"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w2-698e7a2f",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win2",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Riesling pipeline resolve data hazards between stages?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "698e7a2fda334c0cbd9c0f7e66e94ee1",
+    "ordinal": 864,
+    "text": "Section 4.5 Pipelined Y86-64 Implementations 475\nThe expanded diagrams of Figures 4.49 to 4.51 also show how the decode-\nstage logic can determine whether to use a value from the register \ufb01le or to use\na forwarded value. Associated with every value that will be written back to the\nregister \ufb01le is the destination register ID. The logic can compare these IDs with\nthe source register IDs srcA and srcB to detect a case for forwarding. It is possible\nto have multiple destination register IDs match one of the source IDs. We must\nestablish a priority among the different forwarding sources to handle such cases.\nThis will be discussed when we look at the detailed design of the forwarding logic.\nFigure 4.52 shows the structure of PIPE, an extension of PIPE\u2212 that can\nhandle data hazards by forwarding. Comparing this to the structure of PIPE\u2212\n(Figure 4.41), we can see that the values from the \ufb01ve forwarding sources are fed\nback to the two blocks labeled \u201cSel+Fwd A\u201d and \u201cFwd B\u201d in the decode stage.\nThe block labeled \u201cSel+Fwd A\u201d combines the role of the block labeled \u201cSelect A\u201d\nin PIPE\u2212 with the forwarding logic. It allows valA for pipeline register E to be\neither the incremented program counter valP, the value read from the A port\nof the register \ufb01le, or one of the forwarded values. The block labeled \u201cFwd B\u201d\nimplements the forwarding logic for source operand valB.\nLoad/Use Data Hazards\nOne class of data hazards cannot be handled purely by forwarding, because mem-\nory reads occur late in t"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w2-7ae30c61",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win2",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Riesling pipeline resolve data hazards between stages?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "7ae30c6130ac415a8cb252ceadd52959",
+    "ordinal": 851,
+    "text": "in the execute stage. Therefore, theaddq instruction would\nget the incorrect values for both operands.\nThese examples illustrate that a data hazard can arise\n\nfor an instruction\nwhen one of its operands is updated by any of the three preceding instructions.\nThese hazards occur because our pipelined processor reads the operands for an\ninstruction from the register \ufb01le in the decode stage but does not write the results\nfor the instruction to the register \ufb01le until three cycles later, after the instruction\npasses through the write-back stage."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w2-a86c8e96",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win2",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Riesling pipeline resolve data hazards between stages?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "a86c8e96c5dd41f48914e13b185ec51f",
+    "ordinal": 854,
+    "text": "470 Chapter 4 Processor Architecture\nF0x000: irmovq $10,%rdx\n# prog2# prog2\n0x00a: irmovq $3,%rax\n0x014: nop\n0x015: nop\nbubble bubble\n0x016: addlq %rdx,%rax\n0x018: halt\nDEM W\nFDEM W\nFDEM W\nFDEM W\nEM W\nFDDE W M\nFFDE W M\n12345 6 7 8 91 01 1\nFigure 4.47 Pipelined execution of prog2 using stalls. After decoding the addq\ninstruction in cycle 6, the stall control logic detects a data hazard due to the pending\nwrite to register %rax in the write-back stage. It injects a bubble into the execute stage\nand repeats the decoding of the addq instruction in cycle 7. In effect, the machine has\ndynamically inserted a nop instruction, giving a \ufb02ow similar to that shown for prog1\n(Figure 4.43).\nF0x000: irmovq $10,%rdx\n# prog4# prog4\n0x00a: irmovq $3,%rax\nbubblebubble\nbubblebubble\nbubblebubble\n0x014: addq %rdx,%rax\n0x016: halt\nDEM W\nFDEM W\nEM W\nEM W\nEM W\nD D F\nF F\nDDE W M\nFFDE W M\n12345 6 7 8 91 01 1\nFigure 4.48 Pipelined execution of prog4 using stalls. After decoding the addq\ninstruction in cycle 4, the stall control logic detects data hazards for both source registers.\nIt injects a bubble into the execute stage and repeats the decoding of the addq instruction\non cycle"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w3-1a791167",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win3",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does virtual memory translate a virtual address using page tables?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "1a79116714b643d8a8d709c13bd5ef1b",
+    "ordinal": 1519,
+    "text": "844 Chapter 9 Virtual Memory\nnP = 2p Number of PTEs\n12 1 K\n16 16 K\n24 2 M\n36 1 G\n9.3.3 Page Hits\nConsider what happens when the CPU reads a word of virtual memory contained\nin VP 2, which is cached in DRAM (Figure 9.5). Using a technique we will describe\nin detail in Section 9.6, the address translation hardware uses the virtual address\nas an index to locate PTE 2 and read it from memory. Since the valid bit is set, the\naddress translation hardware knows that VP 2 is cached in memory. So it uses the\nphysical memory address in the PTE (which points to the start of the cached page\nin PP 1) to construct the physical address of the word.\n9.3.4 Page Faults\nIn virtual memory parlance, a DRAM cache miss is known as a page fault. Fig-\nure 9.6 shows the state of our example page table before the fault. The CPU has\nreferenced a word in VP 3, which is not cached in DRAM. The address transla-\ntion hardware reads PTE 3 from memory, infers from the valid bit that VP 3 is\nnot cached, and triggers a page fault exception. The page fault exception invokes\na page fault exception handler in the kernel, which selects a victim page\u2014in this\ncase, VP 4 stored in PP 3. If VP 4 has been modi\ufb01ed, then the kernel copies it back\nto disk. In either case, the kernel modi\ufb01es the page table entry for VP 4 to re\ufb02ect\nthe fact that VP 4 is no longer cached in main memory.\nFigure 9.5\nVM page hit.The reference\nto a word in VP 2 is a"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w3-ee31c257",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win3",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does virtual memory translate a virtual address using page tables?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "ee31c25734c74054b184c9f3901107b0",
+    "ordinal": 1522,
+    "text": "When the handler returns, it restarts the faulting instruction,\nwhich resends the faulting virtual address to the address translation hardware.\nBut now,\n\nVP 3 is cached in main memory, and the page hit is handled normally by\nthe address translation hardware. Figure 9.7 shows the state of our example page\ntable after the page fault.\nVirtual memory was invented in the early 1960s, long before the widening\nCPU-memory gap spawned SRAM caches. As a result, virtual memory systems\nuse a different terminology from SRAM caches, even though many of the ideas\nare similar. In virtual memory parlance, blocks are known as pages. The activity\nof transferring a page between disk and memory is known asswapping or paging.\nPages are swapped in (paged in) from disk to DRAM, and swapped out (paged\nout) from DRAM to disk. The strategy of waiting until the last moment to swap"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-sweep-w3-d98b72c5",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win3",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does virtual memory translate a virtual address using page tables?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "d98b72c5823f41ec882f911e7fa4700e",
+    "ordinal": 1517,
+    "text": "Section 9.3 VM as a Tool for Caching 843\nFigure 9.4\nPage table.\nPTE 0\nPP 0\nPP 31\n1\n0\n1\n0\n0\n1\n0\nPTE 7\nNull\nVP 1\nVP 4\nVP 7\nVP 2\nVP 1\nVP 2\nVP 3\nVP 4\nVP 6\nVP 7\nNull\nPhysical page\nnumber or\ndisk address\nMemory-resident\npage table\n(DRAM)\nVirtual memory\n(disk)\nPhysical memory\n(DRAM)\nValid\nwhere the virtual page is stored on disk, select a victim page in physical memory,\nand copy the virtual page from disk to DRAM, replacing the victim page.\nThese capabilities are provided by a combination of operating system soft-\nware, address translation hardware in the MMU (memory management unit), and\na data structure stored in physical memory known as a page table that maps vir-\ntual pages to physical pages. The address translation hardware reads the page table\neach time it converts a virtual address to a physical address. The operating system\nis responsible for maintaining the contents of the page table and transferring pages\nback and forth between disk and DRAM.\nFigure 9.4 shows the basic organization of a page table. A page table is an array\nof page table entries (PTEs). Each page in the virtual address space has a PTE at\na \ufb01xed offset in the page table. For our purposes, we will assume that each PTE\nconsists of a valid bit and an n-bit address \ufb01eld. The valid bit indicates whether\nthe virtual page is currently cached in DRAM. If the valid bit is set, the address\n\ufb01eld indicates the start of the corresponding physical page in DRAM where the\nvirtual page is cached. If the valid bit is not"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w3-9837e345",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win3",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does virtual memory translate a virtual address using page tables?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "9837e34542fe47b7993f791a95bcc1b0",
+    "ordinal": 1538,
+    "text": "Section 9.6 Address Translation 855\nStep 4. The MMU translates the virtual address to a physical address and sends\nit to the cache/main memory.\nStep 5. The cache/main memory returns the requested data word to the CPU.\nWhen there is a TLB miss, then the MMU must fetch the PTE from the L1\ncache, as shown in Figure 9.16(b). The newly fetched PTE is stored in the TLB,\npossibly overwriting an existing entry.\n9.6.3 Multi-Level Page Tables\nThus far, we have assumed that the system uses a single page table to do address\ntranslation. But if we had a 32-bit address space, 4 KB pages, and a 4-byte PTE,\nthen we would needa4M Bpage table resident in memory at all times, even if\nthe application referenced only a small chunk of the virtual address space. The\nproblem is compounded for systems with 64-bit address spaces.\nThe common approach for compacting the page table is to use a hierarchy\nof page tables instead. The idea is easiest to understand with a concrete example.\nConsider a 32-bit virtual address space partitioned into 4 KB pages, with page\ntable entries that are 4 bytes each. Suppose also that at this point in time the virtual\naddress space has the following form: The \ufb01rst 2 K pages of memory are allocated\nfor code and data, the next 6 K pages are unallocated, the next 1,023 pages are also\nunallocated, and the next page is allocated for the user stack. Figure 9.17 shows\nhow we might construct a two-level page table hierarchy for this virtual address\nspace.\nEach PTE in the level 1 t"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-sweep-w3-063b477a",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-win3",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does virtual memory translate a virtual address using page tables?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "063b477a8f704eaaa3eeeb94c30a8e2e",
+    "ordinal": 1540,
+    "text": "856 Chapter 9 Virtual Memory\n. . .\nVP 1,023\nVP 1,024\nVP 2,047\nGap\nPTE 0\nPTE 1\nPTE 2 (null)\nVP 0\n1,023\nunallocated\npages\nPTE 3 (null)\nPTE 4 (null)\nPTE 5 (null)\nPTE 6 (null)\nPTE 0\nPTE 1,023\nPTE 0\nPTE 1,023\n1,023 null\nPTEs\nPTE 7 (null)\nPTE 8\n(1 K\u2013 9)\nnull PTEs PTE 1,023\n. . .\n. . .\nVP 9,215\n2 K allocated VM pages\nfor code and data\n6 K unallocated VM page\ns\n1,023 unallocated pages\n1 allocated VM page\nfor the stack\nVirtual\nmemory\nLevel 2\npage tables\nLevel 1\npage table\n0\n. . .\n. . .\nFigure 9.17 A two-level page table hierarchy. Notice that addresses increase from\ntop to bottom.\nPPN PPO\n. . .\n. . . . . .\nm\u20131\nn\u20131 p\u20131 0\np\u20131 0\nVirtual address\nPhysical address\nVPN 1 VPN 2 VPN k VPO\nLevel 1\npage table\nLevel 2\npage table\nLevel k\npage table\nPPN\nFigure 9.18 Address translation with a k-level page table.\nFigure 9.18 summarizes address translation with ak-level page table hierarchy.\nThe virtual address is partitioned intok VPNs and a VPO. Each VPNi,1 \u2264 i \u2264 k,\nis an index into a page table at level i. Each PTE in a level j table, 1\u2264 j \u2264"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w4-6fb00c51",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win4",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does Dijkstra's algorithm settle the next closest unvisited node?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "6fb00c51789e46a5b71b9893ddf6e8af",
+    "ordinal": 151,
+    "text": "to\nFinish yet, you put down infinity (you\u2019ll see why\nsoon). Node B is the closest node\u2014it\u2019s\n2 minutes away.\n\nChapter 9 I Dijkstra\u2019s algorithm168\nStep 2: Calculate how long it takes to get to all of node B\u2019s out-neighbors\nby following an edge from B.\nHey, you just found a shorter path to node A! It used to take 6 minutes\nto get to node A.\nBut if you go through node B, there\u2019s a path that only takes 5 minutes!\nWhen you find a shorter path for a neighbor of B, update its cost. In this\ncase, you found\n\u2022 A shorter path to A (down from 6 minutes to 5 minutes)\n\u2022 A shorter path to Finish (down from infinity to 7 minutes)\nStep 3: Repeat.\nStep 1 again: Find the node that takes the least amount of time to get to.\nY ou\u2019re done with node B, so node A has the next smallest time estimate.\n\nWorking with Dijkstra\u2019s algorithm 169\nStep 2 again: Update the costs for node A \u2019s out-neighbors.\nWoo, it takes 6 minutes to get to Finish now!\nY ou\u2019ve run Dijkstra\u2019s algorithm for every node (you don\u2019t need to run it\nfor the Finish node). At this point, you know\n\u2022 It takes 2 minutes to get to node B.\n\u2022 It takes 5 minutes to get to node A.\n\u2022 It takes 6 minutes to get to Finish.\nI\u2019ll save the last step, calculating the final path, for the next section. For\nnow, I\u2019ll just show you what the final path is.\nBreadth-first search wouldn\u2019t have found this as the shortest path\nbecause it has three segments. And there\u2019s a way to get from Start to\nFinish in two segments."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w4-553b7442",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win4",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does Dijkstra's algorithm settle the next closest unvisited node?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "553b7442d3b24a6fb7538467c39f1d53",
+    "ordinal": 156,
+    "text": "takes longer than 2 minutes just to get to the park.\nOn the other hand, can you find a faster path to the park? Yup.\n\nTrading for a piano 175\nThis is the key idea behind Dijkstra\u2019s algorithm: look at the cheapest\nnode on your graph. There is no cheaper way to get to this node!\nBack to the music example. The poster is the cheapest trade.\nStep 2: Figure out how long it takes to get to its out-neighbors (the cost).\nY ou have prices for the bass guitar and the drum set in the table. Their\nvalue was set when you went through the poster, so the poster gets set\nas their parent. That means, to get to the bass guitar, you follow the edge\nfrom the poster, and the same for the drums.\nStep 1 again: The LP is the next cheapest node at $5.\nStep 2 again: Update the values of all of its out-neighbors.\nHey, you updated the price of both the drums and the guitar! That\nmeans it\u2019s cheaper to get to the drums and guitar by following the edge\nfrom the LP . So you set the LP as the new parent for both instruments."
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w4-8ab71401",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win4",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does Dijkstra's algorithm settle the next closest unvisited node?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "8ab714015c694523b9605334dfb1b653",
+    "ordinal": 150,
+    "text": "segment has a travel time in minutes. Y ou\u2019ll use Dijkstra\u2019s\nalgorithm to go from Start to Finish in the shortest possible time.\n\nWorking with Dijkstra\u2019s algorithm 167\nIf you ran breadth-first search on this graph, you\u2019 d get this\nshortest path.\nBut that path takes 7 minutes. Let\u2019s see if you can find a path that takes\nless time! There are four steps to Dijkstra\u2019s algorithm:\n1. Find the \u201ccheapest\u201d node. This is the node you can get to in the least\namount of time.\n2. Update the costs of the out-neighbors of this node. I\u2019ll explain what\nI mean by this shortly.\n3. Repeat until you\u2019ve done this for every node in the graph.\n4. Calculate the final path.\nStep 1: Find the cheapest node. Y ou\u2019re standing at Start, wondering if\nyou should go to node A or node B. How long does it take to get to\neach node?\nIt takes 6 minutes to get to node A and 2 minutes to get to node B. The\nrest of the nodes, you don\u2019t know yet.\nBecause you don\u2019t know how long it takes to get to\nFinish yet, you put down infinity (you\u2019ll see why\nsoon). Node B is the closest node\u2014it\u2019s\n2 minutes away."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w4-c2754479",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win4",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does Dijkstra's algorithm settle the next closest unvisited node?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "c2754479d5ff4a2581b3c024afd02f6c",
+    "ordinal": 152,
+    "text": "have found this as the shortest path\nbecause it has three segments. And there\u2019s a way to get from Start to\nFinish in two segments.\n\nChapter 9 I Dijkstra\u2019s algorithm170\nIn the last chapter, you used breadth-first search to find the shortest\npath between two points. Back then, \u201cshortest path\u201d meant the path\nwith the fewest segments. But in Dijkstra\u2019s algorithm, you assign a\nnumber or weight to each segment. Then Dijkstra\u2019s algorithm finds the\npath with the smallest total weight.\nTo recap, Dijkstra\u2019s algorithm has four steps:\n1. Find the cheapest node. This is the node you can get to in the least\namount of time.\n2. Check whether there\u2019s a cheaper path to the out-neighbors of this\nnode. If so, update their costs.\n3. Repeat until you\u2019ve done this for every node in the graph.\n4. Calculate the final path. (Coming up in the next section!)\nTerminology\nI want to show you some more examples of Dijkstra\u2019s algorithm in\naction. But, first, let me clarify some terminology.\nWhen you work with Dijkstra\u2019s algorithm, each edge in the graph has a\nnumber associated with it. These are called weights.\nA graph with weights is called a weighted graph. A graph without\nweights is called an unweighted graph."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w4-3ca4b2ac",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win4",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does Dijkstra's algorithm settle the next closest unvisited node?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "3ca4b2ac85414925b95beca68dc8d6be",
+    "ordinal": 165,
+    "text": ". . updates the cost for the neighbor\nThis node becomes the new parent for this out-neighbor.\nFinds the next node to process and loops\n\nImplementation 185\nFind the node with the lowest cost.\nGet the cost and out-neighbors of that node.\nLoop through the out-neighbors.\nEach node has a cost. The cost is how long it takes to get to that node\nfrom Start. Here, you\u2019re calculating how long it would take to get to\nnode A if you went Start > node B > node A, instead of Start > node A.\nLet\u2019s compare those costs.\n\nChapter 9 I Dijkstra\u2019s algorithm186\nY ou found a shorter path to node A! Update the cost.\nThe new path goes through node B, so set B as the new parent.\nOK, you\u2019re back at the top of the loop. The next out-neighbor in the for\nloop is the Finish node.\nHow long does it take to get to Finish if you go through node B?\nIt takes 7 minutes. The previous cost was infinity minutes, and 7\nminutes is less than that.\n\nImplementation 187\nSet the new cost and the new parent for the Finish node.\nOK, you updated the costs for all the out-neighbors of node B. Mark it\nas processed.\nFind the next node to process.\nGet the cost and out-neighbors for node A.\n\nChapter 9 I Dijkstra\u2019s algorithm188\nNode A only has one out-neighbor: the Finish node.\nCurrently, it takes 7 minutes to get to the Finish node. How long would\nit take to get there if you went through node A?\nIt\u2019s faster to get to Finish from node A! Let\u2019s update the cost and parent."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w5-f2dbf9a9",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win5",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does a hash table handle collisions with chaining?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "f2dbf9a974be4c1d8abc1868c5fad5f0",
+    "ordinal": 96,
+    "text": "simple example. Suppose your array contains 26 slots.\nAnd your hash function is really simple: it assigns a spot in the array\nalphabetically.\n\nChapter 5 I hash tables92\nMaybe you can already see the problem. Y ou\nwant to put the price of apples in your hash.\nY ou get assigned the first slot.\nThen you want to put the price of bananas in the hash. Y ou get assigned\nthe second slot.\nEverything is going so well! But now you want to put the price of\navocados in your hash. Y ou get assigned the first slot again.\nOh no! Apples have that slot already! What to do? This is called a\ncollision: two keys have been assigned the same slot. This is a problem.\nIf you store the price of avocados at that slot, you\u2019ll overwrite the price\nof apples. Then the next time someone asks for the price of apples,\nthey will get the price of avocados instead! Collisions are bad, and you\nneed to work around them. There are many different ways to deal with\ncollisions. The simplest one is this: if multiple keys map to the same slot,\nstart a linked list at that slot."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w5-9f02f94a",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win5",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does a hash table handle collisions with chaining?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "9f02f94a86434fc89e992657b2c59107",
+    "ordinal": 103,
+    "text": "string is \u201cbag, \u201d the index is (3 + 2 + 17) % 10 =\n22 % 10 = 2.\n\nRecap 99\nFor each of these examples, which hash functions would provide a good\ndistribution? Assume a hash table size of 10 slots.\n5.5 A phonebook where the keys are names and values are phone\nnumbers. The names are as follows: Esther, Ben, Bob, and Dan.\n5.6 A mapping from battery size to power. The sizes are A, AA, AAA,\nand AAAA.\n5.7 A mapping from book titles to authors. The titles are Maus, Fun\nHome, and Watchmen.\nRecap\n\u2022 Y ou\u2019ll almost never have to implement a hash table yourself. The\nprogramming language you use should provide an implementation\nfor you. Y ou can use Python\u2019s hash tables and assume that you\u2019ll get\nthe average-case performance: constant time.\n\u2022 Hash tables are a powerful data structure because they\u2019re so fast and\nthey let you model data in a different way. Y ou might soon find that\nyou\u2019re using them all the time.\n\u2022 Y ou can make a hash table by combining a hash function with\nan array.\n\u2022 Collisions are bad. Y ou need a hash function that minimizes\ncollisions.\n\u2022 Hash tables have really fast search, insert, and delete.\n\u2022 Hash tables are good for modeling relationships from one item to\nanother item.\n\u2022 Once your load factor is greater than 0.7, it\u2019s time to resize your\nhash table.\n\u2022 Hash tables are used for caching data (for example, with\na web server).\n\u2022 Hash tables are great for catching duplicates."
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w5-4e5fd48e",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win5",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does a hash table handle collisions with chaining?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "4e5fd48eb8404551b0faa5be800b01c3",
+    "ordinal": 95,
+    "text": "the cache. The next\ntime someone requests this URL, you can send the data from the cache\ninstead of making the server do the work.\n\nCollisions 91\nRecap\nTo recap, hashes are good for\n\u2022 Modeling relationships from one thing to another thing\n\u2022 Filtering out duplicates\n\u2022 Caching/memoizing data instead of making your server do work\nCollisions\nLike I said earlier, most languages have hash tables. Y ou don\u2019t need to\nknow how to write your own. So, I won\u2019t talk about the internals of hash\ntables too much. But you still care about performance! To understand\nthe performance of hash tables, you first need to understand what\ncollisions are. The next two sections cover collisions and performance.\nFirst, I\u2019ve been telling you a white lie. I told you that a hash function\nalways maps different keys to different slots in the array.\nIn reality, it\u2019s almost impossible to write a hash function that does this.\nLet\u2019s take a simple example. Suppose your array contains 26 slots.\nAnd your hash function is really simple: it assigns a spot in the array\nalphabetically."
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w5-31008d04",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win5",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does a hash table handle collisions with chaining?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "31008d04f9ae434eae37079819bf7bbb",
+    "ordinal": 97,
+    "text": "Performance 93\nIn this example, both \u201capples\u201d and \u201cavocados\u201d map to the same slot.\nSo you start a linked list at that slot. If you need to know the price of\nbananas, it\u2019s still quick. If you need to know the price of apples, it\u2019s a\nlittle slower. Y ou have to search through this linked list to find \u201capples. \u201d\nIf the linked list is small, no big deal\u2014you have to search through three\nor four elements. But suppose you work at a grocery store where you\nonly sell produce that starts with the letter A.\nHey, wait a minute! The entire hash table is totally empty except for one\nslot. And that slot has a giant linked list! Every single element in this\nhash table is in the linked list. That\u2019s as bad as putting everything in a\nlinked list to begin with. It\u2019s going to slow down your hash table.\nThere are two lessons here:\n\u2022 Your hash function is really important. Y our hash function mapped all\nthe keys to a single slot. Ideally, your hash function would map keys\nevenly all over the hash.\n\u2022 If those linked lists get long, it slows down your hash table a lot. But\nthey won\u2019t get long if you use a good hash function!\nHash functions are important. A good hash function will give you very\nfew collisions. So how do you pick a good hash function? That\u2019s coming\nup in the next section!\nPerformance\nY ou started this chapter at the grocery store. Y ou wanted to build\nsomething that would give you the prices for produce instantly. Well,\nhash tables are really fast.\nIn the average case, hash tables take"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w5-0e5e1df7",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win5",
+   "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+   "query": "How does a hash table handle collisions with chaining?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "0e5e1df7f89a4a529cbf1af04d8eadb7",
+    "ordinal": 99,
+    "text": "1 element or 1 billion elements\u2014getting something out of\na hash table will take the same amount of time. Actually, you\u2019ve seen\n\nPerformance 95\nconstant time before. Getting an item out of an array takes constant\ntime. It doesn\u2019t matter how big your array is; it takes the same amount\nof time to get an element. In the average case, hash tables are really fast.\nIn the worst case, a hash table takes O(n)\u2014linear time\u2014for everything,\nwhich is really slow. Let\u2019s compare hash tables to arrays and lists.\nLook at the average case for hash tables. Hash tables are as fast as arrays\nat searching (getting a value at an index). And they\u2019re as fast as linked\nlists at inserts and deletes. It\u2019s the best of both worlds! But in the worst\ncase, hash tables are slow at all of those. So it\u2019s important that you don\u2019t\nhit worst-case performance with hash tables. And to do that, you need\nto avoid collisions. To avoid collisions, you need\n\u2022 A low load factor\n\u2022 A good hash function\nNote\nBefore you start this next section, know that it isn\u2019t required reading. I\u2019m\ngoing to talk about how to implement a hash table, but you\u2019ll never have\nto do that yourself. Whatever programming language you use will have an\nimplementation of hash tables built in. You can use the built-in hash table\nand assume it will have good performance. The next section gives you a\npeek under the hood."
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w6-0e3d1295",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win6",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Y86-64 seq processor fetch and decode an instruction?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "0e3d12950c834e4ba90efa706a508ba4",
+    "ordinal": 704,
+    "text": "390 Chapter 4 Processor Architecture\ninstruction set, because it was inspired by the x86-64 instruction set. Compared\nwith x86-64, the Y86-64 instruction set has fewer data types, instructions, and\naddressing modes. It also has a simple byte-level encoding, making the machine\ncode less compact than the comparable x86-64 code, but also much easier to design\nthe CPU\u2019s decoding logic. Even though the Y86-64 instruction set is very simple,\nit is suf\ufb01ciently complete to allow us to write programs manipulating integer data.\nDesigning a processor to implement Y86-64 requires us to deal with many of the\nchallenges faced by processor designers.\nWe then provide some background on digital hardware design. We describe\nthe basic building blocks used in a processor and how they are connected together\nand operated. This presentation builds on our discussion of Boolean algebra and\nbit-level operations from Chapter 2. We also introduce a simple language, HCL\n(for \u201chardware control language\u201d), to describe the control portions of hardware\nsystems. We will later use this language to describe our processor designs. Even if\nyou already have some background in logic design, read this section to understand\nour particular notation.\nAs a \ufb01rst step in designing a processor, we present a functionally correct,\nbut somewhat impractical, Y86-64 processor based on sequential operation. This\nprocessor executes a complete Y86-64 instruction on every clock cycle. The clock\nmust run slowly enough to allow an en"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w6-a2f3ffe6",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win6",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Y86-64 seq processor fetch and decode an instruction?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "a2f3ffe60f424976a9abbf6d15fcd77c",
+    "ordinal": 783,
+    "text": "432 Chapter 4 Processor Architecture\n4.3.2 SEQ Hardware Structure\nThe computations required to implement all of the Y86-64 instructions can be or-\nganized as a series of six basic stages: fetch, decode, execute, memory, write back,\nand PC update. Figure 4.22 shows an abstract view of a hardware structure that can\nperform these computations. The program counter is stored in a register, shown\nin the lower left-hand corner (labeled \u201cPC\u201d). Information then \ufb02ows along wires\n(shown grouped together as a heavy gray line), \ufb01rst upward and then around to\nthe right. Processing is performed by hardware units associated with the different\nstages. The feedback paths coming back down on the right-hand side contain the\nupdated values to write to the register \ufb01le and the updated program counter. In\nSEQ, all of the processing by the hardware units occurs within a single clock cycle,\nas is discussed in Section 4.3.3. This diagram omits some small blocks of combi-\nnational logic as well as all of the control logic needed to operate the different\nhardware units and to route the appropriate values to the units. We will add this\ndetail later. Our method of drawing processors with the \ufb02ow going from bottom\nto top is unconventional. We will explain the reason for this convention when we\nstart designing pipelined processors.\nThe hardware units are associated with the different processing stages:\nFetch. Using the program counter register as an address, the instruction mem-\nory reads the bytes of an in"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w6-b35c7a41",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win6",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Y86-64 seq processor fetch and decode an instruction?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "b35c7a41fd384b6997e0508a68d09b35",
+    "ordinal": 800,
+    "text": "Section 4.3 Sequential Y86-64 Implementations 441\nFigure 4.27\nSEQ fetch stage. Six\nbytes are read from the\ninstruction memory using\nthe PC as the starting\naddress. From these bytes,\nwe generate the different\ninstruction \ufb01elds. The PC\nincrement block computes\nsignal valP.\nicode ifun rA rB valC valP\nNeed\nvalC\nNeed\nregids\nPC\nincrement\nAlign\nBytes 1\u20139Byte 0\nimem_error\nInstruction\nmemory\nPC\nSplit\nInstr\nvalid\nicode ifun\nreferenced in the control logic are shown. The constants we use are documented\nin Figure 4.26. By convention, we use uppercase names for constant values.\nIn addition to the instructions shown in Figures 4.18 to 4.21, we include the\nprocessing for the nop and halt instructions. The nop instruction simply \ufb02ows\nthrough stages without much processing, except to increment the PC by 1. The\nhalt instruction causes the processor status to be set to HLT, causing it to halt\noperation.\nFetch Stage\nAs shown in Figure 4.27, the fetch stage includes the instruction memory hardware\nunit. This unit reads 10 bytes from memory at a time, using the PC as the address of\nthe \ufb01rst byte (byte 0). This byte is interpreted as the instruction byte and is split (by\nthe unit labeled \u201cSplit\u201d) into two 4-bit quantities. The control logic blocks labeled\n\u201cicode\u201d and \u201cifun\u201d then compute the instruction and function codes as equaling\neither the values read from memory or, in the event that the instruction address\nis not valid (as indicated by the signal imem_error), the values corresponding to\na nop"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w6-ec4a2680",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win6",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Y86-64 seq processor fetch and decode an instruction?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "ec4a26800d774139bd24653baab351e5",
+    "ordinal": 716,
+    "text": "396 Chapter 4 Processor Architecture\nAside Comparing x86-64 to Y86-64 instruction encodings\nCompared with the instruction encodings used in x86-64, the encoding of Y86-64 is much simpler but\nalso less compact. The register \ufb01elds occur only in \ufb01xed positions in all Y86-64 instructions, whereas\nthey are packed into various positions in the different x86-64 instructions. An x86-64 instruction can\nencode constant values in 1, 2, 4, or 8 bytes, whereas Y86-64 always requires 8 bytes.\nthe instruction sequence as long as we start from the \ufb01rst byte in the sequence.\nOn the other hand, if we do not know the starting position of a code sequence, we\ncannot reliably determine how to split the sequence into individual instructions.\nThis causes problems for disassemblers and other tools that attempt to extract\nmachine-level programs directly from object-code byte sequences.\nPractice Problem 4.1 (solution page 516)\nDetermine the byte encoding of the Y86-64 instruction sequence that follows. The\nline .pos 0x100 indicates that the starting address of the object code should be\n0x100.\n.pos 0x100 # Start code at address 0x100\nirmovq $15,%rbx\nrrmovq %rbx,%rcx\nloop:\nrmmovq %rcx,-3(%rbx)\naddq %rbx,%rcx\njmp loop\nPractice Problem 4.2 (solution page 517)\nFor each byte sequence listed, determine the Y86-64 instruction sequence it en-\ncodes. If there is some invalid byte in the sequence, show the instruction sequence\nup to that point and indicate where the invalid value occurs. For each sequence,\nwe sho"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w6-15b39dc8",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win6",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the Y86-64 seq processor fetch and decode an instruction?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "15b39dc841aa404d872bdb45e3442d00",
+    "ordinal": 791,
+    "text": "Section 4.3 Sequential Y86-64 Implementations 437\nmemories (such as the register \ufb01le), and we can mimic this effect for larger circuits\nusing special clock circuits. Since our instruction memory is only used to read\ninstructions, we can therefore treat this unit as if it were combinational logic.\nWe are left with just four hardware units that require an explicit control\nover their sequencing\u2014the program counter, the condition code register, the data\nmemory, and the register \ufb01le. These are controlled via a single clock signal that\ntriggers the loading of new values into the registers and the writing of values to the\nrandom access memories. The program counter is loaded with a new instruction\naddress every clock cycle. The condition code register is loaded only when an\ninteger operation instruction is executed. The data memory is written only when\nan rmmovq, pushq,o r call instruction is executed. The two write ports of the\nregister \ufb01le allow two program registers to be updated on every cycle, but we can\nuse the special register ID 0xF as a port address to indicate that no write should\nbe performed for this port.\nThis clocking of the registers and memories is all that is required to control the\nsequencing of activities in our processor. Our hardware achieves the same effect as\nwould a sequential execution of the assignments shown in the tables of Figures 4.18\nthrough 4.21, even though all of the state updates actually occur simultaneously\nand only as the clock rises to start th"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w7-2287fbeb",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win7",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the memory hierarchy use caching to hide DRAM latency?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "2287fbebebef4da4a42a0817f341a340",
+    "ordinal": 1184,
+    "text": "650 Chapter 6 The Memory Hierarchy\nType What cached Where cached Latency (cycles) Managed by\nCPU registers 4-byte or 8-byte words On-chip CPU registers 0 Compiler\nTLB Address translations On-chip TLB 0 Hardware MMU\nL1 cache 64-byte blocks On-chip L1 cache 4 Hardware\nL2 cache 64-byte blocks On-chip L2 cache 10 Hardware\nL3 cache 64-byte blocks On-chip L3 cache 50 Hardware\nVirtual memory 4-KB pages Main memory 200 Hardware + OS\nBuffer cache Parts of \ufb01les Main memory 200 OS\nDisk cache Disk sectors Disk controller 100,000 Controller \ufb01rmware\nNetwork cache Parts of \ufb01les Local disk 10,000,000 NFS client\nBrowser cache Web pages Local disk 10,000,000 Web browser\nWeb cache Web pages Remote server disks 1,000,000,000 Web proxy server\nFigure 6.23 The ubiquity of caching in modern computer systems. Acronyms: TLB: translation lookaside\nbuffer; MMU: memory management unit; OS: operating system; NFS: network \ufb01le system.\n6.3.2 Summary of Memory Hierarchy Concepts\nTo summarize, memory hierarchies based on caching work because slower storage\nis cheaper than faster storage and because programs tend to exhibit locality:\nExploiting temporal locality. Because of temporal locality, the same data objects\nare likely to be reused multiple times. Once a data object has been copied\ninto the cache on the \ufb01rst miss, we can expect a number of subsequent\nhits on that object. Since the cache is faster than the storage at the next\nlower level, these subsequent hits can be served much faster than the\noriginal mi"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w7-891d3be3",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win7",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the memory hierarchy use caching to hide DRAM latency?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "891d3be32df244efb6b1807f77e8025f",
+    "ordinal": 1121,
+    "text": "If stored in a cache, 4 to 75 cycles. If stored in\nmain memory, hundreds of cycles. And if stored in disk,\n\ntens of millions of cycles!\nHere, then, is a fundamental and enduring idea in computer systems: if you\nunderstand how the system moves data up and down the memory hierarchy, then\nyou can write your application programs so that their data items are stored higher\nin the hierarchy, where the CPU can access them more quickly.\nThis idea centers around a fundamental property of computer programs\nknown as locality. Programs with good locality tend to access the same set of\ndata items over and over again, or they tend to access sets of nearby data items.\nPrograms with good locality tend to access more data items from the upper levels\nof the memory hierarchy than programs with poor locality, and thus run faster.\nFor example, on our Core i7 system, the running times of different matrix mul-\ntiplication kernels that perform the same number of arithmetic operations, but\nhave different degrees of locality, can vary by a factor of almost 40!\nIn this chapter, we will look at the basic storage technologies\u2014SRAM mem-\nory, DRAM memory, ROM memory, and rotating and solid state disks\u2014and\ndescribe how they are organized into hierarchies. In particular, we focus on the\ncache memories that act as staging areas between the CPU and main memory, be-\ncause they have the most impact on application program performance. We show\nyou how to analyze your C programs for locality, and we introduce techni"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w7-acd6ad7f",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win7",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the memory hierarchy use caching to hide DRAM latency?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "acd6ad7fcf604c44b97e84bef1eff4d8",
+    "ordinal": 74,
+    "text": "technology known asstatic random access memory\n(SRAM). Newer and more powerful systems even have three levels of cache: L1,\nL2,\n\nand L3. The idea behind caching is that a system can get the effect of both\na very large memory and a very fast one by exploiting locality, the tendency for\nprograms to access data and code in localized regions. By setting up caches to hold\ndata that are likely to be accessed often, we can perform most memory operations\nusing the fast caches.\nOne of the most important lessons in this book is that application program-\nmers who are aware of cache memories can exploit them to improve the perfor-\nmance of their programs by an order of magnitude. You will learn more about\nthese important devices and how to exploit them in Chapter 6."
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-final-w7-8aecc301",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win7",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the memory hierarchy use caching to hide DRAM latency?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "8aecc301c64243da80511be75b922ef4",
+    "ordinal": 76,
+    "text": "4, and so on.\nThe main idea of a memory hierarchy is that storage at one level serves as a\ncache for storage at the next lower\n\nlevel. Thus, the register \ufb01le is a cache for the\nL1 cache. Caches L1 and L2 are caches for L2 and L3, respectively. The L3 cache\nis a cache for the main memory, which is a cache for the disk. On some networked\nsystems with distributed \ufb01le systems, the local disk serves as a cache for data stored\non the disks of other systems.\nJust as programmers can exploit knowledge of the different caches to improve\nperformance, programmers can exploit their understanding of the entire memory\nhierarchy. Chapter 6 will have much more to say about this.\n1.7 The Operating System Manages the Hardware\nBack to our hello example. When the shell loaded and ran the hello program,\nand when the hello program printed its message, neither program accessed the"
+   },
+   "label": "include"
+  },
+  {
+   "row_id": "s2-final-w7-86bcd08d",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-win7",
+   "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+   "query": "How does the memory hierarchy use caching to hide DRAM latency?",
+   "query_source": "scored-retrieval-steer",
+   "passage": {
+    "id": "86bcd08dd40c4d9f9e9144f6e05b3f73",
+    "ordinal": 1515,
+    "text": "842 Chapter 9 Virtual Memory\nFigure 9.3\nHow a VM system uses\nmain memory as a cache.\nVP 0\nVP 1 PP 0\nPP 1\nPP 2m\u2013p \u2013 1\nVP 2n\u2013p \u2013 1\nUnallocated\nVirtual memory Physical memory\nVirtual pages (VPs)\nstored on disk\nPhysical pages (PPs)\ncached in DRAM\nCached\nUncached\nUnallocated\nCached\nUncached\nEmpty\nEmpty\nEmpty\nN \u2013 1\nM \u2013 1\n0\n0\nCached\nUncached\non disk. Virtual pages 1, 4, and 6 are cached in physical memory. Pages 2, 5, and 7\nare allocated but are not currently cached in physical memory.\n9.3.1 DRAM Cache Organization\nTo help us keep the different caches in the memory hierarchy straight, we will use\nthe term SRAM cache to denote the L1, L2, and L3 cache memories between the\nCPU and main memory, and the term DRAM cache to denote the VM system\u2019s\ncache that caches virtual pages in main memory.\nThe position of the DRAM cache in the memory hierarchy has a big impact\non the way that it is organized. Recall that a DRAM is at least 10 times slower\nthan an SRAM and that disk is about 100,000 times slower than a DRAM. Thus,\nmisses in DRAM caches are very expensive compared to misses in SRAM caches\nbecause DRAM cache misses are served from disk, while SRAM cache misses are\nusually served from DRAM-based main memory. Further, the cost of reading the\n\ufb01rst byte from a disk sector is about 100,000 times slower than reading successive\nbytes in the sector. The bottom line is that the organization of the DRAM cache\nis driven entirely by the enormous cost"
+   },
+   "label": "exclude"
+  },
+  {
+   "row_id": "s2-sweep-conflict-00",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-conflictwin0",
+   "material_id": "authored-pair",
+   "query": "How does binary search achieve O(log n) time on sorted lists?",
+   "query_source": "authored-premise-denying-pair",
+   "passage": {
+    "id": "authored-conflict-00",
+    "ordinal": null,
+    "text": "Binary search on a sorted list takes linear O(n) time because every element must be scanned in order; logarithmic-time search on sorted arrays is not possible."
+   },
+   "label": "conflicting_evidence"
+  },
+  {
+   "row_id": "s2-sweep-conflict-01",
+   "split": "sweep",
+   "kind": "passage",
+   "window_id": "s2-sweep-conflictwin1",
+   "material_id": "authored-pair",
+   "query": "Why does quicksort's average-case time complexity reach O(n log n)?",
+   "query_source": "authored-premise-denying-pair",
+   "passage": {
+    "id": "authored-conflict-01",
+    "ordinal": null,
+    "text": "Quicksort always runs in quadratic O(n^2) time on every input including the average case; no partitioning scheme can give it O(n log n) average behavior."
+   },
+   "label": "conflicting_evidence"
+  },
+  {
+   "row_id": "s2-final-conflict-02",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-conflictwin2",
+   "material_id": "authored-pair",
+   "query": "How does Dijkstra's algorithm require non-negative edge weights?",
+   "query_source": "authored-premise-denying-pair",
+   "passage": {
+    "id": "authored-conflict-02",
+    "ordinal": null,
+    "text": "Dijkstra's algorithm works correctly with negative edge weights and never needs non-negativity; the non-negative-weight requirement is a myth."
+   },
+   "label": "conflicting_evidence"
+  },
+  {
+   "row_id": "s2-final-conflict-03",
+   "split": "final",
+   "kind": "passage",
+   "window_id": "s2-final-conflictwin3",
+   "material_id": "authored-pair",
+   "query": "How does virtual memory use page tables to translate addresses?",
+   "query_source": "authored-premise-denying-pair",
+   "passage": {
+    "id": "authored-conflict-03",
+    "ordinal": null,
+    "text": "Virtual memory translates addresses purely with segmentation and never uses page tables; page tables play no role in address translation."
+   },
+   "label": "conflicting_evidence"
+  }
+ ]
+}

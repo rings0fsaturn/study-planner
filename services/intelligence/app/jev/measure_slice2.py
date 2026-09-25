@@ -17,7 +17,15 @@ from __future__ import annotations
 from typing import Any
 
 from app.jev.measure_slice1 import _latency, _scored
-from app.jev.questions import route_passage
+from app.jev.questions import PASSAGE_THRESHOLDS, route_passage
+
+# Offline grid around the ticket starting points (injection_max 0.70,
+# contradicts_min 0.70, relevant_min 0.45, evidence_min 0.55): one-dim
+# slices first so the table names which Noul moves the wall.
+PASSAGE_GRID = [{**PASSAGE_THRESHOLDS, "injection_max": v} for v in (0.50, 0.70, 0.90)]
+PASSAGE_GRID += [{**PASSAGE_THRESHOLDS, "contradicts_min": v} for v in (0.50, 0.70, 0.90)]
+PASSAGE_GRID += [{**PASSAGE_THRESHOLDS, "relevant_min": v} for v in (0.30, 0.45, 0.60)]
+PASSAGE_GRID += [{**PASSAGE_THRESHOLDS, "evidence_min": v} for v in (0.40, 0.55, 0.70)]
 
 
 def _verdict(call: dict[str, Any], thresholds: dict[str, float]) -> str:
