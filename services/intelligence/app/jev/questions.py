@@ -23,20 +23,30 @@ PASSAGE_THRESHOLDS = {
 }
 
 
-def suitability_questions() -> dict[str, Any]:
+def suitability_questions(variant: str = "v1") -> dict[str, Any]:
     """Slice 1: is this material chunk able to ground a coding question?
 
     State shape: ``{"chunk_text": ...}``. Mirrors the rule-42 boundary: an
     input/output contract with the body left unimplemented is derivable; bare
     study notes or worksheets already containing complete solutions are not.
+    ``variant`` selects wording (``v1`` current, ``v2`` narrow rewording);
+    callers stay stable on the default.
     """
+    if variant == "v2":
+        instructions = "Can `chunk_text` alone ground a coding question with hidden tests?"
+        derivable_what = (
+            "States a checkable input/output contract with the body left to the learner"
+        )
+    else:
+        instructions = "Can `chunk_text` ground a coding question with hidden tests?"
+        derivable_what = "States an input/output contract with the body left to the learner"
     return {
         "suitability": {
             "type": "choice",
-            "instructions": "Can `chunk_text` ground a coding question with hidden tests?",
+            "instructions": instructions,
             "criteria": {
                 "derivable": {
-                    "what": "States an input/output contract with the body left to the learner",
+                    "what": derivable_what,
                     "not_for": "Prose with no contract, or material holding the complete solution",
                     "examples": [
                         "Implement binary search on a sorted list",
@@ -65,16 +75,23 @@ def route_suitability(choice: str, confidence: float) -> str:
     return "review"
 
 
-def citation_questions() -> dict[str, Any]:
+def citation_questions(variant: str = "v1") -> dict[str, Any]:
     """Slice 1: does the section support the claim? (citation_check cookbook).
 
     State shape: ``{"claim": ..., "section": ...}``. Call only after the free
     string-match found the quote; a missing quote is ``fabricated`` with no call.
+    ``variant`` selects wording (``v1`` current, ``v2`` narrow rewording);
+    callers stay stable on the default.
     """
+    instructions = (
+        "Does `section` state `claim` or directly imply that it is true?"
+        if variant == "v2"
+        else "How does `section` relate to `claim`?"
+    )
     return {
         "relation": {
             "type": "choice",
-            "instructions": "How does `section` relate to `claim`?",
+            "instructions": instructions,
             "criteria": {
                 "supports": "The section states the claim or directly implies that it is true",
                 "contradicts": "The section states the opposite of the claim",

@@ -22,6 +22,13 @@ def _s_call(row_id, label, choice, confidence, *, scored=True):
     }
 
 
+def test_suitability_variant_kwarg_defaults_to_current_wording() -> None:
+    from app.jev.questions import citation_questions, suitability_questions
+
+    assert suitability_questions() == suitability_questions(variant="v1")
+    assert citation_questions() == citation_questions(variant="v1")
+
+
 def test_suitability_counts_per_threshold() -> None:
     calls = [
         _s_call("r1", "derivable", "derivable", 0.95),
