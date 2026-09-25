@@ -6,11 +6,20 @@ reused from test_generation_worker. No network, no spend.
 
 from __future__ import annotations
 
+import pytest
+
 from app.generation.worker import GenerationWorker, GenerationWorkerConfig
 from app.jev.client import JevError, JevResult
+from app.jev.questions import (
+    APPROVE_AT,
+    AUTO_ACCEPT,
+    BLOCK_AT,
+    SUITABILITY_ENFORCE_FAMILIES,
+)
 from tests.ingestion_doubles import FakeQueue
 from tests.test_generation_worker import (
     VALID_MCQ,
+    VALID_WRITTEN,
     FakeAdapter,
     FakeGenerationRepo,
     FakeTelemetry,
@@ -18,6 +27,7 @@ from tests.test_generation_worker import (
     chunks,
     material,
     ok_response,
+    written_assessment,
 )
 
 BAD_QUOTE_MCQ = dict(
@@ -160,6 +170,71 @@ def test_suitability_not_derivable_advisory_for_objective() -> None:
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1  # advisory-only outside the coding arm
+
+
+def test_suitability_not_derivable_advisory_for_written() -> None:
+    """#75 family matrix: written shares objective's advisory path, never blocks."""
+    repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
+    jev = ScriptJev(
+        [("answer", {"suitability": _answer("not_derivable", 0.95)}), _shadow_include()]
+    )
+    repo.seed(written_assessment(), material())
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    slice1_worker(
+        repo, queue, FakeAdapter([ok_response(structured_output=VALID_WRITTEN)]), telemetry, jev
+    ).run_once()
+    assert len(repo.completed) == 1
+    assert len(jev.calls) == 2  # suitability asked, its verdict ignored for written
+
+
+@pytest.mark.parametrize(
+    ("family", "seed", "response", "enforce"),
+    [
+        ("coding", coding_seed, None, True),
+        ("objective", assessment, None, False),
+        ("written", written_assessment, VALID_WRITTEN, False),
+    ],
+)
+def test_suitability_family_matrix(family, seed, response, enforce) -> None:
+    """#75 enforce scope lock: only the declared families terminal-block.
+
+    The matrix is data-driven off ``SUITABILITY_ENFORCE_FAMILIES`` so the test
+    and the shipped scope cannot drift: a family added to the scope without
+    evidence fails here.
+    """
+    repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
+    assert (family in SUITABILITY_ENFORCE_FAMILIES) is enforce
+    jev = ScriptJev([("answer", {"suitability": _answer("not_derivable", 0.95)})] * 3)
+    adapter = FakeAdapter([] if enforce else [ok_response(structured_output=response)])
+    repo.seed(seed(), material())
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    slice1_worker(repo, queue, adapter, telemetry, jev).run_once()
+    if enforce:
+        assert repo.completed == []
+        assert adapter.calls == []
+        assert repo.assessment_updates[-1][2][0]["code"] == "code_not_derivable"
+    else:
+        assert len(repo.completed) == 1
+        assert len(adapter.calls) == 1
+
+
+def test_locked_thresholds_and_enforce_scope() -> None:
+    """#75 band lock: the measured constants stay put until re-measured.
+
+    Values come from the sweep v1 + final v1 evidence (suitability suite beyond
+    the coding arm is advisory; citation `stands@0.8` precision 1.0). Changing
+    one without a fresh sweep fails this test deliberately.
+    """
+    assert APPROVE_AT == 0.9
+    assert BLOCK_AT == 0.1
+    assert AUTO_ACCEPT == 0.8
+    assert frozenset(SUITABILITY_ENFORCE_FAMILIES) == frozenset({"coding"})
 
 
 def test_suitability_error_fails_open() -> None:
