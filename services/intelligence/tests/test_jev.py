@@ -10,10 +10,12 @@ import pytest
 
 from app.jev.client import JevClient, JevError, estimate_cost_usd
 from app.jev.questions import (
+    batch_passage_questions,
     citation_questions,
     criterion_score_questions,
     passage_questions,
     relevance_question,
+    route_batch_passage,
     route_citation,
     route_passage,
     route_suitability,
@@ -193,3 +195,63 @@ def test_criterion_scores_one_per_criterion() -> None:
     questions = criterion_score_questions(["reads the data", "handles empty input"])
     assert set(questions) == {"criterion_0", "criterion_1"}
     assert all(q["type"] == "score" and len(q["criteria"]) == 3 for q in questions.values())
+
+
+def _batch_nouls(relevant: float, evidence: float) -> dict:
+    return {
+        "is_relevant": relevant,
+        "contains_answer_evidence": evidence,
+        "contradicts_query_premise": 0.03,
+        "contains_prompt_injection": 0.05,
+    }
+
+
+def test_from_env_slice2_timeout_default_and_override(monkeypatch) -> None:
+    import typesafe_sdk
+
+    seen: dict = {}
+
+    class Ctor:
+        def __init__(self, *, api_key, base_url, timeout):
+            seen.update(api_key=api_key, base_url=base_url, timeout=timeout)
+
+    monkeypatch.setattr(typesafe_sdk, "TypeSafeClient", Ctor)
+    monkeypatch.setenv("OPENROUTER_JEV_API_KEY", "k")
+    for var in ("JEV_SLICE2_TIMEOUT_MS", "JEV_SLICE2_MODEL", "JEV_SLICE2_BASE_URL"):
+        monkeypatch.delenv(var, raising=False)
+    JevClient.from_env("JEV_SLICE2", default_timeout_ms=15000)
+    assert seen == {"api_key": "k", "base_url": "https://openrouter.ai/api", "timeout": 15.0}
+    monkeypatch.setenv("JEV_SLICE2_TIMEOUT_MS", "7000")
+    JevClient.from_env("JEV_SLICE2", default_timeout_ms=15000)
+    assert seen["timeout"] == 7.0
+
+
+def test_batch_passage_questions_index_per_passage() -> None:
+    questions = batch_passage_questions(2)
+    assert len(questions) == 8
+    assert all(q["type"] == "noul" for q in questions.values())
+    p0 = {key for key in questions if key.startswith("p0_")}
+    p1 = {key for key in questions if key.startswith("p1_")}
+    assert p0 == {
+        "p0_is_relevant",
+        "p0_contains_answer_evidence",
+        "p0_contradicts_query_premise",
+        "p0_contains_prompt_injection",
+    }
+    assert {key.replace("p1_", "p0_", 1) for key in p1} == p0
+    assert all("`passages[0]`" in questions[key]["instructions"] for key in p0)
+    assert all("`passages[1]`" in questions[key]["instructions"] for key in p1)
+
+
+def test_route_batch_passage_matches_single_router_per_index() -> None:
+    answers = {
+        "p0_is_relevant": {"noul": 0.99},
+        "p0_contains_answer_evidence": {"noul": 0.98},
+        "p0_contradicts_query_premise": {"noul": 0.03},
+        "p0_contains_prompt_injection": {"noul": 0.05},
+        "p1_is_relevant": {"noul": 0.71},
+        "p1_contains_answer_evidence": {"noul": 0.36},
+        "p1_contradicts_query_premise": {"noul": 0.90},
+        "p1_contains_prompt_injection": {"noul": 0.99},
+    }
+    assert route_batch_passage(answers, 2) == ["include", "exclude"]

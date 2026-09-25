@@ -62,6 +62,19 @@ def _answer(choice: str, confidence: float) -> dict:
     return {"choice": choice, "confidence": confidence, "type": "choice"}
 
 
+def _shadow_include() -> tuple[str, object]:
+    """One include verdict for the single-chunk slice-1 context (#72 shadow)."""
+    return (
+        "answer",
+        {
+            "p0_is_relevant": {"noul": 0.99, "type": "noul"},
+            "p0_contains_answer_evidence": {"noul": 0.98, "type": "noul"},
+            "p0_contradicts_query_premise": {"noul": 0.03, "type": "noul"},
+            "p0_contains_prompt_injection": {"noul": 0.05, "type": "noul"},
+        },
+    )
+
+
 def slice1_worker(repo, queue, adapter, telemetry, jev, *, enabled=True):
     return GenerationWorker(
         repo=repo,
@@ -108,17 +121,17 @@ def test_flag_off_makes_zero_jev_calls() -> None:
 
 def test_suitability_derivable_proceeds() -> None:
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.95)})])
+    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.95)}), _shadow_include()])
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1
-    assert len(jev.calls) == 1
+    assert len(jev.calls) == 2
     assert "chunk_text" in jev.calls[0]["state"]
 
 
 def test_suitability_review_proceeds() -> None:
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.5)})])
+    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.5)}), _shadow_include()])
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1
@@ -141,7 +154,9 @@ def test_suitability_not_derivable_blocks_coding_terminal() -> None:
 
 def test_suitability_not_derivable_advisory_for_objective() -> None:
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("answer", {"suitability": _answer("not_derivable", 0.95)})])
+    jev = ScriptJev(
+        [("answer", {"suitability": _answer("not_derivable", 0.95)}), _shadow_include()]
+    )
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1  # advisory-only outside the coding arm
@@ -149,7 +164,7 @@ def test_suitability_not_derivable_advisory_for_objective() -> None:
 
 def test_suitability_error_fails_open() -> None:
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("error", JevError("timeout", "deadline", True, "r1"))])
+    jev = ScriptJev([("error", JevError("timeout", "deadline", True, "r1")), _shadow_include()])
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1
@@ -157,13 +172,13 @@ def test_suitability_error_fails_open() -> None:
 
 def test_citation_match_pass_makes_no_citation_call() -> None:
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.95)})])
+    jev = ScriptJev([("answer", {"suitability": _answer("derivable", 0.95)}), _shadow_include()])
     send(repo, queue)
     slice1_worker(repo, queue, FakeAdapter([ok_response()]), telemetry, jev).run_once()
     assert len(repo.completed) == 1
     _, _, _, warnings = repo.completed[0]
     assert warnings == []
-    assert len(jev.calls) == 1  # suitability only; verified quote needs no judge
+    assert len(jev.calls) == 2  # suitability + passage shadow, no citation judge
 
 
 def test_citation_supports_clears_unverified() -> None:
@@ -171,6 +186,7 @@ def test_citation_supports_clears_unverified() -> None:
     jev = ScriptJev(
         [
             ("answer", {"suitability": _answer("derivable", 0.95)}),
+            _shadow_include(),
             ("answer", {"relation": _answer("supports", 0.93)}),
         ]
     )
@@ -181,7 +197,7 @@ def test_citation_supports_clears_unverified() -> None:
     assert len(repo.completed) == 1
     _, _, _, warnings = repo.completed[0]
     assert warnings == []
-    assert len(jev.calls) == 2
+    assert len(jev.calls) == 3
 
 
 def test_citation_contradicted_shadows_without_drop() -> None:
@@ -190,6 +206,7 @@ def test_citation_contradicted_shadows_without_drop() -> None:
     jev = ScriptJev(
         [
             ("answer", {"suitability": _answer("derivable", 0.95)}),
+            _shadow_include(),
             ("answer", {"relation": _answer("contradicts", 0.99)}),
         ]
     )
@@ -210,6 +227,7 @@ def test_citation_unsupported_shadows_without_drop() -> None:
     jev = ScriptJev(
         [
             ("answer", {"suitability": _answer("derivable", 0.95)}),
+            _shadow_include(),
             ("answer", {"relation": _answer("says_nothing", 0.93)}),
         ]
     )
@@ -229,6 +247,7 @@ def test_citation_error_keeps_soft_warning() -> None:
     jev = ScriptJev(
         [
             ("answer", {"suitability": _answer("derivable", 0.95)}),
+            _shadow_include(),
             ("error", JevError("timeout", "deadline", True, "r1")),
         ]
     )

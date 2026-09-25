@@ -39,7 +39,10 @@ import uuid
 from dataclasses import dataclass
 from typing import Any, Protocol
 
-from app.generation.context import CONTEXT_TOP_K
+from app.generation.context import (  # _steer: shadow judges the steer the retriever used (D-01)
+    CONTEXT_TOP_K,
+    _steer,
+)
 from app.generation.models import AssessmentScope, GenerationBlueprint, RetrievedChunk
 from app.generation.openrouter_client import OpenRouterGenerationClient
 from app.generation.prompts import (
@@ -202,6 +205,31 @@ class GenerationWorkerConfig:
     jev_slice1_enabled: bool = False
 
 
+def _summarize_passage_shadow(
+    chunks: list[RetrievedChunk], answers: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Slice-2 shadow summary (#72): verdicts plus the would-keep set and floor.
+
+    Pure (no Jev call): ``would_keep`` is include + conflicting_evidence (the
+    conflict block is kept, never evidence); when it is empty the floor is the
+    top-by-relevance chunk, so enforcement could never starve the widener.
+    """
+    from app.jev.questions import route_batch_passage
+
+    verdicts = route_batch_passage(answers, len(chunks))
+    ids = [chunk.chunk_id for chunk in chunks]
+    kept = [cid for cid, verdict in zip(ids, verdicts) if verdict != "exclude"]
+    dropped = [cid for cid, verdict in zip(ids, verdicts) if verdict == "exclude"]
+    floor = None
+    if chunks and not kept:
+        relevance = [
+            float((answers.get(f"p{i}_is_relevant") or {}).get("noul", 0.0) or 0.0)
+            for i in range(len(chunks))
+        ]
+        floor = ids[relevance.index(max(relevance))]
+    return {"verdicts": verdicts, "would_keep": kept, "would_drop": dropped, "floor": floor}
+
+
 # The context builder is keyed on the steer parts and the learner's scope: the
 # material title is document context for the prompt, never the retrieval query
 # (D-01), and the scope's page bounds decide which part of the material is
@@ -249,6 +277,7 @@ class GenerationWorker:
         context_builder: ContextBuilder,
         sandbox: PistonClient | None = None,
         jev: Any | None = None,
+        jev_slice2: Any | None = None,
     ) -> None:
         self._repo = repo
         self._queue = queue
@@ -262,6 +291,9 @@ class GenerationWorker:
         # Slice-1 Jev judge (#70). Duck-typed (JevClient) so unit tests can
         # pass a fake; None or flag-off means zero decide() calls.
         self._jev = jev
+        # Slice-2 shadow judge (#72): separate client for the tighter timeout
+        # ceiling; defaults to the slice-1 client so callers pass one fake.
+        self._jev_slice2 = jev_slice2 if jev_slice2 is not None else jev
 
     def run_once(self) -> int:
         messages = self._queue.poll(
@@ -448,6 +480,12 @@ class GenerationWorker:
                         )
                         continue
                     break
+                # Slice-2 passage shadow (#72): same flag, log-only, after the
+                # pre-gate so refused windows spend no call. The retrieval-path
+                # slot is spec-only until this validates (#74).
+                self._jev_classify_passages_shadow(
+                    chunks, skill_tags, scope, correlation_id=correlation_id
+                )
             schema = schema_for(context_ids)
             messages = build(blueprint, chunks, title=material.title)
             response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
@@ -792,6 +830,61 @@ class GenerationWorker:
         if verdict == "not_derivable" and coding:
             return True, "this material does not support a grounded coding question"
         return False, None
+
+    def _jev_classify_passages_shadow(
+        self,
+        chunks: list[RetrievedChunk],
+        skill_tags: tuple[str, ...],
+        scope: AssessmentScope | None,
+        *,
+        correlation_id: str,
+    ) -> None:
+        """Slice-2 passage shadow (#72): log-only, never reorders or drops.
+
+        One batched decide() over the whole window classifies each passage;
+        the summary (would-keep set + top-relevance floor) is logged with
+        structured jev_* fields for #74. Every failure fails open: log and
+        proceed with the retrieved chunks untouched.
+        """
+        from app.jev.questions import batch_passage_questions
+
+        if not chunks:
+            return
+        state = {
+            "query": _steer(skill_tags, scope),
+            "passages": [{"id": chunk.chunk_id, "text": chunk.text} for chunk in chunks],
+        }
+        try:
+            result = self._jev_slice2.decide(
+                state,
+                batch_passage_questions(len(chunks)),
+                request_id=correlation_id,
+                trace_id=correlation_id,
+            )
+            summary = _summarize_passage_shadow(chunks, result.answers or {})
+        except Exception as exc:  # JevError: fail-open, chunks untouched
+            logger.warning(
+                "jev passage shadow fail-open (%s)",
+                getattr(exc, "code", "provider_error"),
+                extra={"trace_id": correlation_id},
+            )
+            return
+        logger.info(
+            "jev passage shadow kept=%d/%d dropped=%s floor=%s tokens=%d",
+            len(summary["would_keep"]),
+            len(chunks),
+            summary["would_drop"],
+            summary["floor"],
+            result.input_tokens,
+            extra={
+                "trace_id": correlation_id,
+                "jev_verdicts": summary["verdicts"],
+                "jev_kept": summary["would_keep"],
+                "jev_dropped": summary["would_drop"],
+                "jev_floor": summary["floor"],
+                "jev_input_tokens": result.input_tokens,
+            },
+        )
 
     def _jev_adjudicate_citations(
         self,

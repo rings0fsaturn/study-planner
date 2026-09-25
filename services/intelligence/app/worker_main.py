@@ -105,13 +105,17 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
 
     # Slice-1 Jev gate (#70): one flag for suitability + citation; off (the
     # default) means zero decide() calls. The client is built only when the
-    # flag is on so disabled workers never import the SDK.
+    # flag is on so disabled workers never import the SDK. Slice-2 passage
+    # shadow (#72) reuses the flag with a tighter timeout ceiling so the one
+    # batched call still fits the 90 s visibility window (#74 retunes it).
     jev_slice1_enabled = os.getenv("JEV_SLICE1_ENABLED", "false").strip().lower() == "true"
     jev = None
+    jev_slice2 = None
     if jev_slice1_enabled:
         from app.jev.client import JevClient
 
         jev = JevClient.from_env()
+        jev_slice2 = JevClient.from_env("JEV_SLICE2", default_timeout_ms=15000)
 
     return GenerationWorker(
         repo=repo,
@@ -121,6 +125,7 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
         context_builder=context_builder,
         sandbox=sandbox,
         jev=jev,
+        jev_slice2=jev_slice2,
         config=GenerationWorkerConfig(
             poll_interval_seconds=float(os.getenv("GENERATION_POLL_INTERVAL_SECONDS", "1")),
             visibility_seconds=int(os.getenv("GENERATION_VISIBILITY_SECONDS", "90")),

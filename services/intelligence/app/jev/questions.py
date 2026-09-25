@@ -121,10 +121,8 @@ def passage_questions() -> dict[str, Any]:
     }
 
 
-def route_passage(
-    nouls: dict[str, float], thresholds: dict[str, float] = PASSAGE_THRESHOLDS
-) -> str:
-    """Slice 2 router: ``include`` / ``conflicting_evidence`` / ``exclude``.
+def _route_nouls(nouls: dict[str, float], thresholds: dict[str, float]) -> str:
+    """Shared slice-2 trigger rule (single and batched routers).
 
     Injection first (security, not evidence); contradiction before evidence so a
     passage denying the premise lands in the conflict block, not the evidence block.
@@ -138,6 +136,57 @@ def route_passage(
     if nouls.get("contains_answer_evidence", 0.0) > thresholds["evidence_min"]:
         return "include"
     return "exclude"
+
+
+def route_passage(
+    nouls: dict[str, float], thresholds: dict[str, float] = PASSAGE_THRESHOLDS
+) -> str:
+    """Slice 2 router: ``include`` / ``conflicting_evidence`` / ``exclude``."""
+    return _route_nouls(nouls, thresholds)
+
+
+_BATCH_NOULS = (
+    "is_relevant",
+    "contains_answer_evidence",
+    "contradicts_query_premise",
+    "contains_prompt_injection",
+)
+
+
+def batch_passage_questions(count: int) -> dict[str, Any]:
+    """Slice 2 shadow (#72): classify ``count`` passages in one ``decide()`` call.
+
+    State shape: ``{"query": ..., "passages": [{"id": ..., "text": ...}, ...]}``.
+    Each per-index Noul references its own `` `passages[i]` `` entry, so one
+    call judges the whole context window (extra questions cost tokens, not
+    latency). Wording is derived from :func:`passage_questions` so the two
+    shapes can never drift apart.
+    """
+    batched: dict[str, Any] = {}
+    for i in range(count):
+        for key, question in passage_questions().items():
+            asked = dict(question)
+            asked["instructions"] = question["instructions"].replace(
+                "`passage`", f"`passages[{i}]`"
+            )
+            batched[f"p{i}_{key}"] = asked
+    return batched
+
+
+def route_batch_passage(
+    answers: dict[str, dict[str, Any]],
+    count: int,
+    thresholds: dict[str, float] = PASSAGE_THRESHOLDS,
+) -> list[str]:
+    """Slice 2 batched router: one verdict per passage index, same rule as single."""
+    verdicts = []
+    for i in range(count):
+        prefix = f"p{i}_"
+        nouls = {
+            key: (answers.get(f"{prefix}{key}") or {}).get("noul", 0.0) for key in _BATCH_NOULS
+        }
+        verdicts.append(_route_nouls(nouls, thresholds))
+    return verdicts
 
 
 def relevance_question() -> dict[str, Any]:

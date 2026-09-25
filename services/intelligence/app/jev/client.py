@@ -88,7 +88,7 @@ class JevClient:
         self._model = model
 
     @classmethod
-    def from_env(cls, prefix: str = "JEV") -> JevClient:
+    def from_env(cls, prefix: str = "JEV", default_timeout_ms: int = 30000) -> JevClient:
         """Build from ``OPENROUTER_JEV_API_KEY`` + ``<prefix>_MODEL/_BASE_URL/_TIMEOUT_MS``."""
         api_key = os.getenv("OPENROUTER_JEV_API_KEY", "").strip()
         if not api_key:
@@ -99,7 +99,7 @@ class JevClient:
             api_key=api_key,
             base_url=os.getenv(f"{prefix}_BASE_URL", JEV_BASE_URL_DEFAULT),
             model=os.getenv(f"{prefix}_MODEL", JEV_MODEL_DEFAULT),
-            timeout_s=int(os.getenv(f"{prefix}_TIMEOUT_MS", "30000")) / 1000.0,
+            timeout_s=int(os.getenv(f"{prefix}_TIMEOUT_MS", str(default_timeout_ms))) / 1000.0,
         )
 
     def decide(
