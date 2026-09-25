@@ -15,6 +15,13 @@ AUTO_ACCEPT = 0.8
 APPROVE_AT = 0.9
 BLOCK_AT = 0.1
 
+# #75: families whose `not_derivable` verdict terminal-blocks generation. The
+# suitability builder is coding-calibrated (sweep v1 + final v1: coding 9/9,
+# objective/written derivable rows read `not_derivable` at 0.64-0.96), so every
+# other family stays advisory until a clearing family gate exists. Widen only
+# with fresh per-family evidence, never by flipping this set on intuition.
+SUITABILITY_ENFORCE_FAMILIES = frozenset({"coding"})
+
 PASSAGE_THRESHOLDS = {
     "injection_max": 0.70,
     "contradicts_min": 0.70,

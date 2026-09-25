@@ -460,12 +460,13 @@ class GenerationWorker:
             chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
             if self.config.jev_slice1_enabled and self._jev is not None:
                 blocked, refusal = self._jev_suitability_blocks(
-                    chunks, coding=coding, correlation_id=correlation_id
+                    chunks, question_format=question_format, correlation_id=correlation_id
                 )
                 if blocked:
-                    # Jev judged the window unsuitable (coding only; other
-                    # families are advisory and never block). Ride the D-02
-                    # resample path exactly like a provider refusal.
+                    # Jev judged the window unsuitable. Only the families in
+                    # SUITABILITY_ENFORCE_FAMILIES (#75: coding) block; the rest
+                    # stay advisory. Ride the D-02 resample path exactly like a
+                    # provider refusal.
                     last_refusal_reason = refusal or (
                         "this material does not support a grounded coding question"
                     )
@@ -788,15 +789,23 @@ class GenerationWorker:
         ]
 
     def _jev_suitability_blocks(
-        self, chunks: list[RetrievedChunk], *, coding: bool, correlation_id: str
+        self,
+        chunks: list[RetrievedChunk],
+        *,
+        question_format: str,
+        correlation_id: str,
     ) -> tuple[bool, str | None]:
         """Slice-1 suitability pre-gate (#70): True means skip prose for this window.
 
-        Shared across families but terminal for coding only; objective/written
-        `not_derivable` stays advisory (the builder is coding-calibrated until
-        #74 retunes it). Every Jev failure fails open: log and proceed.
+        Terminal only for the families in ``SUITABILITY_ENFORCE_FAMILIES``
+        (#75: coding alone); every other family's `not_derivable` stays
+        advisory. Every Jev failure fails open: log and proceed.
         """
-        from app.jev.questions import route_suitability, suitability_questions
+        from app.jev.questions import (
+            SUITABILITY_ENFORCE_FAMILIES,
+            route_suitability,
+            suitability_questions,
+        )
 
         state = {"chunk_text": "\n\n".join(c.text for c in chunks)[:_SUITABILITY_STATE_CHARS]}
         try:
@@ -827,7 +836,7 @@ class GenerationWorker:
             result.input_tokens,
             extra={"trace_id": correlation_id},
         )
-        if verdict == "not_derivable" and coding:
+        if verdict == "not_derivable" and question_format in SUITABILITY_ENFORCE_FAMILIES:
             return True, "this material does not support a grounded coding question"
         return False, None
 
