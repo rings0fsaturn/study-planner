@@ -1,5 +1,13 @@
 # Scratchpad – jev-integration · session 2026-09-25
-_state.md: active/jev-integration/state.md · Updated: 2026-09-25T10:15_
+_state.md: active/jev-integration/state.md · Updated: 2026-09-25T13:10_
+
+## Now / Next
+- Doing: (none - session closed, #76 Phase A posted)
+- Next: open #76 Phase B on the conflict-routing gate
+- Blocked: none
+
+## Session log
+- (reset at session end 2026-09-25; the session's record is distilled into state.md)
 
 ## Now / Next
 - Doing: Start #76 slice-2 graduation Phase A (stress sweep); Step-0 starvation gate first
@@ -34,3 +42,6 @@ _state.md: active/jev-integration/state.md · Updated: 2026-09-25T10:15_
 - 12:40 DONE offline grid (12 one-dim cells, zero spend): defaults hold on both splits; only relevant_min 0.6 / evidence_min 0.7 move recall (sweep 0.933->0.80); contradicts_min inert (no contradicts in 0.5-0.9 band gap); injection 0.5 starves conflict windows (conf 2->0, sweep starv 1/6->2/6, final 0->3/6)
 - 12:40 DONE head-to-head (sidecar stopped after): agree 27/40 (keep-keep 21, drop-drop 6), disagree 13/40; on disagreements Jev correct 9/13, sidecar rank carries the 4 Jev FPs at rank 4-5 but also drops 5 Jev-correct includes to rank 4-5; compose reads filter-then-rerank (Jev generous keep + sidecar rank), never Jev reorder of sidecar
 - 12:40 NEXT verify (slice-2+jev pytest, full backend suite, ruff), then post Phase A to #76 with staging recommendation
+- 13:00 DONE verification: jev-adjacent 57 passed in 9.01s; full backend 18 failed / 787 passed in 33.79s (same 18 pre-existing: 16 order-dependent v1-golden + calibration + 2 retrieval_probe; +4 passed from new slice-2 tests); ruff check + format clean on both touched files
+- 13:00 DONE Phase A posted to #76 (comment 5834300948): per-cell distributions, grid, head-to-head, baseline, staging recommendation (worker filter first with defaults + floor, retrieval slot spec-only, conflict-routing gate for Phase B)
+- 13:00 NEXT distill to state.md + STATUS refresh via work-journal-orchestrator, then close the session
