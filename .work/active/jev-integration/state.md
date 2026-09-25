@@ -2,54 +2,49 @@
 _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Plan: active/jev-integration/plan/ · STATUS row: jev-integration · Status: active · Updated: 2026-09-25_
 
 ## Current state & next
-- Slices #70-#74 are closed; the frontier is **#75 slice-1 graduation**, mid-flight.
-- #75 Phase A (evidence + sweep) and the **B2 citation enforce flip** are DONE and committed; #75 B1 (family matrix test, enforce scope + threshold lock) is the next piece of code.
-- TDD checkpoints on `project/phase-2`: `e8adb9e` summarizer (RED then GREEN), `3413884` variant kwarg, `1f2af11` sweep runner, `2da3ec0` evidence rows, `24d8d96` citation enforce.
-- Key measurement: the suitability judge is **coding-calibrated** (sweep v1 coding 9/9; objective/written derivable rows read `not_derivable` at 0.64-0.96), so suitability enforce stays **coding-only** unless the family gate clears; v1 vs v2 wording showed **no separation** (identical grids but one borderline flip), so final reporting stays on **v1**.
-- Band candidates: suitability `APPROVE_AT=0.9` / `BLOCK_AT=0.1` (prec/rec 0.889 sweep, 0.875 final; jitter_max 0.07 sweep / 0.2 final; flip 0.0); citation `AUTO_ACCEPT=0.8` (prec 1.0 sweep + final; rec 1.0 sweep / 0.75 final).
-- Next: add the family matrix test (objective/written advisory, coding enforces), lock enforce scope + thresholds + variant, run the full backend suite + ruff, then post the #75 band report.
+- **#75 slice-1 graduation is COMPLETE and closed 2026-09-25.** Enforce scope + bands locked, citation enforce flipped, family matrix tested, band report posted, evidence committed, live flag-on check passed on the managed runtime.
+- The task stays **active**: this folder covers all of Jev-in-core (slices 1/2/4, tickets #70-#77). The folder is NOT archived yet - #76 and #77 are still open against it.
+- Frontier: **#76 slice-2 graduation** (RAG enforce, worker filter first). #77 rubric flag queue is queued last.
+- Next: start #76 - read its ticket, then run the slice-2 stress sweep (Noul variants x `PASSAGE_THRESHOLDS` grid, starvation/floor rates, sidecar head-to-head) per rule 80 (`--limit 2` dry run first).
 
 ## Done so far
-- Plan-mode research: Jev primitives/confidence/API, OpenRouter Decisions + SystemOne surfaces, cost monitoring, cookbooks, jaggedness; app LLM + retrieval maps via explore agents.
-- `app/jev/` package: `client.py` (typesafe_sdk wrapper, typed JevError, request_id logging, cost estimate) + `questions.py` (suitability/citation/passage/relevance/rubric builders + routers) + `tests/test_jev.py` (9/9 green).
-- `scripts/jev_probe.py --limit 2` live-verified: passage include/exclude, citation verified@1.0, suitability derivable@1.0 + conservative review, relevance 0.96, rubric sane.
-- Learned live: SystemOne surface returns no usage.cost/id/provider (docs describe Decisions shape); spend estimated at $0.042/Mtok via `estimate_cost_usd` + `JEV_PRICE_PER_MTOK`.
-- #70-#74 all closed: slice-1 wiring (`JEV_SLICE1_ENABLED`, suitability pre-gate, citation adjudication), citation shadow-first, slice-2 passage shadow (spec-only retrieval slot), slice-4 rubric shadow, and the #74 rubric threshold + cost measurement (test agree 0.974 @0.6, 39 pairs, 0 malformed, p95 2.4 s, autopsy 5/5, dashboard drift -1.9%, $0.042/Mtok holds).
-- #75 A1 evidence rows committed 2026-09-25 (`2da3ec0`): `plan/evidence/slice1_rows.json`, 58 rows (suitability 17 sweep / 15 final across coding/objective/written x derivable/not_derivable incl. codeless + solved worksheets + borderline, joined window <= 4000 chars; citation 14 sweep / 12 final exact/paraphrase/off-context/missing-quote/uncertain, `citation_missing`/`malformed_output` excluded); split by material (`mat-sweep-*` vs `mat-final-*`), zero chunk/claim overlap across splits, zero overlap with #74 qids, bias declared in the evidence note; sweep `--limit 2` dry run GREEN before the full run.
-- #75 A2 summarizer + variant + runner committed 2026-09-25: `e8adb9e` pure `app/jev/measure_slice1.py` (offline suitability/citation grids with jitter/flip/malformed/latency, RED import error then GREEN); `3413884` optional `variant` kwarg on `suitability_questions()`/`citation_questions()` defaulting to v1 current wording with v2 narrow rewording, callers stable; `1f2af11` budget-guarded `scripts/jev_sweep_slice1.py` (`--rows/--split/--prompt-variant/--repeats/--limit/--max-spend`, one decide() per row per variant per repeat, 9-cell suitability + 3-cell citation grids offline at zero extra spend). 21/21 slice1+jev tests green, ruff check + format clean.
-- #75 Phase A sweeps measured 2026-09-25: sweep v1 62 calls $0.001176 + sweep v2 62 calls $0.001187 + final v1 54 calls $0.001009 (178 calls, ~$0.0034, zero errors, p50 ~610-645 ms); suitability `@0.9/0.1` prec/rec 0.889 sweep and 0.875 final, review band 9-10 rows, jitter_max 0.07 sweep / 0.2 final, flip 0.0; citation `stands@0.8` prec 1.0/rec 1.0 sweep and 1.0/0.75 final; the v1-v2 diff is one borderline row only (`s-sweep-coding-borderline-01`: derivable@0.71 v1 vs not_derivable@0.17 v2). Raw outputs saved as `plan/evidence/jev_sweep_slice1_{sweep-v1,sweep-v2,final-v1}.json` (untracked; commit with the ticket report).
-- #75 B2 citation enforce flip committed 2026-09-25 (`24d8d96`): confident contradicted/unsupported with stands true returns `accepted=None` with the existing `citation_missing` split and no second repair (the caller only repairs `malformed_output`); supports clearing, low-confidence keep, and Jev-error fail-open unchanged; `validation.py` untouched; 11/11 slice-1 tests + 173 worker/validation/jev/coding suites green, ruff clean.
-- #74 evidence still untracked alongside the #75 sweep outputs: `app/jev/measure.py`, `scripts/jev_measure.py`, `tests/test_jev_measure.py`, `plan/evidence/rubric_rows.json`, `plan/evidence/jev_measure_{train,test}.json`.
+- **#75 B1 enforce-scope lock (2026-09-25, TDD, one commit per RED->GREEN):** `dd28420` RED family matrix + threshold lock (compile-time RED: `ImportError: cannot import name 'SUITABILITY_ENFORCE_FAMILIES'`); `f7c59f2` GREEN `SUITABILITY_ENFORCE_FAMILIES = frozenset({"coding"})` declared in `app/jev/questions.py` and read by `_jev_suitability_blocks` instead of a hardcoded `coding` bool; `fce91ec` test-fixture correction. 16/16 slice-1 tests, 94/94 jev-adjacent suites green, ruff check + format clean.
+- **#75 evidence committed (2026-09-25, `3c63615`):** #74 `app/jev/measure.py` + `scripts/jev_measure.py` + `tests/test_jev_measure.py` + `plan/evidence/rubric_rows.json` + `jev_measure_{train,test}.json`; #75 raw sweep outputs `jev_sweep_slice1_{sweep-v1,sweep-v2,final-v1}.json`. All previously untracked.
+- **#75 band report posted** to ticket 75 (comment 5828909475): per-cell per-family grids, separation evidence, v1-v2 diff, and the shadow->enforce flip list.
+- **#75 live flag-on check PASSED (2026-09-25):** `JEV_SLICE1_ENABLED=true` verified in the worker `/proc/<pid>/environ`; coding generation on the codeless ACCA material judged `not_derivable` on all three D-02 windows (0.98 / 0.99 / 0.95), each firing the resample, terminal `code_not_derivable`; DB row `status=failed` with that warning; UI rendered the server's own reason; request-id join via `./full-app logs intelligence --grep <id>` returned the 202; 0 console errors.
+- **Full backend suite (verbatim):** `18 failed, 783 passed in 33.63s`. All 18 are pre-existing - confirmed by stashing the change and reproducing the identical 7 failures in isolation on a clean tree (order-dependent v1-golden + `test_retrieval_probe`).
+- **Off-frontier live E2E matrix (2026-09-25, operator-requested):** 2 code-heavy PDFs (grokking-algorithms, CSAPP_2016) x coding/objective/written through the real UI. **Jev blocked nothing on either PDF** - every suitability verdict landed in `review` (0.44-0.88), so the pre-gate never fired. The coding refusals came from DeepSeek's own `unsuitable` schema outcome (a separate gate). grokking coding then failed its own self-check (reference passed 7/9). CSAPP ingested for this: 1105 pages -> 2065 chunks, all GPU-embedded.
+- #75 Phase A (2026-09-25): sweep v1 62 calls + v2 62 + final v1 54 = 178 calls, ~$0.0034, zero errors; suitability `@0.9/0.1` prec/rec 0.889 sweep and 0.875 final; citation `stands@0.8` prec 1.0 both splits.
+- #75 B2 citation enforce flip (`24d8d96`): confident contradicted/unsupported with stands true drops with the existing `citation_missing` split and no second repair; `validation.py` untouched.
+- #74 rubric threshold + cost measurement: test agree 0.974 @0.6, 39 pairs, 0 malformed, p95 2.4 s, autopsy 5/5, dashboard drift -1.9%, $0.042/Mtok holds.
+- #70-#74 closed earlier: slice-1 wiring, citation shadow-first, slice-2 passage shadow, slice-4 rubric shadow.
 
 ## Flow trace
-1. All LLM prose flows through `OpenRouterGenerationClient` (services/intelligence/app/generation/openrouter_client.py:80), built by `factory.py:16` from `<PREFIX>_*` env vars.
-2. Jev entry: `services/intelligence/app/jev/client.py::JevClient.from_env` reads `OPENROUTER_JEV_API_KEY` + `JEV_MODEL/_BASE_URL/_TIMEOUT_MS` (template in `.env.example`); SDK retries 429/5xx internally, wrapper classifies to typed codes.
+1. All LLM prose flows through `OpenRouterGenerationClient` (services/intelligence/app/generation/openrouter_client.py:80), built by `factory.py::build_openrouter_adapter` from `<PREFIX>_*` env vars.
+2. Jev entry: `services/intelligence/app/jev/client.py::JevClient.from_env` reads `OPENROUTER_JEV_API_KEY` + `JEV_MODEL/_BASE_URL/_TIMEOUT_MS`; SDK retries 429/5xx internally, wrapper classifies to typed codes.
 3. Slices: suitability `app/jev/questions.py::suitability_questions` (Choice) + `route_suitability`; citations `citation_questions` (Choice) after the free string-match; RAG `passage_questions` (4 Nouls) + `route_passage`; rerank `relevance_question` (Noul, sort desc); rubric `criterion_score_questions` (Score per criterion).
-4. Probe: `services/intelligence/scripts/jev_probe.py --limit N --max-spend 0.40` loads `.env`, batches per state, aborts over budget.
-5. Rubric shadow: `app/grading/worker.py::_jev_shadow_rubric` runs one batched `criterion_score_questions` decide() after `grade_written` composes; `_summarize_rubric_shadow` (pure) normalizes Score `score`/2 onto 0..1 and marks agree vs `CORRECT_THRESHOLD` (0.6); the client is built in `worker_main._build_grading_worker` only when `JEV_SLICE1_ENABLED` is on.
-6. Slice-1 sweep (#75): run from the repo root as `uv run --package intelligence python services/intelligence/scripts/jev_sweep_slice1.py --rows .work/active/jev-integration/plan/evidence/slice1_rows.json --split sweep|final --prompt-variant v1|v2 --repeats 2 --max-spend 0.40`. One decide() per row per variant per repeat; the threshold grid reruns offline through `app/jev/measure_slice1.py` at zero extra spend. Suitability state is the joined window capped at 4000 chars; citation state is `{claim, section}` from the uncertain middle only.
-7. Citation enforce path in the worker (`app/generation/worker.py::_jev_adjudicate_citations`): fires only when an accepted candidate carries a `citation_unverified` warning (string-match misses never enter), regex-keys the warning back to a chunk id, calls one decide(), and on a confident reject returns `(None, [citation_missing])`; the caller then fails the assessment because only `malformed_output` is repairable.
+4. **Enforce scope (#75):** `SUITABILITY_ENFORCE_FAMILIES` in `app/jev/questions.py` is the single declaration of which families terminal-block; `_jev_suitability_blocks` (worker.py) reads it. The family matrix test is data-driven off the same set, so test and shipped scope cannot drift.
+5. Slice-1 sweep (#75): `uv run --package intelligence python services/intelligence/scripts/jev_sweep_slice1.py --rows <rows.json> --split sweep|final --prompt-variant v1|v2 --repeats 2 --max-spend 0.40`. The threshold grid reruns offline through `app/jev/measure_slice1.py` at zero extra spend.
+6. Citation enforce path in the worker (`_jev_adjudicate_citations`): fires only when an accepted candidate carries a `citation_unverified` warning; regex-keys the warning back to a chunk id, one decide(), and on a confident reject returns `(None, [citation_missing])`.
+7. **Generation context:** `app/generation/context.py` - `CONTEXT_TOP_K=5`; coding opts into a code-seeking window (`_code_seeking_context`), objective/written use `_spread_context`. Retrieval is `match_content_chunks` via RPC; the retrieval router's rerank is opt-in and not used by generation.
+8. **Live E2E attribution technique:** slice `.dev/full-app/logs/worker.log` by byte offset before/after a UI action to attribute background-worker lines to a specific cell. A missing dependency (Piston down) surfaces as a *deferred* warning leaving the row `generating`, not failed.
 
 ## Files affected
-- services/intelligence/app/jev/__init__.py, client.py, questions.py – Jev adapter + builders; #72 adds the batched passage builder + shared `_route_nouls` core + `from_env` timeout default; #75 adds the optional `variant` kwarg (v1 current, v2 narrow rewording).
-- services/intelligence/tests/test_jev.py – 9 offline tests with a fake SDK client.
-- services/intelligence/scripts/jev_probe.py – budget-guarded live probe.
-- services/intelligence/pyproject.toml – added typesafe-sdk==0.7.1 (+tenacity transitive).
-- services/intelligence/.env.example – OPENROUTER_JEV_API_KEY + JEV_MODEL/BASE_URL/TIMEOUT_MS/PRICE_PER_MTOK + JEV_SLICE1_ENABLED=false + JEV_SLICE2_TIMEOUT_MS=15000.
-- services/intelligence/app/generation/worker.py – slice-1 flag, suitability pre-gate, citation adjudication; #71 shadow branch + structured `jev_*` verdict log fields; #72 passage shadow; #75 citation enforce (confident reject drops with `citation_missing`, no second repair).
-- services/intelligence/app/worker_main.py – builds the Jev client only when the flag is on; #72 second client (`JEV_SLICE2_TIMEOUT_MS`, default 15000); #73 grading shadow client (flag-gated).
-- services/intelligence/tests/test_generation_jev_slice1.py – #70 pre-gate/adjudication tests; #71 shadow tests; #75 enforce drop tests (contradicts + says_nothing drop, adapter call count unchanged).
-- services/intelligence/app/grading/worker.py – #73 `jev_shadow_enabled` + duck-typed `jev` + `_summarize_rubric_shadow` pure + `_jev_shadow_rubric` log-only hook.
-- services/intelligence/tests/test_grading_jev_rubric_shadow.py – #73 5 offline tests (flag-off, pairs, fail-open, unscored, agree).
-- services/intelligence/app/jev/measure.py + scripts/jev_measure.py + tests/test_jev_measure.py – #74 pure `summarize_measurement` + budget-guarded rubric runner + 6 offline tests (all still UNTRACKED).
-- .work/active/jev-integration/plan/evidence/rubric_rows.json + jev_measure_{train,test}.json – #74 evidence (UNTRACKED).
-- services/intelligence/app/jev/measure_slice1.py – #75 pure sweep summarizer (approve/review/block counts, confident-reject precision/recall, jitter mean/max, flip rate, malformed rate, latency p50/p95).
-- services/intelligence/scripts/jev_sweep_slice1.py – #75 budget-guarded sweep runner (one decide() per row per variant per repeat, fail-open unscored, offline grids).
-- services/intelligence/tests/test_jev_slice1_measure.py – #75 9 offline tests (summarizer math, variant default, runner wiring with the shared `ScriptJev`).
-- .work/active/jev-integration/plan/evidence/slice1_rows.json – #75 58 fresh rows, split by material, bias declared.
-- .work/active/jev-integration/plan/evidence/jev_sweep_slice1_{sweep-v1,sweep-v2,final-v1}.json – #75 raw sweep outputs (UNTRACKED; commit with the ticket report).
+- services/intelligence/app/jev/questions.py – adds `SUITABILITY_ENFORCE_FAMILIES = frozenset({"coding"})` (#75); builders + routers for slices 1+2+4.
+- services/intelligence/app/generation/worker.py – `_jev_suitability_blocks` now takes `question_format` and reads the declared family set instead of a `coding` bool (#75 B1); slice-1 flag, suitability pre-gate, citation adjudication, passage shadow.
+- services/intelligence/tests/test_generation_jev_slice1.py – adds the family matrix (data-driven off the scope), a written-family advisory case, and `test_locked_thresholds_and_enforce_scope` (#75 B1).
+- services/intelligence/app/jev/measure.py + scripts/jev_measure.py + tests/test_jev_measure.py – #74 pure `summarize_measurement` + budget-guarded rubric runner + 6 offline tests (committed `3c63615`).
+- services/intelligence/app/jev/measure_slice1.py – #75 pure sweep summarizer.
+- services/intelligence/scripts/jev_sweep_slice1.py – #75 budget-guarded sweep runner.
+- services/intelligence/tests/test_jev_slice1_measure.py – #75 9 offline tests.
+- .work/active/jev-integration/plan/evidence/ – `slice1_rows.json` (58 rows), `rubric_rows.json`, `jev_measure_{train,test}.json`, `jev_sweep_slice1_{sweep-v1,sweep-v2,final-v1}.json`.
+- services/intelligence/app/jev/client.py – typed-error wrapper; `app/jev/__init__.py`; `services/intelligence/pyproject.toml` (typesafe-sdk==0.7.1).
+- services/intelligence/app/grading/worker.py – #73 rubric shadow (`jev_shadow_enabled` + `_summarize_rubric_shadow`).
+- services/intelligence/app/worker_main.py – builds the Jev clients only when the flag is on.
+- e2e/jev-family-matrix-live.spec.ts, e2e/jev-coding-rerun-live.spec.ts – session diagnostics (UNTRACKED, throwaway).
+- e2e/pdf/CSAPP_2016.pdf, e2e/pdf/grokking-algorithms-2nd-edition-2nd_compress.pdf – operator-added fixtures (UNTRACKED; `e2e/pdf/*.pdf` is NOT gitignored, and the two older sample PDFs ARE tracked).
+- .agents/skills/jev/SKILL.md – Jev dev/debug skill.
 - .work/STATUS.md – jev-integration Active row.
-- .agents/skills/jev/SKILL.md – Jev dev/debug skill (visible via the `.claude/skills` symlink + `.opencode/skills/jev` copy).
 
 ## Pitfalls & rules
 - Must keep API credentials server-side; never ship keys to the browser (Jev skill + rule 20 pattern).
@@ -58,26 +53,33 @@ _Spec: map #69 (https://github.com/rings0fsaturn/study-planner/issues/69) · Pla
 - Must dry-run operator/probe scripts with `--limit 2` before full runs per 80-script-dry-run-before-full-runs.agents.md.
 - Jev jaggedness: no math/counting/dates in questions; one narrow judgment per question; small relevant state; thresholds tuned per question with the model version pinned.
 - OpenRouter SystemOne returns TypeSafe-shaped responses only (no cost/id/provider); estimate spend, do not expect `usage.cost` (verified live 2026-09-24).
-- The suitability judge is coding-calibrated: objective/written derivable rows read as `not_derivable` at 0.64-0.96, so never enforce those families without a clearing gate (found 2026-09-25, sweep v1 + final-v1).
-- v1 and v2 wording do not separate on this evidence; do not flip the builder default on the strength of these grids (found 2026-09-25).
-- Run the sweep script from the repo root as `services/intelligence/scripts/jev_sweep_slice1.py`; a bare `scripts/` path fails under `uv run --package intelligence` (found 2026-09-25).
-- Full-suite v1 golden failures are order-dependent (pass in isolation); the retrieval-probe import failure pre-exists on a clean tree (verified 2026-09-24-25).
-- Score answers carry `score` (0..top level), not `expectation`: live docs beat memory and stale docstrings (found 2026-09-25, questions.py fixed).
-- `ruff format` may reflow untouched hunks in an edited file; keep the reflow (file ends format-clean) rather than hand-reverting.
-- `OPENROUTER_JEV_API_KEY` can expire server-side and every Jev path then answers `provider_credentials` with `retryable=false` and $0.00 spend; a direct `/auth/key` probe returns 401 "API key expired" while the sibling `OPENROUTER_API_KEY` stays valid, so read it as key-specific rather than a code fault (found and fixed 2026-09-25).
+- **The suitability judge is coding-calibrated.** Now doubly confirmed (sweep + live E2E on 2 code-heavy PDFs): objective/written derivable rows read `not_derivable`, and on real books every family's verdict lands 0.44-0.88 so the pre-gate never fires. Never enforce those families without a clearing gate.
+- **Jev and the provider's own refusal are separate gates.** On code-heavy prose the DeepSeek `unsuitable` schema outcome does the real refusal work while Jev stays advisory. Do not read a DeepSeek refusal as a Jev action.
+- **The slice-2 passage shadow dropped 5/5 chunks in every one of the 6 live cells** (`kept=0/5`). It is log-only today, but if it ever goes enforce every generation loses its whole context. Investigate before #76 flips anything to enforce.
+- v1 and v2 wording do not separate on this evidence; v1 holds. Do not flip the builder default on the strength of these grids.
+- Run the sweep script from the repo root as `services/intelligence/scripts/jev_sweep_slice1.py`; a bare `scripts/` path fails under `uv run --package intelligence`.
+- Full-suite v1 golden failures are order-dependent (pass in isolation); the retrieval-probe import failure pre-exists on a clean tree (re-verified 2026-09-25).
+- Score answers carry `score` (0..top level), not `expectation`.
+- `ruff format` may reflow untouched hunks in an edited file; keep the reflow rather than hand-reverting.
+- `OPENROUTER_JEV_API_KEY` can expire server-side and every Jev path then answers `provider_credentials` with `retryable=false` and $0.00 spend; read it as key-specific, not a code fault.
+- **Docker on this host:** the Windows `docker.exe` client produces containers whose host directory binds are EMPTY (GPU sidecar then falls back to CPU with `Cannot load librocdxg.so` + `undefined symbol: hsaKmtOpenKFD`); `docker desktop restart` does not fix it. Use the native `/usr/bin/docker` instead. See the `docker-host-bind-mount-diagnosis` skill.
+- **Piston must be up for any coding generation** or the self-check *defers* (`provider_unavailable`) and the assessment stays `generating` with a retryable warning rather than failing. Start it with `docker compose --profile sandbox up -d piston` (native client).
 
 ## Decisions in force
 - Decided slices 1+2+4 first (suitability+citations, RAG/rerank fallback, rubric calibration); guardrails deferred (user, 2026-09-24).
 - Decided official typesafe_sdk pointed at OpenRouter (`base_url=https://openrouter.ai/api`, model `jev-1.13` pinned) over thin httpx (user, 2026-09-24).
 - Decided dedicated `OPENROUTER_JEV_API_KEY` from services/intelligence/.env (user, 2026-09-24); live halt at $0.40 estimated of the $0.5 budget.
-- Decided slice-4 as a grading-path shadow first, graduation on #74 evidence (user, 2026-09-25): reuses `JEV_SLICE1_ENABLED`, 15 s ceiling; graduation bar 0.80 agree / 30 pairs / <2% malformed / +/-20% spend.
-- Decided #75 interim (2026-09-25): final reporting stays on **v1** wording (no separation vs v2); suitability band candidate `0.9/0.1` and citation band candidate `stands@0.8`; **suitability enforce stays coding-only** with objective/written advisory until a family gate clears.
+- Decided slice-4 as a grading-path shadow first, graduation on #74 evidence (user, 2026-09-25): reuses `JEV_SLICE1_ENABLED`, 15 s ceiling; bar 0.80 agree / 30 pairs / <2% malformed / +/-20% spend.
+- **Decided #75 (2026-09-25):** reporting stays on **v1** wording; suitability band `APPROVE_AT=0.9` / `BLOCK_AT=0.1`; citation band `AUTO_ACCEPT=0.8`; **suitability enforce is coding-only**, declared once as `SUITABILITY_ENFORCE_FAMILIES` and read by the worker so scope and test cannot drift. Widen only with fresh per-family evidence.
 - Decided #75 B2 (2026-09-25): a confident citation reject drops with the existing `citation_missing` split and **no second repair**, keeping `validation.py` pure and the substring gate unchanged.
+- Decided #75 live verification (2026-09-25): flag-on generation is verified through the managed runtime with a request-id log join, not by unit tests alone.
 
 ## Open
-- Frontier: **#75 slice-1 graduation remainder** - add the family matrix test (objective/written advisory, coding enforces), lock enforce scope + thresholds + variant, run the full backend suite + `ruff check`/`ruff format --check`, post the per-cell band report with separation evidence to the ticket, then commit the still-untracked #74/#75 evidence with that report.
-- Live verification for #75 still owed: flag-on generation through the managed runtime with a request-id log join (start `./full-app`, then `./full-app logs intelligence --grep <request-id>`), and confirm coding codeless material refuses via resample while citation drops behave.
-- Sequenced after #75: #76 RAG staged enforce (shares `worker.py`); queued last: #77 rubric flag queue.
+- Frontier: **#76 slice-2 graduation** (RAG enforce, worker filter first). Read the ticket, then run the slice-2 stress sweep per rule 80.
+- Queued last: **#77 rubric flag queue** (short cutoff/margin sweep on the 75-pair corpus, then a disagreement-flag queue; grades never auto-touched).
+- **Untracked files at risk:** the two new `e2e/pdf/*.pdf` fixtures (7.3 MB) and the two throwaway `e2e/jev-*-live.spec.ts` diagnostics. `e2e/pdf` is not gitignored and the older sample PDFs are tracked, so the new ones are untracked-by-omission. Never run `git clean -fdx` at the repo root.
+- **Shared-account hygiene:** the 2026-09-25 runs left test assessments behind (2 coding + the 6-cell matrix rows; one known stuck `generating` from the Piston-down window). Clean before the next live run.
+- GPU sidecar and Piston were demand-started for the session and have been stopped; restart per rule 54 only when embedding/rerank or coding grading is needed.
 - Blocked: none.
-- `client.models.list()` is unusable against OpenRouter (documented SDK wrinkle); use the Models API directly if ever needed.
-- Jev price on OpenRouter is not listed in the public models catalog (458 entries, no typesafe entry 2026-09-24); estimate held at the TypeSafe list $0.042/Mtok until the dashboard says otherwise.
+- `client.models.list()` is unusable against OpenRouter; use the Models API directly if ever needed.
+- Jev price on OpenRouter is not listed in the public models catalog; estimate held at the TypeSafe list $0.042/Mtok until the dashboard says otherwise.
