@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-09-23_
+_Last reconciled: 2026-09-25_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -12,7 +12,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33-#49 spine; frontier #49, #57, #68; #34/#35/#39/#40/#41/#42/#43/#44/#45/#46/#47/#48/#50/#62/#63 closed. | active/phase2-wayfinder/state.md |
 | [APP] | marginalia-visual-refresh | Session 3 (2026-09-20): all remaining unblocked P3s + the critique re-run's P1s fixed - nav `aria-current`, skip link, three-dots loading state (also fixes the unstyled `PlaylistLoadingPopup` dots), calendar-to-week link, no-email greeting, ended-banner 3px single-meaning edge; browser-verified 1280/375; critique re-run **32/40 (from 23/40)**. `e2e/session-log.spec.ts` repaired to actually assert + sign-out verified live. **User Home review gate still open** (blocks steps 6-8). | active/marginalia-visual-refresh/state.md |
 | [APP][RESEARCH] | coding-generation-context | **Code complete + live-verified 2026-09-21 (#67)**: P0-P5 done, AC1-AC6 pass (grokking now produces a self-check-passing coding question; codeless draw still refuses; harness gold 2/2, derivable rate 0.333). Code-proximity scorer + code-seeking spread + exclusion + `coding-v2` derivation rule + bounded resample (3 windows). Committed `b6e286b`; **wrap pending.** | active/coding-generation-context/state.md |
-| [APP][RESEARCH] | jev-integration | **#73 rubric shadow built + closed 2026-09-25**: grading-path shadow after grade composes (fail-open, flag reuse, agree-bit vs CORRECT_THRESHOLD; Score read corrected to score-not-expectation); 5 + 115 tests green, ruff clean, probe dry run blocked credential-side ($0.00). Map #69-73 closed 2026-09-25; next #74 (unblocked, 7 anti-shortcut gates + graduation bar posted). | active/jev-integration/state.md |
+| [APP][RESEARCH] | jev-integration | **#75 slice-1 graduation in flight 2026-09-25**: Phase A done (58 fresh rows split by material; sweep v1/v2 + final-v1, 178 calls ~$0.0034, zero errors; suitability `@0.9/0.1` prec/rec 0.889/0.875, citation `stands@0.8` prec 1.0) and the citation enforce flip is committed (`24d8d96`); suitability stays **coding-only** (objective/written read `not_derivable` at 0.64-0.96) and v1 wording holds (no v2 separation). Next: family matrix test, full suite + ruff, band report, commit `#74`+`#75` evidence. | active/jev-integration/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |
