@@ -203,30 +203,51 @@ class GenerationWorkerConfig:
     # Slice-1 Jev gate (#70): one env flag covering the suitability pre-gate
     # plus citation middle-only adjudication. Off = current behavior exactly.
     jev_slice1_enabled: bool = False
+    # Slice-2 passage filter (#76 Phase B): when on, the batched passage
+    # verdicts decide the window the prompt sees, behind the top-by-relevance
+    # floor. Off = the #72 shadow only (log, never reorders).
+    jev_slice2_enforce: bool = False
 
 
-def _summarize_passage_shadow(
+def _summarize_passage(
     chunks: list[RetrievedChunk], answers: dict[str, dict[str, Any]]
 ) -> dict[str, Any]:
-    """Slice-2 shadow summary (#72): verdicts plus the would-keep set and floor.
+    """Slice-2 passage summary (#72 shadow, #76 enforce): verdicts, keep set, floor.
 
-    Pure (no Jev call): ``would_keep`` is include + conflicting_evidence (the
-    conflict block is kept, never evidence); when it is empty the floor is the
-    top-by-relevance chunk, so enforcement could never starve the widener.
+    Pure (no Jev call). ``would_keep`` is the verdicts in
+    ``PASSAGE_ENFORCE_VERDICTS`` - the same declaration the enforce path applies,
+    so the log cannot describe a different window than the filter used. When it
+    is empty the floor is the top-by-relevance chunk, so enforcement could never
+    starve the widener; injection-flagged chunks are skipped when choosing it,
+    because the floor must not resurrect what the security check rejected.
     """
-    from app.jev.questions import route_batch_passage
+    from app.jev.questions import (
+        PASSAGE_ENFORCE_VERDICTS,
+        PASSAGE_THRESHOLDS,
+        route_batch_passage,
+    )
 
     verdicts = route_batch_passage(answers, len(chunks))
     ids = [chunk.chunk_id for chunk in chunks]
-    kept = [cid for cid, verdict in zip(ids, verdicts) if verdict != "exclude"]
-    dropped = [cid for cid, verdict in zip(ids, verdicts) if verdict == "exclude"]
+    kept = [cid for cid, verdict in zip(ids, verdicts) if verdict in PASSAGE_ENFORCE_VERDICTS]
+    dropped = [
+        cid for cid, verdict in zip(ids, verdicts) if verdict not in PASSAGE_ENFORCE_VERDICTS
+    ]
     floor = None
     if chunks and not kept:
         relevance = [
             float((answers.get(f"p{i}_is_relevant") or {}).get("noul", 0.0) or 0.0)
             for i in range(len(chunks))
         ]
-        floor = ids[relevance.index(max(relevance))]
+        safe = [
+            i
+            for i in range(len(chunks))
+            if float((answers.get(f"p{i}_contains_prompt_injection") or {}).get("noul", 0.0) or 0.0)
+            <= PASSAGE_THRESHOLDS["injection_max"]
+        ]
+        # An all-injection window has nothing safe to floor to, and an empty
+        # context cannot ground a question, so the fallback is the whole window.
+        floor = ids[max(safe or range(len(chunks)), key=lambda i: relevance[i])]
     return {"verdicts": verdicts, "would_keep": kept, "would_drop": dropped, "floor": floor}
 
 
@@ -456,8 +477,7 @@ class GenerationWorker:
                 )
                 return
 
-            context_ids = {chunk.chunk_id for chunk in chunks}
-            chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
+            retrieved_ids = {chunk.chunk_id for chunk in chunks}
             if self.config.jev_slice1_enabled and self._jev is not None:
                 blocked, refusal = self._jev_suitability_blocks(
                     chunks, question_format=question_format, correlation_id=correlation_id
@@ -471,7 +491,7 @@ class GenerationWorker:
                         "this material does not support a grounded coding question"
                     )
                     if window < max_windows:
-                        tried_chunk_ids.update(context_ids)
+                        tried_chunk_ids.update(retrieved_ids)
                         logger.info(
                             "coding generation %s window %d/%d jev-unsuitable; resampling",
                             assessment_id,
@@ -481,12 +501,20 @@ class GenerationWorker:
                         )
                         continue
                     break
-                # Slice-2 passage shadow (#72): same flag, log-only, after the
-                # pre-gate so refused windows spend no call. The retrieval-path
-                # slot is spec-only until this validates (#74).
-                self._jev_classify_passages_shadow(
+            # Slice-2 passage filter (#72 shadow, #76 enforce): after the
+            # suitability pre-gate so refused windows spend no call. Its own
+            # flag can enforce without the slice-1 gate; the retrieval-path slot
+            # stays spec-only until this validates (#74).
+            if self._jev is not None and (
+                self.config.jev_slice2_enforce or self.config.jev_slice1_enabled
+            ):
+                chunks = self._jev_filter_passages(
                     chunks, skill_tags, scope, correlation_id=correlation_id
                 )
+            # Built from the window that survived the filter, so the citation
+            # enum and the citation gate agree with the prompt.
+            context_ids = {chunk.chunk_id for chunk in chunks}
+            chunk_texts = {chunk.chunk_id: chunk.text for chunk in chunks}
             schema = schema_for(context_ids)
             messages = build(blueprint, chunks, title=material.title)
             response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
@@ -551,7 +579,7 @@ class GenerationWorker:
                     str(w["message"]) for w in warnings if w["code"] == "code_not_derivable"
                 )
                 if window < max_windows:
-                    tried_chunk_ids.update(context_ids)
+                    tried_chunk_ids.update(retrieved_ids)
                     logger.info(
                         "coding generation %s window %d/%d unsuitable; resampling (%s)",
                         assessment_id,
@@ -840,25 +868,27 @@ class GenerationWorker:
             return True, "this material does not support a grounded coding question"
         return False, None
 
-    def _jev_classify_passages_shadow(
+    def _jev_filter_passages(
         self,
         chunks: list[RetrievedChunk],
         skill_tags: tuple[str, ...],
         scope: AssessmentScope | None,
         *,
         correlation_id: str,
-    ) -> None:
-        """Slice-2 passage shadow (#72): log-only, never reorders or drops.
+    ) -> list[RetrievedChunk]:
+        """Slice-2 passage filter (#72 shadow, #76 enforce).
 
-        One batched decide() over the whole window classifies each passage;
-        the summary (would-keep set + top-relevance floor) is logged with
-        structured jev_* fields for #74. Every failure fails open: log and
-        proceed with the retrieved chunks untouched.
+        One batched decide() over the whole window classifies every passage.
+        With ``jev_slice2_enforce`` off this is log-only and the retrieved
+        chunks pass through untouched; with it on the returned list is the
+        window the prompt sees - the declared keep-set, or the top-by-relevance
+        floor when that leaves nothing. Every failure fails open: log and keep
+        the retrieved window.
         """
-        from app.jev.questions import batch_passage_questions
+        from app.jev.questions import PASSAGE_ENFORCE_VERDICTS, batch_passage_questions
 
         if not chunks:
-            return
+            return chunks
         state = {
             "query": _steer(skill_tags, scope),
             "passages": [{"id": chunk.chunk_id, "text": chunk.text} for chunk in chunks],
@@ -870,20 +900,29 @@ class GenerationWorker:
                 request_id=correlation_id,
                 trace_id=correlation_id,
             )
-            summary = _summarize_passage_shadow(chunks, result.answers or {})
+            summary = _summarize_passage(chunks, result.answers or {})
         except Exception as exc:  # JevError: fail-open, chunks untouched
             logger.warning(
-                "jev passage shadow fail-open (%s)",
+                "jev passage filter fail-open (%s)",
                 getattr(exc, "code", "provider_error"),
                 extra={"trace_id": correlation_id},
             )
-            return
+            return chunks
+        applied = [
+            chunk
+            for chunk, verdict in zip(chunks, summary["verdicts"])
+            if verdict in PASSAGE_ENFORCE_VERDICTS
+        ]
+        if not applied and summary["floor"]:
+            applied = [chunk for chunk in chunks if chunk.chunk_id == summary["floor"]]
         logger.info(
-            "jev passage shadow kept=%d/%d dropped=%s floor=%s tokens=%d",
+            "jev passage %s kept=%d/%d dropped=%s floor=%s applied=%d tokens=%d",
+            "enforce" if self.config.jev_slice2_enforce else "shadow",
             len(summary["would_keep"]),
             len(chunks),
             summary["would_drop"],
             summary["floor"],
+            len(applied),
             result.input_tokens,
             extra={
                 "trace_id": correlation_id,
@@ -891,9 +930,12 @@ class GenerationWorker:
                 "jev_kept": summary["would_keep"],
                 "jev_dropped": summary["would_drop"],
                 "jev_floor": summary["floor"],
+                "jev_applied": len(applied),
+                "jev_enforce": self.config.jev_slice2_enforce,
                 "jev_input_tokens": result.input_tokens,
             },
         )
+        return applied if self.config.jev_slice2_enforce else chunks
 
     def _jev_adjudicate_citations(
         self,

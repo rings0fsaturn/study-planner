@@ -104,14 +104,16 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
         )
 
     # Slice-1 Jev gate (#70): one flag for suitability + citation; off (the
-    # default) means zero decide() calls. The client is built only when the
-    # flag is on so disabled workers never import the SDK. Slice-2 passage
-    # shadow (#72) reuses the flag with a tighter timeout ceiling so the one
-    # batched call still fits the 90 s visibility window (#74 retunes it).
+    # default) means zero decide() calls. The client is built only when a flag
+    # is on so disabled workers never import the SDK. Slice-2 passage shadow
+    # (#72) reuses the flag with a tighter timeout ceiling so the one batched
+    # call still fits the 90 s visibility window (#74 retunes it). The slice-2
+    # filter's own switch (#76) can enforce without the slice-1 gate.
     jev_slice1_enabled = os.getenv("JEV_SLICE1_ENABLED", "false").strip().lower() == "true"
+    jev_slice2_enforce = os.getenv("JEV_SLICE2_ENFORCE", "false").strip().lower() == "true"
     jev = None
     jev_slice2 = None
-    if jev_slice1_enabled:
+    if jev_slice1_enabled or jev_slice2_enforce:
         from app.jev.client import JevClient
 
         jev = JevClient.from_env()
@@ -132,6 +134,7 @@ def _build_generation_worker(shared_client: httpx.Client, repo, queue, telemetry
             max_in_flight=int(os.getenv("GENERATION_MAX_IN_FLIGHT", "1")),
             model=os.getenv("GENERATION_MODEL", "deepseek/deepseek-v4-flash-0731"),
             jev_slice1_enabled=jev_slice1_enabled,
+            jev_slice2_enforce=jev_slice2_enforce,
         ),
     )
 

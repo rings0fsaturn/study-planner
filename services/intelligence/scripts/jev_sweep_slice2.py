@@ -57,7 +57,7 @@ def load_rows(path: str, split: str) -> list[dict[str, Any]]:
 
 
 def passage_state(row: dict[str, Any]) -> dict[str, Any]:
-    """One-row batched state: the shape ``_jev_classify_passages_shadow`` builds."""
+    """One-row batched state: the shape ``_jev_filter_passages`` builds."""
     passage = row.get("passage") or {}
     return {
         "query": str(row.get("query") or ""),

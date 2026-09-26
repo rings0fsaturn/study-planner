@@ -29,6 +29,16 @@ PASSAGE_THRESHOLDS = {
     "evidence_min": 0.55,
 }
 
+# #76: the slice-2 verdicts that survive the worker filter into generation
+# context. A passage denying the query premise must never ground a question, so
+# `conflicting_evidence` drops even though the shadow reports it as its own
+# class - the Phase B conflict split (12 authored premise-denying pairs) shows
+# the class is detected reliably, so keeping it would only hand the prompt an
+# inverted premise. That also makes the injection/contradicts order irrelevant
+# to the applied set, so `injection_max` stays at its tuned value. The verdict
+# is still logged as the reason. Widen only with fresh per-verdict evidence.
+PASSAGE_ENFORCE_VERDICTS = frozenset({"include"})
+
 
 def suitability_questions(variant: str = "v1") -> dict[str, Any]:
     """Slice 1: is this material chunk able to ground a coding question?

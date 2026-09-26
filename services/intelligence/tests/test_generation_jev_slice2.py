@@ -21,7 +21,7 @@ from app.generation.models import RetrievedChunk
 from app.generation.worker import (
     GenerationWorker,
     GenerationWorkerConfig,
-    _summarize_passage_shadow,
+    _summarize_passage,
 )
 from app.jev.client import JevError
 from app.jev.questions import PASSAGE_ENFORCE_VERDICTS, PASSAGE_THRESHOLDS
@@ -61,9 +61,7 @@ def slice2_worker(repo, queue, adapter, telemetry, jev, *, enabled=True, enforce
         queue=queue,
         adapter=adapter,
         telemetry=telemetry,
-        config=GenerationWorkerConfig(
-            jev_slice1_enabled=enabled, jev_slice2_enforce=enforce
-        ),
+        config=GenerationWorkerConfig(jev_slice1_enabled=enabled, jev_slice2_enforce=enforce),
         context_builder=lambda material_id, skill_tags, scope, **_: two_chunks(),
         jev=jev,
     )
@@ -115,11 +113,14 @@ def _citation_enum(adapter, call: int = 0) -> list[str]:
 
 SUITABILITY_OK = ("answer", {"suitability": _answer("derivable", 0.95)})
 
-# c2 is two_chunks()[1]; the floor test cites it, not VALID_MCQ's c1.
+# c2 is two_chunks()[1]; the tests that keep only c2 cite it, not VALID_MCQ's c1.
 C2_MCQ = dict(
     VALID_MCQ,
     citations=[
-        {"chunkId": "c2", "quote": "Variance analysis compares actual cost against the flexed budget"}
+        {
+            "chunkId": "c2",
+            "quote": "Variance analysis compares actual cost against the flexed budget",
+        }
     ],
 )
 
@@ -199,7 +200,7 @@ def test_shadow_fail_open_on_jev_error() -> None:
 def test_summarize_floor_is_top_by_relevance() -> None:
     answers = dict(_batched(0.10, 0.10))
     answers["p1_is_relevant"] = _noul(0.40)
-    summary = _summarize_passage_shadow(two_chunks(), answers)
+    summary = _summarize_passage(two_chunks(), answers)
     assert summary["verdicts"] == ["exclude", "exclude"]
     assert summary["would_keep"] == []
     assert summary["would_drop"] == ["c1", "c2"]
@@ -207,7 +208,7 @@ def test_summarize_floor_is_top_by_relevance() -> None:
 
 
 def test_summarize_empty_is_empty() -> None:
-    assert _summarize_passage_shadow([], {}) == {
+    assert _summarize_passage([], {}) == {
         "verdicts": [],
         "would_keep": [],
         "would_drop": [],
@@ -215,14 +216,15 @@ def test_summarize_empty_is_empty() -> None:
     }
 
 
-def _exclude_c1_include_c2() -> dict:
-    return _mixed(_nouls(0.10, 0.10), _nouls(0.95, 0.95))
+def _include_c1_exclude_c2() -> dict:
+    """c1 is the include (and the chunk VALID_MCQ cites); c2 is the exclude."""
+    return _mixed(_nouls(0.95, 0.95), _nouls(0.10, 0.10))
 
 
 def test_enforce_drops_excluded_chunks_from_prompt() -> None:
     """#76 enforce: the prompt sees the kept window, and the schema agrees with it."""
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([SUITABILITY_OK, ("answer", _exclude_c1_include_c2())])
+    jev = ScriptJev([SUITABILITY_OK, ("answer", _include_c1_exclude_c2())])
     _seed(repo, queue)
     adapter = FakeAdapter([ok_response()])
     worker = slice2_worker(repo, queue, adapter, telemetry, jev, enforce=True)
@@ -318,7 +320,7 @@ def test_enforce_runs_with_slice1_flag_off() -> None:
     One scripted response only: no suitability pre-gate call happened.
     """
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([("answer", _exclude_c1_include_c2())])
+    jev = ScriptJev([("answer", _include_c1_exclude_c2())])
     _seed(repo, queue)
     adapter = FakeAdapter([ok_response()])
     worker = slice2_worker(repo, queue, adapter, telemetry, jev, enabled=False, enforce=True)
@@ -328,20 +330,20 @@ def test_enforce_runs_with_slice1_flag_off() -> None:
 
 
 def test_enforce_without_client_is_inert() -> None:
+    """A misconfigured worker (flag on, no client) generates exactly as before."""
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ExplodingJev()
     _seed(repo, queue)
     adapter = FakeAdapter([ok_response()])
-    worker = slice2_worker(repo, queue, adapter, telemetry, jev, enabled=False, enforce=True)
+    worker = slice2_worker(repo, queue, adapter, telemetry, None, enabled=False, enforce=True)
     assert worker.run_once() == 1
-    assert jev.calls == []
+    assert len(repo.completed) == 1
     assert _citation_enum(adapter) == ["c1", "c2"]
 
 
 def test_enforce_logs_the_applied_set(caplog) -> None:
     """The live verification (B3) reads these fields; keep them truthful."""
     repo, queue, telemetry = FakeGenerationRepo(), FakeQueue(), FakeTelemetry()
-    jev = ScriptJev([SUITABILITY_OK, ("answer", _exclude_c1_include_c2())])
+    jev = ScriptJev([SUITABILITY_OK, ("answer", _include_c1_exclude_c2())])
     _seed(repo, queue)
     adapter = FakeAdapter([ok_response()])
     worker = slice2_worker(repo, queue, adapter, telemetry, jev, enforce=True)
@@ -357,7 +359,7 @@ def test_enforce_logs_the_applied_set(caplog) -> None:
 def test_summarize_floor_skips_injection_flagged_chunk() -> None:
     """D-04: the floor must not resurrect what the injection judge rejected."""
     answers = _mixed(_nouls(0.90, 0.30, injection=0.95), _nouls(0.20, 0.10))
-    summary = _summarize_passage_shadow(two_chunks(), answers)
+    summary = _summarize_passage(two_chunks(), answers)
     assert summary["verdicts"] == ["exclude", "exclude"]
     assert summary["would_drop"] == ["c1", "c2"]
     assert summary["floor"] == "c2"
@@ -366,7 +368,7 @@ def test_summarize_floor_skips_injection_flagged_chunk() -> None:
 def test_summarize_floor_falls_back_when_every_chunk_is_injection_flagged() -> None:
     """Ceiling: an all-injection window has nothing safe to floor to."""
     answers = _mixed(_nouls(0.90, 0.30, injection=0.95), _nouls(0.20, 0.10, injection=0.90))
-    summary = _summarize_passage_shadow(two_chunks(), answers)
+    summary = _summarize_passage(two_chunks(), answers)
     assert summary["floor"] == "c1"
 
 
