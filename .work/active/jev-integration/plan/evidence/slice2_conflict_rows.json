@@ -1,0 +1,197 @@
+{
+  "note": "#76 Phase B conflict-gate rows: 12 authored premise-denying pairs (6 sweep / 6 final), each grounded in a real retrieval window already recorded in slice2_rows.json (field source_window_id names it, material_id is the real source material), and each hand-labeled conflicting_evidence before any Jev call. Construction: the query states a premise the source chunk supports, the passage states the opposite. Authored by construction, not retrieved - dense top-5 windows do not contain premise-denying passages (declared in slice2_rows.json too). Same corpus as #75 Phase A, different judgment; no overlap with #74 rubric_rows question_ids. Purpose: measure the injection/contradicts entanglement on premise-denying text, which conflict-01 showed can be injection-gated (0.77 > 0.70 before contradicts 0.96), and confirm the applied-set routing decision on a heavier sample than the 4 Phase A pairs.",
+  "rows": [
+    {
+      "row_id": "s2-sweep-conflict-04",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin4",
+      "source_window_id": "s2-sweep-win0",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "Why does binary search require the array to be sorted before searching?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-04",
+        "ordinal": null,
+        "text": "Binary search needs no sorted input: it checks every element in turn and stops at the match, so the order of the array never changes whether the target is found."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-sweep-conflict-05",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin5",
+      "source_window_id": "s2-sweep-win1",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "How does quicksort partition the array around a pivot?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-05",
+        "ordinal": null,
+        "text": "Quicksort has no pivot and never partitions: it copies the array into a second buffer on each recursive call and merges the halves afterwards, so it needs extra space proportional to the array."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-sweep-conflict-06",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin6",
+      "source_window_id": "s2-final-win4",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "Why does Dijkstra's algorithm settle the next closest unvisited node?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-06",
+        "ordinal": null,
+        "text": "Dijkstra's algorithm settles nodes in the order they appear in the adjacency list rather than by distance, so the first node discovered is always processed first whatever its cost."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-sweep-conflict-07",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin7",
+      "source_window_id": "s2-final-win5",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "How does a hash table keep both entries when two keys hash to the same slot?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-07",
+        "ordinal": null,
+        "text": "A hash table holds only one entry per slot: when two keys hash to the same slot the second insert overwrites the first, so the earlier key becomes unrecoverable."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-sweep-conflict-08",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin8",
+      "source_window_id": "s2-final-win7",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "Why does the address-translation hardware cache recent virtual-to-physical translations?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-08",
+        "ordinal": null,
+        "text": "The translation lookaside buffer caches recently accessed 64-byte data blocks and holds no address translations, so every virtual-to-physical mapping must be read from the page table in DRAM."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-sweep-conflict-09",
+      "split": "sweep",
+      "kind": "passage",
+      "window_id": "s2-sweep-conflictwin9",
+      "source_window_id": "s2-final-win7",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "Why is a register access far faster than a DRAM access?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-09",
+        "ordinal": null,
+        "text": "Registers and main memory have the same access latency because both are reached by the same load and store instructions, so a compiler has no reason to prefer one over the other."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-10",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin10",
+      "source_window_id": "s2-final-win6",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "Why does the Y86-64 instruction set use a simple byte-level encoding?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-10",
+        "ordinal": null,
+        "text": "Y86-64 uses the same variable-length encoding as x86-64, so its machine code is exactly as compact and its decoding logic exactly as complex."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-11",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin11",
+      "source_window_id": "s2-sweep-win2",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "How does the pipeline handle a data hazard when forwarding alone cannot supply the value?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-11",
+        "ordinal": null,
+        "text": "The pipeline never stalls for a data hazard: every hazard is resolved by forwarding, so the only reason to inject a bubble is a mispredicted branch."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-12",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin12",
+      "source_window_id": "s2-sweep-win0",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "What does binary search return when the target item is absent from the list?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-12",
+        "ordinal": null,
+        "text": "Binary search raises an error when the target is absent, so callers must check membership with a linear scan before searching for any key."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-13",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin13",
+      "source_window_id": "s2-final-win7",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "Why does a cache miss fetch a whole 64-byte block instead of the single requested word?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-13",
+        "ordinal": null,
+        "text": "A cache miss transfers exactly one word from DRAM, so a program that walks an array pays a separate DRAM access for each element with no reuse of the transfer."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-14",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin14",
+      "source_window_id": "s2-final-win5",
+      "material_id": "b5f51eab-c11d-4505-80db-88bb3627801d",
+      "query": "Why does a hash table need to grow as its load factor rises?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-14",
+        "ordinal": null,
+        "text": "A hash table never needs to grow: the load factor only changes the iteration order, so enlarging the underlying array cannot change lookup cost."
+      },
+      "label": "conflicting_evidence"
+    },
+    {
+      "row_id": "s2-final-conflict-15",
+      "split": "final",
+      "kind": "passage",
+      "window_id": "s2-final-conflictwin15",
+      "source_window_id": "s2-final-win7",
+      "material_id": "be7e88a0-909e-4db2-8a15-a14510165027",
+      "query": "How does the memory hierarchy hide DRAM latency from the processor?",
+      "query_source": "authored-premise-denying-pair",
+      "passage": {
+        "id": "authored-conflict-15",
+        "ordinal": null,
+        "text": "The memory hierarchy does not hide DRAM latency: every load goes straight to DRAM, and the on-chip caches serve instruction fetches only."
+      },
+      "label": "conflicting_evidence"
+    }
+  ]
+}
