@@ -1,70 +1,139 @@
-# Verification - jev-integration #76 Phase B (slice-2 worker passage filter)
+# Verification - jev-integration #77 (slice-4 rubric Score-to-action flag queue)
 
-_Issue [#76](https://github.com/rings0fsaturn/study-planner/issues/76) (map [#69](https://github.com/rings0fsaturn/study-planner/issues/69)) · Verified 2026-09-26 · Plan: `plan/PLAN.md`_
+_Issue [#77](https://github.com/rings0fsaturn/study-planner/issues/77) (map [#69](https://github.com/rings0fsaturn/study-planner/issues/69)) · Verified 2026-09-26 · Plan: `plan/PLAN.md` · Supersedes the #76 section this file previously carried (that record lives in git history at `a62c796` and in `state.md`)._
 
-Commits: `99f409b` (conflict split + sweep runner + evidence), `76b139e` (RED), `575190b` (GREEN), `a31f25e` (code-review follow-up).
+## Summary
+
+The slice-4 rubric path graduated from the #73 log-only shadow into a server-side review queue.
+The cutoff/margin pick was re-run on an enlarged corpus and **the #74 prior holds** (`0.6` / `0.10`), because the train-favoured cutoff loses on the test split - the exact risk #77's register named.
+Grades are never touched and nothing rubric-shaped reaches the browser.
 
 ## AC ledger
 
 | AC | Verdict | Evidence |
 |---|---|---|
-| Conflict-routing gate resolved on a premise-denying-heavy split | PASS | 12 authored pairs (6 sweep / 6 final), 12 calls, $0.000223, 0 errors, p50 659 / p95 882 ms. 11/12 route `conflicting_evidence`; `injection_gated` 0/12; `injection_max` 0.90 identical to defaults, so no threshold loosening. Decision D-01: keep-set is `include` only. Posted to #76 (comment 5842297344). |
-| Thresholds locked on both axes | PASS | Phase A's 12-cell grid (44 real rows) + this split's grid; both hold the defaults. Pinned by `test_locked_passage_thresholds_and_enforce_verdicts`. |
-| Prompt variants locked | PASS | No v2 wording exists for slice 2 and `batch_passage_questions` is derived from `passage_questions` (`app/jev/questions.py`), so batched and single shapes cannot drift. No code change needed. |
-| Worker filter enforces behind a floor | PASS | `_jev_filter_passages` returns the applied window; `PASSAGE_ENFORCE_VERDICTS` is the single declaration the filter and the log both read; the floor skips injection-flagged chunks and falls back to the whole window only when none qualify. 16 slice-2 tests. |
-| Citation enum agrees with the prompt | PASS | `context_ids` / `chunk_texts` are rebuilt after filtering; asserted through `_citation_enum(adapter)` in four tests rather than only through prompt text. |
-| Rollback is independent of slice 1 | PASS | `JEV_SLICE2_ENFORCE` (default false) is its own switch; `test_enforce_runs_with_slice1_flag_off` proves the filter works with the slice-1 gate off, `test_flag_off_makes_zero_shadow_calls` proves zero calls when both are off. |
-| Fail-open preserved | PASS | `test_enforce_fail_open_on_jev_error`; the warning carries `trace_id` (rule 17). |
-| No retrieval-path change | PASS | The retrieval router, `context.py`, and the `rerank` opt-in are untouched; nothing in the diff can move the frozen 754-corpus dense baseline (r@1 0.60 / r@3 0.7333 / MRR 0.7033). |
-| Latency ceiling | PASS | Phase A p50 ~650 / p95 ~1127 ms; this split p50 659 / p95 882 ms, against the 15 s client ceiling and the 90 s visibility window. |
-| Live flag-on generation with a request-id log join | PASS | Two live objective generations on `grokking-algorithms` with both flags on. Steered: `kept=5/5`, `applied=5`, `ready`. Unsteered: `kept=0/5` floor to `applied=1`, `ready`, citing the floor chunk. Log join via the assessment's `correlationId` (the worker traces by that, not the HTTP `X-Request-ID`). Details in "Live run". |
+| Met-class top-up recorded | PASS (with a recorded substitution) | The ticket's source, "post-09-16 attempts", is **empty**: a service-role probe on 2026-09-26 finds 39 attempts (20 written / 19 objective, one owner) and **none after `2026-09-16T03:29`**; all 20 rubric-bearing attempts are the corpus itself. The plan's fallback fired: 6 answers authored against existing written questions' rubric criteria and submitted through the real `submit_assessment_attempt` path, so each `breakdown` is a **real server `llm_rubric` grade**. 6 rows / 20 new met pairs, 0 errors. Corpus: `plan/evidence/rubric_slice4_rows.json`. |
+| 3x3 sweep run offline | PASS | `--replay` re-grids the recorded calls at zero spend. Train 56 pairs (23 met) / test 39 pairs (2 met). Grid in `plan/evidence/jev_sweep_slice4_v1.json`. |
+| (cutoff, margin) picked on train, reported on test | PASS (prior retained) | Train favours `0.7`/`0.05` (0.9286 vs `0.6`'s 0.9107), but **test contradicts it**: at 0.7 test agreement falls to 0.9487 and `agree_met` collapses to 0.5, while `0.6` separates the met class perfectly (0.9744, `agree_met` 1.0). Per the plan's risk rule - "a different pick must show better test agreement, not just train agreement" - the prior `0.6`/`0.10` ships. Recorded as `effective` with an explicit `caution` in the sweep output. |
+| Calibration report (D-05) | PASS | `plan/evidence/jev_calibration_report_v1.{json,md}`: per-split summaries at the pick, the full 3x3 grid per split, and every flagged criterion with its reason, Jev score, server `met` and answer excerpt (7 flagged). |
+| Mapping + queue tests pass | PASS | 20 slice-4 tests in `tests/test_jev_slice4_flags.py` (mapping, band edges, any-flag aggregation, malformed-pair fail-open, locked declaration, worker wiring, excerpt, insert fail-open). |
+| Full backend shows no new failures | PASS | See the counts below; failure set is the same pre-existing set. |
+| ruff clean | PASS | `uv run ruff check .` -> "All checks passed!"; the 9 touched files are `ruff format` clean. |
+| Migration 033 pushed | PASS | `db push --dry-run` listed only `033_jev_review_flags.sql`; the push applied it. Live column and policy checks below. |
+| RLS verified owner-scoped | PASS | Service-role write/read/delete round-trip works; owner sees the row, a different user sees 0. Details below. |
+| `rubricAgreementMin` / `rubricMalformedMax` gates fail-closed | PASS | Gates read the committed report (`rubric_evidence`), which returns live values (agreement 0.9744 >= 0.9, malformed 0.0 <= 0.02). Missing report / null values breach, proven by `test_rubric_gates_breach_on_low_agreement_and_high_malformed`. |
+| Live flag-on check | PASS | See "Live run". |
+| Zero rows / zero log change with the flag off | PASS | `test_flags_off_makes_zero_jev_calls_and_writes_nothing` (zero decide calls, zero inserts, grade still `graded`). |
+
+## Phase A: the met-class top-up
+
+| Step | Result |
+|---|---|
+| Live-attempt probe | 39 attempts, 1 owner, 0 after `2026-09-16`; the top-up source the ticket named does not exist |
+| Authored answers submitted | 6 rows (`0e61c0c8`, `3379ec6b`, `255cd429`, `3d250ddd`, `1cd46c52`, `51ca4b39`), one batched `decide()`-free server grade each |
+| Met pairs | 20 of 20 criteria met (the authored answers are deliberately strong) |
+| Spend | Jev recording for the whole merged corpus: $0.000794, 0 errors |
+| Rule 80 | `--limit 2` dry run before both the top-up and the sweep |
+
+**Honest limits of this evidence.** The 20 new met pairs are *authored*, so they are easier than real learner answers and they all sit on **train** by construction - which is why the test split's met class stayed at 2 pairs and why the test column is the only one that could falsify the pick. It did. The top-up therefore did exactly the job the ticket needed (a thicker train met class to sweep against) without letting synthetic rows decide the shipped cutoff.
+
+## Phase A: the sweep
+
+| Split | rows | pairs | met pairs |
+|---|---|---|---|
+| train | 16 | 56 | 23 |
+| test | 10 | 39 | 2 |
+
+| cutoff | train agreement | test agreement | test agree_met |
+|---|---|---|---|
+| 0.5 | 0.8750 | 0.8718 | 1.0 |
+| 0.6 | 0.9107 | **0.9744** | **1.0** |
+| 0.7 | **0.9286** | 0.9487 | 0.5 |
+
+Train alone would ship `0.7`; the test split says the prior `0.6` is the honest reading, and the `agree_met` collapse at 0.7 (1.0 -> 0.5) is the sharper signal - at 0.7 the queue would disagree with the server on the very class the band exists to protect.
+
+## Live run
+
+Two defects were found **only** by running this live, and both are the reason the plan puts the live check last.
+
+### Defect 1: a lazy import outside the fail-open guard wedged grading
+
+The first live flag-on attempt raised `ImportError` from `_queue_jev_flags`.
+The `from app.jev.measure import map_scores` sat **outside** the `try`, so the exception escaped `_grade_written`, propagated to `run_once`'s generic handler, and left the attempt `queued` with **no grade at all** - a direct violation of the contract "the grade is never modified".
+
+The trigger was self-inflicted (my own `git stash` experiment reverted `measure.py` under the still-running worker, and a lazy import re-reads disk at call time), but the defect is real and reachable by any import-time fault.
+Fixed by moving every import inside its guard; two regression tests added (`test_insert_fault_never_reaches_the_composed_grade`, `test_missing_flag_insert_method_fails_open`).
+
+### Defect 2: every insert answered 400 on the NOT NULL primary key
+
+With the guard fixed, insertion still failed silently as `provider_unavailable` - the fail-open swallowed a **400/23502**.
+Cause: the row never carried `id`, and the table's TEXT primary key is NOT NULL.
+Reproduced directly against PostgREST: `WITHOUT id -> 400 null value in column "id"`, `WITH id -> 201`.
+Fixed by minting `id` client-side (the codebase convention: every TEXT-id table here is filled by the service); a test now asserts the row carries an id.
+
+This one is the stronger argument for the live check: the unit suite was fully green, the table was correct, and RLS was proven - yet the queue would have stayed **empty forever** in production.
+
+### Results after both fixes
+
+| Step | Result |
+|---|---|
+| Flag state | `JEV_SLICE4_FLAGS=true` in the gitignored `services/intelligence/.env` (backup taken **outside** the repo), verified in the live worker's `/proc/<pid>/environ` alongside `JEV_SLICE1_ENABLED` and `JEV_SLICE2_ENFORCE` |
+| Flag-on grade | A real written attempt graded `llm_rubric`, `score 0.84`, breakdown `[True, True, False]` - **no wedge** |
+| Flag-on queue write | Resubmitting a corpus answer known to be flagged produced exactly **1 row** (`review_band`, `jev_score 0.55`, `server_met False`, 216-char excerpt) |
+| Log join | `./full-app logs intelligence --grep` style join on the correlation id returns the whole trail: `jev.client` decide -> `jev ok` -> `grading.worker` shadow pairs -> `jev flag queue queued=1/3`, all under `trace_id=jev-slice4-flagproof-16cd2626` |
+| Flag-off parity | Same answer with the flag off: **0 rows**, and the flag-queue log-line count is **unchanged (2 -> 2)** - zero log change |
+| Migration live check | `033` applied; `rowsecurity = true` on `pg_tables`; both policies carry `auth.uid() = owner` on the read predicate |
+| Service-role write/read | `POST` 201, `SELECT` 200 with the row, `DELETE` 204, re-`SELECT` `[]` |
+| Owner vs other-user read | In SQL with `set local role authenticated` + JWT claims: the owner's `sub` sees **1**, a different `sub` sees **0** |
+| Authenticated anon-key read | `200 []` - RLS filters it; the table carries Supabase's default grants (`anon`/`authenticated` hold full table privileges exactly as `assessments`/`question_attempts` do), so **RLS is the sole gate**, not the GRANT list. The migration comment states this explicitly |
+| Probe hygiene | All probe flag rows and probe attempts deleted; `jev_review_flags` row count **0**, attempts back to the 45 pre-session rows |
+
+### A self-inflicted detour worth recording
+
+After the fixes, `./full-app status` reported `health=unhealthy` and a stale pid, and starts appeared to fail with `ELIFECYCLE Command failed`.
+The service was in fact **healthy the whole time** (`curl /health` -> `{"status":"ok"}`); the reports were a stale state file.
+The `Address already in use` error came from my own foreground diagnostic run, which could not bind the port the healthy service already held - I created the error I then chased, and only caught it by reading the health endpoint instead of trusting `status`.
+Lesson: check `/health` before concluding a managed service is down.
 
 ## Offline verification (run 2026-09-26)
 
 | Check | Command | Result |
 |---|---|---|
-| Imports / config default | `uv run python -c "from app.generation.worker import ..."` | OK; `GenerationWorkerConfig().jev_slice2_enforce is False` |
-| Target suites | `uv run pytest tests/test_generation_jev_slice{1,2}.py tests/test_jev.py tests/test_jev_slice2_measure.py tests/test_generation_worker.py tests/test_worker_main.py -q` | **84 passed** (16 in the slice-2 file) |
-| Full backend | `uv run pytest -q` | **18 failed / 799 passed**; failure set byte-identical to the pre-change baseline (`diff` empty), so 0 new failures and 787 -> 799 = +12 net new tests |
-| Lint | `uv run ruff check .` | clean |
-| Format | `uv run ruff format --check` on the 5 touched files | clean (43 pre-existing unformatted files left alone) |
-| Type check | `uv run pyright ...` | not run: pyright is not installed and the repo carries no pyright config |
-| Security | diff scan for keys/secrets; exact-substring scan of both new evidence files | no secrets; 0 hits for `referenceSolution` / `hiddenTests` / `acceptedValue` |
+| Slice-4 suites | `uv run pytest tests/test_jev_slice4_flags.py tests/test_jev_slice4_sweep.py -q` | **29 passed** |
+| Jev-adjacent suites | `uv run pytest` over the 11 jev/grading/eval files | **134 passed** |
+| Full backend | `uv run pytest -q` | **7 failed / 838 passed**; the 7 are the pre-existing set (5 order-dependent `v1_integration` goldens + 2 `test_retrieval_probe` import failures), unchanged from the stashed-tree baseline |
+| Lint | `uv run ruff check .` | "All checks passed!" |
+| Format | `uv run ruff format --check` on the 9 touched files | clean |
+| Gates read live values | `python -c "eh.rubric_evidence(eh.load_golds())"` | `{'agreement': 0.9743589743589743, 'malformed_rate': 0.0, 'cutoff': 0.6, 'margin': 0.1, ...}` |
 
-Pre-existing-failure note: the 18 are the same ones recorded on 2026-09-25 - order-dependent v1-golden fixtures plus `test_retrieval_probe`. They fail on a clean tree too, so the baseline is historical debt rather than a regression from this change.
+### The 18-vs-7 failure count (recorded so it is not re-diagnosed)
 
-## Conflict split (D-05 evidence)
+The same tree reports **18 failed / 825 passed** in one run and **7 failed / 838 passed** in another.
+The cause is `pytest-randomly`, not the change: under some orderings the `v1_integration` golden fixtures re-seed shared state and fail as a block.
+Both counts contain the identical pre-existing failure set; the pass count differs by exactly the cascaded goldens.
+`state.md` has recorded "the same 18 pre-existing failures" since #75, which is one of those orderings.
 
-| split | n | conflicting_evidence | include | exclude | injection_gated |
-|---|---|---|---|---|---|
-| sweep | 6 | 6 | 0 | 0 | 0 |
-| final | 6 | 5 | 1 | 0 | 0 |
+## Design decisions that differ from the plan's first reading
 
-Grid on this split: `injection_max 0.90` is identical to defaults; `0.50` costs 1 sweep + 2 final conflicts; `contradicts_min 0.90` costs conflicts; `relevant_min` / `evidence_min` are inert (the contradiction check fires first). Recorded ceiling: one row with a question-shaped query (no stated premise) routes `include` - a query without a premise cannot express a contradiction, and the passage filter is a relevance/abuse filter, not a fact-checker.
+| Plan text | What shipped | Why |
+|---|---|---|
+| "count post-09-16 attempts ... if live attempts cannot supply them, author met-bearing answers" | Authored answers **submitted through the production path**, not hand-written rows | Weaker evidence would have been a hand-authored `breakdown`; submitting on the real path makes every row a real server grade, which is the strongest reading of "the same way `rubric_rows.json` rows were authored" |
+| "insert one row per flagged criterion through a new repo method (`insert_jev_flag` or one bare-array bulk `_post`)" | `insert_jev_flags(rows)` - the bulk form | One insert per attempt instead of N; the unique index `(attempt_id, criterion)` makes a redelivered message idempotent |
+| Files table lists only `jev_sweep_slice4.py` as CREATE | Also committed `jev_slice4_topup.py` | User decision: the corpus is otherwise not reproducible. Matches the slice-1/slice-2 precedent that every sweep runner is durable |
+| "RUBRIC_THRESHOLDS = {cutoff: <picked>, margin: <picked>}" | Declared, then **kept at the prior after the sweep** | The sweep's own caution fired; shipping 0.7 would have contradicted the test split |
 
-## Code review
+## Acceptance
 
-`/ecc:code-review` on the three commits: **APPROVE**. One MEDIUM (dead `_index_answers` helper) and one LOW (a test constructing `GenerationWorker` inline) found and fixed in `a31f25e`. Three findings were investigated and cleared: the loop-variable reassignment is safe because `retrieved_ids` deliberately captures the pre-filter window for resample exclusion; a starved window cannot produce an empty prompt because `_summarize_passage` always floors when the window is non-empty (a defensive branch was written, then removed as dead and replaced by a per-window-size assertion); and no new exception path was introduced.
+- [x] Met-class top-up recorded (20 new met pairs, real server grades); 3x3 sweep run offline; pick reported (prior retained, with the caution recorded).
+- [x] Calibration report (D-05) committed under `plan/evidence/`.
+- [x] Mapping + queue tests pass; full backend shows no new failures; ruff clean.
+- [x] Migration 033 pushed; RLS verified owner-scoped (service-role write works, cross-owner read returns nothing).
+- [x] `rubricAgreementMin` / `rubricMalformedMax` gates fail-closed in the harness.
+- [x] Live flag-on check: flag verified in the worker env, RLS proven live, zero rows with the flag off, probe rows cleaned.
+- [x] Evidence, `VERIFICATION.md`, `state.md`, and the STATUS row updated in the same session.
 
-## Live run
+## Open items handed off
 
-Run 2026-09-26 on the shared dev account against the real stack (intelligence :8000, app :5173, worker), started with `JEV_SLICE1_ENABLED=true JEV_SLICE2_ENFORCE=true` in the shell so both flags reached the worker's real environment. Confirmed by reading `/proc/<worker-pid>/environ` (values not printed, rule 53). The GPU sidecar was demand-started for the steered case and stopped immediately after (rule 54); no containers remain running.
-
-Two objective generations on `grokking-algorithms` (`b5f51eab-...`); no Piston needed, since objective generation runs no self-check.
-
-| run | recipe | suitability | passage enforce | outcome |
-|---|---|---|---|---|
-| unsteered (empty steer) | `{formats:[objective], difficulty:3, questionCount:1}` | `review` (not_derivable 0.78) | `kept=0/5`, `floor=982af624...`, **`applied=1`** | `ready`, 1 question, 0 warnings, cites `982af624...` |
-| steered | same + `skillTags:["binary search"]` | `derivable` 0.98 | **`kept=5/5`, `floor=None`, `applied=5`** | `ready`, 1 question, 0 warnings, cites `68b37436...` |
-
-Findings:
-
-1. **The filter is a no-op on real steered windows.** `kept=5/5`, `floor=None`, `applied=5` - so the flagged risk (recall 0.846 dropping true includes) does not materialize on the production path. The real risk was narrower than reported: the empty steer.
-2. **The empty-steer window starves, and the floor is exactly what keeps it alive.** `kept=0/5` → `applied=1` → the generation still completed `ready`. Enforce-off would have sent all 5 chunks (the Phase A `kept=0/5` shadow behaviour); enforce-on sends the top-by-relevance one. The floor's safety property is therefore exercised for real, not just in unit tests, and the documented ceiling stands: the floor is injection-aware, not relevance-aware.
-3. **The applied window drives the schema and the citation.** The unsteered question cites the floor chunk `982af624...`, proving `context_ids`/`chunk_texts` were rebuilt from the filtered window: a stale enum would have offered all 5 ids.
-4. **Redaction holds.** Both `/v1/assessments/{id}` reads contain no `referenceSolution` / `hiddenTests` / `acceptedValue`.
-5. **Flag-off behaviour is unchanged** by construction (the flag defaults false and the filter returns the retrieved window untouched); covered by `test_flag_off_makes_zero_shadow_calls` and the no-client inert test rather than a third live run.
-
-Log-join note for future sessions: the generation worker traces with the assessment's `correlationId`, so joining on the HTTP `X-Request-ID` returns nothing even though the service echoes the id in its own logs. Read the `correlation_id` column for the assessment, then grep the worker log with it.
-
-Leftovers left on the shared account (both `ready`, safe): assessments `1647d38a-b52d-4c76-ae8e-ee108a10de0e` (unsteered) and `4dda8bfa-68db-49dc-9de1-f426873359fa` (steered). The 2026-09-25 coding leftovers and the known stuck `generating` row are still present and still need cleaning before any live spec run that uses strict-mode locators.
+- **The queue has no reader.** Nothing lists `jev_review_flags`, by design (D-01: no route, no browser exposure). A reviewer reads through the service role. Building that surface is a follow-up, not part of #77.
+- **Test met class is still 2 pairs.** The authored top-up went to train on purpose, so the *test* column remains thin. More real met-bearing written attempts are the only honest way to thicken it.
+- **#78 / #79** remain open (retrieval insertion point; reranked-754 baseline).

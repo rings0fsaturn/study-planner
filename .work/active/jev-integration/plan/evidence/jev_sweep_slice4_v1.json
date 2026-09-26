@@ -1,0 +1,1357 @@
+{
+  "n_rows": 26,
+  "n_calls": 26,
+  "errors": [],
+  "spent_input_tokens": 18910,
+  "spent_usd_estimated": 0.000794,
+  "split_counts": {
+    "test": {
+      "rows": 10,
+      "pairs": 39,
+      "met_pairs": 2
+    },
+    "train": {
+      "rows": 16,
+      "pairs": 56,
+      "met_pairs": 23
+    }
+  },
+  "grid_config": {
+    "cutoffs": [
+      0.5,
+      0.6,
+      0.7
+    ],
+    "margins": [
+      0.05,
+      0.1,
+      0.15
+    ]
+  },
+  "grid": {
+    "test": [
+      {
+        "cutoff": 0.5,
+        "margin": 0.05,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.8717948717948718,
+        "agree_met": 1.0,
+        "agree_notmet": 0.8648648648648649,
+        "n_met": 2,
+        "n_review": 4,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.5,
+        "margin": 0.1,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.8717948717948718,
+        "agree_met": 1.0,
+        "agree_notmet": 0.8648648648648649,
+        "n_met": 2,
+        "n_review": 5,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.5,
+        "margin": 0.15,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.8717948717948718,
+        "agree_met": 1.0,
+        "agree_notmet": 0.8648648648648649,
+        "n_met": 2,
+        "n_review": 7,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.05,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9743589743589743,
+        "agree_met": 1.0,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 1,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.1,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9743589743589743,
+        "agree_met": 1.0,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 5,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.15,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9743589743589743,
+        "agree_met": 1.0,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 6,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.05,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9487179487179487,
+        "agree_met": 0.5,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 1,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.1,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9487179487179487,
+        "agree_met": 0.5,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 2,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.15,
+        "n": 39,
+        "n_scored": 39,
+        "malformed_rate": 0.0,
+        "agreement": 0.9487179487179487,
+        "agree_met": 0.5,
+        "agree_notmet": 0.972972972972973,
+        "n_met": 2,
+        "n_review": 2,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      }
+    ],
+    "train": [
+      {
+        "cutoff": 0.5,
+        "margin": 0.05,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.875,
+        "agree_met": 1.0,
+        "agree_notmet": 0.7878787878787878,
+        "n_met": 23,
+        "n_review": 3,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.5,
+        "margin": 0.1,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.875,
+        "agree_met": 1.0,
+        "agree_notmet": 0.7878787878787878,
+        "n_met": 23,
+        "n_review": 6,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.5,
+        "margin": 0.15,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.875,
+        "agree_met": 1.0,
+        "agree_notmet": 0.7878787878787878,
+        "n_met": 23,
+        "n_review": 8,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.05,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9107142857142857,
+        "agree_met": 0.9565217391304348,
+        "agree_notmet": 0.8787878787878788,
+        "n_met": 23,
+        "n_review": 4,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.1,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9107142857142857,
+        "agree_met": 0.9565217391304348,
+        "agree_notmet": 0.8787878787878788,
+        "n_met": 23,
+        "n_review": 7,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.6,
+        "margin": 0.15,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9107142857142857,
+        "agree_met": 0.9565217391304348,
+        "agree_notmet": 0.8787878787878788,
+        "n_met": 23,
+        "n_review": 8,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.05,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9285714285714286,
+        "agree_met": 0.9130434782608695,
+        "agree_notmet": 0.9393939393939394,
+        "n_met": 23,
+        "n_review": 1,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.1,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9285714285714286,
+        "agree_met": 0.9130434782608695,
+        "agree_notmet": 0.9393939393939394,
+        "n_met": 23,
+        "n_review": 3,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      },
+      {
+        "cutoff": 0.7,
+        "margin": 0.15,
+        "n": 56,
+        "n_scored": 56,
+        "malformed_rate": 0.0,
+        "agreement": 0.9285714285714286,
+        "agree_met": 0.9130434782608695,
+        "agree_notmet": 0.9393939393939394,
+        "n_met": 23,
+        "n_review": 6,
+        "latency_p50_ms": null,
+        "latency_p95_ms": null
+      }
+    ]
+  },
+  "picked": {
+    "cutoff": 0.7,
+    "margin": 0.05,
+    "basis": "train agreement, narrowest band",
+    "train_agreement": 0.9285714285714286,
+    "train_met_pairs": 23,
+    "test_agreement": 0.9487179487179487,
+    "test_agree_met": 0.5,
+    "test_met_pairs": 2,
+    "caution": "train picks cutoff 0.7 (margin 0.05) but test prefers the prior cutoff 0.6 at the same margin (0.9743589743589743 vs 0.9487179487179487; agree_met 1.0 vs 0.5)",
+    "effective": {
+      "cutoff": 0.6,
+      "margin": 0.1
+    },
+    "effective_basis": "prior retained: train pick contradicted on test",
+    "prior": {
+      "cutoff": 0.6,
+      "margin": 0.1
+    }
+  },
+  "calls": [
+    {
+      "answer_id": "76c24bec-06e2-4009-a4d9-bd3cc0608083",
+      "question_id": "0e61c0c8-3a8b-414c-85f8-98fdf08f82de",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "Not sure",
+      "criteria": [
+        "Identifies the pattern as load balancing",
+        "Explains that the purpose is to share the work among consumers"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "1f0b01d4-d094-4b69-b5d7-4c28e132cf42",
+      "question_id": "1cd46c52-dd43-4224-b202-1f262035fc67",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "States the exam duration, total marks, and the single case study format with its mark split (40 technical, 10 professional).",
+        "Identifies that the technical syllabus is covered in Chapters 1\u201314 and professional skills in the final two chapters.",
+        "Explains that APM builds on PM knowledge but is not a retest, requiring linking topics and evaluation of techniques.",
+        "Mentions the need to compare different performance management approaches."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.22,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.035,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "dc01f663-2e55-4072-a254-c34a56d54694",
+      "question_id": "255cd429-6917-4500-b756-22a94346e77f",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "I dont know",
+      "criteria": [
+        "Correctly defines the planning gap as the difference between the forecast position and long-term targets.",
+        "Identifies at least two distinct strategies that could close the gap, such as efficiency improvements or expansion.",
+        "Explains how each strategy helps close the gap (e.g., efficiency gap, expansion gap)."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "c7403c03-1af0-411b-8bfb-ec54c14daa03",
+      "question_id": "3379ec6b-af09-4869-86e4-d2ad1de1c86c",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "Identifies the two dimensions of Mendelow's matrix (power and interest) and names the four quadrants.",
+        "Explains the recommended management approach for each quadrant (e.g., manage closely, keep satisfied, keep informed, minimal effort).",
+        "Provides a concrete example or applies the matrix to a stakeholder scenario."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.535,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "c3173206-7cad-41ad-92db-d662518ad1fb",
+      "question_id": "3761f050-84e4-4024-bc96-83a6d14e3b58",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "\u201cLoad balancing: sharing the work of consuming a topic among consumers; fan-out: delivering each message to multiple consumers.",
+      "criteria": [
+        "Identifies both patterns by name (load balancing and fan-out).",
+        "Explains that in load balancing, each message is delivered to only one consumer within a group, sharing the work.",
+        "Explains that in fan-out, each message is delivered to all consumers, allowing independent processing.",
+        "Clearly contrasts the two patterns, showing understanding of the difference."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.995,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.61,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.59,
+          "grade_met": true,
+          "agree": false
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.97,
+          "grade_met": false,
+          "agree": false
+        }
+      ]
+    },
+    {
+      "answer_id": "0575e557-4559-468e-9913-da5a3dc104cc",
+      "question_id": "3d250ddd-792c-416e-81b0-e4dcaf3bbdf6",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. It also weighs the operational and competitive consequences.",
+      "criteria": [
+        "States the exam duration, total marks, and pass mark correctly.",
+        "Lists all four professional skills assessed.",
+        "Explains the purpose of the 10-minute reading time and suggests how to use it effectively.",
+        "Provides a coherent, well-structured answer within the expected length."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.265,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.005,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.895,
+          "grade_met": false,
+          "agree": false
+        }
+      ]
+    },
+    {
+      "answer_id": "da43ed9d-7cb6-4545-925f-3ea818f2bb32",
+      "question_id": "51ca4b39-df6d-44c8-87bc-234af9d6fcfe",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. It also weighs the operational and competitive consequences.",
+      "criteria": [
+        "Correctly identifies the exam duration, total marks, pass mark, and the 10-minute reading period.",
+        "Accurately describes Section A as a 50-mark case study with 40 technical and 10 professional skills marks, and lists the four professional skills.",
+        "Explains the recommended approach to longer questions: interpreting requirements, reading and understanding the scenario, and planning/structure.",
+        "Provides a coherent, essay-length answer that integrates the points logically and demonstrates commercial acumen."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.005,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.015,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.345,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "832f4e85-bb78-41f6-98c2-9124e11b76b2",
+      "question_id": "5455a47f-859a-41f4-9d6e-5d36960686b0",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "States the exam format (duration, mode, total marks, and case study structure) accurately.",
+        "Explains the purpose of the case study in terms of applying strategic management accounting techniques and professional skills.",
+        "Correctly identifies the relationship with PM and SBL, including that PM knowledge is assumed and SBL knowledge is not required.",
+        "Clearly contrasts APM with PM, emphasizing the greater focus on linking topics and evaluation."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.665,
+          "grade_met": false,
+          "agree": false
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.065,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.445,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "da50b0b7-39d5-48a0-9f2d-7443886226df",
+      "question_id": "6738203f-76f8-4a5b-b96d-442edafca479",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "States the exam format (duration, total marks, case study structure) accurately.",
+        "Explains the focus on strategic management accounting techniques and the case study's role in planning, control, and evaluation.",
+        "Describes the relationship with PM and SBL, noting that PM knowledge is assumed and SBL is not required.",
+        "Identifies the shift from PM's core techniques to APM's emphasis on linking topics and evaluation, including the professional skills component."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.005,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.595,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.02,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.455,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "4bf5f5c1-0471-473c-ad37-29cee778b29f",
+      "question_id": "6738203f-76f8-4a5b-b96d-442edafca479",
+      "criterion_source": null,
+      "split": "train",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. A second pass adds the cash-flow consequence.",
+      "criteria": [
+        "States the exam format (duration, total marks, case study structure) accurately.",
+        "Explains the focus on strategic management accounting techniques and the case study's role in planning, control, and evaluation.",
+        "Describes the relationship with PM and SBL, noting that PM knowledge is assumed and SBL is not required.",
+        "Identifies the shift from PM's core techniques to APM's emphasis on linking topics and evaluation, including the professional skills component."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.625,
+          "grade_met": false,
+          "agree": false
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.025,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.525,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "85bbdc1a-6afb-4671-96b6-93f8bcb61a98",
+      "question_id": "7fbdb058-f8e9-423b-967f-18d9632ab157",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "Identifies that technical content covers syllabus sections A to D (Chapters 1\u201314) and that professional skills (section E) and employability/technology skills (section F) underpin it.",
+        "States that Section A is a single 50-mark case study based on an organisation in a business context.",
+        "Specifies that Section A comprises 40 technical marks and 10 professional skills marks (from section E)."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.02,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "3e03abff-4970-4f40-b247-bcf5725bd8a7",
+      "question_id": "835a3936-b0b0-45b2-b3c1-3cd5dbb4927c",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "I dont know this answer",
+      "criteria": [
+        "States that APM focuses on the use of strategic management accounting techniques in different organisational contexts.",
+        "Mentions that these techniques contribute to planning, control, and evaluation of performance.",
+        "Lists at least three of the four professional skills: Communication, Analysis and Evaluation, Scepticism, Commercial Acumen."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "8376e130-44e9-4556-ba69-20b75fa8a14b",
+      "question_id": "8484d831-b1aa-436b-8393-aaecd1bd148d",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "Identifies the exam structure: 3h15m CBE, 100 marks, pass mark 50%, and Section A as a 50-mark case study with 40 technical and 10 professional skills marks.",
+        "Lists the four professional skills assessed: Communication, Analysis and Evaluation, Scepticism, Commercial Acumen.",
+        "Explains that the final two chapters cover professional skills (Section E) and employability/technology skills (Section F) and should be used alongside technical chapters."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.035,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "276f1926-7f1d-4ec2-816a-ddcbff16eb0b",
+      "question_id": "8bf87f3c-4b99-4d7c-a07c-679960238d99",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "States the exam duration and total marks correctly",
+        "Identifies the single 50-mark case study and its business context",
+        "Explains the breakdown of technical (40) and professional (10) marks",
+        "Mentions the focus on comparing approaches and applying strategic management accounting techniques",
+        "Clarifies the relationship with PM and SBL knowledge"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.045,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.1,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.525,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 4,
+          "scored": true,
+          "jev_score": 0.53,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "07b5626c-7e5f-4e41-a4b5-244f9fcba599",
+      "question_id": "8bf87f3c-4b99-4d7c-a07c-679960238d99",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. A second pass adds the cash-flow consequence.",
+      "criteria": [
+        "States the exam duration and total marks correctly",
+        "Identifies the single 50-mark case study and its business context",
+        "Explains the breakdown of technical (40) and professional (10) marks",
+        "Mentions the focus on comparing approaches and applying strategic management accounting techniques",
+        "Clarifies the relationship with PM and SBL knowledge"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.07,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.115,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.525,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 4,
+          "scored": true,
+          "jev_score": 0.52,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "f7075c1d-9327-4391-8af2-0034e1dac871",
+      "question_id": "96c1cb73-f51b-45ff-a2a4-08434bb4659b",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "States the exam duration, total marks, and pass mark correctly.",
+        "Describes Section A as a 50-mark case study with 40 technical and 10 professional skills marks, and notes that all professional skills are examined in Section A.",
+        "Explains that APM builds on PM knowledge and assumes PM knowledge is known, while SBL knowledge is not required.",
+        "Lists the four professional skills assessed: Communication, Analysis and Evaluation, Scepticism, Commercial Acumen."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.005,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.005,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.03,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "73e0aec4-c45d-401e-bb0e-19f64213dea9",
+      "question_id": "ad89e744-dd51-43e8-ba2e-cce29876e6a0",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from.",
+      "criteria": [
+        "Correctly defines the two axes of Mendelow\u2019s matrix (power and interest) and explains their meaning.",
+        "Accurately describes the four quadrants and the appropriate management approach for each.",
+        "Explains the practical steps of using the matrix (identify stakeholders, assess power/interest, plot, manage accordingly).",
+        "Provides a clear example or application of how the matrix guides stakeholder management."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.07,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.23,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "2f5f79b4-8bac-4d94-bac1-f65b5dbda241",
+      "question_id": "b4103684-e1af-4c46-a78f-01ce22e3ffd3",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. It also weighs the operational and competitive consequences.",
+      "criteria": [
+        "Correctly identifies the exam format (3h15m, 100 marks, 50% pass, Section A case study with 40 technical + 10 professional skills marks).",
+        "Lists the four professional skills (Communication, Analysis and Evaluation, Scepticism, Commercial Acumen) and explains how each is relevant to strategic performance management.",
+        "Explains how the exam structure (especially Section A case study) tests the ability to relate technical knowledge to strategic issues, including the expectation to perform calculations, comparisons, and offer recommendations.",
+        "Provides a coherent, well-structured answer that demonstrates integrated understanding, as expected at APM level."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.105,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.36,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.705,
+          "grade_met": false,
+          "agree": false
+        }
+      ]
+    },
+    {
+      "answer_id": "98c11c1a-8c1c-4572-be31-65037d8c02ed",
+      "question_id": "b70737a9-5b63-4016-b4b7-4e4c5f0298bd",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "Non-financial factors, focusing on areas such as customer satisfaction, product innovation, sustainability and employee productivity, will be equally as important",
+      "criteria": [
+        "States that the primary objective is to maximise shareholder wealth, or equivalent phrasing.",
+        "Explains that focusing solely on financial performance may be detrimental to long-term mission and objectives.",
+        "Identifies a specific valid non-financial factor such as customer satisfaction, product innovation, sustainability, or employee productivity.",
+        "Demonstrates understanding that non-financial factors are equally important and should be integrated with financial measures."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.4,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.985,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.615,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "c641d90b-76ed-4292-8028-c8097a2a4337",
+      "question_id": "be0a9003-040d-4078-9d83-5d58285e08e5",
+      "criterion_source": null,
+      "split": "test",
+      "answer_excerpt": "The rubric is applied to the firm in the case: performance is judged on both financial and non-financial measures, and the variance analysis identifies which critical success factor the shortfall actually comes from. It also weighs the operational and competitive consequences.",
+      "criteria": [
+        "Correctly states the exam duration, total marks, pass mark, and that Section A is a 50-mark case study with 40 technical and 10 professional skills marks.",
+        "Lists all four professional skills assessed: Communication, Analysis and Evaluation, Scepticism, Commercial Acumen.",
+        "Describes the expected approach to a longer question: interpret requirements, read and understand the scenario, plan and structure the answer, and read each question carefully.",
+        "Mentions that candidates are expected to perform calculations and draw comparisons against relevant information."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.0,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 0.31,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.03,
+          "grade_met": false,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.345,
+          "grade_met": false,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "f13b5e66-6fb7-4e73-b0e4-15da7152f0b8",
+      "question_id": "0e61c0c8-3a8b-414c-85f8-98fdf08f82de",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "That is the load balancing pattern, also called competing consumers. All of the consumers are attached to the same queue, and the broker delivers each individual message to exactly one of them rather than to every one of them.\n\nThe primary purpose is therefore to share the work among the consumers. Because each message is handled once by whichever consumer is free, the consumers divide the backlog between them instead of duplicating effort, and the throughput of the queue can be scaled horizonta",
+      "criteria": [
+        "Identifies the pattern as load balancing",
+        "Explains that the purpose is to share the work among consumers"
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "639a537b-86ce-4f4c-b239-c295d757381b",
+      "question_id": "3379ec6b-af09-4869-86e4-d2ad1de1c86c",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "Mendelow's matrix classifies stakeholders on two dimensions: their power, meaning the extent to which they can influence the organisation's objectives, and their interest, meaning how concerned they are about what the organisation does. Crossing the two axes produces four quadrants: high power and high interest (key players), high power but low interest (keep satisfied), low power but high interest (keep informed), and low power and low interest (minimal effort).\n\nThe recommended management appr",
+      "criteria": [
+        "Identifies the two dimensions of Mendelow's matrix (power and interest) and names the four quadrants.",
+        "Explains the recommended management approach for each quadrant (e.g., manage closely, keep satisfied, keep informed, minimal effort).",
+        "Provides a concrete example or applies the matrix to a stakeholder scenario."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 0.99,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "8e82bbd4-6d4a-4197-87db-ea03bf1f54be",
+      "question_id": "255cd429-6917-4500-b756-22a94346e77f",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "The planning gap is the difference between the position the organisation expects to reach if it continues with its current strategies, that is the forecast position, and the position it needs to reach to meet its long-term targets or objectives. It is therefore the shortfall that existing plans leave against the strategic target, and it is what forces the organisation to look for additional strategic options.\n\nTwo broad families of strategy can close the gap. The first is an efficiency improveme",
+      "criteria": [
+        "Correctly defines the planning gap as the difference between the forecast position and long-term targets.",
+        "Identifies at least two distinct strategies that could close the gap, such as efficiency improvements or expansion.",
+        "Explains how each strategy helps close the gap (e.g., efficiency gap, expansion gap)."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "1d8a080a-9061-4459-8558-835fcecf20c5",
+      "question_id": "3d250ddd-792c-416e-81b0-e4dcaf3bbdf6",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "The APM examination is a three-hour and fifteen-minute computer-based examination, marked out of 100 with a pass mark of 50%. It is built around a single case study: Section A is one 50-mark question based on a case, of which 40 marks are technical and 10 marks are professional skills, and Section B contains two 25-mark questions. Ten minutes of reading time are available before the examination begins.\n\nFour professional skills are assessed: communication, analysis and evaluation, scepticism, an",
+      "criteria": [
+        "States the exam duration, total marks, and pass mark correctly.",
+        "Lists all four professional skills assessed.",
+        "Explains the purpose of the 10-minute reading time and suggests how to use it effectively.",
+        "Provides a coherent, well-structured answer within the expected length."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.965,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.955,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "bc4779a4-f8dd-4c9a-beb0-07c22096bb76",
+      "question_id": "1cd46c52-dd43-4224-b202-1f262035fc67",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "The APM examination lasts three hours and fifteen minutes and is marked out of 100, with a pass mark of 50%. Its dominant feature is the single case study: Section A is one 50-mark question set in a single organisational scenario, split into 40 technical marks and 10 professional skills marks, while Section B carries two further 25-mark questions.\n\nThe technical syllabus is covered by Chapters 1 to 14 of the study text, which deal with the strategic management accounting techniques themselves, a",
+      "criteria": [
+        "States the exam duration, total marks, and the single case study format with its mark split (40 technical, 10 professional).",
+        "Identifies that the technical syllabus is covered in Chapters 1\u201314 and professional skills in the final two chapters.",
+        "Explains that APM builds on PM knowledge but is not a retest, requiring linking topics and evaluation of techniques.",
+        "Mentions the need to compare different performance management approaches."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.98,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    },
+    {
+      "answer_id": "6f11b4a6-bcf8-4ae7-accd-a45408e4707b",
+      "question_id": "51ca4b39-df6d-44c8-87bc-234af9d6fcfe",
+      "criterion_source": "authored_met_topup",
+      "split": "train",
+      "answer_excerpt": "The APM examination is a three-hour and fifteen-minute computer-based assessment marked out of 100, with a pass mark of 50% and ten minutes of reading time before the examination starts.\n\nSection A is a single 50-mark case study, comprising 40 technical marks and 10 professional skills marks, and the four professional skills assessed are communication, analysis and evaluation, scepticism, and commercial acumen. Section B contains two 25-mark questions.\n\nThe recommended approach to the longer que",
+      "criteria": [
+        "Correctly identifies the exam duration, total marks, pass mark, and the 10-minute reading period.",
+        "Accurately describes Section A as a 50-mark case study with 40 technical and 10 professional skills marks, and lists the four professional skills.",
+        "Explains the recommended approach to longer questions: interpreting requirements, reading and understanding the scenario, and planning/structure.",
+        "Provides a coherent, essay-length answer that integrates the points logically and demonstrates commercial acumen."
+      ],
+      "pairs": [
+        {
+          "index": 0,
+          "scored": true,
+          "jev_score": 0.985,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 1,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 2,
+          "scored": true,
+          "jev_score": 1.0,
+          "grade_met": true,
+          "agree": true
+        },
+        {
+          "index": 3,
+          "scored": true,
+          "jev_score": 0.82,
+          "grade_met": true,
+          "agree": true
+        }
+      ]
+    }
+  ]
+}

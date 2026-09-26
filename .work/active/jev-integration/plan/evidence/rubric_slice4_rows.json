@@ -1,0 +1,226 @@
+{
+ "split": "authored met-class top-up (#77 Phase A): 6 answers authored against existing written questions' rubric criteria and graded by the real llm_rubric arm via submit_assessment_attempt. All train by construction - authored answers are easier than real ones, so the met-heavy rows stay on the split the pick tunes on and the test split stays purely real (2 met pairs). Live attempts could not supply the top-up: 0 written attempts exist after 2026-09-16 (service-role probe 2026-09-26). Two further dry-run attempts (--limit 2) were recorded on the first two questions and are deliberately NOT included here to avoid double-counting a question.",
+ "provenance": "services/intelligence/scripts/jev_slice4_topup.py; answers authored from answer_block.rubric only, referenceAnswer never read",
+ "n_rows": 6,
+ "n_met_pairs": 20,
+ "summary": [
+  {
+   "question_id": "0e61c0c8",
+   "criteria": 2,
+   "met": 2
+  },
+  {
+   "question_id": "3379ec6b",
+   "criteria": 3,
+   "met": 3
+  },
+  {
+   "question_id": "255cd429",
+   "criteria": 3,
+   "met": 3
+  },
+  {
+   "question_id": "3d250ddd",
+   "criteria": 4,
+   "met": 4
+  },
+  {
+   "question_id": "1cd46c52",
+   "criteria": 4,
+   "met": 4
+  },
+  {
+   "question_id": "51ca4b39",
+   "criteria": 4,
+   "met": 4
+  }
+ ],
+ "rows": [
+  {
+   "answer_id": "f13b5e66-6fb7-4e73-b0e4-15da7152f0b8",
+   "question_id": "0e61c0c8-3a8b-414c-85f8-98fdf08f82de",
+   "criterion_source": "authored_met_topup",
+   "answer": "That is the load balancing pattern, also called competing consumers. All of the consumers are attached to the same queue, and the broker delivers each individual message to exactly one of them rather than to every one of them.\n\nThe primary purpose is therefore to share the work among the consumers. Because each message is handled once by whichever consumer is free, the consumers divide the backlog between them instead of duplicating effort, and the throughput of the queue can be scaled horizontally simply by adding more consumers to the same group.",
+   "criteria": [
+    "Identifies the pattern as load balancing",
+    "Explains that the purpose is to share the work among consumers"
+   ],
+   "breakdown": [
+    {
+     "criterion": "Identifies the pattern as load balancing",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains that the purpose is to share the work among consumers",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  },
+  {
+   "answer_id": "639a537b-86ce-4f4c-b239-c295d757381b",
+   "question_id": "3379ec6b-af09-4869-86e4-d2ad1de1c86c",
+   "criterion_source": "authored_met_topup",
+   "answer": "Mendelow's matrix classifies stakeholders on two dimensions: their power, meaning the extent to which they can influence the organisation's objectives, and their interest, meaning how concerned they are about what the organisation does. Crossing the two axes produces four quadrants: high power and high interest (key players), high power but low interest (keep satisfied), low power but high interest (keep informed), and low power and low interest (minimal effort).\n\nThe recommended management approach follows the quadrant. Key players are managed closely through active engagement and involvement in decisions. The keep-satisfied group requires enough attention to avoid them becoming disaffected and using their power against the organisation. The keep-informed group should receive adequate information so that their interest is maintained without overwhelming them, since they can influence opinion even without direct power. The minimal-effort group needs only monitoring.\n\nAs an example, when an organisation proposes closing a manufacturing site, the local council and the largest institutional investor sit in the key-player quadrant and must be engaged directly; a regulator with power but little interest in the day-to-day operation is kept satisfied by compliance reporting; employees at the affected site have high interest but limited power and are kept informed; and a distant supplier base is monitored with minimal effort.",
+   "criteria": [
+    "Identifies the two dimensions of Mendelow's matrix (power and interest) and names the four quadrants.",
+    "Explains the recommended management approach for each quadrant (e.g., manage closely, keep satisfied, keep informed, minimal effort).",
+    "Provides a concrete example or applies the matrix to a stakeholder scenario."
+   ],
+   "breakdown": [
+    {
+     "criterion": "Identifies the two dimensions of Mendelow's matrix (power and interest) and names the four quadrants.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains the recommended management approach for each quadrant (e.g., manage closely, keep satisfied, keep informed, minimal effort).",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Provides a concrete example or applies the matrix to a stakeholder scenario.",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  },
+  {
+   "answer_id": "8e82bbd4-6d4a-4197-87db-ea03bf1f54be",
+   "question_id": "255cd429-6917-4500-b756-22a94346e77f",
+   "criterion_source": "authored_met_topup",
+   "answer": "The planning gap is the difference between the position the organisation expects to reach if it continues with its current strategies, that is the forecast position, and the position it needs to reach to meet its long-term targets or objectives. It is therefore the shortfall that existing plans leave against the strategic target, and it is what forces the organisation to look for additional strategic options.\n\nTwo broad families of strategy can close the gap. The first is an efficiency improvement, tightening internal operations such as cost reduction, process rationalisation or better asset utilisation so that the same output is produced for less resource. The second is expansion, growing the business by entering new markets, developing new products or increasing share in existing markets so that revenue and contribution rise.\n\nEach closes the gap in a different way. The efficiency improvement closes what is often called the efficiency gap, raising the margin earned on the organisation's existing volume and so lifting the forecast line towards the target without requiring new revenue. The expansion closes the expansion gap, adding volume or new revenue streams so that the absolute level of performance increases. In practice a planning gap is usually attacked with a combination of the two, because efficiency gains alone are bounded by the existing volume while expansion alone carries more risk and takes longer to deliver.",
+   "criteria": [
+    "Correctly defines the planning gap as the difference between the forecast position and long-term targets.",
+    "Identifies at least two distinct strategies that could close the gap, such as efficiency improvements or expansion.",
+    "Explains how each strategy helps close the gap (e.g., efficiency gap, expansion gap)."
+   ],
+   "breakdown": [
+    {
+     "criterion": "Correctly defines the planning gap as the difference between the forecast position and long-term targets.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Identifies at least two distinct strategies that could close the gap, such as efficiency improvements or expansion.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains how each strategy helps close the gap (e.g., efficiency gap, expansion gap).",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  },
+  {
+   "answer_id": "1d8a080a-9061-4459-8558-835fcecf20c5",
+   "question_id": "3d250ddd-792c-416e-81b0-e4dcaf3bbdf6",
+   "criterion_source": "authored_met_topup",
+   "answer": "The APM examination is a three-hour and fifteen-minute computer-based examination, marked out of 100 with a pass mark of 50%. It is built around a single case study: Section A is one 50-mark question based on a case, of which 40 marks are technical and 10 marks are professional skills, and Section B contains two 25-mark questions. Ten minutes of reading time are available before the examination begins.\n\nFour professional skills are assessed: communication, analysis and evaluation, scepticism, and commercial acumen.\n\nThe purpose of the ten-minute reading time is to let candidates understand the case study and the requirements before they begin writing, rather than to gain extra writing time. It should be used to skim the case and identify the organisation's situation, to read the requirements carefully and underline the verbs and the specific tasks being asked, to note where in the case the relevant details sit, and to sketch a brief structure and time plan for each answer. Candidates who use the time to plan tend to produce answers that address each requirement directly instead of writing everything they know on the topic.\n\nThe examination rewards a methodical approach: interpret each requirement, select relevant evidence from the case, apply the technique the question asks for, and evaluate rather than merely describe, so that the answer reads as a coherent and well-structured professional response within the time and length available.",
+   "criteria": [
+    "States the exam duration, total marks, and pass mark correctly.",
+    "Lists all four professional skills assessed.",
+    "Explains the purpose of the 10-minute reading time and suggests how to use it effectively.",
+    "Provides a coherent, well-structured answer within the expected length."
+   ],
+   "breakdown": [
+    {
+     "criterion": "States the exam duration, total marks, and pass mark correctly.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Lists all four professional skills assessed.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains the purpose of the 10-minute reading time and suggests how to use it effectively.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Provides a coherent, well-structured answer within the expected length.",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  },
+  {
+   "answer_id": "bc4779a4-f8dd-4c9a-beb0-07c22096bb76",
+   "question_id": "1cd46c52-dd43-4224-b202-1f262035fc67",
+   "criterion_source": "authored_met_topup",
+   "answer": "The APM examination lasts three hours and fifteen minutes and is marked out of 100, with a pass mark of 50%. Its dominant feature is the single case study: Section A is one 50-mark question set in a single organisational scenario, split into 40 technical marks and 10 professional skills marks, while Section B carries two further 25-mark questions.\n\nThe technical syllabus is covered by Chapters 1 to 14 of the study text, which deal with the strategic management accounting techniques themselves, and the professional skills are covered in the final two chapters, which develop communication, analysis and evaluation, scepticism and commercial acumen.\n\nAPM builds on the PM examination but it is not a retest of it. PM knowledge is assumed to be known, so the techniques are not re-taught; instead candidates are expected to link topics together, to select the appropriate technique for the situation in the case and to evaluate whether the approach chosen is suitable, rather than to reproduce a technique in isolation. This is why the examination is assessed at the strategic level, where judgement about performance management matters more than the mechanics.\n\nA further consequence is that candidates need to compare different performance management approaches. The case study frequently requires the merits of, for example, the balanced scorecard against the performance prism, or a financial measure against a non-financial one, to be weighed against each other in the organisation's particular context, so an answer that names several approaches without comparing them earns limited credit.",
+   "criteria": [
+    "States the exam duration, total marks, and the single case study format with its mark split (40 technical, 10 professional).",
+    "Identifies that the technical syllabus is covered in Chapters 1\u201314 and professional skills in the final two chapters.",
+    "Explains that APM builds on PM knowledge but is not a retest, requiring linking topics and evaluation of techniques.",
+    "Mentions the need to compare different performance management approaches."
+   ],
+   "breakdown": [
+    {
+     "criterion": "States the exam duration, total marks, and the single case study format with its mark split (40 technical, 10 professional).",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Identifies that the technical syllabus is covered in Chapters 1\u201314 and professional skills in the final two chapters.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains that APM builds on PM knowledge but is not a retest, requiring linking topics and evaluation of techniques.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Mentions the need to compare different performance management approaches.",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  },
+  {
+   "answer_id": "6f11b4a6-bcf8-4ae7-accd-a45408e4707b",
+   "question_id": "51ca4b39-df6d-44c8-87bc-234af9d6fcfe",
+   "criterion_source": "authored_met_topup",
+   "answer": "The APM examination is a three-hour and fifteen-minute computer-based assessment marked out of 100, with a pass mark of 50% and ten minutes of reading time before the examination starts.\n\nSection A is a single 50-mark case study, comprising 40 technical marks and 10 professional skills marks, and the four professional skills assessed are communication, analysis and evaluation, scepticism, and commercial acumen. Section B contains two 25-mark questions.\n\nThe recommended approach to the longer questions is deliberate and structured. First, interpret the requirement precisely: identify the verb, the specific task and any constraint such as the number of items or the perspective demanded, because a technically correct answer to the wrong requirement scores nothing. Second, read and understand the scenario: extract the facts that bear on the requirement, the organisation's objectives, constraints and the interests of its stakeholders, and disregard the background detail that does not. Third, plan and structure the answer: decide the headings, allocate roughly the marks they deserve, and order the points so the argument progresses, leaving time to write a conclusion where one is called for.\n\nThe answer should read as a coherent, essay-length response rather than a list. That means integrating the technical points with the evidence from the case, applying judgement about what matters in this organisation, and demonstrating commercial acumen by recognising the trade-offs a real manager would face.",
+   "criteria": [
+    "Correctly identifies the exam duration, total marks, pass mark, and the 10-minute reading period.",
+    "Accurately describes Section A as a 50-mark case study with 40 technical and 10 professional skills marks, and lists the four professional skills.",
+    "Explains the recommended approach to longer questions: interpreting requirements, reading and understanding the scenario, and planning/structure.",
+    "Provides a coherent, essay-length answer that integrates the points logically and demonstrates commercial acumen."
+   ],
+   "breakdown": [
+    {
+     "criterion": "Correctly identifies the exam duration, total marks, pass mark, and the 10-minute reading period.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Accurately describes Section A as a 50-mark case study with 40 technical and 10 professional skills marks, and lists the four professional skills.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Explains the recommended approach to longer questions: interpreting requirements, reading and understanding the scenario, and planning/structure.",
+     "score": 1.0,
+     "met": true
+    },
+    {
+     "criterion": "Provides a coherent, essay-length answer that integrates the points logically and demonstrates commercial acumen.",
+     "score": 1.0,
+     "met": true
+    }
+   ],
+   "split": "train"
+  }
+ ]
+}

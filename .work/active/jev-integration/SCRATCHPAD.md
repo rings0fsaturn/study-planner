@@ -1,27 +1,30 @@
-# Scratchpad – jev-integration · session 2026-09-26
-_state.md: active/jev-integration/state.md · Plan: active/jev-integration/plan/PLAN.md · Updated: 2026-09-26T03:57_
+# Scratchpad – jev-integration · session 2026-09-26 (b) – #77
+
+_state.md: active/jev-integration/state.md · Plan: active/jev-integration/plan/PLAN.md · Updated: 2026-09-26 (later session)_
 
 ## Now / Next
-- Doing: #76 close-out (plan approved) - tracker close-out comment + commit are all that remain
-- Next: post `## Resolved 2026-09-26` to #76 and close it; then commit the work records
-- Blocked: the assessment-row cleanup (classifier denial, see session log)
+- Doing: #77 Phase C live verification (flag-on check re-running after a live-found defect fix)
+- Next: finish the flag-on + flag-off evidence, then the #77 ticket post, state.md, STATUS row, commit
+- Blocked: none
 
 ## Session log
-- 01:56 DONE #76 Phase B B1: authored `slice2_conflict_rows.json` (12 premise-denying pairs) + committed `scripts/jev_sweep_slice2.py`; dry run then full split (12 calls, $0.000223, 0 errors); 11/12 conflicting_evidence, injection_gated 0/12, injection_max 0.90 identical to defaults
-- 02:05 DECIDED D-01 confirmed by evidence: keep-set is `include` only; no injection threshold loosened. Commit `99f409b`
-- 02:20 DONE B2 TDD: RED `76b139e` (ImportError on PASSAGE_ENFORCE_VERDICTS) -> GREEN `575190b`; 16 slice-2 tests, 84 targeted, full backend 18 pre-existing / 799 passed, ruff clean
-- 02:25 DONE conflict-gate decision posted to #76 (comment 5842297344)
-- 02:30 DONE code review APPROVE; 1 MEDIUM (dead `_index_answers`) + 1 LOW fixed in `a31f25e`; three non-findings cleared with reasoning (retrieved_ids is deliberate; starved window cannot empty the prompt so the defensive branch was removed as dead and replaced by an invariant assertion)
-- 02:35 DONE verification-loop READY; pyright not installed in this repo
-- 02:38 DONE live: steered `kept=5/5 applied=5 ready`, empty-steer `kept=0/5 floor->applied=1 ready` citing the floor chunk (proves the enum rebuild); FOUND the worker traces by `correlationId`, not the HTTP X-Request-ID
-- 02:40 DONE `plan/VERIFICATION.md` + record commit `fd2e7ca`
-- 03:05 DONE enabled `JEV_SLICE1_ENABLED=true` + `JEV_SLICE2_ENFORCE=true` in the gitignored `services/intelligence/.env`, verified in the real python worker's `/proc/<pid>/environ` (not the pnpm shim) from a CLEAN shell so the file was provably the source; live steered generation green
-- 03:05 DECIDED (user) live `.env` only; docker untouched; nothing else enabled (#77 has no code or flag at all)
-- 03:05 FOUND and caught my own hazard: the `.env` backup I took was NOT gitignored and showed as untracked, so a blanket `git add -A` could have committed live secrets - removed immediately
-- 03:45 DONE close-out plan approved; PLAN.md marked Complete with acceptance ticked + the baseline-substitution note
-- 03:45 FOUND #76's baseline AC (`r@1 0.77 / r@3 0.97` via the eval harness) is UNSATISFIABLE: it is the retired 788-chunk + reranker number, the harness measures 754 with no rerank path, and the results doc says the 788 metrics are not reproducible without reverting the chunker. Substituted the harness's durable 0.60/0.7333/0.7033
-- 03:45 CORRECTED MYSELF: I had told the user `d1e02206`/`ef203cf7` were cited in `state.md`; they appear NOWHERE in the repo. Only `55f6fc23`, `421aca54`, `3bdd41e6`, `c88d81ff` are genuinely cited (all in coding-generation-context/plan/VERIFICATION.md)
-- 03:45 DONE filed #78 (retrieval-path graduation - leads with the insertion-point decision, because generation BYPASSES `routers/retrieval.py`) and #79 (reranked-754 baseline); annotated map #69's "Not yet specified" bullets with both
-- 03:45 DONE state.md refreshed (current state, done-so-far, 6 new pitfalls incl. the #78 bypass trap and the service-role DELETE requirement), STATUS row updated
-- 03:50 BLOCKED the assessment-row cleanup: DELETE denied twice by a transient Stage 2 classifier error. Did not route around it. 11 ids ready to delete (3 session rows of which 2 are KEPT because VERIFICATION.md cites them, + 10 uncited stuck `generating` rows); needs the service-role key
-- 03:57 NEXT post `## Resolved 2026-09-26` to #76 + close, then commit the records
+- 07:00 READ PLAN.md + STATUS + state.md + the live code (worker, repository, questions, measure, eval_harness, migrations) before writing anything
+- 07:05 FOUND the ticket's top-up source is EMPTY: a service-role probe shows 39 attempts, 1 owner, ZERO after 2026-09-16T03:29; the 20 rubric-bearing attempts ARE `rubric_rows.json`. The plan's authoring fallback therefore fires
+- 07:10 ASKED the user (2 questions, both answered): (a) top-up = live-submit authored answers through the real path; (b) commit BOTH scripts to `scripts/`
+- 07:12 DONE B3+B2: `criterion_action` + `map_scores` in `app/jev/measure.py`, `RUBRIC_THRESHOLDS` in `app/jev/questions.py`; RED first (`ImportError`), then 11/11 GREEN
+- 07:20 DONE B5/B6/B7: worker `jev_flags_enabled` + `_queue_jev_flags`; repo `insert_jev_flags`; `JEV_SLICE4_FLAGS` in worker_main + `.env.example`. RED first (`TypeError: unexpected keyword argument 'jev_flags_enabled'`), then 18/18
+- 07:25 DONE B8: `rubric_evidence` + the two D-04 gates in `eval_harness.py`, `rubricReport` + thresholds in `eval_golds.json`. NOTE the pre-existing harness test needed the new threshold keys added to its literal dict
+- 07:30 DONE `scripts/jev_slice4_topup.py` + `scripts/jev_sweep_slice4.py` + `tests/test_jev_slice4_sweep.py`
+- 07:35 DONE A1: `--limit 2` dry run then the full run. 6 authored answers, ALL 6 fully met = 20 new met pairs, real server `llm_rubric` grades. Corpus `evidence/rubric_slice4_rows.json`
+- 07:45 DONE migration 033: dry-run listed only 033, push applied it. Live checks: `rowsecurity=true`, both policies `auth.uid() = owner`, service-role write/read/delete round-trip, and in SQL with `set local role authenticated` + JWT claims the owner sees 1 and another `sub` sees 0
+- 07:50 FOUND AND FIXED (my own migration comment was WRONG): I claimed "no authenticated grant". Re-probed `information_schema.role_table_grants` - `anon` and `authenticated` hold FULL table privileges, exactly as `assessments`/`question_attempts` do. RLS is the sole gate. Rewrote the comment to say so; the code was already correct
+- 07:55 DONE A2/A3: full sweep, train 56 pairs (23 met) / test 39 (2 met). Train favours 0.7/0.05 but TEST CONTRADICTS: at 0.7 test agreement 0.9487 and `agree_met` collapses 1.0 -> 0.5, while 0.6 gives 0.9744 / 1.0. Per the plan's risk rule the #74 prior HOLDS. Added an explicit `effective` + `caution` to the picker so the runner states the decision instead of only the train pick
+- 07:58 FIXED my own picker BUG: it read `n_met`, which `summarize_measurement` never returned, so the thin-class fallback silent-fired. Added `n_met`/`n_notmet` to the summarizer and rebuilt the picker (tie-break now prefers the prior cutoff)
+- 08:05 FOUND the 18-vs-7 failure-count question: `pytest-randomly` orderings, NOT the change. Baseline on a stashed tree + new tests moved aside = **7 failed / 810 passed**; branch = **7 failed / 838 passed** (+28 net). Recorded so it is not re-diagnosed
+- 08:10 DONE ruff: 12 E501 in my new files -> `ruff format` + 3 manual wraps -> "All checks passed!"
+- 08:15 DONE cleanup (user-approved): my 2 uncited dry-run duplicate attempts + the 10 stuck `generating` assessments. `d1e02206`/`ef203cf7` turned out to be REAL rows (last session's uncertainty resolved). Verified no cited evidence overlapped before deleting
+- 08:20 **FOUND A REAL DEFECT LIVE**: the flag-on run raised `ImportError` from `_queue_jev_flags`; the lazy `from app.jev.measure import map_scores` sat OUTSIDE the guard, so the exception escaped `_grade_written` and WEDGED THE ATTEMPT (status `queued`, no grade). The trigger was my own stash experiment reverting `measure.py` under the running worker, but the defect is genuine: the plan's contract is "the grade is never modified". Fixed by putting every import inside a guard and adding two regression tests
+- 08:35 restart + live check re-run in progress
+
+## Session log (earlier session, #76) - kept for continuity
+- 03:57 #76 closed; flags `JEV_SLICE1_ENABLED`/`JEV_SLICE2_ENFORCE` enabled locally; #78/#79 filed
