@@ -62,6 +62,9 @@
     "nearDupMax": 0.05,
     "difficultyMeanAbsBandError": 1.0,
     "masteryMinAuc": 0.6,
-    "codingDerivableMin": 0.5
-  }
+    "codingDerivableMin": 0.5,
+    "rubricAgreementMin": 0.9,
+    "rubricMalformedMax": 0.02
+  },
+  "rubricReport": ".work/active/jev-integration/plan/evidence/jev_calibration_report_v1.json"
 }

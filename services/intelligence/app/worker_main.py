@@ -151,8 +151,11 @@ def _build_grading_worker(repo, queue, adapter, sandbox=None):
     # Slice-4 rubric shadow (#73): reuses the slice-1 flag (no new flag); the
     # 15 s ceiling fits the 30 s grading visibility window (#74 retunes it).
     jev_shadow_enabled = os.getenv("JEV_SLICE1_ENABLED", "false").strip().lower() == "true"
+    # Slice-4 flag queue (#77): its own switch, independent of the shadow. The
+    # queue is advisory and fail-open, so it can run without the log-only shadow.
+    jev_flags_enabled = os.getenv("JEV_SLICE4_FLAGS", "false").strip().lower() == "true"
     jev = None
-    if jev_shadow_enabled:
+    if jev_shadow_enabled or jev_flags_enabled:
         from app.jev.client import JevClient
 
         jev = JevClient.from_env("JEV", default_timeout_ms=15000)
@@ -169,6 +172,7 @@ def _build_grading_worker(repo, queue, adapter, sandbox=None):
             max_in_flight=int(os.getenv("GRADING_MAX_IN_FLIGHT", "1")),
             model=os.getenv("GRADING_MODEL", "deepseek/deepseek-v4-flash-0731"),
             jev_shadow_enabled=jev_shadow_enabled,
+            jev_flags_enabled=jev_flags_enabled,
         ),
     )
 

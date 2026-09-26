@@ -20,6 +20,7 @@ JOBS_TABLE = "ingestion_jobs"
 ASSESSMENTS_TABLE = "assessments"
 QUESTIONS_TABLE = "questions"
 ATTEMPTS_TABLE = "question_attempts"
+JEV_FLAGS_TABLE = "jev_review_flags"
 
 
 class IngestionRepo(Protocol):
@@ -321,6 +322,10 @@ class SupabaseIngestionRepo:
 
     def insert_question(self, row: dict) -> None:
         self._post(f"{self._base}/rest/v1/{QUESTIONS_TABLE}", row)
+
+    def insert_jev_flags(self, rows: list[dict]) -> None:
+        """Best-effort slice-4 review rows (#77). Bare JSON array body (rule 36)."""
+        self._post(f"{self._base}/rest/v1/{JEV_FLAGS_TABLE}", rows)
 
     def complete_assessment(
         self, question_row: dict, job_id: str, status: str, warnings: list[dict]

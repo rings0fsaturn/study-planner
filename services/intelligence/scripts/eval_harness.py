@@ -381,6 +381,31 @@ def telemetry_summary(rows: list[dict]) -> dict:
     }
 
 
+def rubric_evidence(golds: dict) -> dict:
+    """Slice-4 rubric agreement from the committed #77 calibration report.
+
+    Offline and zero-spend by construction: the report is the durable artifact
+    the Phase A sweep wrote, so the harness re-reads it instead of calling Jev.
+    A missing report is an unmeasured gate (fail-closed), not a pass.
+    """
+    name = golds.get("rubricReport")
+    if not name:
+        return {"agreement": None, "malformed_rate": None, "source": None}
+    path = REPO_ROOT / name
+    if not path.is_file():
+        return {"agreement": None, "malformed_rate": None, "source": name}
+    report = json.loads(path.read_text(encoding="utf-8"))
+    picked = report.get("picked") or {}
+    test = (report.get("splits") or {}).get("test") or {}
+    return {
+        "agreement": test.get("agreement"),
+        "malformed_rate": test.get("malformed_rate"),
+        "cutoff": picked.get("cutoff"),
+        "margin": picked.get("margin"),
+        "source": name,
+    }
+
+
 def evaluate_gates(summary: dict, thresholds: dict) -> list[dict]:
     """Fail-closed, actionable: one entry per breached gate."""
     checks = [
@@ -417,6 +442,18 @@ def evaluate_gates(summary: dict, thresholds: dict) -> list[dict]:
             summary["coding"].get("derivable_rate"),
             thresholds["codingDerivableMin"],
             "min",
+        ),
+        (
+            "rubricAgreementMin",
+            (summary.get("rubric") or {}).get("agreement"),
+            thresholds["rubricAgreementMin"],
+            "min",
+        ),
+        (
+            "rubricMalformedMax",
+            (summary.get("rubric") or {}).get("malformed_rate"),
+            thresholds["rubricMalformedMax"],
+            "max",
         ),
     ]
     failures: list[dict] = []
@@ -783,6 +820,7 @@ def build_summary(golds: dict, live: dict) -> dict:
         "difficulty": calibration_metrics(calibration_rows),
         "mastery": mastery_candidates(list(sequences.values())),
         "coding": coding,
+        "rubric": rubric_evidence(golds),
         "telemetry": telemetry_summary(reader.telemetry(5000)),
     }
 
@@ -881,7 +919,15 @@ def write_report(summary: dict, failures: list[dict], activated: bool) -> None:
     ]
     for disagreement in summary["coding"]["gold"].get("disagreements") or []:
         lines.append(f"  - {disagreement}")
+    rubric = summary.get("rubric") or {}
     lines += [
+        "",
+        "## Rubric calibration (slice-4 flag queue)",
+        "",
+        f"- test agreement: {rubric.get('agreement')} · "
+        f"malformed rate: {rubric.get('malformed_rate')}",
+        f"- picked thresholds: cutoff {rubric.get('cutoff')} · margin {rubric.get('margin')}",
+        f"- source: {rubric.get('source')}",
         "",
         "## Telemetry (redacted)",
         "",

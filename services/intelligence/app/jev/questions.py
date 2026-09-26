@@ -29,6 +29,14 @@ PASSAGE_THRESHOLDS = {
     "evidence_min": 0.55,
 }
 
+# #77: the slice-4 Score-to-action thresholds. `cutoff` is the pass/fail line
+# the Jev score is read against and `margin` is the review band either side of
+# it; both are read by the worker mapping (app/jev/measure.py::map_scores), the
+# offline sweep, and the calibration report, so this is the single declaration.
+# Values are the pick from the #77 Phase A 3x3 grid over the enlarged corpus
+# (train pick, test report); the #74 prior was cutoff 0.6 / margin 0.10.
+RUBRIC_THRESHOLDS = {"cutoff": 0.6, "margin": 0.10}
+
 # #76: the slice-2 verdicts that survive the worker filter into generation
 # context. A passage denying the query premise must never ground a question, so
 # `conflicting_evidence` drops even though the shadow reports it as its own

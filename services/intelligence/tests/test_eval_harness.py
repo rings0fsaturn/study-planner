@@ -184,14 +184,61 @@ def test_evaluate_gates_fails_closed_on_breach_and_on_unmeasured():
         "difficultyMeanAbsBandError": 1.0,
         "masteryMinAuc": 0.6,
         "codingDerivableMin": 0.5,
+        "rubricAgreementMin": 0.9,
+        "rubricMalformedMax": 0.02,
     }
     failures = eh.evaluate_gates(summary, thresholds)
-    assert {f["metric"] for f in failures} == {"schemaValid", "nearDupMax"}
+    assert {f["metric"] for f in failures} == {
+        "schemaValid",
+        "nearDupMax",
+        "rubricAgreementMin",
+        "rubricMalformedMax",
+    }
 
     unmeasured = eh.evaluate_gates(
         {**summary, "retrieval": {"recall3": None, "mrr": None}}, thresholds
     )
     assert "retrievalRecall3" in {f["metric"] for f in unmeasured}
+
+
+def test_rubric_gates_breach_on_low_agreement_and_high_malformed():
+    """D-04 gates: fail-closed in both directions, one entry per breach."""
+    thresholds = {
+        "schemaValid": 0.9,
+        "citationValid": 0.85,
+        "goldSupport": 0.7,
+        "retrievalRecall3": 0.7,
+        "retrievalMrr": 0.67,
+        "nearDupMax": 0.05,
+        "difficultyMeanAbsBandError": 1.0,
+        "masteryMinAuc": 0.6,
+        "codingDerivableMin": 0.5,
+        "rubricAgreementMin": 0.9,
+        "rubricMalformedMax": 0.02,
+    }
+    base = {
+        "objective": {"schema_valid": 0.95, "citation_valid": 0.9, "gold_support": 0.8},
+        "retrieval": {"recall3": 0.8, "mrr": 0.8},
+        "diversity": {"near_dup_rate": 0.01},
+        "difficulty": {"mean_abs_band_error": 0.5},
+        "mastery": {"bkt-v1": {"auc": 0.7}},
+        "coding": {"derivable_rate": 0.9},
+    }
+    healthy = eh.evaluate_gates(
+        {**base, "rubric": {"agreement": 0.95, "malformed_rate": 0.0}}, thresholds
+    )
+    assert [f["metric"] for f in healthy] == []
+
+    breached = eh.evaluate_gates(
+        {**base, "rubric": {"agreement": 0.5, "malformed_rate": 0.3}}, thresholds
+    )
+    assert {f["metric"] for f in breached} == {"rubricAgreementMin", "rubricMalformedMax"}
+
+    missing = eh.evaluate_gates(
+        {**base, "rubric": {"agreement": None, "malformed_rate": None}}, thresholds
+    )
+    assert {f["metric"] for f in missing} == {"rubricAgreementMin", "rubricMalformedMax"}
+    assert all(f["observed"] is None for f in missing)
 
 
 def test_unresolved_snippets_flags_only_missing_gold():

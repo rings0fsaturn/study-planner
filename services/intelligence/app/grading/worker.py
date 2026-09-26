@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import datetime as dt
 import logging
+import uuid
 from dataclasses import dataclass
 from typing import Protocol
 
@@ -61,6 +62,10 @@ OBJECTIVE_FORMAT = "objective"
 WRITTEN_FORMAT = "written"
 CODING_FORMAT = "coding"
 DEFAULT_MODEL = "deepseek/deepseek-v4-flash-0731"
+# The review queue stores a truncated excerpt for context, never the full answer
+# (rule 42: the durable grade stays authoritative and nothing rubric-shaped
+# reaches the browser).
+ANSWER_EXCERPT_MAX = 500
 
 
 @dataclass(frozen=True)
@@ -75,6 +80,9 @@ class GradingWorkerConfig:
     # Slice-4 rubric shadow (#73): log-only Jev calibration after a written
     # grade composes. Off (the default) means zero decide() calls.
     jev_shadow_enabled: bool = False
+    # Slice-4 flag queue (#77): write one `jev_review_flags` row per flagged
+    # criterion for human review. Advisory only - the grade is never touched.
+    jev_flags_enabled: bool = False
 
 
 class GradingRepo(Protocol):
@@ -88,6 +96,8 @@ class GradingRepo(Protocol):
     def complete_attempt(
         self, attempt_id: str, job_id: str, status: str, grade: dict | None
     ) -> None: ...
+
+    def insert_jev_flags(self, rows: list[dict]) -> None: ...
 
 
 def _now_iso() -> str:
@@ -406,25 +416,44 @@ class GradingWorker:
             answer_text=answer_text,
             grade=grade,
             correlation_id=str(attempt.get("correlation_id") or ""),
+            attempt_id=attempt_id,
         )
         return grade
 
     def _jev_shadow_rubric(
-        self, *, question: dict, answer_text: str, grade: dict, correlation_id: str
+        self,
+        *,
+        question: dict,
+        answer_text: str,
+        grade: dict,
+        correlation_id: str,
+        attempt_id: str = "",
     ) -> None:
-        """Slice-4 rubric shadow (#73): log-only, never changes the grade.
+        """Slice-4 rubric path (#73 shadow, #77 flag queue): never changes the grade.
 
         One batched decide() over the authored criteria runs after the grade
-        composes; the per-criterion (jev score, grade met, agree) pairs are
-        logged with structured jev_* fields for #74. Every failure fails open:
-        log and return with the grade untouched. Off (the default) or a
-        missing client means zero decide() calls.
-        """
-        from app.jev.questions import criterion_score_questions
+        composes. The shadow (#73) logs the per-criterion (jev score, grade met,
+        agree) pairs; the flag queue (#77) additionally maps them to review
+        actions and best-effort queues one row per flagged criterion. Every
+        failure fails open: log and return with the grade untouched. With both
+        flags off (the default) or no client there are zero decide() calls.
 
-        if not self.config.jev_shadow_enabled or self._jev is None:
+        The answer text reaches neither a log line nor a table row - the queue
+        carries a truncated excerpt in its own column, and the log carries
+        counts and ids only (rule 42).
+        """
+        if not (self.config.jev_shadow_enabled or self.config.jev_flags_enabled):
             return
+        if self._jev is None:
+            return
+        # Both guards include their imports. A review queue is advisory, so an
+        # import fault, a provider fault or a mapping fault must all cost the
+        # learner nothing: the grade composes before this runs and must survive
+        # any of them - which is exactly what a live run on 2026-09-26 proved,
+        # when an import raised outside the guard and wedged the attempt.
         try:
+            from app.jev.questions import criterion_score_questions
+
             criteria = [label for label, _ in rubric_criteria(question.get("answer_block"))]
             result = self._jev.decide(
                 {"learner_answer": answer_text},
@@ -442,16 +471,97 @@ class GradingWorker:
                 extra={"trace_id": correlation_id},
             )
             return
+        if self.config.jev_shadow_enabled:
+            logger.info(
+                "jev rubric shadow agree=%d/%d tokens=%d",
+                sum(1 for pair in pairs if pair["agree"]),
+                len(pairs),
+                result.input_tokens,
+                extra={
+                    "trace_id": correlation_id,
+                    "jev_pairs": pairs,
+                    "jev_input_tokens": result.input_tokens,
+                },
+            )
+        if self.config.jev_flags_enabled:
+            # A separate guard, so a queue fault cannot suppress the shadow log
+            # above and vice versa. The call - and therefore the imports inside
+            # `_queue_jev_flags`, which must stay lazy because app.jev imports
+            # the SDK - is what this try covers.
+            try:
+                self._queue_jev_flags(
+                    question=question,
+                    answer_text=answer_text,
+                    grade=grade,
+                    pairs=pairs,
+                    correlation_id=correlation_id,
+                    attempt_id=attempt_id,
+                )
+            except Exception as exc:  # fail-open: the grade is already composed
+                logger.warning(
+                    "jev flag queue fail-open (%s)",
+                    exc,
+                    extra={"trace_id": correlation_id},
+                )
+
+    def _queue_jev_flags(
+        self,
+        *,
+        question: dict,
+        answer_text: str,
+        grade: dict,
+        pairs: list[dict],
+        correlation_id: str,
+        attempt_id: str,
+    ) -> None:
+        """One review row per flagged criterion.
+
+        Raises are the caller's to swallow: the call site runs inside the
+        fail-open guard, so this stays free of its own try/except rather than
+        logging the same fault twice.
+        """
+        from app.jev.measure import map_scores
+        from app.jev.questions import RUBRIC_THRESHOLDS
+
+        verdicts = map_scores(
+            pairs, cutoff=RUBRIC_THRESHOLDS["cutoff"], margin=RUBRIC_THRESHOLDS["margin"]
+        )
+        flagged = set(verdicts["flagged"])
+        if not flagged:
+            return
+        breakdown = grade.get("rubricBreakdown") or []
+        excerpt = answer_text.strip()[:ANSWER_EXCERPT_MAX]
+        rows = []
+        for verdict in verdicts["criteria"]:
+            index = verdict["index"]
+            if index not in flagged or index >= len(breakdown):
+                continue
+            rows.append(
+                {
+                    # The id is client-minted (the codebase convention: every
+                    # TEXT-id table here is filled by the service). Omitting it
+                    # answers 400/23502 on the NOT NULL primary key, which is
+                    # how this was found live.
+                    "id": str(uuid.uuid4()),
+                    "owner": str(question.get("user_id") or ""),
+                    "assessment_id": str(question.get("assessment_id") or ""),
+                    "question_id": str(question.get("id") or ""),
+                    "attempt_id": attempt_id,
+                    "criterion": str(breakdown[index].get("criterion") or ""),
+                    "jev_score": verdict["jev_score"],
+                    "server_met": bool(verdict["server_met"]),
+                    "answer_excerpt": excerpt,
+                    "correlation_id": correlation_id,
+                }
+            )
+        if not rows:
+            return
+        self._repo.insert_jev_flags(rows)
         logger.info(
-            "jev rubric shadow agree=%d/%d tokens=%d",
-            sum(1 for pair in pairs if pair["agree"]),
-            len(pairs),
-            result.input_tokens,
-            extra={
-                "trace_id": correlation_id,
-                "jev_pairs": pairs,
-                "jev_input_tokens": result.input_tokens,
-            },
+            "jev flag queue queued=%d/%d",
+            len(rows),
+            len(breakdown),
+            extra={"trace_id": correlation_id, "jev_flagged": len(rows)},
         )
 
     def _grade_coding(
