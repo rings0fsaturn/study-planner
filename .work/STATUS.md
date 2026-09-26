@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-09-25_
+_Last reconciled: 2026-09-26_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -12,7 +12,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33-#49 spine; frontier #49, #57, #68; #34/#35/#39/#40/#41/#42/#43/#44/#45/#46/#47/#48/#50/#62/#63 closed. | active/phase2-wayfinder/state.md |
 | [APP] | marginalia-visual-refresh | Session 3 (2026-09-20): all remaining unblocked P3s + the critique re-run's P1s fixed - nav `aria-current`, skip link, three-dots loading state (also fixes the unstyled `PlaylistLoadingPopup` dots), calendar-to-week link, no-email greeting, ended-banner 3px single-meaning edge; browser-verified 1280/375; critique re-run **32/40 (from 23/40)**. `e2e/session-log.spec.ts` repaired to actually assert + sign-out verified live. **User Home review gate still open** (blocks steps 6-8). | active/marginalia-visual-refresh/state.md |
 | [APP][RESEARCH] | coding-generation-context | **Code complete + live-verified 2026-09-21 (#67)**: P0-P5 done, AC1-AC6 pass (grokking now produces a self-check-passing coding question; codeless draw still refuses; harness gold 2/2, derivable rate 0.333). Code-proximity scorer + code-seeking spread + exclusion + `coding-v2` derivation rule + bounded resample (3 windows). Committed `b6e286b`; **wrap pending.** | active/coding-generation-context/state.md |
-| [APP][RESEARCH] | jev-integration | **#76 CLOSED 2026-09-26**: slice-2 worker passage filter enforces behind `JEV_SLICE2_ENFORCE` (keep-set `include` only, `injection_max` unchanged, injection-aware floor); both tested flags now ON locally in the gitignored `services/intelligence/.env`. Baseline AC substitution recorded (0.77/0.97 is the retired 788-chunk reranker number; harness measures 754). Frontier **#77**; follow-ups **#78** (retrieval slot - insertion point first) + **#79** (reranked-754 baseline). | active/jev-integration/state.md |
+| [APP][RESEARCH] | jev-integration | **#77 DONE 2026-09-26**: slice-4 rubric graduation - disagreement-flag queue (`jev_review_flags`, migration 033, `JEV_SLICE4_FLAGS` default false, owner RLS) + Score-to-action mapping; **the #74 cutoff/margin prior 0.6/0.10 holds** (train favours 0.7, test contradicts it `agree_met` 1.0->0.5); 2 live-found defects fixed (import outside the fail-open guard wedged grading; missing NOT NULL `id` 400'd every insert). Frontier now **#78** (retrieval insertion point) + **#79** (reranked-754). | active/jev-integration/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |
