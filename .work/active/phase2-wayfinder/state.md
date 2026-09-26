@@ -3,7 +3,7 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
-- Implementable: #36 material library (done + live-verified), #37 ingestion (done); #38 grounded assessment (done + live-verified, its own task). Provider prep #52–#56 closed; #57 contract neutralization landed.
+- Implementable: #36 material library (done + live-verified), #37 ingestion (done); #38 grounded assessment (done + live-verified, its own task). Provider prep #52–#56 closed; #57 contract neutralization closed 2026-09-26.
 - #62 scoped question generation and #63 roadmap material attachment closed 2026-09-20; #45 coding practice runs closed 2026-09-21 (wayfinder exit run: resolution comment, map #4 Decisions-so-far line, task archived).
 - #48 generation-quality evaluation harness closed 2026-09-21 (offline harness + gold registry + report; wayfinder exit run). Its own resolution answers the #45 coding-suitability handoff: `grokking-algorithms` is refused 3/3 with reasons naming the retrieved front matter, not the material.
 - #35 Roadmap Feedback prototype closed 2026-09-23 (wayfinder exit run: HITL chose Variant B, resolution comment, map #4 decision line + #21 cluster annotation, task archived). This unblocked #47 Roadmap Feedback implementation.
@@ -11,7 +11,8 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - #46 Socratic Guide and Gated Reveal closed 2026-09-23 (wayfinder exit run: `/v1/guide/stream` SSE + `/v1/guide/reveal` gate, coach popover on the practice run, resolution comment, ACs ticked, map #4 decision line, task archived). Live E2E green at 1280 + 375; closing it unblocks #49 Phase 2 Integrated Verification.
 - #50 LLM-generated learner feedback contract closed 2026-09-24 (HITL grilling: all six recommendations accepted; server OpenRouter endpoint with `meta/muse-spark-1.3-contributor`, whole-input ceiling, exact `FeedbackCopy`, titles+links grounding, LLM on `updated` only with static fallback, advisory-only; resolution comment, map #4 decision line, task archived). Implementation is follow-up build ticket #68.
 - #68 LLM feedback copy provider closed 2026-09-24 (endpoint + `feedback-v1` + client + provider swap + live E2E 3/3 at 1280/375; wayfinder exit run: resolution comment, map #4 decision line, task archived). Closing it unblocks #49 Phase 2 Integrated Verification.
-- Open frontier (2026-09-24 query): #49 Phase 2 Integrated Verification · #57.
+- #57 provider contract neutralization closed 2026-09-26 (verify-and-close: acceptance 10/10, contract suite 32 passed, dash guard + README wording fixed; resolution comment, map #4 decision line, task archived). Unblocks #38's adapter and downstream slices.
+- Open frontier (2026-09-26 query): #49 Phase 2 Integrated Verification.
 - Next: #49 Phase 2 Integrated Verification.
 
 ## Done so far
