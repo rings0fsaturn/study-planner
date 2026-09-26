@@ -1,6 +1,6 @@
 ---
 title: Phase 2 object, provider, and pipeline contracts
-purpose: Keep Assessments, Practice, Gemini integration, grading, knowledge tracing, and roadmap feedback aligned across service boundaries
+purpose: Keep Assessments, Practice, OpenRouter generation, grading, knowledge tracing, and roadmap feedback aligned across service boundaries
 audience: implementers, reviewers, API consumers
 status: approved
 last_updated: 2026-08-09

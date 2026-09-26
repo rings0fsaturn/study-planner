@@ -392,7 +392,7 @@ def test_attempt_fixtures_validate_against_openapi() -> None:
     assert len(graded["grade"]["perSkill"]) >= 1
     assert_no_secret_fields(graded)
 
-    # D-01: answer is optional — pre-echo rows without the key still validate.
+    # D-01: answer is optional - pre-echo rows without the key still validate.
     legacy = dict(queued)
     del legacy["answer"]
     _validate_against_openapi(document, "AttemptRecord", legacy)
@@ -708,3 +708,16 @@ def test_mastery_recommendations_route_is_typed() -> None:
     assert "currentBand" in schema["required"]
     assert "recommendedBand" in schema["required"]
     assert "modelVersion" in schema["required"]
+
+
+def test_contract_pack_has_no_em_or_en_dashes() -> None:
+    suffixes = {".json", ".yaml", ".yml", ".md", ".py"}
+    offenders = []
+    for path in sorted(ROOT.rglob("*")):
+        if path.suffix not in suffixes or "__pycache__" in path.parts:
+            continue
+        text = path.read_text(encoding="utf-8")
+        for index, line in enumerate(text.splitlines(), start=1):
+            if "\u2013" in line or "\u2014" in line:
+                offenders.append(f"{path.relative_to(ROOT)}:{index}")
+    assert not offenders, f"em/en dashes found in contract pack: {offenders}"
