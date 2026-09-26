@@ -83,10 +83,6 @@ def _nouls(
     }
 
 
-def _index_answers(relevant: float, evidence: float) -> dict:
-    return _nouls(relevant, evidence)
-
-
 def _batched(all_relevant: float, all_evidence: float) -> dict:
     return _mixed(_nouls(all_relevant, all_evidence), _nouls(all_relevant, all_evidence))
 
@@ -338,6 +334,25 @@ def test_enforce_without_client_is_inert() -> None:
     assert worker.run_once() == 1
     assert len(repo.completed) == 1
     assert _citation_enum(adapter) == ["c1", "c2"]
+
+
+def test_enforce_never_generates_from_an_empty_context() -> None:
+    """The enforce path cannot starve the prompt, so no worker-side guard is needed.
+
+    The floor always carries an id when ``chunks`` is non-empty, so a starved
+    window yields exactly the floor chunk. Pinned per window size, including
+    the all-injection window where the floor must fall back to the whole
+    window - an empty context cannot ground a question.
+    """
+    for size in (1, 2):
+        chunks = two_chunks()[:size]
+        answers: dict = {}
+        for i in range(size):
+            for key, value in _nouls(0.90, 0.30, injection=0.95).items():
+                answers[f"p{i}_{key}"] = value
+        summary = _summarize_passage(chunks, answers)
+        assert summary["would_keep"] == []
+        assert summary["floor"] in {chunk.chunk_id for chunk in chunks}
 
 
 def test_enforce_logs_the_applied_set(caplog) -> None:
