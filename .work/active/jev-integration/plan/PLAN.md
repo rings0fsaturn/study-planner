@@ -1,6 +1,6 @@
 # Jev slice-2 graduation (Phase B): worker passage filter in enforce
 
-_Written: 2026-09-26 · Status: In progress · Issue: [#76](https://github.com/rings0fsaturn/study-planner/issues/76) · Map: [#69](https://github.com/rings0fsaturn/study-planner/issues/69) · Parent task: `.work/active/jev-integration/state.md` · Verification: `plan/VERIFICATION.md`_
+_Written: 2026-09-26 · Status: Complete - 575190b · Issue: [#76](https://github.com/rings0fsaturn/study-planner/issues/76) · Map: [#69](https://github.com/rings0fsaturn/study-planner/issues/69) · Parent task: `.work/active/jev-integration/state.md` · Verification: `plan/VERIFICATION.md`_
 
 ## How to use this plan (read this first, agent)
 
@@ -48,7 +48,7 @@ Measured rates at enforce-relevant settings: sweep precision 0.824 / recall 0.93
 
 ### B1 - conflict-routing gate: premise-denying-heavy split + decision
 
-_Status: In progress_
+_Status: Complete - 99f409b_
 
 1. Author `plan/evidence/slice2_conflict_rows.json`: 12 authored premise-denying pairs (6 sweep / 6 final) grounded in the real corpus already used by Phase A, each declaring the source chunk whose claim it denies. Hand-labeled `conflicting_evidence` before any call.
 2. Commit `scripts/jev_sweep_slice2.py`: budget-guarded runner in the `jev_sweep_slice1.py` shape, reusing `measure_slice2.summarize_passage` and `PASSAGE_GRID`, emitting per-split summaries and the grid so the artifact is self-contained. One batched `decide()` per row via `batch_passage_questions(1)` - the same builder the worker enforce path uses.
@@ -57,7 +57,7 @@ _Status: In progress_
 
 ### B2 - worker-filter enforce (TDD)
 
-_Status: Not started_
+_Status: Complete - 76b139e (RED), 575190b (GREEN), a31f25e (review follow-up)_
 
 1. **RED** `tests/test_generation_jev_slice2.py`: dropped chunks absent from the built messages, the floor keeps exactly the top-by-relevance chunk, the floor never resurrects an injection-flagged chunk, fail-open on `JevError`, `conflicting_evidence` not kept, locked declaration, flag-on-without-client inert.
 2. **GREEN** `app/jev/questions.py`: declare `PASSAGE_ENFORCE_VERDICTS = frozenset({"include"})` beside `PASSAGE_THRESHOLDS`.
@@ -66,7 +66,7 @@ _Status: Not started_
 
 ### B3 - verification, review, close-out
 
-_Status: Not started_
+_Status: Complete - fd2e7ca_
 
 1. `/ecc:verification-loop`: targeted pytest, full backend against the 18-failure pre-existing baseline, ruff check + format.
 2. `/ecc:code-review`.
@@ -112,7 +112,9 @@ uv run ruff check . && uv run ruff format --check .
 
 ## Acceptance
 
-- [ ] Conflict split recorded, decision posted to #76 with D-01 as the answer.
-- [ ] Enforce tests pass; the full backend suite shows no new failures; ruff clean.
-- [ ] Live flag-on generation verified with a request-id log join; flag-off behavior unchanged.
-- [ ] Evidence, `VERIFICATION.md`, `state.md`, and the STATUS row updated in the same session.
+- [x] Conflict split recorded, decision posted to #76 with D-01 as the answer (comment 5842297344).
+- [x] Enforce tests pass; the full backend suite shows no new failures; ruff clean (84 targeted; 18 pre-existing / 799 passed, failure set byte-identical to baseline).
+- [x] Live flag-on generation verified with a request-id log join; flag-off behavior unchanged (steered `kept=5/5 applied=5 ready`; empty-steer floor to `applied=1 ready`; joined by `correlationId`).
+- [x] Evidence, `VERIFICATION.md`, `state.md`, and the STATUS row updated in the same session (fd2e7ca).
+
+**Baseline AC substitution (recorded, not silently ticked).** #76's body asked for an `r@1 0.77 / r@3 0.97` spot-check via the eval harness. That is unsatisfiable: those are the retired 788-chunk + Qwen3-reranker numbers from 2026-08-15, and the harness measures the 754-chunk corpus with no rerank path. The substitution is the harness's durable baseline `r@1 0.60 / r@3 0.7333 / MRR 0.7033` against gates `recall3 0.7 / mrr 0.67`, which holds. Re-measuring a reranked baseline on 754 is tracked as a follow-up ticket.
