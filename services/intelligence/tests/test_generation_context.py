@@ -183,7 +183,7 @@ def test_build_context_spreads_when_there_is_no_steer(monkeypatch: pytest.Monkey
     assert listing_call["method"] == "get"
     assert listing_call["url"] == (
         "https://supabase.example/rest/v1/content_chunks"
-        "?material_id=eq.m1&select=id,ordinal&order=ordinal.asc&limit=10000"
+        "?material_id=eq.m1&select=id,ordinal&order=ordinal.asc&limit=1000&offset=0"
     )
     assert detail_call["url"].startswith(
         "https://supabase.example/rest/v1/content_chunks?id=in.(c0,c2,c4,c6,c8)"
@@ -209,7 +209,7 @@ def test_build_context_spread_is_bounded_by_the_scope_pages(
         rest,  # type: ignore[arg-type]
     )
     assert [chunk.chunk_id for chunk in chunks] == ["c1"]
-    assert rest.calls[0]["url"].endswith("&page_start=lte.140&page_end=gte.100")
+    assert "&page_start=lte.140&page_end=gte.100" in rest.calls[0]["url"]
 
 
 def test_build_context_spread_with_no_chunks_returns_nothing(
@@ -338,7 +338,7 @@ def test_code_seeking_spread_is_bounded_by_the_scope_pages() -> None:
         code_seeking=True,
     )
     assert [chunk.chunk_id for chunk in chunks] == ["c1"]
-    assert rest.calls[0]["url"].endswith("&page_start=lte.140&page_end=gte.100")
+    assert "&page_start=lte.140&page_end=gte.100" in rest.calls[0]["url"]
 
 
 def test_default_spread_is_unchanged_by_the_code_seeking_seam() -> None:
@@ -361,3 +361,58 @@ def test_default_spread_is_unchanged_by_the_code_seeking_seam() -> None:
     )
     assert [chunk.chunk_id for chunk in chunks] == ["c0", "c2", "c4", "c6", "c8"]
     assert "select=id,ordinal&" in rest.calls[0]["url"]
+
+
+def test_listing_pages_until_a_short_page(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PostgREST caps collections at 1000 rows; the even spread must page."""
+    monkeypatch.setattr(context_module, "LISTING_PAGE_SIZE", 2)
+    pages = [
+        httpx.Response(200, json=[{"id": "c0", "ordinal": 0}, {"id": "c1", "ordinal": 1}]),
+        httpx.Response(200, json=[{"id": "c2", "ordinal": 2}, {"id": "c3", "ordinal": 3}]),
+        httpx.Response(200, json=[{"id": "c4", "ordinal": 4}, {"id": "c5", "ordinal": 5}]),
+        httpx.Response(200, json=[]),  # exact multiple: the loop ends on the short page
+    ]
+    detail = httpx.Response(
+        200, json=[{"id": f"c{i}", "ordinal": i, "text": "body"} for i in range(5)]
+    )
+    rest = FakeRest([*pages, detail])
+    chunks = build_context("m1", (), None, "https://supabase.example", "svc-key", rest)  # type: ignore[arg-type]
+
+    assert [chunk.chunk_id for chunk in chunks] == ["c0", "c1", "c2", "c3", "c4"]
+    assert [call["url"].split("&")[-2:] for call in rest.calls[:4]] == [
+        ["limit=2", "offset=0"],
+        ["limit=2", "offset=2"],
+        ["limit=2", "offset=4"],
+        ["limit=2", "offset=6"],
+    ]
+
+
+def test_code_seeking_scores_across_paged_rows(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A code chunk past the cap still wins its band (the DDIA 1094-chunk case)."""
+    monkeypatch.setattr(context_module, "LISTING_PAGE_SIZE", 4)
+    rows = [
+        _prose("c0", 0),
+        _prose("c1", 1),
+        _prose("c2", 2),
+        _code("c3", 3),
+        _code("c4", 4),
+        _prose("c5", 5),
+        _prose("c6", 6),
+        _prose("c7", 7),
+        _prose("c8", 8),
+        _prose("c9", 9),
+    ]
+    rest = FakeRest(
+        [httpx.Response(200, json=rows[offset : offset + 4]) for offset in range(0, len(rows), 4)]
+    )
+    chunks = build_context(
+        "m1",
+        (),
+        None,
+        "https://supabase.example",
+        "svc-key",
+        rest,
+        code_seeking=True,  # type: ignore[arg-type]
+    )
+    assert [chunk.chunk_id for chunk in chunks] == ["c0", "c3", "c4", "c6", "c8"]
+    assert len(rest.calls) == 3  # 4 + 4 + 2; the third page is short

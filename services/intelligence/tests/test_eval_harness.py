@@ -1,6 +1,7 @@
 """Unit tests for the pure metric helpers of the #48 evaluation harness."""
 
 import importlib.util
+import json
 import pathlib
 
 HARNESS = pathlib.Path(__file__).resolve().parents[1] / "scripts/eval_harness.py"
@@ -248,3 +249,26 @@ def test_unresolved_snippets_flags_only_missing_gold():
     unresolved_labels = {p.rsplit(": ", 1)[1] for p in problems}
     assert "non-financial performance indicators" not in unresolved_labels
     assert "information quality criteria" in unresolved_labels
+
+
+def test_verify_golds_requires_a_negative_coding_case(tmp_path, monkeypatch):
+    """A coding gold registry with no codeless material is not healthy."""
+    monkeypatch.setattr(eh, "gold_path", lambda name: tmp_path / name)
+    (tmp_path / "probe_questions.json").write_text(
+        json.dumps([{"label": "o", "answerSnippet": "snippet"}]), encoding="utf-8"
+    )
+    (tmp_path / "eval_golds_written.json").write_text(
+        json.dumps([{"label": "w", "answerSnippet": "snippet"}]), encoding="utf-8"
+    )
+    (tmp_path / "eval_golds_coding.json").write_text(
+        json.dumps([{"label": "code-only", "materialId": "m1", "expectedDerivable": True}]),
+        encoding="utf-8",
+    )
+    golds = {
+        "folds": [],
+        "objectiveGold": "probe_questions.json",
+        "writtenGold": "eval_golds_written.json",
+        "codingGold": "eval_golds_coding.json",
+    }
+    problems = eh.verify_golds(golds)
+    assert any("no negative case" in problem for problem in problems)

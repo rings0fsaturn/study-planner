@@ -36,6 +36,12 @@ from app.query_embedder import embed_queries
 
 CONTEXT_TOP_K = 5
 CHUNKS_TABLE = "content_chunks"
+# The hosted PostgREST caps every collection at 1000 rows (measured 2026-09-28:
+# `content-range: 0-999/4175`). A single listing request silently loses a
+# material's tail past 1000 chunks, so the no-steer listing pages at the cap.
+# ponytail: a page equals the measured cap; if the cap ever drops, read
+# `Content-Range` instead of trusting a short page.
+LISTING_PAGE_SIZE = 1000
 
 
 def build_context(
@@ -126,7 +132,8 @@ def _spread_context(
 ) -> list[RetrievedChunk]:
     """No steer: CONTEXT_TOP_K chunks spread over the material or scope.
 
-    The default is an even spread. It sends two light requests instead of
+    The listing is paged at the hosted collection cap, then spread in memory.
+    The default is an even spread. It sends light listing requests instead of
     shipping every chunk's text: the id/ordinal list decides the spread, then
     only the chosen rows are fetched with text. `code_seeking` (coding arm
     only) fetches the candidate text and leans on `code_proximity`.
@@ -134,24 +141,14 @@ def _spread_context(
     select = "id,ordinal,text,page_start,page_end" if code_seeking else "id,ordinal"
     query = (
         f"{supabase_url.rstrip('/')}/rest/v1/{CHUNKS_TABLE}"
-        f"?material_id=eq.{material_id}&select={select}&order=ordinal.asc&limit=10000"
+        f"?material_id=eq.{material_id}&select={select}&order=ordinal.asc"
     )
     if scope is not None:
         query += f"&page_start=lte.{scope.page_end}&page_end=gte.{scope.page_start}"
-    if code_seeking:
-        return _code_seeking_context(
-            query,
-            material_id,
-            exclude_chunk_ids,
-            supabase_url,
-            service_key,
-            client,
-        )
-    rows = _json_rows(
-        _request(client, "get", query, service_key=service_key),
-        "chunk listing",
-    )
+    rows = _fetch_listing(client, query, service_key=service_key)
     rows = [row for row in rows if str(row.get("id") or "") not in exclude_chunk_ids]
+    if code_seeking:
+        return [_retrieved_chunk(row, material_id) for row in _top_code_picks(rows)]
     picks = _evenly_spaced(rows, CONTEXT_TOP_K)
     if not picks:
         return []
@@ -171,26 +168,29 @@ def _spread_context(
     return [_retrieved_chunk(row, material_id) for row in detail]
 
 
-def _code_seeking_context(
-    listing_query: str,
-    material_id: str,
-    exclude_chunk_ids: frozenset[str],
-    supabase_url: str,
-    service_key: str,
-    client: httpx.Client,
-) -> list[RetrievedChunk]:
-    """Code-dense spread: one request with text, score in memory (D-03).
+def _fetch_listing(client: httpx.Client, query: str, *, service_key: str) -> list[dict]:
+    """Every row for a listing query, paged at the hosted collection cap.
 
-    The caller's listing query already carries the text in its `select`, so the
-    scorer runs on candidate rows without a stored code column or a second
-    fetch.
+    One request when the material fits the cap; extra requests only past
+    `LISTING_PAGE_SIZE` rows, so a large material's tail is still scored
+    instead of silently dropped by PostgREST's 1000-row ceiling.
     """
-    rows = _json_rows(
-        _request(client, "get", listing_query, service_key=service_key),
-        "chunk listing",
-    )
-    rows = [row for row in rows if str(row.get("id") or "") not in exclude_chunk_ids]
-    return [_retrieved_chunk(row, material_id) for row in _top_code_picks(rows)]
+    rows: list[dict] = []
+    offset = 0
+    while True:
+        page = _json_rows(
+            _request(
+                client,
+                "get",
+                f"{query}&limit={LISTING_PAGE_SIZE}&offset={offset}",
+                service_key=service_key,
+            ),
+            "chunk listing",
+        )
+        rows.extend(page)
+        if len(page) < LISTING_PAGE_SIZE:
+            return rows
+        offset += len(page)
 
 
 def _top_code_picks(rows: list[dict]) -> list[dict]:

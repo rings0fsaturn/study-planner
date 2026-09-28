@@ -525,6 +525,14 @@ def verify_golds(golds: dict) -> list[str]:
                 problems.append(f"{label} gold item without answerSnippet: {item.get('label')}")
             if label == "coding" and "expectedDerivable" not in item:
                 problems.append(f"coding gold item without expectedDerivable: {item.get('label')}")
+        if (
+            label == "coding"
+            and items
+            and not any(item.get("expectedDerivable") is False for item in items)
+        ):
+            problems.append(
+                f"coding gold has no negative case (expectedDerivable=false): {path.name}"
+            )
     return problems
 
 
