@@ -9,7 +9,7 @@
       "dimensions": 768
     },
     "attemptGateK": 5,
-    "generatedAt": "2026-09-21T15:03:14Z",
+    "generatedAt": "2026-09-28T02:17:57Z",
     "evidenceDir": "research/doc/deepseek-generation-probe",
     "liveSource": "cache"
   },
@@ -237,54 +237,65 @@
   },
   "mastery": {
     "sequences": 35,
-    "observations": 94,
+    "observations": 109,
     "bkt-v1": {
-      "ece": 0.1604,
-      "auc": 0.8884
+      "ece": 0.1463,
+      "auc": 0.7203
     },
     "running-proportion": {
-      "ece": 0.1968,
-      "auc": 0.8886
+      "ece": 0.2913,
+      "auc": 0.7053
     }
   },
   "coding": {
-    "coding_attempts": 8,
-    "judged_attempts": 6,
-    "code_not_derivable": 4,
-    "failed_other": 2,
-    "derivable_rate": 0.3333,
+    "coding_attempts": 22,
+    "judged_attempts": 11,
+    "code_not_derivable": 6,
+    "failed_other": 11,
+    "derivable_rate": 0.4545,
     "by_material": {
-      "ac8e4730-00eb-447d-bffd-81e81dd43bb4": {
-        "attempts": 1,
-        "refused": 1
+      "b5f51eab-c11d-4505-80db-88bb3627801d": {
+        "attempts": 7,
+        "refused": 4
       },
-      "80c8b138-b544-4095-8dc0-1c390ac70da2": {
+      "be7e88a0-909e-4db2-8a15-a14510165027": {
         "attempts": 1,
         "refused": 0
       },
-      "b5f51eab-c11d-4505-80db-88bb3627801d": {
-        "attempts": 4,
-        "refused": 3
+      "80c8b138-b544-4095-8dc0-1c390ac70da2": {
+        "attempts": 2,
+        "refused": 1
+      },
+      "ac8e4730-00eb-447d-bffd-81e81dd43bb4": {
+        "attempts": 1,
+        "refused": 1
       }
     },
     "gold": {
-      "checked": 2,
-      "agreed": 2,
+      "checked": 3,
+      "agreed": 3,
       "agreement_rate": 1.0,
       "disagreements": []
     }
   },
+  "rubric": {
+    "agreement": 0.9743589743589743,
+    "malformed_rate": 0.0,
+    "cutoff": 0.6,
+    "margin": 0.1,
+    "source": ".work/active/jev-integration/plan/evidence/jev_calibration_report_v1.json"
+  },
   "telemetry": {
-    "records": 190,
+    "records": 218,
     "outcomes": {
       "provider_error": 2,
-      "malformed_output": 22,
-      "ok": 145,
-      "partial": 21
+      "malformed_output": 28,
+      "ok": 165,
+      "partial": 23
     },
-    "questions_requested": 190,
-    "questions_accepted": 145,
-    "acceptance_rate": 0.7632,
-    "repair_rate": 0.0474
+    "questions_requested": 218,
+    "questions_accepted": 165,
+    "acceptance_rate": 0.7569,
+    "repair_rate": 0.0734
   }
 }

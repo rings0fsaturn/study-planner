@@ -1,5 +1,5 @@
 # State – phase2-wayfinder
-_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-09-23_
+_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-09-28_
 
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
@@ -12,8 +12,9 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - #50 LLM-generated learner feedback contract closed 2026-09-24 (HITL grilling: all six recommendations accepted; server OpenRouter endpoint with `meta/muse-spark-1.3-contributor`, whole-input ceiling, exact `FeedbackCopy`, titles+links grounding, LLM on `updated` only with static fallback, advisory-only; resolution comment, map #4 decision line, task archived). Implementation is follow-up build ticket #68.
 - #68 LLM feedback copy provider closed 2026-09-24 (endpoint + `feedback-v1` + client + provider swap + live E2E 3/3 at 1280/375; wayfinder exit run: resolution comment, map #4 decision line, task archived). Closing it unblocks #49 Phase 2 Integrated Verification.
 - #57 provider contract neutralization closed 2026-09-26 (verify-and-close: acceptance 10/10, contract suite 32 passed, dash guard + README wording fixed; resolution comment, map #4 decision line, task archived). Unblocks #38's adapter and downstream slices.
-- Open frontier (2026-09-26 query): #49 Phase 2 Integrated Verification.
-- Next: #49 Phase 2 Integrated Verification.
+- #67 coding-generation-context closed 2026-09-28 (wayfinder exit run: residual hardening - mandatory negative coding gold + paged no-steer listing past the hosted 1000-row cap; fresh live AC1/AC2/AC4 re-verification + redaction CLEAN; resolution comment, ACs ticked, map #4 decision line, task archived). #49 is now the sole open frontier ticket.
+- Open frontier (2026-09-28 query): #49 Phase 2 Integrated Verification alone.
+- Next: #49.
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).

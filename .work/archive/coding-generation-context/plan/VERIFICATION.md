@@ -60,3 +60,40 @@ uv run --package intelligence ruff format --check <changed files>      # clean
 ```
 
 Pre-existing unrelated failures (unchanged from the #48 baseline): `test_retrieval_probe.py` (2, stale import) and `test_v1_integration.py` (5, TZ/time-of-day golden flake).
+
+## Continuation verification (2026-09-28)
+
+_Residual hardening (`.work/plans/2026-09-28-coding-generation-context-residuals.md` Phases 1-4) on the current tree. Live stack: `./full-app` full profile plus sidecar (`:8200`) and Piston (`:2000`), both stopped after the run. All live evidence below is redacted: no raw material text, reference solution, or hidden test content is recorded. Do NOT delete the codeless material `ac8e4730-...`: the Phase 1 negative gold depends on its row._
+
+### Residual table
+
+| Residual | Fix | Evidence |
+|---|---|---|
+| Coding gold registry had no negative case (all three `expectedDerivable: true`) | `verify_golds` fails closed with `coding gold has no negative case` when no item has `expectedDerivable is False`; registry pins the live codeless fixture `ac8e4730-...` as the fourth item | `test_verify_golds_requires_a_negative_coding_case` RED->GREEN; `--verify-golds` reports `gold registry healthy`; `--summarize` gives `coding.gold checked=3, agreed=3, agreement_rate=1.0, disagreements=[]`, ac8e4730 `by_material attempts=1/refused=1` |
+| No-steer listing trusted one PostgREST response (hosted cap 1000 rows; DDIA has 1094 chunks) | Shared `_fetch_listing` helper pages `limit=1000&offset=N` until a short page; both the even spread and the code-seeking scorer use it; `_code_seeking_context` deleted | `test_listing_pages_until_a_short_page` + `test_code_seeking_scores_across_paged_rows` RED->GREEN; live dry run `_fetch_listing` on DDIA `ef3abfa1-...` prints `rows fetched: 1094 expected: 1094` |
+
+### Fresh AC evidence (current tree, 2026-09-28)
+
+| AC | Assessment | Request-id | Result |
+|---|---|---|---|
+| AC1 coding on grokking `b5f51eab-...` | `044ff31e-3177-4049-a258-27717597fa56` | `442fc538-69a5-4a76-b162-1fb8df485b89` | `ready`, `warnings=[]`, 1 question `format=coding`; telemetry `prompt_template_version=coding-v2`, `outcome=ok`, `questions_accepted=1` |
+| AC2 coding on codeless `ac8e4730-...` | `38d86725-d8f7-4e28-a125-306ce9a6eb60` | `107ebab0-02d9-4f6e-a4d5-77833a52abd7` | `failed`, warning `code_not_derivable`, 0 questions |
+| AC4 objective on grokking | `6ba5452a-0067-44e1-bf5b-22c2bdfefd36` | `88e309a1-a1dc-477f-9af7-5e84e80b13cb` | `ready`, 1 question `format=objective` |
+| AC4 written on grokking | `2d426e3c-784f-406d-89d0-bb20fea08aa5` | `85b33444-4640-4051-bdf4-b50a81a56f13` | `ready`, 1 question `format=written` |
+| AC3 no schema change | n/a | n/a | No migration, no Dexie version, no new column; diff is 2 source + 2 test + 1 JSON files |
+| AC6 redaction | `044ff31e-...` GET | n/a | CLEAN: `grep -E "referenceSolution|hiddenTests|acceptedValue"` exits 1; visible `questions` columns carry no `answer_block`; harness summary holds metrics only |
+
+Each generation joined with `./full-app logs intelligence --grep <request-id>` (rule 17); the generate paths log the request-id with 202.
+
+### Static gates and reviews
+
+- Focused: `test_generation_context.py` + `test_eval_harness.py` -> 32 passed.
+- Full intelligence suite -> 843 passed, 18 pre-existing unrelated failures (16 `test_v1_integration.py`/`test_calibration` golden fixtures + 2 `test_retrieval_probe.py`); none in the changed areas.
+- `ruff check services/intelligence/` clean; `ruff format --check` on the four changed py files clean.
+- Harness gate note (not a failure of this change): `codingDerivableMin 0.4545 < 0.5` and `difficultyMeanAbsBandError` unmeasured - shared-account live-data drift, out of scope.
+- `open-code-review-delegate` over the Phase 1-2 diff: APPROVE, no Critical/High, 3 Low waived (long test line matches existing style; `in` scope assertions required by trailing limit/offset; unbounded page loop covered by the `ponytail:` cap-drift note).
+- `verification-loop` over the phase evidence: READY, zero deviations; no `thermo-nuclear-code-quality-review` per D-06.
+
+### Live-found note (pre-existing endpoint behavior, not this change)
+
+The first AC2 call without a `clientId` body field answered `conflict` (`assessment with this client id already exists`): the endpoint stores `clientId or ""` under a unique constraint, so a second clientId-less call from the same user collides with the first. Retried with a fresh per-call `clientId` (what the app client sends) and the run proceeded. No code change; the plan's curl shape now carries `clientId`.
