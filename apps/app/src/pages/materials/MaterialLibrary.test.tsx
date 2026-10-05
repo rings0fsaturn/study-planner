@@ -277,4 +277,14 @@ describe('MaterialLibrary', () => {
 
     expect(await screen.findByText(/1 material selected/i)).toBeInTheDocument()
   })
+
+  it('renders the library sub-nav with links to the hubs', async () => {
+    const client = new FakeMaterialClient([material({ id: 'mat-1', title: 'OSTEP' })])
+    renderLibrary(client)
+    await screen.findByText('OSTEP')
+    expect(screen.getByRole('navigation', { name: /Library sections/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /Library/i }).getAttribute('href')).toBe('/materials')
+    expect(screen.getByRole('link', { name: /Assessments/i }).getAttribute('href')).toBe('/assessments')
+    expect(screen.getByRole('link', { name: /Practice/i }).getAttribute('href')).toBe('/practice')
+  })
 })

@@ -151,8 +151,9 @@ function attributeMaterial(
 /**
  * A problem counts as done once its latest attempt carries a grade. Queued
  * and in-flight attempts are not done — a retry moves the problem back.
+ * Exported so the library hub reuses the single graded predicate.
  */
-function isGraded(problem: PracticeRunProblem): boolean {
+export function isGraded(problem: PracticeRunProblem): boolean {
   const display = problem.group?.display
   return display === 'correct' || display === 'partial' || display === 'incorrect'
 }

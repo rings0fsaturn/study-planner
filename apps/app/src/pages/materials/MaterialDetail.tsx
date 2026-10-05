@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { useMaterialUsage } from '../../materials/useMaterialUsage'
+import { MaterialLibrarySection } from '../../library/MaterialLibrarySection'
 import { MaterialPicker } from '../../materials/MaterialPicker'
 import { IngestionProgress, MaterialStatusBadge } from '../../materials/StatusBadge'
+import { formatShortDate } from '../../lib/formatShortDate'
 import '../../materials/materials.css'
 import {
   SOURCE_FIELDS,
@@ -21,11 +23,6 @@ function formatMinutes(mins: number | null): string {
   const hours = Math.floor(mins / 60)
   const rest = mins % 60
   return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 const REPLACE_SOURCES: MaterialSourceKind[] = ['url', 'manual', 'youtube']
@@ -299,7 +296,7 @@ export function MaterialDetail() {
             <div className="mono-caps">{SOURCE_LABELS[material.kind]}</div>
             <h2>{material.title}</h2>
             <div className="material-detail-meta">
-              {formatMinutes(material.estimatedMinutes)} · added {formatDate(material.createdAt)}
+              {formatMinutes(material.estimatedMinutes)} · added {formatShortDate(material.createdAt)}
               {material.archived && ' · archived'}
               {contentless && ' · contentless (planning only)'}
             </div>
@@ -403,9 +400,7 @@ export function MaterialDetail() {
                 Used by
               </h3>
               {usage.length === 0 ? (
-                <p className="t-body-sm">
-                  Not attached to any roadmap yet. Assessments will appear here once created.
-                </p>
+                <p className="t-body-sm">Not attached to any roadmap yet.</p>
               ) : (
                 <ul className="material-ref-list">
                   {usage.map((ref) => (
@@ -414,6 +409,8 @@ export function MaterialDetail() {
                 </ul>
               )}
             </div>
+
+            <MaterialLibrarySection materialId={material.id} />
 
             <div className="material-detail-actions material-detail-actions-lower">
               <button type="button" className="btn btn-secondary" onClick={() => setReplaceMode(true)}>

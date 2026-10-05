@@ -22,6 +22,7 @@
 
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { formatShortDate as formatDate } from '../../lib/formatShortDate';
 import './material-library.css';
 
 type IngestStatus = 'pending' | 'extracting' | 'chunking' | 'embedding' | 'ready' | 'failed';
@@ -172,11 +173,6 @@ function statusTagClass(status: IngestStatus): string {
     default:
       return 'tag-terracotta';
   }
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function formatMinutes(mins: number): string {

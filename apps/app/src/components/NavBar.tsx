@@ -60,29 +60,29 @@ function SettingsIcon() {
 }
 
 const NAV_ITEMS = [
-  { to: '/home', label: 'Home', icon: HomeIcon, prefix: '/home' },
-  { to: '/session', label: 'Session', icon: SessionIcon, prefix: '/session' },
-  { to: '/week', label: 'Week', icon: WeekIcon, prefix: '/week' },
-  { to: '/roadmaps', label: 'Roadmaps', icon: RoadmapIcon, prefix: '/roadmap' },
-  { to: '/materials', label: 'Materials', icon: MaterialsIcon, prefix: '/materials' },
-  { to: '/settings', label: 'Settings', icon: SettingsIcon, prefix: '/settings' },
+  { to: '/home', label: 'Home', icon: HomeIcon, prefixes: ['/home'] },
+  { to: '/session', label: 'Session', icon: SessionIcon, prefixes: ['/session'] },
+  { to: '/week', label: 'Week', icon: WeekIcon, prefixes: ['/week'] },
+  { to: '/roadmaps', label: 'Roadmaps', icon: RoadmapIcon, prefixes: ['/roadmap'] },
+  { to: '/materials', label: 'Materials', icon: MaterialsIcon, prefixes: ['/materials', '/assessments', '/practice'] },
+  { to: '/settings', label: 'Settings', icon: SettingsIcon, prefixes: ['/settings'] },
 ] as const;
 
 export function NavBar() {
   const { pathname } = useLocation();
 
-  const isActive = (prefix: string) => pathname.startsWith(prefix);
+  const isActive = (prefixes: readonly string[]) => prefixes.some((prefix) => pathname.startsWith(prefix));
 
   return (
     <>
       {/* Mobile bottom tab bar */}
       <nav className="navbar-mobile mobile-only" aria-label="Main navigation">
-        {NAV_ITEMS.map(({ to, label, icon: Icon, prefix }) => (
+        {NAV_ITEMS.map(({ to, label, icon: Icon, prefixes }) => (
           <Link
             key={to}
             to={to}
-            className={`navbar-item${isActive(prefix) ? ' active' : ''}`}
-            aria-current={isActive(prefix) ? 'page' : undefined}
+            className={`navbar-item${isActive(prefixes) ? ' active' : ''}`}
+            aria-current={isActive(prefixes) ? 'page' : undefined}
           >
             <Icon />
             <span>{label}</span>
@@ -93,12 +93,12 @@ export function NavBar() {
       {/* Desktop top nav bar */}
       <nav className="navbar-desktop desktop-only" aria-label="Main navigation">
         <div className="navbar-desktop-brand">Study Tracker</div>
-        {NAV_ITEMS.map(({ to, label, prefix }) => (
+        {NAV_ITEMS.map(({ to, label, prefixes }) => (
           <Link
             key={to}
             to={to}
-            className={`navbar-desktop-item${isActive(prefix) ? ' active' : ''}`}
-            aria-current={isActive(prefix) ? 'page' : undefined}
+            className={`navbar-desktop-item${isActive(prefixes) ? ' active' : ''}`}
+            aria-current={isActive(prefixes) ? 'page' : undefined}
           >
             {label}
           </Link>

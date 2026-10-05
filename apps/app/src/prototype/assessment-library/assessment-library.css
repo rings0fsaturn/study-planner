@@ -1,0 +1,470 @@
+/* PROTOTYPE — throwaway styles for wayfinder #80 (Assessment library + Practice hub).
+   Marginalia tokens only. Delete with the prototype. */
+
+.alb-page {
+  min-height: 100vh;
+  padding: var(--space-6) var(--space-4) 140px;
+  color: var(--text-primary);
+  background: var(--surface-page);
+  font-family: var(--font-body);
+}
+
+.alb-col {
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.alb-wide {
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.alb-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.alb-title {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  line-height: 1.1;
+  margin: var(--space-2) 0 var(--space-2);
+  text-wrap: balance;
+}
+
+.alb-sub {
+  max-width: 62ch;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+}
+
+/* Nested-in-Materials sub-nav (user pick): Library | Assessments | Practice */
+.alb-subnav {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  align-items: center;
+  padding: var(--space-3);
+  margin-bottom: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.alb-subnav-label {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-right: var(--space-1);
+}
+
+.alb-subnav-tab {
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  padding: 8px 14px;
+  min-height: 44px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+
+.alb-subnav-tab.is-active {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.alb-subnav-tab:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.alb-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-4);
+}
+
+.alb-statebtn {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-pill);
+  padding: 8px 12px;
+  min-height: 44px;
+  background: var(--surface-card);
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.alb-statebtn.is-active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.alb-statebtn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.alb-section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-3);
+}
+
+.alb-section-head h2 {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.alb-count {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+/* Variant A: dense single-column rows. Whole row is the link. */
+.alb-list {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.alb-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 12px 14px;
+  min-height: 44px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+a.alb-row:hover {
+  border-color: var(--ink-faint);
+  background: var(--paper-deep);
+}
+
+a.alb-row:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.alb-row-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.alb-row-title {
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+
+.alb-row-meta {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+  overflow-wrap: break-word;
+}
+
+.alb-row-note {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+  line-height: 1.5;
+}
+
+.alb-row-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.alb-score {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.alb-progress {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* Variant B: card grid */
+.alb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: var(--space-3);
+}
+
+.alb-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--space-4);
+  background: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+a.alb-card:hover {
+  border-color: var(--ink-faint);
+  background: var(--paper-deep);
+}
+
+a.alb-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Tags carry state, never action */
+.tag-moss {
+  background: color-mix(in srgb, var(--moss) 14%, var(--paper-deep));
+  color: var(--moss);
+}
+
+.tag-rust {
+  background: color-mix(in srgb, var(--rust) 12%, var(--paper-deep));
+  color: var(--rust);
+}
+
+.tag-terracotta {
+  background: color-mix(in srgb, var(--terracotta) 12%, var(--paper-deep));
+  color: var(--terracotta-d);
+}
+
+.tag-dim {
+  background: var(--paper-deep);
+  color: var(--text-tertiary);
+}
+
+.alb-actions {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+/* Detail preview inside the prototype (stands in for shipped taking/review) */
+.alb-detail {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.alb-detail table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  margin-top: 8px;
+}
+
+.alb-detail th,
+.alb-detail td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.alb-rubric-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 4px 0;
+}
+
+/* Honest states */
+.alb-empty {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  padding: var(--space-6) var(--space-5);
+  text-align: left;
+}
+
+.alb-empty h3 {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin: 0 0 8px;
+}
+
+.alb-empty p {
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0 0 var(--space-4);
+  max-width: 52ch;
+}
+
+.alb-skeleton {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--surface-card);
+}
+
+.alb-skeleton-line {
+  height: 12px;
+  border-radius: 6px;
+  background: var(--paper-deep);
+}
+
+.alb-dots {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.alb-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--ink-faint);
+  animation: alb-pulse 1.2s ease-in-out infinite;
+}
+
+.alb-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.alb-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes alb-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alb-dots span {
+    animation: none;
+    opacity: 0.7;
+  }
+}
+
+/* Backlink mock */
+.alb-backlink {
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  padding: var(--space-5);
+  display: grid;
+  gap: var(--space-3);
+}
+
+.alb-backlink h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.alb-backlink ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.alb-backlink li a {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  min-height: 44px;
+  align-items: center;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  color: inherit;
+}
+
+.alb-backlink li a:hover {
+  border-color: var(--ink-faint);
+}
+
+/* Recommended-choice recorder (AC7) */
+.alb-pick {
+  margin-top: var(--space-6);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  padding: var(--space-5);
+}
+
+.alb-pick h3 {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  margin: 0 0 4px;
+}
+
+.alb-pick p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0 0 12px;
+  max-width: 60ch;
+}
+
+.alb-pick-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.alb-note {
+  margin-top: var(--space-5);
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  max-width: 68ch;
+}
+
+.alb-offline-banner {
+  margin-bottom: var(--space-3);
+}

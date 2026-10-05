@@ -39,6 +39,7 @@ import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuideProt
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
 import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentReviewPrototype';
 import PracticeSummaryPrototype from './prototype/practice-summary/PracticeSummaryPrototype';
+import AssessmentLibraryPrototype from './prototype/assessment-library/AssessmentLibraryPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { GuideProvider } from './guide/GuideProvider';
@@ -49,6 +50,8 @@ import { PracticeThis } from './pages/materials/PracticeThis';
 import { PracticeRun } from './pages/practice/PracticeRun';
 import { AssessmentConfig } from './pages/assessments/AssessmentConfig';
 import { AssessmentDetail } from './pages/assessments/AssessmentDetail';
+import { AssessmentLibrary } from './pages/assessments/AssessmentLibrary';
+import { PracticeHub } from './pages/practice/PracticeHub';
 import { DevSeeder } from './dev/DevSeeder';
 
 // pdf.js is ~1 MB and only the viewer route needs it, so it stays out of the
@@ -186,6 +189,12 @@ function AppRoutes() {
           element={<PracticeSummaryPrototype />}
         />
       )}
+      {import.meta.env.DEV && (
+        <Route
+          path="/assessment-library-prototype"
+          element={<AssessmentLibraryPrototype />}
+        />
+      )}
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route
         element={
@@ -224,7 +233,9 @@ function AppRoutes() {
           }
         />
         <Route path="/materials/:materialId/assessments/new" element={<AssessmentConfig />} />
+        <Route path="/assessments" element={<AssessmentLibrary />} />
         <Route path="/assessments/:assessmentId" element={<AssessmentDetail />} />
+        <Route path="/practice" element={<PracticeHub />} />
         <Route path="/replan" element={<Replan />} />
         <Route path="/settings" element={<Settings />} />
       </Route>

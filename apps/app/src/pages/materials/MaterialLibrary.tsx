@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
 import { MaterialPicker, type MaterialPickerPurpose } from '../../materials/MaterialPicker'
 import { MaterialStatusBadge } from '../../materials/StatusBadge'
+import { MaterialsSubnav } from '../../materials/MaterialsSubnav'
 import { useMaterialLibrary } from '../../materials/useMaterialLibrary'
+import { formatShortDate } from '../../lib/formatShortDate'
 import '../../materials/materials.css'
+import '../../library/library.css'
 import {
   SOURCE_LABELS,
   isContentless,
@@ -19,11 +22,6 @@ function formatMinutes(mins: number | null): string {
   const hours = Math.floor(mins / 60)
   const rest = mins % 60
   return rest === 0 ? `${hours} hr` : `${hours} hr ${rest} min`
-}
-
-function formatDate(iso: string): string {
-  const d = new Date(iso)
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function sourceIconClass(material: MaterialRecord): string {
@@ -119,7 +117,7 @@ export function MaterialLibrary() {
           </div>
           <div className="material-meta">
             {SOURCE_LABELS[material.kind]} · {formatMinutes(material.estimatedMinutes)} · added{' '}
-            {formatDate(material.createdAt)}
+            {formatShortDate(material.createdAt)}
             {material.archived && ' · archived'}
           </div>
           {!ready && (
@@ -282,6 +280,7 @@ export function MaterialLibrary() {
           </button>
         </div>
       </div>
+      <MaterialsSubnav />
 
       <div className="materials-toolbar">
         <div className="materials-filters">

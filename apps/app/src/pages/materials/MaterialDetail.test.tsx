@@ -1,10 +1,19 @@
-import { describe, expect, it, afterEach, vi } from 'vitest'
+import { describe, expect, it, afterEach, beforeEach, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import Dexie from 'dexie'
 import { MaterialDetail } from './MaterialDetail'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
+import { AssessmentProvider } from '../../assessments/AssessmentProvider'
+import { EventStoreProvider, createEventStore } from '../../events/EventStoreProvider'
+import { ASSESSMENT_CREATED, PRACTICE_RUN_STARTED } from '../../events/EventStore'
 import { useMaterialUsage } from '../../materials/useMaterialUsage'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
+import {
+  FakeAssessmentClient,
+  attemptRecord,
+  readyAssessment,
+} from '../../assessments/testing/fakeAssessmentClient'
 import type { MaterialRecord } from '../../materials/types'
 
 vi.mock('../../lib/supabase', () => ({
@@ -39,26 +48,60 @@ function material(overrides: Partial<MaterialRecord>): MaterialRecord {
   }
 }
 
-function renderDetail(client: FakeMaterialClient, materialId = 'mat-1') {
+const BACKLINK_USER = 'material-detail-backlink-user'
+const BACKLINK_DB = `StudyTracker_${BACKLINK_USER}`
+
+async function seedBacklink(events: Array<{ kind: string; payload: Record<string, unknown> }>) {
+  const store = createEventStore(BACKLINK_USER)
+  for (const { kind, payload } of events) {
+    await store.append(kind, payload)
+  }
+  store.close()
+}
+
+function renderDetail(
+  client: FakeMaterialClient,
+  materialId = 'mat-1',
+  assessments: FakeAssessmentClient = new FakeAssessmentClient(),
+) {
   return render(
     <MemoryRouter initialEntries={[`/materials/${materialId}`]}>
-      <MaterialsProvider client={client}>
-        <Routes>
-          <Route path="/materials/:materialId" element={<MaterialDetail />} />
-          <Route path="/materials" element={<div data-testid="library-page" />} />
-          <Route path="/materials/:materialId/practice" element={<div data-testid="practice-page" />} />
-          <Route path="/materials/:materialId/assessments/new" element={<div data-testid="assessment-config-page" />} />
-        </Routes>
-      </MaterialsProvider>
+      <EventStoreProvider userId={BACKLINK_USER}>
+        <MaterialsProvider client={client}>
+          <AssessmentProvider client={assessments}>
+            <Routes>
+              <Route path="/materials/:materialId" element={<MaterialDetail />} />
+              <Route path="/materials" element={<div data-testid="library-page" />} />
+              <Route path="/materials/:materialId/practice" element={<div data-testid="practice-page" />} />
+              <Route
+                path="/materials/:materialId/assessments/new"
+                element={<div data-testid="assessment-config-page" />}
+              />
+              <Route path="/assessments/:assessmentId" element={<div data-testid="assessment-detail" />} />
+              <Route
+                path="/materials/:materialId/practice/:runId"
+                element={<div data-testid="run-detail" />}
+              />
+            </Routes>
+          </AssessmentProvider>
+        </MaterialsProvider>
+      </EventStoreProvider>
     </MemoryRouter>,
   )
 }
 
 describe('MaterialDetail', () => {
-  afterEach(() => {
+  beforeEach(async () => {
+    await Dexie.delete(BACKLINK_DB)
+  })
+
+  afterEach(async () => {
     vi.useRealTimers()
     vi.restoreAllMocks()
     vi.mocked(useMaterialUsage).mockReturnValue([])
+    const store = createEventStore(BACKLINK_USER)
+    store.close()
+    await Dexie.delete(BACKLINK_DB)
   })
 
   it('renders a ready material with Practice this and attach actions', async () => {
@@ -281,12 +324,16 @@ describe('MaterialDetail', () => {
 
     render(
       <MemoryRouter initialEntries={['/materials/mat-1?confirm=delete']}>
-        <MaterialsProvider client={client}>
-          <Routes>
-            <Route path="/materials/:materialId" element={<MaterialDetail />} />
-            <Route path="/materials" element={<div data-testid="library-page" />} />
-          </Routes>
-        </MaterialsProvider>
+        <EventStoreProvider userId={BACKLINK_USER}>
+          <MaterialsProvider client={client}>
+            <AssessmentProvider client={new FakeAssessmentClient()}>
+              <Routes>
+                <Route path="/materials/:materialId" element={<MaterialDetail />} />
+                <Route path="/materials" element={<div data-testid="library-page" />} />
+              </Routes>
+            </AssessmentProvider>
+          </MaterialsProvider>
+        </EventStoreProvider>
       </MemoryRouter>,
     )
 
@@ -307,5 +354,226 @@ describe('MaterialDetail', () => {
     expect(await screen.findByText('Operating Systems — Three Easy Pieces')).toBeInTheDocument()
     expect(screen.queryByText(/Extracted content/)).not.toBeInTheDocument()
     expect(document.querySelector('.material-preview-text')).toBeNull()
+  })
+
+  it('lists this material assessments with family, status, and links', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([
+      attemptRecord({
+        assessmentId: 'a-1',
+        questionId: 'q1',
+        status: 'graded',
+        grade: {
+          attemptId: 'att-1',
+          questionId: 'q1',
+          materialId: 'mat-1',
+          score: 0.8,
+          correct: true,
+          grader: 'objective',
+          gradedAt: '2026-09-20T11:00:00Z',
+        },
+      }),
+    ])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(await screen.findByText('0.80')).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    expect(within(section).getByRole('link', { name: /Objective/i }).getAttribute('href')).toBe(
+      '/assessments/a-1',
+    )
+  })
+
+  it('lists this material practice runs with mode, progress, and links', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      {
+        kind: PRACTICE_RUN_STARTED,
+        payload: {
+          runId: 'run-1',
+          materialIds: ['mat-1'],
+          mode: 'written',
+          assessmentIds: ['a-1'],
+          count: 1,
+          families: ['written'],
+        },
+      },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(async (id) =>
+      readyAssessment({ id, materialIds: ['mat-1'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(await screen.findByText(/0 of 1 graded/i)).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    const runLink = within(section).getByRole('link', { name: /Written/i })
+    expect(runLink.getAttribute('href')).toBe('/materials/mat-1/practice/run-1')
+  })
+
+  it('hides rows created by other materials', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-2', materialIds: ['mat-2'] } },
+      {
+        kind: PRACTICE_RUN_STARTED,
+        payload: {
+          runId: 'run-1',
+          materialIds: ['mat-1'],
+          mode: 'written',
+          assessmentIds: ['a-1'],
+          count: 1,
+          families: ['written'],
+        },
+      },
+      {
+        kind: PRACTICE_RUN_STARTED,
+        payload: {
+          runId: 'run-2',
+          materialIds: ['mat-2'],
+          mode: 'written',
+          assessmentIds: ['a-2'],
+          count: 1,
+          families: ['written'],
+        },
+      },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(async (id) =>
+      readyAssessment({ id, materialIds: id === 'a-1' ? ['mat-1'] : ['mat-2'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({}), material({ id: 'mat-2' })])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    await waitFor(() => {
+      const section = screen.getByRole('region', { name: /Assessments and practice/i })
+      expect(section.innerHTML).toContain('/assessments/a-1')
+    })
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    const hrefs = within(section)
+      .getAllByRole('link')
+      .map((link) => link.getAttribute('href'))
+    expect(hrefs).toContain('/assessments/a-1')
+    expect(hrefs).not.toContain('/assessments/a-2')
+    expect(hrefs).toContain('/materials/mat-1/practice/run-1')
+    expect(hrefs).not.toContain('/materials/mat-2/practice/run-2')
+  })
+
+  it('shows honest empty copy and retires the placeholder sentence', async () => {
+    await seedBacklink([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client)
+
+    expect(await screen.findByText(/Not attached to any roadmap yet/)).toBeInTheDocument()
+    expect(screen.queryByText(/Assessments will appear here once created/)).not.toBeInTheDocument()
+    expect(await screen.findByText(/No assessments or practice runs for this material yet/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Used by/i })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Assessments and practice/i })).toBeInTheDocument()
+  })
+
+  it('shows a failed assessment reason verbatim with no retry affordance', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-f', materialIds: ['mat-1'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(
+      readyAssessment({
+        id: 'a-f',
+        materialIds: ['mat-1'],
+        status: 'failed',
+        questions: [],
+        recipe: { formats: ['written'], questionCount: 1 },
+        warnings: [{ code: 'code_not_derivable', message: 'notes ship the solution' }],
+      }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(
+      await screen.findByText('code_not_derivable: notes ship the solution'),
+    ).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    expect(within(section).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument()
+  })
+
+  it('shows a generating assessment with N of M ready and no invented grade', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-g', materialIds: ['mat-1'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(
+      readyAssessment({
+        id: 'a-g',
+        materialIds: ['mat-1'],
+        status: 'generating',
+        questions: [],
+        recipe: { formats: ['objective'], questionCount: 3 },
+        warnings: [],
+      }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(await screen.findByText('0 of 3 ready')).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    expect(within(section).queryByText(/graded/)).not.toBeInTheDocument()
+  })
+
+  it('marks unreadable uncached rows unavailable offline without inventing counts', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-off', materialIds: ['mat-1'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockRejectedValue(new Error('offline'))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(await screen.findByText('Unavailable offline')).toBeInTheDocument()
+    const section = screen.getByRole('region', { name: /Assessments and practice/i })
+    expect(within(section).queryByText(/graded/)).not.toBeInTheDocument()
+  })
+
+  it('names the missing count on partial runs', async () => {
+    await seedBacklink([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      {
+        kind: PRACTICE_RUN_STARTED,
+        payload: {
+          runId: 'run-partial',
+          materialIds: ['mat-1'],
+          mode: 'written',
+          assessmentIds: ['a-1'],
+          count: 3,
+          families: ['written'],
+        },
+      },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(async (id) =>
+      readyAssessment({ id, materialIds: ['mat-1'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const client = new FakeMaterialClient([material({})])
+
+    renderDetail(client, 'mat-1', assessments)
+
+    expect(await screen.findByText(/2 of 3 never generated/i)).toBeInTheDocument()
   })
 })
