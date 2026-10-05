@@ -6,15 +6,17 @@ description: Use the managed full-app lifecycle and the repository Playwright co
 # Runtime and E2E
 
 Use `./full-app` for runtime work that touches the React app, authenticated routes, the Intelligence Service, or generation/ingestion jobs.
-The `full` profile starts the service, the React app, and the ingestion/generation/grading worker, while `all` also starts the marketing site.
+The `full` profile starts the GPU sidecar (:8200), the Piston sandbox (:2000), the service, the React app, and the ingestion/generation/grading worker, while `all` also starts the marketing site.
 The worker is portless: `./full-app status full` reports it as `health=running` and its log is `.dev/full-app/logs/worker.log`.
-The GPU inference sidecar stays a separate demand-started service (rule 54); generation/embedding work still needs it started on `:8200` before the worker can complete embedding-dependent stages.
+`./full-app` starts, stops, and health-checks the sidecar and Piston as Compose dependencies (rule 51), so all five dependencies move together.
+`./full-app logs sidecar|piston` delegates to `docker compose logs`.
+Coding generation and grading need Piston on `:2000`; embedding-dependent stages need the sidecar on `:8200`.
 
 ## Required Workflow
 
 1. Run `./full-app status full` before changing process state.
 2. Start with `./full-app start full` or restart with `./full-app restart full` only when clean state is required.
-3. Verify `http://127.0.0.1:8000/health` and `http://localhost:5173/study/sign-in` before opening Chromium.
+3. Verify `http://127.0.0.1:8000/health`, `http://localhost:5173/study/sign-in`, the sidecar `/health` on `:8200`, and Piston `/api/v2/runtimes` on `:2000` before opening Chromium.
 4. Run the smallest relevant Playwright test first.
 5. Inspect `.dev/full-app/logs/` before changing code after a runtime failure.
 6. Stop the managed runtime when finished unless the user wants it left running.

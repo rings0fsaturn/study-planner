@@ -15,8 +15,14 @@ Inspect `docker info`, `docker compose version`, and `./docker-app status` befor
 restarting or stopping containers.
 Do not stop containers or kill port listeners until the owning process has been
 identified.
-The lifecycle manager `./full-app` manages local development processes only; do
-not use it for Docker work.
+The lifecycle manager `./full-app` owns the local development processes and the
+two Compose dependencies they need: the GPU sidecar (:8200) and the Piston
+sandbox (:2000).
+It starts, stops, restarts, and reports those containers through the same
+commands as the processes, so a plain `./full-app start full` yields a complete
+working stack.
+`./docker-app` remains the container-native path for the full product stack
+(web + intelligence + ingestion-worker) and is not replaced by `./full-app`.
 
 If a published port is unreachable, verify the service inside the container
 (`docker compose exec -T intelligence ...`) before changing application code.

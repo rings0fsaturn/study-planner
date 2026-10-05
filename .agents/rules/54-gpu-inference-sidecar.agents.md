@@ -144,6 +144,12 @@ runtime.
 
 ## Start only when needed
 
+`./full-app start full` starts the sidecar as a managed dependency and
+`./full-app stop full` stops it, so local development no longer leaves it
+running by accident (this is an explicit override of the demand-start default).
+The direct compose commands below remain valid for standalone sidecar work.
+The container still burns its idle CPU while the stack runs, so stop the stack
+when the work is done.
 Because the container burns about two CPU cores whenever it runs, treat it as a
 demand-started service and never leave it running idle.
 Start it immediately before embedding work (sidecar bake-off, live sidecar
