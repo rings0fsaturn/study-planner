@@ -39,7 +39,6 @@ import PracticeGuidePrototype from './prototype/practice-guide/PracticeGuideProt
 import RoadmapFeedbackPrototype from './prototype/roadmap-feedback/RoadmapFeedbackPrototype';
 import AssessmentReviewPrototype from './prototype/assessment-review/AssessmentReviewPrototype';
 import PracticeSummaryPrototype from './prototype/practice-summary/PracticeSummaryPrototype';
-import AssessmentLibraryPrototype from './prototype/assessment-library/AssessmentLibraryPrototype';
 import { MaterialsProvider } from './materials/MaterialsProvider';
 import { AssessmentProvider } from './assessments/AssessmentProvider';
 import { GuideProvider } from './guide/GuideProvider';
@@ -187,12 +186,6 @@ function AppRoutes() {
         <Route
           path="/practice-summary-prototype"
           element={<PracticeSummaryPrototype />}
-        />
-      )}
-      {import.meta.env.DEV && (
-        <Route
-          path="/assessment-library-prototype"
-          element={<AssessmentLibraryPrototype />}
         />
       )}
       <Route path="/reset-password" element={<ResetPassword />} />

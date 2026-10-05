@@ -50,8 +50,6 @@ const MATERIAL_ID = '80c8b138-b544-4095-8dc0-1c390ac70da2';
 /** A real provider call measured 146 s once (#41); the worker can be slow. */
 const GENERATION_WAIT_MS = 300_000;
 const GRADE_WAIT_MS = 180_000;
-/** Hub hydration is N reads plus titles plus attempts; slower than one paint. */
-const HUB_WAIT_MS = 90000;
 const EVIDENCE_DIR = '.work/active/assessment-library-practice-hub/plan/evidence';
 const WRITTEN_ANSWER_TEXT =
   'The measure is applied to the firm in the case: performance is judged on both financial and ' +
@@ -60,6 +58,27 @@ const WRITTEN_ANSWER_TEXT =
 /** Authored rubric/reference vocabulary must never reach the browser. */
 const REDACTION_RE =
   /answerBlock|answer_block|referenceAnswer|reference_answer|rubricVersion|rubric_version|maxPoints|max_points|correctIndex|referenceSolution|hiddenTest|answer key/i;
+
+/** Buffer every /rest/v1 and /v1 body so the redaction sweep covers responses. */
+function watchResponses(page: Page): () => string[] {
+  const bodies: string[] = [];
+  page.on('response', (response) => {
+    const url = response.url();
+    if (!/\/rest\/v1\/|\/v1\/assessments|\/v1\/attempts/.test(url)) return;
+    void response.text().then((body) => {
+      if (body.length < 1_000_000) bodies.push(body);
+    });
+  });
+  return () => bodies;
+}
+
+/** The redaction gate over responses and the rendered DOM. */
+async function assertRedaction(page: Page, bodies: () => string[]): Promise<void> {
+  expect(bodies().join('\n'), 'no response body may carry hidden content').not.toMatch(REDACTION_RE);
+  expect(await page.locator('body').innerText(), 'no rendered DOM may carry hidden content').not.toMatch(
+    REDACTION_RE,
+  );
+}
 
 async function signIn(page: Page): Promise<void> {
   await page.goto(`${APP_URL}/study/sign-in`);
@@ -132,7 +151,7 @@ async function generateObjectiveAssessment(page: Page): Promise<string> {
   const failed = page.getByRole('button', { name: 'Retry generation' });
   for (let attempt = 0; attempt < 4; attempt++) {
     await expect(taker.or(failed)).toBeVisible({ timeout: GENERATION_WAIT_MS });
-    if ((await failed.count()) === 0 || !(await failed.isVisible())) break;
+    if ((await failed.count()) === 0) break;
     await failed.click();
   }
   await expect(taker).toBeVisible({ timeout: GENERATION_WAIT_MS });
@@ -210,6 +229,7 @@ async function desktopScenario(page: Page): Promise<string> {
       if (id) generationIds.push(id);
     }
   });
+  const bodies = watchResponses(page);
 
   await signIn(page);
 
@@ -260,7 +280,7 @@ async function desktopScenario(page: Page): Promise<string> {
   await expect(
     page.getByRole('region', { name: 'Assessment summary' }).getByText(/score \d+\.\d+/),
   ).toBeVisible({ timeout: 60000 });
-  expect(await page.locator('body').innerText()).not.toMatch(REDACTION_RE);
+  await assertRedaction(page, bodies);
 
   // Desktop-only: the card grid renders two cards per row, so a leaked
   // mobile viewport fails here instead of passing quietly.
@@ -327,7 +347,7 @@ async function desktopScenario(page: Page): Promise<string> {
   await historyCard.getByRole('link', { name: 'Open summary' }).click();
   await expect(page.getByRole('region', { name: 'Run summary' })).toBeVisible({ timeout: 60000 });
 
-  expect(await page.locator('body').innerText()).not.toMatch(REDACTION_RE);
+  await assertRedaction(page, bodies);
   await assertNoOverflow(page);
   await page.screenshot({ path: `${EVIDENCE_DIR}/assessment-library-desktop.png`, fullPage: true });
 
@@ -336,8 +356,17 @@ async function desktopScenario(page: Page): Promise<string> {
   return firstGenerationId;
 }
 
-/** Phone 375: own assessment, one-column hubs, and a resumed run. */
-async function phoneScenario(page: Page): Promise<void> {
+/** Phone 375: own assessment, one-column hubs, and a resumed run. Returns one generation X-Request-ID for the log join. */
+async function phoneScenario(page: Page): Promise<string> {
+  const generationIds: string[] = [];
+  page.on('request', (request) => {
+    if (request.url().includes('/v1/assessments/generate')) {
+      const id = request.headers()['x-request-id'];
+      if (id) generationIds.push(id);
+    }
+  });
+  const bodies = watchResponses(page);
+
   await signIn(page);
 
   const assessmentId = await generateObjectiveAssessment(page);
@@ -349,10 +378,9 @@ async function phoneScenario(page: Page): Promise<void> {
       timeout: 30000,
     });
     const grid = page.locator('.materials-grid').first();
-    if ((await grid.count()) > 0 && (await grid.isVisible())) {
-      const columns = await grid.evaluate((node) => getComputedStyle(node).gridTemplateColumns);
-      expect(columns.split(' ').filter(Boolean).length).toBe(1);
-    }
+    await expect(grid).toBeVisible({ timeout: 90000 });
+    const columns = await grid.evaluate((node) => getComputedStyle(node).gridTemplateColumns);
+    expect(columns.split(' ').filter(Boolean).length).toBe(1);
     await assertNoOverflow(page);
   }
 
@@ -380,9 +408,13 @@ async function phoneScenario(page: Page): Promise<void> {
   });
   await expect(page.getByRole('region', { name: 'Problem 1' })).toBeVisible({ timeout: 60000 });
 
-  expect(await page.locator('body').innerText()).not.toMatch(REDACTION_RE);
+  await assertRedaction(page, bodies);
   await assertNoOverflow(page);
   await page.screenshot({ path: `${EVIDENCE_DIR}/assessment-library-mobile.png`, fullPage: true });
+
+  const firstGenerationId = generationIds[0] ?? '';
+  expect(firstGenerationId, 'the browser minted an X-Request-ID for generation').toBeTruthy();
+  return firstGenerationId;
 }
 
 test.describe('assessment library live (desktop 1280)', () => {
@@ -424,16 +456,23 @@ test.describe('assessment library live (phone 375)', () => {
     test.setTimeout(900_000);
     const testStartedAt = new Date().toISOString();
     let failure: unknown;
+    let requestId = '';
     try {
-      await phoneScenario(page);
+      requestId = await phoneScenario(page);
       expect(errors()).toEqual([]);
     } catch (error) {
       failure = error;
     }
     try {
+      if (requestId) {
+        // Rule 17: the browser's request id joins to the backend log lines.
+        const lines = await grepIntelligenceLog(requestId);
+        console.log(`[assessment-library-live] request ${requestId} -> ${lines.length} backend line(s)`);
+        expect(lines.length, 'the generation request id must appear in the service log').toBeGreaterThan(0);
+      }
       await cleanupRunAssessments(testStartedAt);
     } catch (error) {
-      console.warn(`[assessment-library-live] cleanup failed: ${String(error)}`);
+      console.warn(`[assessment-library-live] cleanup/join failed: ${String(error)}`);
       if (failure == null) failure = error;
     }
     if (failure != null) throw failure;

@@ -506,7 +506,7 @@ Review gate: OCR delegate subagent plus thermo-nuclear subagent on the full diff
 
 ### Phase 6: Live E2E and full verification
 
-**Status:** ☐ Not started
+**Status:** ✅ Done 2026-10-05 (live 2 passed 2.8m both widths with strengthened spec, suite 1077 + 2 pre-existing flakes, typecheck/lint/build green, OCR + thermo PASS-WITH-MINORS fixed in spec; detail in `.work/active/assessment-library-practice-hub/SCRATCHPAD.md` + `plan/VERIFICATION.md`)
 **Skills:** rules 10, 15, 16; `tdd` still applies (write the spec scenarios as the test, then make them pass without weakening them).
 **Depends on:** Phases 1-5 green.
 
@@ -573,7 +573,7 @@ Review gate: OCR delegate subagent plus thermo-nuclear subagent on the spec and 
 
 ### Phase 7: Prototype removal and wayfinder exit (AC7)
 
-**Status:** ☐ Not started
+**Status:** ✅ Done 2026-10-05 (prototype dir deleted 1364 lines + App.tsx DEV route removed 7 lines; build green with 0 prototype hits in dist; typecheck/lint clean; focused 82/82; suite 1077 + 2 pre-existing flakes; OCR PASS + thermo PASS-WITH-MINORS, both test-only, no fix; #81 resolution + 7/7 ACs + map #4 line + CLOSED)
 **Skills:** `work-journal-orchestrator` for the wrap; rules 52 and the wayfinder exit protocol; `ponytail` for the deletion.
 **Depends on:** Phase 6.
 
