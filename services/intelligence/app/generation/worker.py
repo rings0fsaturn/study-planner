@@ -277,6 +277,11 @@ WIDEN_MIN_PAD = 5
 # unchanged; only the refusal path spends the extra provider calls.
 MAX_CODING_WINDOWS = 3
 
+# D-01/D-03: objective and written get one fresh window after a repair that did
+# not resolve validation, so a single bad JSON draw is not terminal. Bounded at
+# two total windows (one generation + one repair each) to cap LLM spend.
+MAX_PLAIN_WINDOWS = 2
+
 # Slice-1 Jev gate (#70): suitability state is the joined window text, capped
 # so the judgment stays narrow (Jev skill: small relevant state). Citation
 # adjudication keys unverified warnings back to chunk ids via this pattern.
@@ -411,14 +416,22 @@ class GenerationWorker:
 
         build, schema_for, validate = _arm(question_format)
         tried_chunk_ids: set[str] = set()
-        max_windows = MAX_CODING_WINDOWS if coding else 1
-        last_refusal_reason: str | None = None
+        max_windows = MAX_CODING_WINDOWS if coding else MAX_PLAIN_WINDOWS
+        # The last window's failure, carried across a resample: a warnings list
+        # for a malformed terminal, or a refusal reason string for the
+        # code_not_derivable terminal. One variable so no resample site has to
+        # null the other channel (the D-04 stable terminal invariant).
+        resample_failure: list[dict] | str | None = None
         response = None
         accepted = None
         warnings: list[dict] = []
         repair_attempted = False
 
         for window in range(1, max_windows + 1):
+            # Reset the candidate every window so a resample's `continue` can
+            # never leak a previous window's (possibly self-check-failed) result
+            # into the post-loop accept path.
+            accepted = None
             try:
                 chunks = self._build_context(
                     material_id,
@@ -428,9 +441,10 @@ class GenerationWorker:
                     exclude=frozenset(tried_chunk_ids),
                 )
                 if not chunks:
-                    if last_refusal_reason is not None:
-                        # The resample excluded every remaining candidate; use
-                        # the last honest reason instead of "no content".
+                    if resample_failure is not None:
+                        # The resample excluded every remaining candidate; the
+                        # previous window's failure is the honest terminal, not
+                        # "no content".
                         break
                     # D-06's only rejection: a scope (or a material) with no
                     # chunk to ground on cannot produce a grounded question.
@@ -453,6 +467,13 @@ class GenerationWorker:
                 )
             except IngestionError as exc:
                 if exc.retryable:
+                    logger.warning(
+                        "generation context for assessment %s deferred (%s): %s",
+                        assessment_id,
+                        exc.code,
+                        exc.message,
+                        extra={"trace_id": correlation_id},
+                    )
                     self._mark_job_retryable(job_id, exc)
                     self._repo.update_assessment_status(
                         assessment_id,
@@ -464,6 +485,13 @@ class GenerationWorker:
                 # A non-retryable context fault (no topic steer to ground on)
                 # cannot succeed on a retry, so fail the assessment outright
                 # instead of leaving it spinning with a warning.
+                logger.warning(
+                    "generation context for assessment %s failed closed (%s): %s",
+                    assessment_id,
+                    exc.code,
+                    exc.message,
+                    extra={"trace_id": correlation_id},
+                )
                 self._fail_assessment(
                     blueprint,
                     warnings=[{"code": exc.code, "message": exc.message}],
@@ -487,18 +515,19 @@ class GenerationWorker:
                     # SUITABILITY_ENFORCE_FAMILIES (#75: coding) block; the rest
                     # stay advisory. Ride the D-02 resample path exactly like a
                     # provider refusal.
-                    last_refusal_reason = refusal or (
+                    resample_failure = refusal or (
                         "this material does not support a grounded coding question"
                     )
-                    if window < max_windows:
-                        tried_chunk_ids.update(retrieved_ids)
-                        logger.info(
-                            "coding generation %s window %d/%d jev-unsuitable; resampling",
-                            assessment_id,
-                            window,
-                            max_windows,
-                            extra={"trace_id": correlation_id},
-                        )
+                    if self._resample(
+                        assessment_id,
+                        window,
+                        max_windows,
+                        tried_chunk_ids,
+                        retrieved_ids,
+                        label="jev-unsuitable",
+                        reason=resample_failure,
+                        correlation_id=correlation_id,
+                    ):
                         continue
                     break
             # Slice-2 passage filter (#72 shadow, #76 enforce): after the
@@ -519,7 +548,6 @@ class GenerationWorker:
             messages = build(blueprint, chunks, title=material.title)
             response = self._adapter.generate(messages, schema, correlation_id=correlation_id)
             repair_attempted = False
-            accepted = None
             warnings = list(scope_warnings)
 
             if response.outcome == "ok" and response.structured_output is not None:
@@ -530,6 +558,12 @@ class GenerationWorker:
                 warnings = [*scope_warnings, *warnings]
                 if accepted is None and any(w["code"] == "malformed_output" for w in warnings):
                     repair_feedback = "; ".join(str(w["message"]) for w in warnings)
+                    logger.info(
+                        "generation %s validation failed; attempting repair (%s)",
+                        assessment_id,
+                        repair_feedback,
+                        extra={"trace_id": correlation_id},
+                    )
                     accepted, warnings = self._repair_once(
                         blueprint,
                         chunks,
@@ -546,6 +580,12 @@ class GenerationWorker:
                 repair_feedback = str(
                     (response.error or {}).get("message") or "output failed validation"
                 )
+                logger.info(
+                    "generation %s output malformed; attempting repair (%s)",
+                    assessment_id,
+                    repair_feedback,
+                    extra={"trace_id": correlation_id},
+                )
                 accepted, warnings = self._repair_once(
                     blueprint,
                     chunks,
@@ -559,6 +599,33 @@ class GenerationWorker:
                 warnings = [*scope_warnings, *warnings]
                 repair_attempted = True
 
+            if (
+                accepted is None
+                and repair_attempted
+                and any(w["code"] == "malformed_output" for w in warnings)
+            ):
+                # D-01/D-03: the repair did not resolve validation, so spend one
+                # more fresh window before failing closed. Coding excludes the
+                # tried chunks on the no-steer spread path (a steered retrieval
+                # RPC ignores the exclusion, so the resample is then a fresh
+                # draw); objective and written ignore the exclusion set. The
+                # repair failure is the latest outcome.
+                resample_failure = warnings
+                if self._resample(
+                    assessment_id,
+                    window,
+                    max_windows,
+                    tried_chunk_ids,
+                    retrieved_ids,
+                    label="repair unresolved",
+                    reason="; ".join(
+                        str(w["message"]) for w in warnings if w["code"] == "malformed_output"
+                    ),
+                    correlation_id=correlation_id,
+                ):
+                    continue
+                # Out of budget: fall through to the malformed terminal below.
+
             if accepted is not None and self.config.jev_slice1_enabled and self._jev is not None:
                 # Middle-only adjudication: string-match passes never reach
                 # here (no citation_unverified warning); Jev judges only the
@@ -568,99 +635,68 @@ class GenerationWorker:
                 )
 
             if accepted is not None:
-                break
-
-            if any(w["code"] == "code_not_derivable" for w in warnings):
-                # The provider judged the material unsuitable (D-04): a
-                # legitimate answer, not a format failure, so no repair. Try a
-                # different code-dense window first (D-02); only the last
-                # window's reason reaches the learner.
-                last_refusal_reason = next(
-                    str(w["message"]) for w in warnings if w["code"] == "code_not_derivable"
-                )
-                if window < max_windows:
-                    tried_chunk_ids.update(retrieved_ids)
-                    logger.info(
-                        "coding generation %s window %d/%d unsuitable; resampling (%s)",
-                        assessment_id,
-                        window,
-                        max_windows,
-                        last_refusal_reason,
-                        extra={"trace_id": correlation_id},
-                    )
-                    continue
-                break
-
-            if response.outcome in ("quota_failure", "timeout", "provider_error"):
-                retryable = bool((response.error or {}).get("retryable", False))
-                error_code = str((response.error or {}).get("code") or "provider_error")
-                error_message = str((response.error or {}).get("message") or "generation failed")
-                self._repo.update_job_status(
-                    job_id,
-                    "failed",
-                    error_code=error_code,
-                    error_message=error_message,
-                    retryable=retryable,
-                    retry_after=(response.error or {}).get("retryAfterSeconds"),
-                )
-                # The assessment stays `generating` (D-06) so the UI can offer
-                # retry/resume; surface the retryable failure as a warning so the
-                # page is not stuck on an eternal spinner.
-                self._repo.update_assessment_status(
-                    blueprint.assessment_id,
-                    "generating",
-                    [{"code": error_code, "message": error_message}],
-                )
-                self._emit_telemetry(blueprint, response.outcome, response, repair_attempted, 0)
-                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
-                return
-
-            if response.outcome == "safety_block":
-                self._fail_assessment(
-                    blueprint,
-                    warnings=[{"code": "safety_block", "message": "provider safety block"}],
-                    error_code="safety_block",
-                    error_message="provider safety block",
-                    retryable=False,
-                    outcome=response.outcome,
-                    latency_ms=response.latency_ms,
-                    repair_attempted=repair_attempted,
-                    message_id=message.msg_id,
-                )
-                return
-
-            if not warnings:
-                warnings = [
-                    {
-                        "code": "malformed_output",
-                        "message": "generation produced no usable output",
-                    }
-                ]
-            self._fail_assessment(
-                blueprint,
-                warnings=warnings,
-                error_code="malformed_output",
-                error_message="; ".join(w["message"] for w in warnings),
-                retryable=False,
-                outcome=("malformed_output" if response.outcome == "ok" else response.outcome),
-                latency_ms=response.latency_ms,
-                repair_attempted=repair_attempted,
-                message_id=message.msg_id,
-            )
-            return
-
-        if accepted is not None:
-            if window > 1:
-                logger.info(
-                    "coding generation %s accepted on window %d/%d",
-                    assessment_id,
-                    window,
-                    max_windows,
-                    extra={"trace_id": correlation_id},
-                )
-            if coding:
+                if not coding:
+                    break
+                # Coding adds its own gate: the reference must pass every test
+                # it authored (D-05). A failure means the provider wrote an
+                # internally inconsistent reference/tests pair, so spend one
+                # bounded repair (failing test name and outcome only, never
+                # source) and re-check the corrected candidate; if it is still
+                # unresolved, resample a different code-dense window before
+                # failing closed.
                 try:
                     failure = self._coding_self_check(blueprint, accepted)
+                    if failure is not None:
+                        logger.info(
+                            "coding self-check %s failed; attempting one repair (%s)",
+                            assessment_id,
+                            failure["message"],
+                            extra={"trace_id": correlation_id},
+                        )
+                        accepted, repair_warnings = self._repair_once(
+                            blueprint,
+                            chunks,
+                            material.title,
+                            response,
+                            context_ids,
+                            chunk_texts,
+                            repair_feedback=(
+                                f"the self-check failed: {failure['message']}. "
+                                "Return the full corrected JSON object whose "
+                                "referenceSolution prints each test's expectedOutput "
+                                "exactly, so every authored test passes."
+                            ),
+                            question_format=question_format,
+                        )
+                        repair_attempted = True
+                        if accepted is not None:
+                            warnings = [*scope_warnings, *repair_warnings]
+                            failure = self._coding_self_check(blueprint, accepted)
+                    if failure is not None:
+                        # A self-check failure is a malformed terminal (D-05),
+                        # not a refusal, so it must not fall through to the
+                        # code_not_derivable path when the resample empties.
+                        resample_failure = [failure]
+                        if self._resample(
+                            assessment_id,
+                            window,
+                            max_windows,
+                            tried_chunk_ids,
+                            retrieved_ids,
+                            label="self-check unresolved",
+                            reason=failure["message"],
+                            correlation_id=correlation_id,
+                        ):
+                            continue
+                        self._fail_malformed(
+                            blueprint,
+                            [failure],
+                            correlation_id=correlation_id,
+                            response=response,
+                            repair_attempted=repair_attempted,
+                            message_id=message.msg_id,
+                        )
+                        return
                 except IngestionError as exc:
                     if exc.retryable:
                         # The sandbox is down (demand-start, rule 54): leave
@@ -701,25 +737,109 @@ class GenerationWorker:
                         message_id=message.msg_id,
                     )
                     return
-                if failure is not None:
-                    logger.warning(
-                        "coding self-check %s failed: %s",
-                        assessment_id,
-                        failure["message"],
-                        extra={"trace_id": correlation_id},
-                    )
-                    self._fail_assessment(
-                        blueprint,
-                        warnings=[failure],
-                        error_code="malformed_output",
-                        error_message=failure["message"],
-                        retryable=False,
-                        outcome="malformed_output",
-                        latency_ms=response.latency_ms,
-                        repair_attempted=repair_attempted,
-                        message_id=message.msg_id,
-                    )
-                    return
+                break
+
+            if any(w["code"] == "code_not_derivable" for w in warnings):
+                # The provider judged the material unsuitable (D-04): a
+                # legitimate answer, not a format failure, so no repair. Try a
+                # different code-dense window first (D-02); only the last
+                # window's reason reaches the learner.
+                resample_failure = next(
+                    str(w["message"]) for w in warnings if w["code"] == "code_not_derivable"
+                )
+                if self._resample(
+                    assessment_id,
+                    window,
+                    max_windows,
+                    tried_chunk_ids,
+                    retrieved_ids,
+                    label="unsuitable",
+                    reason=resample_failure,
+                    correlation_id=correlation_id,
+                ):
+                    continue
+                break
+
+            if response.outcome in ("quota_failure", "timeout", "provider_error"):
+                retryable = bool((response.error or {}).get("retryable", False))
+                error_code = str((response.error or {}).get("code") or "provider_error")
+                error_message = str((response.error or {}).get("message") or "generation failed")
+                logger.warning(
+                    "generation %s provider %s (%s retryable=%s retry_after=%s)",
+                    assessment_id,
+                    response.outcome,
+                    error_code,
+                    retryable,
+                    (response.error or {}).get("retryAfterSeconds"),
+                    extra={"trace_id": correlation_id},
+                )
+                self._repo.update_job_status(
+                    job_id,
+                    "failed",
+                    error_code=error_code,
+                    error_message=error_message,
+                    retryable=retryable,
+                    retry_after=(response.error or {}).get("retryAfterSeconds"),
+                )
+                # The assessment stays `generating` (D-06) so the UI can offer
+                # retry/resume; surface the retryable failure as a warning so the
+                # page is not stuck on an eternal spinner.
+                self._repo.update_assessment_status(
+                    blueprint.assessment_id,
+                    "generating",
+                    [{"code": error_code, "message": error_message}],
+                )
+                self._emit_telemetry(blueprint, response.outcome, response, repair_attempted, 0)
+                self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
+                return
+
+            if response.outcome == "safety_block":
+                logger.warning(
+                    "generation %s safety block",
+                    assessment_id,
+                    extra={"trace_id": correlation_id},
+                )
+                self._fail_assessment(
+                    blueprint,
+                    warnings=[{"code": "safety_block", "message": "provider safety block"}],
+                    error_code="safety_block",
+                    error_message="provider safety block",
+                    retryable=False,
+                    outcome=response.outcome,
+                    latency_ms=response.latency_ms,
+                    repair_attempted=repair_attempted,
+                    message_id=message.msg_id,
+                )
+                return
+
+            if not warnings:
+                warnings = [
+                    {
+                        "code": "malformed_output",
+                        "message": "generation produced no usable output",
+                    }
+                ]
+            self._fail_malformed(
+                blueprint,
+                warnings,
+                correlation_id=correlation_id,
+                response=response,
+                repair_attempted=repair_attempted,
+                message_id=message.msg_id,
+                outcome=("malformed_output" if response.outcome == "ok" else response.outcome),
+            )
+            return
+
+        if accepted is not None:
+            if window > 1:
+                logger.info(
+                    "generation %s (%s) accepted on window %d/%d",
+                    assessment_id,
+                    question_format,
+                    window,
+                    max_windows,
+                    extra={"trace_id": correlation_id},
+                )
             self._accept_question(
                 blueprint,
                 accepted,
@@ -731,12 +851,25 @@ class GenerationWorker:
             self._queue.complete(GENERATION_QUEUE, message.msg_id, True)
             return
 
+        if isinstance(resample_failure, list):
+            # The repair/self-check resample ran out of candidates before a
+            # fresh window could generate. Keep the D-04 `malformed_output`
+            # terminal with the real gate from the previous window rather than
+            # blaming the material for having no content.
+            self._fail_malformed(
+                blueprint,
+                resample_failure,
+                correlation_id=correlation_id,
+                response=response,
+                repair_attempted=repair_attempted,
+                message_id=message.msg_id,
+            )
+            return
+
         # Every window returned unsuitable (or a resample ran out of candidates):
         # fail terminal with the last honest reason, exactly as the one-shot path
         # did. The refusal path is preserved (D-04).
-        reason = last_refusal_reason or (
-            "this material does not support a grounded coding question"
-        )
+        reason = resample_failure or "this material does not support a grounded coding question"
         logger.info(
             "coding generation %s unsuitable: %s",
             assessment_id,
@@ -1070,7 +1203,12 @@ class GenerationWorker:
         )
         if repaired.outcome == "ok" and repaired.structured_output is not None:
             return validate(repaired.structured_output, blueprint, context_ids, chunk_texts)
-        return None, [{"code": "malformed_output", "message": "repair validation failed"}]
+        # D-02: never return a dead-end generic message. Name the adapter outcome
+        # or its error message so the learner and the trace see the real reason.
+        reason = str((repaired.error or {}).get("message") or repaired.outcome or "unknown")
+        return None, [
+            {"code": "malformed_output", "message": f"repair did not yield valid output ({reason})"}
+        ]
 
     def _coding_self_check(self, blueprint: GenerationBlueprint, accepted: dict) -> dict | None:
         """Run the reference solution over every authored test (D-05).
@@ -1187,6 +1325,69 @@ class GenerationWorker:
         )
         self._emit_telemetry(blueprint, outcome, None, repair_attempted, 0)
         self._queue.complete(GENERATION_QUEUE, message_id, True)
+
+    def _resample(
+        self,
+        assessment_id: str,
+        window: int,
+        max_windows: int,
+        tried_chunk_ids: set[str],
+        retrieved_ids: set[str],
+        *,
+        label: str,
+        reason: str,
+        correlation_id: str,
+    ) -> bool:
+        """Exclude the tried window and log a resample; False when out of budget.
+
+        One policy for the four resample sites (jev-unsuitable, repair
+        unresolved, self-check unresolved, unsuitable). On False the caller
+        owns the terminal: a refusal break or its own malformed terminal.
+        """
+        if window >= max_windows:
+            return False
+        tried_chunk_ids.update(retrieved_ids)
+        logger.info(
+            "generation %s window %d/%d %s; resampling (%s)",
+            assessment_id,
+            window,
+            max_windows,
+            label,
+            reason,
+            extra={"trace_id": correlation_id},
+        )
+        return True
+
+    def _fail_malformed(
+        self,
+        blueprint: GenerationBlueprint,
+        warnings: list[dict],
+        *,
+        correlation_id: str,
+        response,
+        repair_attempted: bool,
+        message_id: int,
+        outcome: str = "malformed_output",
+    ) -> None:
+        """One terminal for unusable output (D-04: code and outcome stay stable)."""
+        joined = "; ".join(str(w["message"]) for w in warnings)
+        logger.warning(
+            "generation %s malformed terminal: %s",
+            blueprint.assessment_id,
+            joined,
+            extra={"trace_id": correlation_id},
+        )
+        self._fail_assessment(
+            blueprint,
+            warnings=warnings,
+            error_code="malformed_output",
+            error_message=joined,
+            retryable=False,
+            outcome=outcome,
+            latency_ms=response.latency_ms if response is not None else 0.0,
+            repair_attempted=repair_attempted,
+            message_id=message_id,
+        )
 
     def _mark_job_retryable(self, job_id: str, exc: IngestionError) -> None:
         self._repo.update_job_status(

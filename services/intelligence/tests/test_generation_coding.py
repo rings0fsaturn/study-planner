@@ -532,6 +532,126 @@ def test_coding_format_failure_repairs_with_coding_schema() -> None:
     assert telemetry.records[0].questions_accepted == 1
 
 
+def test_coding_repair_validation_failure_resamples_to_a_later_window(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """D-01/D-03: a failed format repair spends a fresh window before failing."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    broken = {**VALID_CODING}
+    broken.pop("referenceSolution")
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=broken),
+            ok_response(structured_output=broken),
+            ok_response(),
+        ]
+    )
+    telemetry = FakeTelemetry()
+
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        run_worker(repo, queue, adapter, telemetry, FakeSandbox())
+
+    assert len(adapter.calls) == 3  # window 1 gen + repair, window 2 gen
+    assert [call["repair"] for call in adapter.calls] == [False, True, False]
+    assert len(repo.questions) == 1
+    assert repo.assessment_updates == []  # resolved by the resample
+    assert "window 1/3 repair unresolved; resampling" in caplog.text
+
+
+def test_coding_repair_failure_resample_out_of_candidates_keeps_malformed_terminal() -> None:
+    """D-04: a resample that excludes every chunk must stay `malformed_output`.
+
+    No skill tags and no scope means no steer, so the no-steer spread applies
+    the exclusion set. A small material then has no candidate left on window 2;
+    that must not be reported as `validation_failed` / "no content".
+    """
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    broken = {**VALID_CODING}
+    broken.pop("referenceSolution")
+    adapter = FakeAdapter(
+        [ok_response(structured_output=broken), ok_response(structured_output=broken)]
+    )
+    telemetry = FakeTelemetry()
+
+    def context_builder(
+        material_id, skill_tags, scope, *, code_seeking=False, exclude_chunk_ids=frozenset()
+    ):
+        return [] if exclude_chunk_ids else chunks()
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+        sandbox=FakeSandbox(),
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    worker.run_once()
+
+    assert len(adapter.calls) == 2  # window 2 never generates: no candidates
+    assert repo.questions == []
+    assert repo.assessment_updates[-1][1] == "failed"
+    warning = repo.assessment_updates[-1][2][0]
+    assert warning["code"] == "malformed_output"
+    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].outcome == "malformed_output"
+    assert telemetry.records[0].questions_accepted == 0
+
+
+def test_coding_self_check_resample_out_of_candidates_never_accepts_failed_candidate() -> None:
+    """A self-check failure must never be persisted `ready` when the resample empties.
+
+    Window 1 fails the self-check before and after repair; the resample excludes
+    the only chunk, so window 2 has no candidates. The stale `accepted` from the
+    failed repair must not leak into the post-loop accept path (critical).
+    """
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter([ok_response(), ok_response()])
+    telemetry = FakeTelemetry()
+    sandbox = FakeSandbox(outcomes=[RUN_FAILED, RUN_FAILED])
+
+    def context_builder(
+        material_id, skill_tags, scope, *, code_seeking=False, exclude_chunk_ids=frozenset()
+    ):
+        return [] if exclude_chunk_ids else chunks()
+
+    worker = GenerationWorker(
+        repo=repo,
+        queue=queue,
+        adapter=adapter,
+        telemetry=telemetry,
+        config=GenerationWorkerConfig(),
+        context_builder=context_builder,
+        sandbox=sandbox,
+    )
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+    worker.run_once()
+
+    assert repo.questions == []
+    assert repo.completed == []
+    assert repo.assessment_updates[-1][1] == "failed"
+    warning = repo.assessment_updates[-1][2][0]
+    assert warning["code"] == "self_check_failed"
+    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].outcome == "malformed_output"
+
+
 def test_coding_unsuitable_after_all_windows_fails_without_repair() -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
@@ -678,24 +798,69 @@ def test_coding_self_check_runs_reference_through_the_sandbox() -> None:
     assert repo.questions[0]["format"] == "coding"
 
 
-def test_coding_self_check_failure_drops_the_question() -> None:
+def test_coding_self_check_failure_repairs_once_then_accepts() -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
-    adapter = FakeAdapter([ok_response()])
+    adapter = FakeAdapter([ok_response(), ok_response()])
     telemetry = FakeTelemetry()
-    sandbox = FakeSandbox(outcomes=[RUN_PASSED, RUN_FAILED])
+    # Original reference fails test 1; the repaired reference passes all three.
+    sandbox = FakeSandbox(outcomes=[RUN_FAILED])
+
+    run_worker(repo, queue, adapter, telemetry, sandbox)
+
+    assert len(repo.questions) == 1
+    assert repo.assessment_updates == []  # repaired before any failure
+    assert adapter.calls[1]["repair"] is True
+    assert "the self-check failed" in adapter.calls[1]["messages"][-1]["content"]
+    assert "base case" in adapter.calls[1]["messages"][-1]["content"]
+    assert telemetry.records[0].repair_attempted is True
+    assert telemetry.records[0].questions_accepted == 1
+    assert telemetry.records[0].outcome == "ok"
+
+
+def test_coding_self_check_repair_failure_resamples_to_a_later_window(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    # window 1: original + repair both fail the self-check; window 2 accepts.
+    adapter = FakeAdapter([ok_response(), ok_response(), ok_response()])
+    telemetry = FakeTelemetry()
+    sandbox = FakeSandbox(outcomes=[RUN_FAILED, RUN_FAILED])
+
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        run_worker(repo, queue, adapter, telemetry, sandbox)
+
+    assert len(adapter.calls) == 3  # gen, repair, then window 2 gen
+    assert len(repo.questions) == 1
+    assert repo.assessment_updates == []  # resolved by the resample
+    assert "window 1/3 self-check unresolved; resampling" in caplog.text
+    assert telemetry.records[0].questions_accepted == 1
+
+
+def test_coding_self_check_unresolved_across_all_windows_fails() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    # Every window's reference fails the self-check before and after repair.
+    adapter = FakeAdapter([ok_response() for _ in range(6)])
+    telemetry = FakeTelemetry()
+    sandbox = FakeSandbox(outcomes=[RUN_FAILED] * 6)
 
     run_worker(repo, queue, adapter, telemetry, sandbox)
 
     assert repo.questions == []
-    assert repo.assessment_updates[0][1] == "failed"
-    warning = repo.assessment_updates[0][2][0]
+    assert len(adapter.calls) == 6  # one bounded repair spent per window
+    assert repo.assessment_updates[-1][1] == "failed"
+    warning = repo.assessment_updates[-1][2][0]
     assert warning["code"] == "self_check_failed"
-    assert "passed 1/3" in warning["message"]
-    assert "small n" in warning["message"]
+    assert "passed 0/3" in warning["message"]
+    assert "base case" in warning["message"]
     assert repo.job_updates[-1]["error_code"] == "malformed_output"
     assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].repair_attempted is True
     assert telemetry.records[0].outcome == "malformed_output"
     assert telemetry.records[0].questions_accepted == 0
 

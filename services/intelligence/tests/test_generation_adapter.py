@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any
 
 import httpx
@@ -241,6 +242,22 @@ def test_429_retries_once_with_retry_after_capped_then_quota_failure(
         "correlationId": "",
         "retryAfterSeconds": 30,
     }
+
+
+def test_429_retry_logs_the_sleep_with_correlation_id(
+    fake: FakeClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    """D-06: the silent retry backoff becomes an explainable log line."""
+    fake._responses.append(_status_error(429, "slow down", headers={"retry-after": "1"}))
+    fake._responses.append(_body(content=json.dumps(VALID_MCQ)))
+    with caplog.at_level(logging.INFO, logger="generation.openrouter"):
+        response = _client().generate(
+            [{"role": "user", "content": "hi"}], MCQ_SCHEMA, correlation_id="corr-1"
+        )
+    assert response.outcome == "ok"
+    assert "adapter retry" in caplog.text
+    assert "delay=1.00s" in caplog.text
+    assert caplog.records[0].trace_id == "corr-1"
 
 
 def test_429_recovers_on_second_attempt(fake: FakeClient) -> None:

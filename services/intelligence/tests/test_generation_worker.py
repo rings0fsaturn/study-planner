@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import logging
+
+import pytest
+
 from app.generation.models import (
     AssessmentScope,
     NormalizedGenerationResponse,
@@ -240,9 +244,9 @@ def test_happy_path_inserts_question_and_marks_ready() -> None:
     assert telemetry.records[0].outcome == "ok"
     # The response schema is bound to this generation's retrieved chunk ids, so
     # the provider cannot return a chunk id outside the context (#41).
-    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
-        "chunkId"
-    ]["enum"] == ["c1"]
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"]["chunkId"][
+        "enum"
+    ] == ["c1"]
     assert "correctIndex" in adapter.calls[0]["schema"]["required"]
     assert telemetry.records[0].questions_requested == 1
     assert telemetry.records[0].questions_accepted == 1
@@ -270,7 +274,9 @@ def test_redelivered_message_for_terminal_assessment_is_dropped() -> None:
     assert not queue.queues["assessment_generate"]
 
 
-def test_quota_failure_fails_job_retryable_and_keeps_assessment_generating() -> None:
+def test_quota_failure_fails_job_retryable_and_keeps_assessment_generating(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -281,8 +287,12 @@ def test_quota_failure_fails_job_retryable_and_keeps_assessment_generating() -> 
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    make_worker(repo, queue, adapter, telemetry).run_once()
+    with caplog.at_level(logging.WARNING, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
 
+    assert "provider quota_failure" in caplog.text
+    assert "quota_exhausted" in caplog.text
+    assert caplog.records[0].trace_id == "corr-1"
     assert repo.questions == []
     assert repo.assessment_updates == [
         ("a1", "generating", [{"code": "quota_exhausted", "message": "quota_exhausted message"}])
@@ -347,7 +357,9 @@ def test_unsupported_request_fails_job_non_retryable() -> None:
     ]
 
 
-def test_safety_block_fails_assessment_with_warning() -> None:
+def test_safety_block_fails_assessment_with_warning(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -358,8 +370,11 @@ def test_safety_block_fails_assessment_with_warning() -> None:
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    make_worker(repo, queue, adapter, telemetry).run_once()
+    with caplog.at_level(logging.WARNING, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
 
+    assert "safety block" in caplog.text
+    assert caplog.records[0].trace_id == "corr-1"
     assert repo.questions == []
     assert repo.assessment_updates[0][1] == "failed"
     assert repo.assessment_updates[0][2] == [
@@ -371,7 +386,9 @@ def test_safety_block_fails_assessment_with_warning() -> None:
     assert not queue.queues["assessment_generate"]
 
 
-def test_malformed_output_repairs_and_succeeds() -> None:
+def test_malformed_output_repairs_and_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -403,8 +420,10 @@ def test_malformed_output_repairs_and_succeeds() -> None:
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    make_worker(repo, queue, adapter, telemetry).run_once()
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
 
+    assert "output malformed; attempting repair" in caplog.text
     assert len(repo.questions) == 1
     assert adapter.calls[0]["repair"] is False
     assert adapter.calls[1]["repair"] is True
@@ -415,7 +434,9 @@ def test_malformed_output_repairs_and_succeeds() -> None:
     assert telemetry.records[0].questions_accepted == 1
 
 
-def test_malformed_output_repair_exhausted_fails_assessment() -> None:
+def test_malformed_output_repair_exhausted_fails_assessment(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -435,7 +456,81 @@ def test_malformed_output_repair_exhausted_fails_assessment() -> None:
         },
         latency_ms=100.0,
     )
-    adapter = FakeAdapter([malformed, malformed])
+    # MAX_PLAIN_WINDOWS = 2: one generation plus one repair per window.
+    adapter = FakeAdapter([malformed, malformed, malformed, malformed])
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    with caplog.at_level(logging.WARNING, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert "malformed terminal" in caplog.text
+    assert caplog.records[-1].trace_id == "corr-1"
+    assert len(adapter.calls) == 4
+    assert [call["repair"] for call in adapter.calls] == [False, True, False, True]
+    assert repo.questions == []
+    assert repo.assessment_updates[0][1] == "failed"
+    assert repo.assessment_updates[0][2][0]["code"] == "malformed_output"
+    # D-02: the terminal warning names the real gate, never the generic string.
+    message = repo.assessment_updates[0][2][0]["message"]
+    assert "repair validation failed" not in message
+    assert "repair did not yield valid output" in message
+    assert "output failed local schema validation" in message
+    assert repo.job_updates[-1]["error_code"] == "malformed_output"
+    assert repo.job_updates[-1]["retryable"] is False
+    assert telemetry.records[0].outcome == "malformed_output"
+    assert telemetry.records[0].repair_attempted is True
+
+
+def test_objective_repair_failure_resamples_and_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """D-01/D-03: a failed repair spends one more fresh window before failing."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+            ok_response(),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(adapter.calls) == 3  # window 1 gen + repair, window 2 gen
+    assert [call["repair"] for call in adapter.calls] == [False, True, False]
+    assert repo.assessment_updates == []  # never fails
+    assert repo.completed[0][2] == "ready"
+    assert "window 1/2 repair unresolved; resampling" in caplog.text
+    # The accept log names the family, never a hardcoded "coding".
+    assert "generation a1 (objective) accepted on window 2/2" in caplog.text
+
+
+def test_repair_exhausted_names_the_repeated_gate() -> None:
+    """D-02: a well-formed candidate that keeps failing a named gate names it."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    wrong_difficulty = {**VALID_MCQ, "difficulty": 5}
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=wrong_difficulty),
+            ok_response(structured_output=wrong_difficulty),
+            ok_response(structured_output=wrong_difficulty),
+            ok_response(structured_output=wrong_difficulty),
+        ]
+    )
     telemetry = FakeTelemetry()
     queue.send(
         "assessment_generate",
@@ -445,15 +540,40 @@ def test_malformed_output_repair_exhausted_fails_assessment() -> None:
     make_worker(repo, queue, adapter, telemetry).run_once()
 
     assert repo.questions == []
-    assert repo.assessment_updates[0][1] == "failed"
-    assert repo.assessment_updates[0][2][0]["code"] == "malformed_output"
-    assert repo.job_updates[-1]["error_code"] == "malformed_output"
-    assert repo.job_updates[-1]["retryable"] is False
-    assert telemetry.records[0].outcome == "malformed_output"
-    assert telemetry.records[0].repair_attempted is True
+    message = repo.assessment_updates[0][2][0]["message"]
+    assert "difficulty_mismatch" in message
+    assert "repair validation failed" not in message
 
 
-def test_format_failure_repairs_and_succeeds() -> None:
+def test_repair_malformed_response_names_the_reason() -> None:
+    """A repair response that is itself unusable still reports why (D-02)."""
+    repo = FakeGenerationRepo()
+    repo.seed(assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    message = repo.assessment_updates[0][2][0]["message"]
+    assert "repair validation failed" not in message
+    assert "malformed_output message" in message
+
+
+def test_format_failure_repairs_and_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -465,8 +585,11 @@ def test_format_failure_repairs_and_succeeds() -> None:
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    make_worker(repo, queue, adapter, telemetry).run_once()
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
 
+    assert "validation failed; attempting repair" in caplog.text
+    assert "difficulty_mismatch" in caplog.text
     assert len(repo.questions) == 1
     assert adapter.calls[1]["repair"] is True
     assert "difficulty_mismatch" in adapter.calls[1]["messages"][-1]["content"]
@@ -513,7 +636,9 @@ def test_unverified_quote_warning_lands_on_ready_assessment() -> None:
     assert repo.completed[0][3][0]["code"] == "citation_unverified"
 
 
-def test_embedder_unavailable_fails_job_retryable() -> None:
+def test_embedder_unavailable_fails_job_retryable(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
     queue = FakeQueue()
@@ -536,8 +661,12 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    worker.run_once()
+    with caplog.at_level(logging.WARNING, logger="generation.worker"):
+        worker.run_once()
 
+    assert "deferred" in caplog.text
+    assert "provider_unavailable" in caplog.text
+    assert caplog.records[0].trace_id == "corr-1"
     assert adapter.calls == []
     assert repo.job_updates[-1] == {
         "job_id": "j1",
@@ -559,7 +688,9 @@ def test_embedder_unavailable_fails_job_retryable() -> None:
     assert not queue.queues["assessment_generate"]
 
 
-def test_non_retryable_context_error_fails_the_assessment() -> None:
+def test_non_retryable_context_error_fails_the_assessment(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     """No topic steer cannot be retried into success, so fail instead of spin."""
     repo = FakeGenerationRepo()
     repo.seed(assessment(), material())
@@ -583,8 +714,12 @@ def test_non_retryable_context_error_fails_the_assessment() -> None:
         {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
     )
 
-    worker.run_once()
+    with caplog.at_level(logging.WARNING, logger="generation.worker"):
+        worker.run_once()
 
+    assert "failed closed" in caplog.text
+    assert "validation_failed" in caplog.text
+    assert caplog.records[0].trace_id == "corr-1"
     assert adapter.calls == []
     assert repo.assessment_updates == [
         ("a1", "failed", [{"code": "validation_failed", "message": "no topic steer"}])
@@ -669,9 +804,9 @@ def test_written_recipe_uses_written_schema_and_accepts_written_row() -> None:
 
     # Written arm: the schema carries the rubric and is id-bound, so a written
     # generation cannot cite a chunk outside the retrieved context.
-    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"][
-        "chunkId"
-    ]["enum"] == ["c1"]
+    assert adapter.calls[0]["schema"]["properties"]["citations"]["items"]["properties"]["chunkId"][
+        "enum"
+    ] == ["c1"]
     assert "rubric" in adapter.calls[0]["schema"]["required"]
     assert adapter.calls[0]["messages"][0]["content"].startswith(
         "You author one written exam question"
@@ -752,21 +887,54 @@ def test_written_format_failure_repairs_with_written_schema() -> None:
     assert repo.questions[0]["format"] == "written"
     assert adapter.calls[1]["repair"] is True
     # The repair call carries the same id-bound written schema as the first.
-    assert adapter.calls[1]["schema"]["properties"]["citations"]["items"]["properties"][
-        "chunkId"
-    ]["enum"] == ["c1"]
+    assert adapter.calls[1]["schema"]["properties"]["citations"]["items"]["properties"]["chunkId"][
+        "enum"
+    ] == ["c1"]
     assert "rubric" in adapter.calls[1]["schema"]["required"]
     assert "rubric_weights_not_normalized" in adapter.calls[1]["messages"][-1]["content"]
     assert telemetry.records[0].repair_attempted is True
     assert telemetry.records[0].questions_accepted == 1
 
 
-def test_written_repair_exhausted_fails_assessment_malformed() -> None:
+def test_written_repair_failure_resamples_and_succeeds(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """D-01/D-03: written gets the same bounded resample as objective."""
     repo = FakeGenerationRepo()
     repo.seed(written_assessment(), material())
     queue = FakeQueue()
     adapter = FakeAdapter(
         [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=VALID_WRITTEN),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    with caplog.at_level(logging.INFO, logger="generation.worker"):
+        make_worker(repo, queue, adapter, telemetry).run_once()
+
+    assert len(adapter.calls) == 3
+    assert repo.questions[0]["format"] == "written"
+    assert repo.completed[0][2] == "ready"
+    assert repo.assessment_updates == []
+    assert "window 1/2 repair unresolved; resampling" in caplog.text
+
+
+def test_written_repair_exhausted_fails_assessment_malformed() -> None:
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    # MAX_PLAIN_WINDOWS = 2: one generation plus one repair per window.
+    adapter = FakeAdapter(
+        [
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
+            ok_response(structured_output=UNNORMALIZED_WRITTEN),
             ok_response(structured_output=UNNORMALIZED_WRITTEN),
             ok_response(structured_output=UNNORMALIZED_WRITTEN),
         ]
@@ -779,13 +947,43 @@ def test_written_repair_exhausted_fails_assessment_malformed() -> None:
 
     make_worker(repo, queue, adapter, telemetry).run_once()
 
+    assert len(adapter.calls) == 4
     assert repo.questions == []
     assert repo.assessment_updates[0][1] == "failed"
     assert repo.assessment_updates[0][2][0]["code"] == "malformed_output"
+    # D-02: the written terminal warning names the gate, never the generic string.
+    assert "rubric_weights_not_normalized" in repo.assessment_updates[0][2][0]["message"]
+    assert "repair validation failed" not in repo.assessment_updates[0][2][0]["message"]
     assert repo.job_updates[-1]["error_code"] == "malformed_output"
     assert repo.job_updates[-1]["retryable"] is False
     assert telemetry.records[0].outcome == "malformed_output"
     assert telemetry.records[0].questions_accepted == 0
+
+
+def test_written_repair_malformed_response_names_the_reason() -> None:
+    """A written repair response that is unusable reports why, not the generic string."""
+    repo = FakeGenerationRepo()
+    repo.seed(written_assessment(), material())
+    queue = FakeQueue()
+    adapter = FakeAdapter(
+        [
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+            failure_response("malformed_output", "malformed_output"),
+        ]
+    )
+    telemetry = FakeTelemetry()
+    queue.send(
+        "assessment_generate",
+        {"jobId": "j1", "assessmentId": "a1", "materialId": "m1", "correlationId": "corr-1"},
+    )
+
+    make_worker(repo, queue, adapter, telemetry).run_once()
+
+    message = repo.assessment_updates[0][2][0]["message"]
+    assert "repair validation failed" not in message
+    assert "malformed_output message" in message
 
 
 def test_written_citation_drop_fails_without_repair() -> None:

@@ -144,7 +144,7 @@ class OpenRouterGenerationClient:
                 body = json.loads(raw.text)
             except APITimeoutError:
                 if attempt == 1:
-                    time.sleep(RETRY_DELAY_SECONDS)
+                    self._retry_sleep(attempt, RETRY_DELAY_SECONDS, "timeout", correlation_id)
                     continue
                 return self._failure(
                     "timeout",
@@ -162,7 +162,8 @@ class OpenRouterGenerationClient:
                         if exc.status_code == 429
                         else RETRY_DELAY_SECONDS
                     )
-                    time.sleep(delay)
+                    reason = "rate_limit" if exc.status_code == 429 else "provider_status"
+                    self._retry_sleep(attempt, delay, reason, correlation_id)
                     continue
                 outcome, code, retryable = self._classify_status(exc)
                 return self._failure(
@@ -177,7 +178,7 @@ class OpenRouterGenerationClient:
                 )
             except APIConnectionError:
                 if attempt == 1:
-                    time.sleep(RETRY_DELAY_SECONDS)
+                    self._retry_sleep(attempt, RETRY_DELAY_SECONDS, "connection", correlation_id)
                     continue
                 return self._failure(
                     "provider_error",
@@ -253,7 +254,7 @@ class OpenRouterGenerationClient:
                 return
             except APITimeoutError:
                 if attempt == 1 and not emitted:
-                    time.sleep(RETRY_DELAY_SECONDS)
+                    self._retry_sleep(attempt, RETRY_DELAY_SECONDS, "timeout", correlation_id)
                     continue
                 raise GenerationStreamError(
                     "provider_timeout", "provider deadline exceeded", True
@@ -266,19 +267,32 @@ class OpenRouterGenerationClient:
                         if exc.status_code == 429
                         else RETRY_DELAY_SECONDS
                     )
-                    time.sleep(delay)
+                    reason = "rate_limit" if exc.status_code == 429 else "provider_status"
+                    self._retry_sleep(attempt, delay, reason, correlation_id)
                     continue
                 _outcome, code, retryable = self._classify_status(exc)
                 raise GenerationStreamError(code, self._message(exc), retryable) from None
             except APIConnectionError:
                 if attempt == 1 and not emitted:
-                    time.sleep(RETRY_DELAY_SECONDS)
+                    self._retry_sleep(attempt, RETRY_DELAY_SECONDS, "connection", correlation_id)
                     continue
                 raise GenerationStreamError(
                     "provider_unavailable", "provider connection failed", True
                 ) from None
             except APIError as exc:
                 raise GenerationStreamError("provider_error", str(exc)[:300], False) from None
+
+    @staticmethod
+    def _retry_sleep(attempt: int, delay: float, reason: str, correlation_id: str) -> None:
+        """D-06: log the retry backoff so a silent multi-minute gap is explainable."""
+        logger.info(
+            "adapter retry attempt=%d delay=%.2fs reason=%s",
+            attempt,
+            delay,
+            reason,
+            extra={"trace_id": correlation_id},
+        )
+        time.sleep(delay)
 
     @staticmethod
     def _delta_text(chunk: Any) -> str:
