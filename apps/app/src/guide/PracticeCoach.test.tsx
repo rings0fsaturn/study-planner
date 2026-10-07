@@ -1,7 +1,29 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PracticeCoach } from './PracticeCoach'
+import practiceCoachCss from './practiceCoach.css?raw'
 import type { PracticeGuide } from './usePracticeGuide'
+
+const LONG_QUOTE =
+  'Performance is judged on both financial and non-financial measures, and the variance ' +
+  'analysis identifies which critical success factor the shortfall actually comes from in the ' +
+  'case period under review, with the supporting detail quoted at length from the material. '
+
+function fiveLongCitations() {
+  return Array.from({ length: 5 }, (_, index) => ({
+    chunkId: `chunk-${index}`,
+    materialId: 'material-1',
+    quote: `${LONG_QUOTE}(${index})`,
+  }))
+}
+
+/** The real stylesheet: jsdom has no layout, so containment is asserted on computed styles. */
+function withRealStyles(): () => void {
+  const style = document.createElement('style')
+  style.textContent = practiceCoachCss
+  document.head.appendChild(style)
+  return () => style.remove()
+}
 
 function makeGuide(overrides: Partial<PracticeGuide> = {}): PracticeGuide {
   return {
@@ -108,6 +130,28 @@ describe('PracticeCoach', () => {
     )
     expect(screen.getByText('1 source')).toBeInTheDocument()
     expect(screen.getByText(/a grounded line/i)).toBeInTheDocument()
+  })
+
+  it('keeps a five-quote sources list capped, scrollable, and collapsible', () => {
+    const removeStyles = withRealStyles()
+    render(<PracticeCoach guide={makeGuide({ citations: fiveLongCitations() })} />)
+    const summary = screen.getByText('5 sources')
+    const details = summary.closest('details')
+    expect(details).not.toBeNull()
+
+    fireEvent.click(summary)
+    expect(details!.open).toBe(true)
+
+    const list = document.querySelector('.coach-citations ul') as HTMLElement
+    expect(getComputedStyle(list).overflowY).toBe('auto')
+    expect(getComputedStyle(list).maxHeight).not.toBe('none')
+
+    const card = document.querySelector('.coach') as HTMLElement
+    expect(getComputedStyle(card).maxHeight).not.toBe('none')
+
+    fireEvent.click(summary)
+    expect(details!.open).toBe(false)
+    removeStyles()
   })
 
   it('dismisses from the close control', () => {

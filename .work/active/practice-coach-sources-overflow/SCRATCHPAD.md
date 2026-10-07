@@ -4,8 +4,8 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 
 ## Now / Next
 
-- Doing: Phase 0 done (overflow reproduced and measured); starting Phase 1 failing assertions.
-- Next: Extend `PracticeCoach.test.tsx` with capped-scrollable plus toggle-closed assertions and add the Playwright regression check; run red.
+- Doing: Phase 1 red done; running R1 fan-out review of the test diff.
+- Next: Collect three reviewer verdicts into plan/REVIEWS.md; fix findings in Phase 1; then Phase 2.
 - Blocked: none.
 
 ## Session log
@@ -25,3 +25,10 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 - 02:16 EDIT   plan/evidence/measurements.md plus coach-open-1280.png, coach-open-375.png, coach-collapsed-1280.png - created - VERIFIED (Phase 0 exit gate passes).
 - 02:17 DONE   Phase 0 reproduce and measure at both viewports with screenshots.
 - 02:17 NEXT   Phase 1 failing assertions in PracticeCoach.test.tsx plus Playwright regression check.
+- 02:21 EDIT   apps/app/src/guide/PracticeCoach.test.tsx - one red test (five long quotes, real ?raw stylesheet, computed containment plus pointer toggle) - UNVERIFIED.
+- 02:21 FOUND  jsdom toggles native details on summary click and resolves author-stylesheet computed styles, so the red test is honest: fails on overflowY visible, want auto.
+- 02:30 EDIT   e2e/practice-coach-overflow.spec.ts - live-gated 1280 plus 375 regression check (mocked 5-quote SSE, real run page) - UNVERIFIED.
+- 02:31 FOUND  summary exposes no button role in Chromium a11y, so the spec uses the scoped user-visible label getByText 5 sources instead (rule 11: role first, documented fallback).
+- 02:33 FOUND  desktop check RED for the right reason: card top escapes the viewport with five quotes open (expectContainedCard box.y).
+- 02:33 DONE   Phase 1 red assertions (unit overflowY plus e2e viewport containment).
+- 02:33 NEXT   R1 fan-out review of the Phase 1 test diff; no Phase 2 until APPROVE.
