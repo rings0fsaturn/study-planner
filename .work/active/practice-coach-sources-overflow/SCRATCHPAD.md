@@ -4,8 +4,8 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 
 ## Now / Next
 
-- Doing: R2 PASS committed; starting Phase 3 verify (runtime restart first).
-- Next: Restart managed runtime, re-run Phase 0 browser pass, then unit plus live spec.
+- Doing: Phase 3 evidence complete; running R3 final fan-out before wrap.
+- Next: Collect three verdicts into plan/REVIEWS.md; on APPROVE run SESSION END plus WRAP.
 - Blocked: none.
 
 ## Session log
@@ -49,3 +49,9 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 - 03:13 EDIT   PracticeCoach.test.tsx plus plan/REVIEWS.md - collapsed duplicate rationale comments, recorded R2 - VERIFIED (unit 11/11 re-run).
 - 03:13 DONE   R2 gate PASS, no carried findings.
 - 03:13 NEXT   Phase 3 verify (restart runtime, browser pass 1280 plus 375, unit plus typecheck plus lint, live overflow spec, VERIFICATION.md, R3).
+- 03:20 DONE   runtime restarted (app only) with fresh Vite serving the fix.
+- 03:22 FOUND  post-fix synthetic pass: card 369px in 720 at 1280 and 399px in 812 at 375, ul capped 180 with scroll, all actions inside; collapsed unchanged 181px.
+- 03:30 FOUND  full app suite 1078/1080, the 2 failures are the known seedTestData TZ flake (green under pool forks), unrelated.
+- 03:40 FOUND  live spec: first post-fix run had one desktop transient at an uncaptured step, then desktop twice green plus phone twice green; recorded as unclassified in VERIFICATION.md.
+- 03:41 EDIT   plan/VERIFICATION.md plus fixed and e2e evidence screenshots - created - VERIFIED.
+- 03:41 NEXT   R3 final fan-out, then SESSION END plus WRAP.
