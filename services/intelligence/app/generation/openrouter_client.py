@@ -171,7 +171,7 @@ class OpenRouterGenerationClient:
                 return self._failure(
                     outcome,
                     code,
-                    self._message(exc),
+                    self._terminal_message(exc, code),
                     retryable,
                     request_id,
                     correlation_id,
@@ -277,7 +277,9 @@ class OpenRouterGenerationClient:
                     self._retry_sleep(attempt, delay, reason, correlation_id)
                     continue
                 self._maybe_log_terminal_400(exc, code, correlation_id)
-                raise GenerationStreamError(code, self._message(exc), retryable) from None
+                raise GenerationStreamError(
+                    code, self._terminal_message(exc, code), retryable
+                ) from None
             except APIConnectionError:
                 if attempt == 1 and not emitted:
                     self._retry_sleep(attempt, RETRY_DELAY_SECONDS, "connection", correlation_id)
@@ -388,6 +390,12 @@ class OpenRouterGenerationClient:
         return str(exc)[:300]
 
     @staticmethod
+    def _terminal_message(exc: APIStatusError, code: str) -> str:
+        if exc.status_code == 400 and code == "provider_error":
+            return "A temporary provider issue interrupted generation; please try again."
+        return OpenRouterGenerationClient._message(exc)
+
+    @staticmethod
     def _as_dict(value: Any) -> dict:
         return value if isinstance(value, dict) else {}
 
@@ -437,9 +445,10 @@ class OpenRouterGenerationClient:
     def _log_terminal_400(exc: APIStatusError, correlation_id: str) -> None:
         provider_name, provider_error_code = OpenRouterGenerationClient._provider_details(exc)
         logger.warning(
-            "adapter terminal 400 provider_name=%s provider_error_code=%s",
+            "adapter terminal 400 provider_name=%s provider_error_code=%s raw=%s",
             provider_name,
             provider_error_code,
+            OpenRouterGenerationClient._message(exc),
             extra={"trace_id": correlation_id},
         )
 

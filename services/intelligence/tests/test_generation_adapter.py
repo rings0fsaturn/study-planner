@@ -580,3 +580,42 @@ def test_stream_401_is_provider_credentials_no_retry(stream_fake: FakeStreamClie
 def test_provider_details_never_raises(body: Any) -> None:
     exc = _status_error(400, "x", body=body)
     assert OpenRouterGenerationClient._provider_details(exc) == (None, None)
+
+
+def test_terminal_400_stores_honest_warning_not_raw(
+    fake: FakeClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake._responses.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    fake._responses.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    with caplog.at_level(logging.WARNING, logger="generation.openrouter"):
+        response = _client().generate(
+            [{"role": "user", "content": "hi"}], MCQ_SCHEMA, correlation_id="corr-1"
+        )
+    assert response.error["message"] == (
+        "A temporary provider issue interrupted generation; please try again."
+    )
+    assert "Error code" not in response.error["message"]
+    assert "Sail Research" in caplog.text
+    assert "raw=" in caplog.text
+    assert "Error code: 400" in caplog.text
+
+
+def test_stream_terminal_400_uses_honest_message(
+    stream_fake: FakeStreamClient,
+) -> None:
+    stream_fake._streams.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    stream_fake._streams.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    with pytest.raises(GenerationStreamError) as excinfo:
+        list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert excinfo.value.message == (
+        "A temporary provider issue interrupted generation; please try again."
+    )
+    assert "Error code" not in excinfo.value.message
