@@ -4,8 +4,8 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 
 ## Now / Next
 
-- Doing: Phase 1 red done; running R1 fan-out review of the test diff.
-- Next: Collect three reviewer verdicts into plan/REVIEWS.md; fix findings in Phase 1; then Phase 2.
+- Doing: R1 PASS; starting Phase 2 minimal CSS fix.
+- Next: Cap .coach plus .coach-body plus citations ul per plan values; run unit green plus suite.
 - Blocked: none.
 
 ## Session log
@@ -32,3 +32,10 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 - 02:33 FOUND  desktop check RED for the right reason: card top escapes the viewport with five quotes open (expectContainedCard box.y).
 - 02:33 DONE   Phase 1 red assertions (unit overflowY plus e2e viewport containment).
 - 02:33 NEXT   R1 fan-out review of the Phase 1 test diff; no Phase 2 until APPROVE.
+- 02:40 DONE   R1 fan-out collected: delegate REQUEST_CHANGES (2 plus 3), thermo APPROVE-waived, impeccable REQUEST_CHANGES (6 plus 4).
+- 02:45 FOUND  jsdom echoes max-height min(70vh,560px) raw and resolves overflow/display/flex, so the unit test can pin concrete caps (probe, scratch file removed).
+- 02:50 EDIT   Phase 1 review fixes (Got it bbox, try/finally, container queries, attempts cascade, scoped trigger, four-edge containment, Tab plus Enter plus Space toggle, phone toggle plus 44px, list-in-card, px cap, viewport shots) - UNVERIFIED.
+- 02:55 FOUND  unit still RED on overflowY and desktop e2e still RED on card-top after fixes; keyboard legs await the Phase 3 green run.
+- 02:55 EDIT   plan/REVIEWS.md - R1 section with per-agent verdicts and dispositions - VERIFIED.
+- 02:55 DONE   R1 gate PASS with all correctness findings fixed inside Phase 1.
+- 02:55 NEXT   Phase 2 minimal CSS fix (impeccable Operate, tdd red to green, ponytail native plus CSS only).

@@ -91,6 +91,7 @@ async function cleanupRunAssessments(testStartedAt: string): Promise<void> {
   );
   const created = (await before.json()) as Array<{ id: string }>;
   if (created.length === 0) return;
+  const ids = created.map((row) => row.id);
   const deleted = await fetch(`${SUPABASE_URL}/rest/v1/assessments?${windowFilter}`, {
     method: 'DELETE',
     headers: { ...headers, Prefer: 'return=minimal' },
@@ -101,6 +102,11 @@ async function cleanupRunAssessments(testStartedAt: string): Promise<void> {
     { headers },
   );
   expect(await remaining.json(), 'the run assessments must be gone after cleanup').toEqual([]);
+  const attempts = await fetch(
+    `${SUPABASE_URL}/rest/v1/question_attempts?select=id&assessment_id=in.(${ids.join(',')})`,
+    { headers },
+  );
+  expect(await attempts.json(), 'attempts cascade with their assessment').toEqual([]);
 }
 
 async function startRun(page: Page): Promise<string> {
@@ -129,7 +135,10 @@ async function openCoachWithSources(page: Page): Promise<void> {
       body: mockStreamBody(),
     });
   });
-  await page.getByRole('button', { name: /stuck/i }).click();
+  await page
+    .getByRole('region', { name: 'Problem 1' })
+    .getByRole('button', { name: /stuck/i })
+    .click();
   const card = coach(page);
   await expect(card).toBeVisible({ timeout: 15000 });
   await card.getByRole('button', { name: 'Yes, help me' }).click();
@@ -147,19 +156,63 @@ async function expectContainedCard(page: Page, evidenceName: string): Promise<vo
   const viewport = page.viewportSize();
   expect(box, 'the open coach card must have a rect').not.toBeNull();
   expect(viewport, 'the viewport must be known').not.toBeNull();
-  expect(box!.y, 'card top stays inside the viewport').toBeGreaterThanOrEqual(0);
-  expect(box!.y + box!.height, 'card bottom stays inside the viewport').toBeLessThanOrEqual(
-    viewport!.height,
-  );
+  const inViewport = (
+    name: string,
+    rect: { x: number; y: number; width: number; height: number },
+  ): void => {
+    expect(rect.x, `${name} left edge inside the viewport`).toBeGreaterThanOrEqual(0);
+    expect(rect.y, `${name} top stays inside the viewport`).toBeGreaterThanOrEqual(0);
+    expect(rect.x + rect.width, `${name} right edge inside the viewport`).toBeLessThanOrEqual(
+      viewport!.width,
+    );
+    expect(rect.y + rect.height, `${name} bottom stays inside the viewport`).toBeLessThanOrEqual(
+      viewport!.height,
+    );
+  };
+  inViewport('card', box!);
+  const listBox = await card.locator('.coach-citations ul').boundingBox();
+  expect(listBox, 'the citations list must have a rect').not.toBeNull();
+  expect(listBox!.y, 'list top stays inside the card').toBeGreaterThanOrEqual(box!.y);
+  expect(
+    listBox!.y + listBox!.height,
+    'list bottom stays inside the card',
+  ).toBeLessThanOrEqual(box!.y + box!.height);
   const scroll = await card
     .locator('.coach-citations ul')
     .evaluate((el) => ({ scrollHeight: el.scrollHeight, clientHeight: el.clientHeight }));
   expect(scroll.scrollHeight, 'the five-quote list scrolls internally').toBeGreaterThan(
     scroll.clientHeight,
   );
-  await expect(card.getByRole('button', { name: 'Dismiss practice coach' })).toBeVisible();
-  await expect(card.getByRole('button', { name: 'Go deeper' })).toBeVisible();
-  await page.screenshot({ path: `${EVIDENCE_DIR}/${evidenceName}`, fullPage: true });
+  for (const name of ['Dismiss practice coach', 'Go deeper', 'Got it'] as const) {
+    const action = card.getByRole('button', { name });
+    await expect(action).toBeVisible();
+    const actionBox = await action.boundingBox();
+    expect(actionBox, `${name} must have a rect`).not.toBeNull();
+    inViewport(name, actionBox!);
+  }
+  await page.screenshot({ path: `${EVIDENCE_DIR}/${evidenceName}` });
+}
+
+/** Pointer close/reopen plus a fully keyboard-driven toggle (Tab from Dismiss, Enter, Space). */
+async function expectDisclosureToggle(page: Page): Promise<void> {
+  const card = coach(page);
+  const details = card.locator('details.coach-citations');
+  const summary = card.getByText('5 sources');
+  const quote = card.getByText(/E2E overflow probe quote 4/);
+  await summary.click();
+  await expect(details).not.toHaveAttribute('open', '');
+  await expect(quote).toBeHidden();
+  await summary.click();
+  await expect(quote).toBeVisible();
+  await card.getByRole('button', { name: 'Dismiss practice coach' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(summary).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(details).not.toHaveAttribute('open', '');
+  await page.keyboard.press('Space');
+  await expect(quote).toBeVisible();
+  await page.keyboard.press('Enter');
+  await expect(details).not.toHaveAttribute('open', '');
 }
 
 test.describe('coach sources overflow (desktop 1280)', () => {
@@ -180,16 +233,7 @@ test.describe('coach sources overflow (desktop 1280)', () => {
       });
       await openCoachWithSources(page);
       await expectContainedCard(page, 'coach-e2e-open-1280.png');
-      const card = coach(page);
-      const summary = card.getByText('5 sources');
-      await summary.click();
-      await expect(card.locator('details.coach-citations')).not.toHaveAttribute('open', '');
-      await expect(card.getByText(/E2E overflow probe quote 4/)).toBeHidden();
-      await summary.click();
-      await expect(card.getByText(/E2E overflow probe quote 4/)).toBeVisible();
-      await summary.focus();
-      await page.keyboard.press('Enter');
-      await expect(card.locator('details.coach-citations')).not.toHaveAttribute('open', '');
+      await expectDisclosureToggle(page);
       expect(errors()).toEqual([]);
     } catch (error) {
       failure = error;
@@ -219,6 +263,11 @@ test.describe('coach sources overflow (phone 375)', () => {
       });
       await openCoachWithSources(page);
       await expectContainedCard(page, 'coach-e2e-open-375.png');
+      await expectDisclosureToggle(page);
+      for (const name of ['Dismiss practice coach', 'Go deeper', 'Got it'] as const) {
+        const height = (await coach(page).getByRole('button', { name }).boundingBox())!.height;
+        expect(height, `${name} meets the 44px phone touch target`).toBeGreaterThanOrEqual(44);
+      }
       expect(errors()).toEqual([]);
     } catch (error) {
       failure = error;

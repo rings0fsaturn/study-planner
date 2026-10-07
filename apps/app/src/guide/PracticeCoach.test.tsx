@@ -134,24 +134,34 @@ describe('PracticeCoach', () => {
 
   it('keeps a five-quote sources list capped, scrollable, and collapsible', () => {
     const removeStyles = withRealStyles()
-    render(<PracticeCoach guide={makeGuide({ citations: fiveLongCitations() })} />)
-    const summary = screen.getByText('5 sources')
-    const details = summary.closest('details')
-    expect(details).not.toBeNull()
+    try {
+      const { container } = render(
+        <PracticeCoach guide={makeGuide({ citations: fiveLongCitations() })} />,
+      )
+      const summary = screen.getByText('5 sources')
+      const details = summary.closest('details')
+      expect(details).not.toBeNull()
 
-    fireEvent.click(summary)
-    expect(details!.open).toBe(true)
+      fireEvent.click(summary)
+      expect(details!.open).toBe(true)
 
-    const list = document.querySelector('.coach-citations ul') as HTMLElement
-    expect(getComputedStyle(list).overflowY).toBe('auto')
-    expect(getComputedStyle(list).maxHeight).not.toBe('none')
+      const list = container.querySelector('.coach-citations ul') as HTMLElement
+      expect(getComputedStyle(list).overflowY).toBe('auto')
+      expect(Number.parseFloat(getComputedStyle(list).maxHeight)).toBeLessThanOrEqual(200)
 
-    const card = document.querySelector('.coach') as HTMLElement
-    expect(getComputedStyle(card).maxHeight).not.toBe('none')
+      const card = container.querySelector('.coach') as HTMLElement
+      expect(getComputedStyle(card).display).toBe('flex')
+      expect(getComputedStyle(card).overflow).toBe('hidden')
+      expect(getComputedStyle(card).maxHeight).toBe('min(70vh, 560px)')
 
-    fireEvent.click(summary)
-    expect(details!.open).toBe(false)
-    removeStyles()
+      const body = container.querySelector('.coach-body') as HTMLElement
+      expect(getComputedStyle(body).overflowY).toBe('auto')
+
+      fireEvent.click(summary)
+      expect(details!.open).toBe(false)
+    } finally {
+      removeStyles()
+    }
   })
 
   it('dismisses from the close control', () => {
