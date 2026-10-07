@@ -5,10 +5,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { PracticeCoach } from './PracticeCoach'
 import type { PracticeGuide } from './usePracticeGuide'
 
-// The real stylesheet, read from disk: vitest leaves `?raw` CSS imports empty,
-// so the file is injected into a <style> tag and containment is asserted on
-// computed styles (jsdom has no layout). Read lazily: module-scope
-// `import.meta.url` does not survive the transform, in-test access does.
+// Real stylesheet from disk (see withRealStyles): `?raw` CSS imports are empty
+// under vitest, and module-scope `import.meta.url` does not survive the transform.
 
 const LONG_QUOTE =
   'Performance is judged on both financial and non-financial measures, and the variance ' +

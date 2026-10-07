@@ -31,3 +31,18 @@ _A gate passes only on three APPROVEs (waived minors allowed); findings are fixe
 
 - PASS: every correctness finding is fixed in Phase 1 with tests re-run (unit red on overflowY, desktop e2e red on card-top containment).
 - The new Tab/Space and phone toggle legs execute only once the card is contained, so their first execution is the Phase 3 green run.
+
+## R2 (after Phase 2 CSS fix, commit 44b44d1)
+
+- Agent A (open-code-review-delegate lens): APPROVE with waived minors (no contract drift, caps match plan verbatim, phone guard consistent, standards clean).
+- Agent B (thermo-nuclear lens): APPROVE with waived minors (no abstraction, no size breach, no spaghetti).
+- Agent C (impeccable Operate plus a11y lens): APPROVE with waived minors (order and rhythm preserved, identity intact, focus outline survives, 44px targets intact, dvh guard clears the tab bar, body owns the scroll).
+
+### Disposition
+
+- Waived minors applied: collapsed the duplicated jsdom-rationale comments in `PracticeCoach.test.tsx` (flagged by A and B).
+- Waived minors accepted as-is: exact-string `min(70vh, 560px)` pin (stabilizes the plan value), nested scroll regions and short-landscape clipping note (both inside plan-prescribed values, browser proof in Phase 3 decides).
+
+### R2 gate
+
+- PASS: three APPROVEs with explicitly waived minors; no carried findings.

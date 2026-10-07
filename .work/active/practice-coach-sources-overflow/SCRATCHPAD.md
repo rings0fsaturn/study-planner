@@ -4,8 +4,8 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 
 ## Now / Next
 
-- Doing: Phase 2 green done; running R2 fan-out review of the CSS diff.
-- Next: Collect three verdicts into plan/REVIEWS.md; fix findings in Phase 2; then Phase 3.
+- Doing: R2 PASS committed; starting Phase 3 verify (runtime restart first).
+- Next: Restart managed runtime, re-run Phase 0 browser pass, then unit plus live spec.
 - Blocked: none.
 
 ## Session log
@@ -45,3 +45,7 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 - 03:05 FOUND  honest red-green: stashed fix runs RED on real old CSS (overflowY visible), restored fix runs GREEN 11/11.
 - 03:06 DONE   Phase 2 fix with guide suite 34/34, tsc clean, eslint 0 errors.
 - 03:06 NEXT   R2 fan-out review of the CSS diff; no Phase 3 until APPROVE.
+- 03:12 DONE   R2 fan-out collected: three APPROVE with waived minors.
+- 03:13 EDIT   PracticeCoach.test.tsx plus plan/REVIEWS.md - collapsed duplicate rationale comments, recorded R2 - VERIFIED (unit 11/11 re-run).
+- 03:13 DONE   R2 gate PASS, no carried findings.
+- 03:13 NEXT   Phase 3 verify (restart runtime, browser pass 1280 plus 375, unit plus typecheck plus lint, live overflow spec, VERIFICATION.md, R3).
