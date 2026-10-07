@@ -157,13 +157,8 @@ class OpenRouterGenerationClient:
                     start,
                 )
             except APIStatusError as exc:
-                if attempt == 1 and (
-                    exc.status_code == 429
-                    or exc.status_code >= 500
-                    or (
-                        exc.status_code == 400 and self._classify_status(exc)[1] == "provider_error"
-                    )
-                ):
+                outcome, code, retryable = self._classify_status(exc)
+                if attempt == 1 and self._should_retry_status(exc.status_code, code):
                     delay = (
                         self._retry_after_delay(exc)
                         if exc.status_code == 429
@@ -172,7 +167,7 @@ class OpenRouterGenerationClient:
                     reason = "rate_limit" if exc.status_code == 429 else "provider_status"
                     self._retry_sleep(attempt, delay, reason, correlation_id)
                     continue
-                outcome, code, retryable = self._classify_status(exc)
+                self._maybe_log_terminal_400(exc, code, correlation_id)
                 return self._failure(
                     outcome,
                     code,
@@ -267,8 +262,12 @@ class OpenRouterGenerationClient:
                     "provider_timeout", "provider deadline exceeded", True
                 ) from None
             except APIStatusError as exc:
-                retryable_status = exc.status_code == 429 or exc.status_code >= 500
-                if attempt == 1 and not emitted and retryable_status:
+                _outcome, code, retryable = self._classify_status(exc)
+                if (
+                    attempt == 1
+                    and not emitted
+                    and self._should_retry_status(exc.status_code, code)
+                ):
                     delay = (
                         self._retry_after_delay(exc)
                         if exc.status_code == 429
@@ -277,7 +276,7 @@ class OpenRouterGenerationClient:
                     reason = "rate_limit" if exc.status_code == 429 else "provider_status"
                     self._retry_sleep(attempt, delay, reason, correlation_id)
                     continue
-                _outcome, code, retryable = self._classify_status(exc)
+                self._maybe_log_terminal_400(exc, code, correlation_id)
                 raise GenerationStreamError(code, self._message(exc), retryable) from None
             except APIConnectionError:
                 if attempt == 1 and not emitted:
@@ -360,7 +359,7 @@ class OpenRouterGenerationClient:
             return None
         try:
             return float(raw)
-        except ValueError:
+        except (ValueError, TypeError):
             return None
 
     def _retry_after_delay(self, exc: APIStatusError) -> float:
@@ -370,8 +369,84 @@ class OpenRouterGenerationClient:
         return RETRY_DELAY_SECONDS
 
     @staticmethod
+    def _should_retry_status(status_code: int, code: str) -> bool:
+        """One in-adapter retry only; the terminal envelope stays non-retryable.
+
+        `_classify_status` owns the queue-level `retryable` flag (terminal 400
+        stays False so the worker parks the assessment in `generating` per D-06).
+        This predicate owns the single internal retry that absorbs a transient
+        downstream 400, so the two intentionally differ for 429/transient-400.
+        """
+        return (
+            status_code == 429
+            or status_code >= 500
+            or (status_code == 400 and code == "provider_error")
+        )
+
+    @staticmethod
     def _message(exc: APIStatusError) -> str:
         return str(exc)[:300]
+
+    @staticmethod
+    def _as_dict(value: Any) -> dict:
+        return value if isinstance(value, dict) else {}
+
+    @staticmethod
+    def _provider_details(exc: APIStatusError) -> tuple[str | None, str | None]:
+        """Provider routing details from the error body; (None, None) when absent."""
+        body = getattr(exc, "body", None)
+        data: Any = None
+        if isinstance(body, dict):
+            data = body
+        elif isinstance(body, str):
+            try:
+                data = json.loads(body)
+            except (ValueError, TypeError):
+                return (None, None)
+        else:
+            return (None, None)
+        if not isinstance(data, dict):
+            return (None, None)
+        error = OpenRouterGenerationClient._as_dict(data.get("error"))
+        metadata = OpenRouterGenerationClient._as_dict(error.get("metadata"))
+        name = (
+            metadata.get("provider_name") or error.get("provider_name") or data.get("provider_name")
+        )
+        code = (
+            metadata.get("provider_error_code")
+            or error.get("provider_error_code")
+            or data.get("provider_error_code")
+        )
+        if not code:
+            raw = metadata.get("raw")
+            if isinstance(raw, str):
+                try:
+                    parsed = json.loads(raw)
+                except (ValueError, TypeError):
+                    parsed = None
+                if isinstance(parsed, dict):
+                    inner = OpenRouterGenerationClient._as_dict(parsed.get("error"))
+                    candidate = inner.get("code") or parsed.get("code")
+                    if isinstance(candidate, str) and candidate:
+                        code = candidate
+        provider_name = name if isinstance(name, str) and name else None
+        provider_error_code = code if isinstance(code, str) and code else None
+        return (provider_name, provider_error_code)
+
+    @staticmethod
+    def _log_terminal_400(exc: APIStatusError, correlation_id: str) -> None:
+        provider_name, provider_error_code = OpenRouterGenerationClient._provider_details(exc)
+        logger.warning(
+            "adapter terminal 400 provider_name=%s provider_error_code=%s",
+            provider_name,
+            provider_error_code,
+            extra={"trace_id": correlation_id},
+        )
+
+    @staticmethod
+    def _maybe_log_terminal_400(exc: APIStatusError, code: str, correlation_id: str) -> None:
+        if exc.status_code == 400 and code == "provider_error":
+            OpenRouterGenerationClient._log_terminal_400(exc, correlation_id)
 
     def _normalize(
         self,
@@ -398,7 +473,7 @@ class OpenRouterGenerationClient:
             elif finish_reason == "stop":
                 try:
                     structured_output = json.loads(content)
-                except Exception:
+                except (ValueError, TypeError):
                     structured_output = None
                 if structured_output is None:
                     outcome = "malformed_output"

@@ -109,11 +109,13 @@ def _body(
     }
 
 
-def _status_error(status: int, message: str, headers: dict | None = None) -> APIStatusError:
+def _status_error(
+    status: int, message: str, headers: dict | None = None, body: Any | None = None
+) -> APIStatusError:
     response = httpx.Response(
         status, request=httpx.Request("POST", "http://test"), headers=headers or {}
     )
-    return APIStatusError(message, response=response, body=None)
+    return APIStatusError(message, response=response, body=body)
 
 
 def test_ok_outcome_normalizes_envelope(fake: FakeClient) -> None:
@@ -268,13 +270,17 @@ def test_429_recovers_on_second_attempt(fake: FakeClient) -> None:
     assert response.outcome == "ok"
 
 
-def test_400_effort_message_is_unsupported_request_no_retry(fake: FakeClient) -> None:
+def test_400_effort_message_is_unsupported_request_no_retry(
+    fake: FakeClient, caplog: pytest.LogCaptureFixture
+) -> None:
     fake._responses.append(_status_error(400, "reasoning effort not supported by this model tier"))
-    response = _client().generate([{"role": "user", "content": "hi"}], MCQ_SCHEMA)
+    with caplog.at_level(logging.WARNING, logger="generation.openrouter"):
+        response = _client().generate([{"role": "user", "content": "hi"}], MCQ_SCHEMA)
     assert len(fake.calls) == 1
     assert response.outcome == "provider_error"
     assert response.error["code"] == "unsupported_request"
     assert response.error["retryable"] is False
+    assert [r for r in caplog.records if "terminal 400" in r.getMessage()] == []
 
 
 def test_transient_400_provider_error_retries_once_then_ok(fake: FakeClient) -> None:
@@ -448,3 +454,129 @@ def test_stream_text_does_not_retry_after_a_delta(stream_fake: FakeStreamClient)
         list(_client().stream_text([{"role": "user", "content": "hi"}]))
     assert excinfo.value.code == "provider_timeout"
     assert len(stream_fake.calls) == 1
+
+
+def test_stream_transient_400_provider_error_retries_once_then_ok(
+    stream_fake: FakeStreamClient,
+) -> None:
+    stream_fake._streams.append(_status_error(400, "Error code: 400 - Provider returned error"))
+    stream_fake._streams.append(FakeStream(["ok"]))
+    deltas = list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert deltas == ["ok"]
+    assert len(stream_fake.calls) == 2
+
+
+def test_stream_400_effort_message_is_unsupported_request_no_retry(
+    stream_fake: FakeStreamClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    stream_fake._streams.append(
+        _status_error(400, "reasoning effort not supported by this model tier")
+    )
+    with caplog.at_level(logging.WARNING, logger="generation.openrouter"):
+        with pytest.raises(GenerationStreamError) as excinfo:
+            list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert excinfo.value.code == "unsupported_request"
+    assert len(stream_fake.calls) == 1
+    assert [r for r in caplog.records if "terminal 400" in r.getMessage()] == []
+
+
+def test_stream_400_after_first_delta_does_not_retry(
+    stream_fake: FakeStreamClient,
+) -> None:
+    stream_fake._streams.append(
+        FakeStream(
+            ["Hel"],
+            error=_status_error(400, "Error code: 400 - Provider returned error"),
+        )
+    )
+    with pytest.raises(GenerationStreamError) as excinfo:
+        list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert excinfo.value.code == "provider_error"
+    assert len(stream_fake.calls) == 1
+
+
+def _provider_body() -> dict:
+    return {
+        "error": {
+            "message": "Provider returned error",
+            "code": 400,
+            "metadata": {
+                "provider_name": "Sail Research",
+                "raw": '{"error":{"code":"invalid_request_error","message":"rejected"}}',
+            },
+        }
+    }
+
+
+def test_terminal_400_logs_provider_details(
+    fake: FakeClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake._responses.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    fake._responses.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    with caplog.at_level(logging.WARNING, logger="generation.openrouter"):
+        response = _client().generate(
+            [{"role": "user", "content": "hi"}], MCQ_SCHEMA, correlation_id="corr-1"
+        )
+    assert response.outcome == "provider_error"
+    assert response.error["code"] == "provider_error"
+    assert len(fake.calls) == 2
+    assert "Sail Research" in caplog.text
+    assert "invalid_request_error" in caplog.text
+    warning = next((r for r in caplog.records if "terminal 400" in r.getMessage()), None)
+    assert warning is not None
+    assert warning.trace_id == "corr-1"
+
+
+def test_stream_terminal_400_logs_provider_details(
+    stream_fake: FakeStreamClient, caplog: pytest.LogCaptureFixture
+) -> None:
+    stream_fake._streams.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    stream_fake._streams.append(
+        _status_error(400, "Error code: 400 - Provider returned error", body=_provider_body())
+    )
+    with caplog.at_level(logging.WARNING, logger="generation.openrouter"):
+        with pytest.raises(GenerationStreamError) as excinfo:
+            list(
+                _client().stream_text([{"role": "user", "content": "hi"}], correlation_id="corr-9")
+            )
+    assert excinfo.value.code == "provider_error"
+    assert len(stream_fake.calls) == 2
+    assert "Sail Research" in caplog.text
+    assert "invalid_request_error" in caplog.text
+    warning = next((r for r in caplog.records if "terminal 400" in r.getMessage()), None)
+    assert warning is not None
+    assert warning.trace_id == "corr-9"
+
+
+def test_stream_401_is_provider_credentials_no_retry(stream_fake: FakeStreamClient) -> None:
+    stream_fake._streams.append(_status_error(401, "invalid api key"))
+    with pytest.raises(GenerationStreamError) as excinfo:
+        list(_client().stream_text([{"role": "user", "content": "hi"}]))
+    assert excinfo.value.code == "provider_credentials"
+    assert len(stream_fake.calls) == 1
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        None,
+        "not-json{",
+        '{"a": 1}',
+        '"hi"',
+        "[1, 2]",
+        [],
+        {"error": "str"},
+        {"error": {}},
+        {"error": {"metadata": {"raw": "not-json{"}}},
+        b"bytes",
+    ],
+)
+def test_provider_details_never_raises(body: Any) -> None:
+    exc = _status_error(400, "x", body=body)
+    assert OpenRouterGenerationClient._provider_details(exc) == (None, None)
