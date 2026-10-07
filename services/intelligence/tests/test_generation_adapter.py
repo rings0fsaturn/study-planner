@@ -277,6 +277,14 @@ def test_400_effort_message_is_unsupported_request_no_retry(fake: FakeClient) ->
     assert response.error["retryable"] is False
 
 
+def test_transient_400_provider_error_retries_once_then_ok(fake: FakeClient) -> None:
+    fake._responses.append(_status_error(400, "Error code: 400 - Provider returned error"))
+    fake._responses.append(_body(content=json.dumps(VALID_MCQ)))
+    response = _client().generate([{"role": "user", "content": "hi"}], MCQ_SCHEMA)
+    assert len(fake.calls) == 2
+    assert response.outcome == "ok"
+
+
 def test_401_is_provider_credentials_no_retry(fake: FakeClient) -> None:
     fake._responses.append(_status_error(401, "invalid api key"))
     response = _client().generate([{"role": "user", "content": "hi"}], MCQ_SCHEMA)

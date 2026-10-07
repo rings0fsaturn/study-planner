@@ -2,7 +2,8 @@
 
 DeepSeek via OpenRouter with the OpenAI SDK, `max_retries=0`, exactly one
 application-level retry for the retryable classes (rate limit honoring
-`Retry-After` capped at 60 s, provider unavailability, provider deadline),
+`Retry-After` capped at 60 s, provider unavailability, provider deadline,
+transient downstream 400 that classifies as generic `provider_error`),
 and the D-08 finish-reason/status to outcome mapping. Local schema
 validation runs after every response regardless of strict mode.
 """
@@ -156,7 +157,13 @@ class OpenRouterGenerationClient:
                     start,
                 )
             except APIStatusError as exc:
-                if attempt == 1 and (exc.status_code == 429 or exc.status_code >= 500):
+                if attempt == 1 and (
+                    exc.status_code == 429
+                    or exc.status_code >= 500
+                    or (
+                        exc.status_code == 400 and self._classify_status(exc)[1] == "provider_error"
+                    )
+                ):
                     delay = (
                         self._retry_after_delay(exc)
                         if exc.status_code == 429
