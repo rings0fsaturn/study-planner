@@ -9,6 +9,12 @@
   bottom: 96px;
   width: 360px;
   max-width: calc(100vw - 32px);
+  /* Containment: the open sources disclosure must not push the card past the
+     viewport. Header and actions stay pinned while the body scrolls. */
+  max-height: min(70vh, 560px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: var(--space-4);
   background: var(--surface-card);
   border-radius: var(--radius-lg);
@@ -106,6 +112,9 @@
   line-height: 1.55;
   color: var(--text-primary);
   white-space: pre-wrap;
+  /* Primary scroll region inside the capped flex card. */
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .coach-actions {
@@ -140,6 +149,9 @@
   gap: var(--space-1);
   margin: var(--space-2) 0 0;
   padding-left: var(--space-4);
+  /* Independent cap so long quotes scroll inside the disclosure. */
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 .coach-quote {
@@ -183,6 +195,8 @@
     bottom: 84px;
     width: auto;
     max-width: none;
+    /* Clear the bottom tab bar on short phone viewports. */
+    max-height: calc(100dvh - 120px);
   }
 
   .coach .btn {

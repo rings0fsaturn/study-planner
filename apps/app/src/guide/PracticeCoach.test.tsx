@@ -1,8 +1,14 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { PracticeCoach } from './PracticeCoach'
-import practiceCoachCss from './practiceCoach.css?raw'
 import type { PracticeGuide } from './usePracticeGuide'
+
+// The real stylesheet, read from disk: vitest leaves `?raw` CSS imports empty,
+// so the file is injected into a <style> tag and containment is asserted on
+// computed styles (jsdom has no layout). Read lazily: module-scope
+// `import.meta.url` does not survive the transform, in-test access does.
 
 const LONG_QUOTE =
   'Performance is judged on both financial and non-financial measures, and the variance ' +
@@ -19,6 +25,9 @@ function fiveLongCitations() {
 
 /** The real stylesheet: jsdom has no layout, so containment is asserted on computed styles. */
 function withRealStyles(): () => void {
+  // NOTE: `new URL('./practiceCoach.css', import.meta.url)` is Vite's asset-import
+  // syntax and gets rewritten, so resolve the path with dirname instead.
+  const practiceCoachCss = readFileSync(join(import.meta.dirname, 'practiceCoach.css'), 'utf8')
   const style = document.createElement('style')
   style.textContent = practiceCoachCss
   document.head.appendChild(style)

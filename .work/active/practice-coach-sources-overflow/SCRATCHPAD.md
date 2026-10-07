@@ -4,8 +4,8 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 
 ## Now / Next
 
-- Doing: R1 PASS; starting Phase 2 minimal CSS fix.
-- Next: Cap .coach plus .coach-body plus citations ul per plan values; run unit green plus suite.
+- Doing: Phase 2 green done; running R2 fan-out review of the CSS diff.
+- Next: Collect three verdicts into plan/REVIEWS.md; fix findings in Phase 2; then Phase 3.
 - Blocked: none.
 
 ## Session log
@@ -39,3 +39,9 @@ _state.md: active/practice-coach-sources-overflow/state.md · Updated: 2026-10-0
 - 02:55 EDIT   plan/REVIEWS.md - R1 section with per-agent verdicts and dispositions - VERIFIED.
 - 02:55 DONE   R1 gate PASS with all correctness findings fixed inside Phase 1.
 - 02:55 NEXT   Phase 2 minimal CSS fix (impeccable Operate, tdd red to green, ponytail native plus CSS only).
+- 03:00 FOUND  impeccable context loaded plus craft floor read; direction is Operate refinement, identity untouched.
+- 03:01 EDIT   apps/app/src/guide/practiceCoach.css - card cap plus flex column plus hidden, body scroll region, ul 180px scroll, phone dvh guard - UNVERIFIED.
+- 03:02 FOUND  vitest leaves ?raw CSS imports empty (probe), and rewrites new URL asset syntax, so the test reads the file via dirname plus join.
+- 03:05 FOUND  honest red-green: stashed fix runs RED on real old CSS (overflowY visible), restored fix runs GREEN 11/11.
+- 03:06 DONE   Phase 2 fix with guide suite 34/34, tsc clean, eslint 0 errors.
+- 03:06 NEXT   R2 fan-out review of the CSS diff; no Phase 3 until APPROVE.
