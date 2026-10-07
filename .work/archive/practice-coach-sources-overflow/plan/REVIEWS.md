@@ -46,3 +46,19 @@ _A gate passes only on three APPROVEs (waived minors allowed); findings are fixe
 ### R2 gate
 
 - PASS: three APPROVEs with explicitly waived minors; no carried findings.
+
+## R3 (final pre-wrap gate)
+
+- Agent A (open-code-review-delegate lens): APPROVE with waived minors (no blocking defect; AC1-AC5 match rules 11/12/16/17/42/53).
+- Agent B (thermo-nuclear lens): clean APPROVE (no abstraction, helpers earn their keep, 283-line spec justified).
+- Agent C (impeccable Operate plus a11y lens): APPROVE with waived minors (card in viewport both widths, 180px region usable, identity intact, no visual regression in captures).
+
+### Disposition
+
+- Waived minors accepted: no request-id join (stream mocked, rationale in VERIFICATION.md), unclassified desktop transient (recorded honestly, re-run spec on next coach touch), exact-string min() pin (R2-accepted stabilizer).
+- Waived design notes re-challenged against captures with no harm found: nested scroll regions show no trap, short-landscape clipping stays theoretical at 720/812px.
+- Agent A process note: SESSION END distills `state.md` and resets the scratchpad before WRAP flips STATUS (done below).
+
+### R3 gate
+
+- PASS: three APPROVEs; WRAP authorized.
