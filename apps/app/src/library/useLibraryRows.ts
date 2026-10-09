@@ -21,6 +21,9 @@ import {
 } from './libraryModel'
 
 export const MATERIAL_UNAVAILABLE = 'Material unavailable'
+/** Neutral title shown while the material list is still in flight; it asserts
+ * nothing, unlike MATERIAL_UNAVAILABLE which is a resolved outcome. */
+export const MATERIAL_TITLE_PENDING = 'Loading title…'
 
 const HYDRATION_CONCURRENCY = 4
 const POLL_INTERVAL_MS = 3000
@@ -38,6 +41,39 @@ async function pool<T>(ids: string[], fn: (id: string) => Promise<T>, concurrenc
 function dbOf(eventStore: unknown): Dexie | null {
   const db = (eventStore as unknown as { db?: Dexie }).db
   return db ?? null
+}
+
+/**
+ * Cache-first seed: read the Dexie envelope cache and local attempts for the
+ * requested ids before any network call, so reload paints from local state.
+ * Read failures are advisory (a missing row is a cache miss, not an error).
+ */
+async function seedFromCache(
+  ids: string[],
+  flow: AttemptFlow,
+): Promise<{
+  envelopes: Record<string, Assessment>
+  rows: Record<string, LocalAttemptRow[]>
+}> {
+  const envelopes: Record<string, Assessment> = {}
+  const rows: Record<string, LocalAttemptRow[]> = {}
+  await Promise.all(
+    ids.map(async (id) => {
+      try {
+        const envelope = await flow.cachedAssessment(id)
+        if (envelope) envelopes[id] = envelope
+      } catch (error) {
+        logger.debug('[library] cache read advisory', error)
+      }
+      try {
+        rows[id] = await flow.listLocalAttempts(id)
+      } catch (error) {
+        logger.debug('[library] local attempts advisory', error)
+        rows[id] = []
+      }
+    }),
+  )
+  return { envelopes, rows }
 }
 
 export function useLibraryCounts(options?: { materialId?: string }) {
@@ -65,6 +101,7 @@ export function useLibraryRows(options?: { materialId?: string }) {
   const [failedIds, setFailedIds] = useState<string[]>([])
   const [materialTitles, setMaterialTitles] = useState<Record<string, string>>({})
   const [hydrated, setHydrated] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
 
   // Per-user attempt flow (PracticeRun precedent): recreated whenever the
   // event store (account) or transport changes, never reused across users.
@@ -78,6 +115,7 @@ export function useLibraryRows(options?: { materialId?: string }) {
     setFailedIds([])
     setMaterialTitles({})
     setHydrated(false)
+    setRefreshing(false)
     if (!eventStore) {
       setFlow(null)
       setFlowOwner(null)
@@ -108,6 +146,15 @@ export function useLibraryRows(options?: { materialId?: string }) {
     return [...ids]
   }, [pointers, entries])
   const uniqueKey = uniqueIds.join(',')
+
+  const uniqueIdSet = useMemo(() => new Set(uniqueIds), [uniqueIds])
+  // Failures that belong to a previous event snapshot (account switch pairs
+  // the new flow with the old events for a tick) are hidden at render, so the
+  // hub never shows a stale retry banner or retries ids it no longer lists.
+  const visibleFailedIds = useMemo(
+    () => failedIds.filter((id) => uniqueIdSet.has(id)),
+    [failedIds, uniqueIdSet],
+  )
 
   const hydrateEnvelopes = useCallback(
     async (
@@ -182,21 +229,31 @@ export function useLibraryRows(options?: { materialId?: string }) {
       runEntries: Array<{ started: { materialIds: string[] } }>,
       cancelled: { current: boolean },
     ): Promise<void> => {
+      const referenced = new Set([
+        ...assessmentPointers.flatMap((pointer) => pointer.materialIds),
+        ...runEntries.flatMap((entry) => entry.started.materialIds),
+      ])
       try {
         const list = await fetchTitles()
         if (cancelled.current) return
         const titles: Record<string, string> = {}
         for (const record of list) titles[record.id] = record.title
-        const referenced = new Set([
-          ...assessmentPointers.flatMap((pointer) => pointer.materialIds),
-          ...runEntries.flatMap((entry) => entry.started.materialIds),
-        ])
         for (const id of referenced) {
           if (!(id in titles)) titles[id] = MATERIAL_UNAVAILABLE
         }
         setMaterialTitles(titles)
       } catch (error) {
         logger.debug('[library] titles advisory', error)
+        // A failed list is a resolved outcome for every referenced material:
+        // terminate pending placeholders instead of leaving them loading.
+        if (cancelled.current) return
+        setMaterialTitles((previous) => {
+          const next = { ...previous }
+          for (const id of referenced) {
+            if (!(id in next)) next[id] = MATERIAL_UNAVAILABLE
+          }
+          return next
+        })
       }
     },
     [],
@@ -224,11 +281,30 @@ export function useLibraryRows(options?: { materialId?: string }) {
     const snapshotPointers = pointers
     const snapshotEntries = entries
     void (async () => {
-      const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, cancelled)
-      if (cancelled.current) return
-      setFailedIds(failed)
-      await hydrateTitles(fetchTitles, snapshotPointers, snapshotEntries, cancelled)
-      if (!cancelled.current) setHydrated(true)
+      setRefreshing(true)
+      try {
+        // Cache-first: seed envelopes and local attempts from Dexie, paint if
+        // anything was cached, then revalidate over the network in the
+        // background. A cold cache keeps the skeleton until the first network
+        // pass lands (nothing cached to show), preserving the honest states.
+        const seeded = await seedFromCache(ids, flow)
+        if (cancelled.current) return
+        setEnvelopes((previous) => mergeEnvelopes(previous, seeded.envelopes))
+        setRowsByAssessment((previous) => ({ ...previous, ...seeded.rows }))
+        if (Object.keys(seeded.envelopes).length > 0) setHydrated(true)
+
+        // Titles never gate first paint: they run beside envelope
+        // revalidation and fill in (or fall back in the pages) whenever the
+        // material list lands.
+        const titles = hydrateTitles(fetchTitles, snapshotPointers, snapshotEntries, cancelled)
+        const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, cancelled)
+        if (cancelled.current) return
+        setFailedIds(failed)
+        setHydrated(true)
+        await titles
+      } finally {
+        if (!cancelled.current) setRefreshing(false)
+      }
     })()
     return () => {
       cancelled.current = true
@@ -241,7 +317,7 @@ export function useLibraryRows(options?: { materialId?: string }) {
   const reload = useCallback(() => {
     if (!flow || flowOwner !== eventStore) return
     const cancelled = { current: false }
-    const retried = [...failedIds]
+    const retried = [...visibleFailedIds]
     if (retried.length === 0) return
     void (async () => {
       const { failed } = await hydrateEnvelopes(retried, flow, getAssessment, cancelled)
@@ -251,7 +327,7 @@ export function useLibraryRows(options?: { materialId?: string }) {
         ...failed,
       ])
     })()
-  }, [flow, flowOwner, eventStore, failedIds, getAssessment, hydrateEnvelopes])
+  }, [flow, flowOwner, eventStore, visibleFailedIds, getAssessment, hydrateEnvelopes])
 
   // Poll only the generating / in-flight subset, never the whole union.
   // Never-loaded envelopes stay in the subset (the run model reads a missing
@@ -260,12 +336,12 @@ export function useLibraryRows(options?: { materialId?: string }) {
     () =>
       uniqueIds.filter((id) => {
         const envelope = envelopes[id]
-        if (!envelope) return !failedIds.includes(id)
+        if (!envelope) return !visibleFailedIds.includes(id)
         if (envelope.status === 'generating') return true
         const rows = rowsByAssessment[id]
         return rows?.some((row) => !row.grade && (row.status === 'queued' || row.status === 'submitted')) ?? false
       }),
-    [uniqueIds, envelopes, rowsByAssessment, failedIds],
+    [uniqueIds, envelopes, rowsByAssessment, visibleFailedIds],
   )
   const activeKey = activeIds.join(',')
   const pollInFlight = useRef(false)
@@ -331,8 +407,9 @@ export function useLibraryRows(options?: { materialId?: string }) {
     historyRows: history,
     materialTitles,
     loading: !eventStore || events == null || !hydrated,
-    errorCount: failedIds.length,
-    failedIds,
+    refreshing,
+    errorCount: visibleFailedIds.length,
+    failedIds: visibleFailedIds,
     reload,
   }
 }

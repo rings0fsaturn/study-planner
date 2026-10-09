@@ -4,14 +4,14 @@ import {
   LibraryHubLoading,
   LibraryHubShell,
 } from '../../library/LibraryHubShell'
-import { MATERIAL_UNAVAILABLE, useLibraryRows } from '../../library/useLibraryRows'
+import { MATERIAL_TITLE_PENDING, useLibraryRows } from '../../library/useLibraryRows'
 
 /**
  * `/practice` hub (Phase 3, variant B card grid). Resume first, history
  * second; derivation lives in the library model, I/O in the hook.
  */
 export function PracticeHub() {
-  const { resumeRows, historyRows, runRows, materialTitles, loading, errorCount, reload } =
+  const { resumeRows, historyRows, runRows, materialTitles, loading, refreshing, errorCount, reload } =
     useLibraryRows()
 
   return (
@@ -20,6 +20,7 @@ export function PracticeHub() {
       emptyTitle="No practice runs yet"
       emptyBody="Start a run from a ready material to see it here with its resume point."
       empty={!loading && runRows.length === 0}
+      refreshing={!loading && refreshing && runRows.length > 0}
     >
       {loading && <LibraryHubLoading text="Loading practice runs…" />}
       {!loading && errorCount > 0 && (
@@ -37,7 +38,7 @@ export function PracticeHub() {
               <PracticeRunCard
                 key={row.runId}
                 row={row}
-                title={materialTitles[row.primaryMaterialId] ?? MATERIAL_UNAVAILABLE}
+                title={materialTitles[row.primaryMaterialId] ?? MATERIAL_TITLE_PENDING}
                 accent={index === 0}
               />
             ))}
@@ -52,7 +53,7 @@ export function PracticeHub() {
               <PracticeRunCard
                 key={row.runId}
                 row={row}
-                title={materialTitles[row.primaryMaterialId] ?? MATERIAL_UNAVAILABLE}
+                title={materialTitles[row.primaryMaterialId] ?? MATERIAL_TITLE_PENDING}
                 accent={false}
               />
             ))}

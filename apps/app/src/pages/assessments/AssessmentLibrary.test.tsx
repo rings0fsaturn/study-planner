@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Dexie from 'dexie'
 import { EventStoreProvider, createEventStore } from '../../events/EventStoreProvider'
@@ -9,6 +9,8 @@ import { MaterialsProvider } from '../../materials/MaterialsProvider'
 import { FakeAssessmentClient, readyAssessment, attemptRecord } from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
+import type { Assessment } from '../../assessments/types'
+import { MATERIAL_TITLE_PENDING, MATERIAL_UNAVAILABLE } from '../../library/useLibraryRows'
 import { AssessmentLibrary } from './AssessmentLibrary'
 
 vi.mock('../../lib/supabase', () => ({
@@ -45,6 +47,18 @@ async function seed(events: Array<{ kind: string; payload: Record<string, unknow
   const store = createEventStore(USER)
   for (const { kind, payload } of events) {
     await store.append(kind, payload)
+  }
+  store.close()
+}
+
+async function seedCached(envelopes: Assessment[]) {
+  const store = createEventStore(USER)
+  const db = (store as unknown as { db: Dexie }).db
+  await db.open()
+  for (const envelope of envelopes) {
+    await db
+      .table('assessmentContentCache')
+      .put({ assessmentId: envelope.id, envelope, cachedAt: new Date().toISOString() })
   }
   store.close()
 }
@@ -115,6 +129,56 @@ describe('AssessmentLibrary', () => {
     expect(await screen.findByRole('link', { name: /Operating Systems/i })).toBeInTheDocument()
     expect(screen.getByText('Ready')).toBeInTheDocument()
     expect(screen.getByText('0.80')).toBeInTheDocument()
+  })
+
+  it('paints cached rows with a refreshing indicator until revalidation lands', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    await seedCached([readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    let release: ((assessment: Assessment) => void) | null = null
+    assessments.getAssessment.mockImplementation(
+      () => new Promise<Assessment>((resolve) => { release = resolve }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    expect(await screen.findByRole('link', { name: /OS/i })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Refreshing')
+    await act(async () => {
+      release?.(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    })
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
+  })
+
+  it('keeps the skeleton without a refreshing indicator when nothing is cached', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(() => new Promise<never>(() => {}))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    expect(await screen.findByText('Loading assessments…')).toBeInTheDocument()
+    expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('shows a neutral title placeholder while titles are still loading', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    await seedCached([readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(() => new Promise<never>(() => {}))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const materials = new FakeMaterialClient([material('mat-1', 'OS')])
+    let releaseTitles: (() => void) | null = null
+    vi.spyOn(materials, 'listMaterials').mockReturnValue(
+      new Promise<MaterialRecord[]>((resolve) => {
+        releaseTitles = () => resolve([material('mat-1', 'OS')])
+      }),
+    )
+    renderLibrary(assessments, materials)
+    expect(await screen.findByRole('link', { name: MATERIAL_TITLE_PENDING })).toBeInTheDocument()
+    expect(screen.queryByText(MATERIAL_UNAVAILABLE)).toBeNull()
+    await act(async () => {
+      releaseTitles?.()
+    })
+    expect(await screen.findByRole('link', { name: /OS/i })).toBeInTheDocument()
   })
 
   it('shows generating rows with dots, N of M ready, and a working retry', async () => {

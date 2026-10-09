@@ -134,6 +134,13 @@
   }
 }
 
+/* Background revalidation: cached rows are already painted, the network pass
+   converges behind them. Quiet inline dots plus a mono caps label in the head. */
+.library-refreshing {
+  display: inline-flex;
+  align-items: center;
+}
+
 .library-skeleton {
   padding: 1rem;
   border: 1px solid var(--border-subtle);

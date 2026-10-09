@@ -1,5 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Dexie from 'dexie'
 import { EventStoreProvider, createEventStore } from '../../events/EventStoreProvider'
@@ -9,6 +9,7 @@ import { MaterialsProvider } from '../../materials/MaterialsProvider'
 import { FakeAssessmentClient, readyAssessment, attemptRecord } from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
+import type { Assessment } from '../../assessments/types'
 import { PracticeHub } from './PracticeHub'
 
 vi.mock('../../lib/supabase', () => ({
@@ -51,6 +52,18 @@ async function seed(events: SeedEvent[]) {
   const store = createEventStore(USER)
   for (const { kind, payload, createdAt } of events) {
     await store.append(kind, payload, createdAt)
+  }
+  store.close()
+}
+
+async function seedCached(envelopes: Assessment[]) {
+  const store = createEventStore(USER)
+  const db = (store as unknown as { db: Dexie }).db
+  await db.open()
+  for (const envelope of envelopes) {
+    await db
+      .table('assessmentContentCache')
+      .put({ assessmentId: envelope.id, envelope, cachedAt: new Date().toISOString() })
   }
   store.close()
 }
@@ -146,6 +159,24 @@ describe('PracticeHub', () => {
     expect(resumes).toHaveLength(2)
     expect(resumes[0].className).toMatch(/btn-accent/)
     expect(resumes[1].className).toMatch(/btn-secondary/)
+  })
+
+  it('paints cached runs with a refreshing indicator until revalidation lands', async () => {
+    await seed([{ kind: PRACTICE_RUN_STARTED, payload: startedPayload('run-1', 'mat-1', ['a-1']) }])
+    await seedCached([readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    let release: ((assessment: Assessment) => void) | null = null
+    assessments.getAssessment.mockImplementation(
+      () => new Promise<Assessment>((resolve) => { release = resolve }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderHub(assessments, new FakeMaterialClient([material('mat-1', 'Operating Systems')]))
+    expect(await screen.findByRole('link', { name: /Operating Systems/ })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Refreshing')
+    await act(async () => {
+      release?.(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    })
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull())
   })
 
   it('lists History newest first across completed, abandoned, and failed', async () => {

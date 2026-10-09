@@ -16,12 +16,14 @@ export function LibraryHubShell({
   emptyTitle,
   emptyBody,
   empty,
+  refreshing = false,
   children,
 }: {
   title: string
   emptyTitle: string
   emptyBody: string
   empty: boolean
+  refreshing?: boolean
   children: ReactNode
 }) {
   return (
@@ -31,6 +33,7 @@ export function LibraryHubShell({
           <div className="mono-caps">Study library</div>
           <h1>{title}</h1>
         </div>
+        {refreshing && <LibraryHubRefreshing />}
       </div>
       <MaterialsSubnav />
       {children}
@@ -43,6 +46,21 @@ export function LibraryHubShell({
           </Link>
         </div>
       )}
+    </div>
+  )
+}
+
+/** Background revalidation indicator: cached rows stay on screen while the
+ * network pass converges. The No-Spinner dots plus a mono caps label. */
+function LibraryHubRefreshing() {
+  return (
+    <div className="library-refreshing" role="status">
+      <span className="processing-dots processing-dots-inline" aria-hidden="true">
+        <span className="processing-dot" />
+        <span className="processing-dot" />
+        <span className="processing-dot" />
+      </span>
+      <span className="mono-caps">Refreshing</span>
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { MaterialsProvider } from '../materials/MaterialsProvider'
 import { FakeAssessmentClient, readyAssessment, attemptRecord } from '../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../materials/types'
+import type { Assessment } from '../assessments/types'
 import { useLibraryRows, useLibraryCounts, MATERIAL_UNAVAILABLE } from './useLibraryRows'
 
 vi.mock('../lib/supabase', () => ({
@@ -51,11 +52,24 @@ async function seedEvents(events: Array<{ kind: string; payload: Record<string, 
   store.close()
 }
 
+async function seedCached(userId: string, envelopes: Assessment[]) {
+  const store = createEventStore(userId)
+  const db = (store as unknown as { db: Dexie }).db
+  await db.open()
+  for (const envelope of envelopes) {
+    await db
+      .table('assessmentContentCache')
+      .put({ assessmentId: envelope.id, envelope, cachedAt: new Date().toISOString() })
+  }
+  store.close()
+}
+
 function Probe({ materialId }: { materialId?: string }) {
   const rows = useLibraryRows({ materialId })
   return (
     <div>
       <div data-testid="loading">{rows.loading ? 'loading' : 'done'}</div>
+      <div data-testid="refreshing">{rows.refreshing ? 'refreshing' : 'idle'}</div>
       <div data-testid="errors">{rows.errorCount}</div>
       <div data-testid="assessments">{rows.assessmentRows.map((r) => `${r.assessmentId}:${r.state}`).join(',')}</div>
       <div data-testid="runs">{rows.runRows.map((r) => `${r.runId}:${r.state}`).join(',')}</div>
@@ -88,6 +102,25 @@ function renderProbe(
       </MaterialsProvider>
     </EventStoreProvider>,
   )
+}
+
+function renderAccountSwitcher(assessments: FakeAssessmentClient, materials: FakeMaterialClient) {
+  function Switcher() {
+    const [userId, setUserId] = useState(USER)
+    return (
+      <div>
+        <button type="button" onClick={() => setUserId(USER2)}>switch-user</button>
+        <EventStoreProvider userId={userId}>
+          <MaterialsProvider client={materials}>
+            <AssessmentProvider client={assessments}>
+              <Probe />
+            </AssessmentProvider>
+          </MaterialsProvider>
+        </EventStoreProvider>
+      </div>
+    )
+  }
+  return render(<Switcher />)
 }
 
 beforeEach(async () => {
@@ -163,6 +196,91 @@ describe('useLibraryRows', () => {
     renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
     await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
     expect(screen.getByTestId('errors')).toHaveTextContent('0')
+  })
+
+  it('paints a cached envelope before the network responds (cache-first)', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(() => new Promise<never>(() => {}))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
+    expect(screen.getByTestId('loading')).toHaveTextContent('done')
+    expect(screen.getByTestId('refreshing')).toHaveTextContent('refreshing')
+  })
+
+  it('revalidates a stale cached envelope and converges to the network state', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [
+      readyAssessment({ id: 'a-1', materialIds: ['mat-1'], status: 'generating', questions: [] }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    let release: ((assessment: Assessment) => void) | null = null
+    assessments.getAssessment.mockImplementation(
+      () => new Promise<Assessment>((resolve) => { release = resolve }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:generating'))
+    await act(async () => {
+      release?.(readyAssessment({ id: 'a-1', materialIds: ['mat-1'], status: 'ready' }))
+    })
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
+    expect(screen.getByTestId('assessments')).toHaveTextContent(/^a-1:ready$/)
+  })
+
+  it('keeps cached rows when revalidation fails and retries only uncached ids', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-2', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockRejectedValue(new Error('offline'))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('errors')).toHaveTextContent('1'))
+    expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready')
+    expect(screen.getByTestId('assessments')).toHaveTextContent('a-2:unavailable')
+
+    assessments.getAssessment.mockClear()
+    assessments.getAssessment.mockImplementation(async (id) => readyAssessment({ id, materialIds: ['mat-1'] }))
+    await act(async () => {
+      screen.getByRole('button', { name: 'reload' }).click()
+    })
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-2:ready'))
+    expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready')
+    const calledIds = assessments.getAssessment.mock.calls.map((call) => call[0])
+    expect(calledIds).toEqual(['a-2'])
+  })
+
+  it('resolves titles concurrently with envelope revalidation', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(() => new Promise<never>(() => {}))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const materials = new FakeMaterialClient([material('mat-1', 'OS')])
+    let releaseTitles: (() => void) | null = null
+    const titlesGate = new Promise<MaterialRecord[]>((resolve) => {
+      releaseTitles = () => resolve([material('mat-1', 'OS')])
+    })
+    vi.spyOn(materials, 'listMaterials').mockReturnValue(titlesGate)
+    renderProbe(assessments, materials)
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
+    expect(screen.getByTestId('loading')).toHaveTextContent('done')
+    expect(screen.getByTestId('titles')).not.toHaveTextContent('OS')
+    await act(async () => {
+      releaseTitles?.()
+    })
+    await waitFor(() => expect(screen.getByTestId('titles')).toHaveTextContent('OS'))
   })
 
   it('marks unreadable uncached rows unavailable and raises the error count', async () => {
@@ -254,8 +372,47 @@ describe('useLibraryRows', () => {
     renderProbe(assessments, materials)
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('done'))
     expect(spy).toHaveBeenCalledTimes(1)
-    expect(screen.getByTestId('titles')).toHaveTextContent(MATERIAL_UNAVAILABLE)
+    await waitFor(() => expect(screen.getByTestId('titles')).toHaveTextContent(MATERIAL_UNAVAILABLE))
   })
+
+  it('marks referenced titles unavailable when the material list fails', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(() => new Promise<never>(() => {}))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const materials = new FakeMaterialClient([material('mat-1', 'OS')])
+    vi.spyOn(materials, 'listMaterials').mockRejectedValue(new Error('offline'))
+    renderProbe(assessments, materials)
+    await waitFor(() =>
+      expect(screen.getByTestId('titles')).toHaveTextContent(MATERIAL_UNAVAILABLE),
+    )
+  })
+
+  it('resets cache-seeded envelopes on account switch', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const seeder2 = createEventStore(USER2)
+    await seeder2.append(ASSESSMENT_CREATED, { assessmentId: 'b-1', materialIds: ['mat-1'] })
+    seeder2.close()
+    await seedCached(USER2, [readyAssessment({ id: 'b-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockRejectedValue(new Error('offline'))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    const materials = new FakeMaterialClient([material('mat-1', 'OS')])
+    renderAccountSwitcher(assessments, materials)
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
+    await act(async () => {
+      screen.getByRole('button', { name: 'switch-user' }).click()
+    })
+    await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('b-1:ready'), { timeout: 8000 })
+    expect(screen.getByTestId('assessments')).not.toHaveTextContent('a-1')
+    expect(screen.getByTestId('errors')).toHaveTextContent('0')
+  }, 15000)
 
   it('recreates the attempt flow on account switch instead of reusing the stale db', async () => {
     await seedEvents([
@@ -268,22 +425,7 @@ describe('useLibraryRows', () => {
     assessments.getAssessment.mockImplementation(async (id) => readyAssessment({ id, materialIds: ['mat-1'] }))
     assessments.listAssessmentAttempts.mockResolvedValue([])
     const materials = new FakeMaterialClient([material('mat-1', 'OS')])
-    function Switcher() {
-      const [userId, setUserId] = useState(USER)
-      return (
-        <div>
-          <button type="button" onClick={() => setUserId(USER2)}>switch-user</button>
-          <EventStoreProvider userId={userId}>
-            <MaterialsProvider client={materials}>
-              <AssessmentProvider client={assessments}>
-                <Probe />
-              </AssessmentProvider>
-            </MaterialsProvider>
-          </EventStoreProvider>
-        </div>
-      )
-    }
-    render(<Switcher />)
+    renderAccountSwitcher(assessments, materials)
     await waitFor(() => expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:ready'))
     await act(async () => {
       screen.getByRole('button', { name: 'switch-user' }).click()
