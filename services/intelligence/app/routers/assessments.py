@@ -289,6 +289,36 @@ def regenerate_assessment(
     return JSONResponse(status_code=202, content=async_job_from_row(job_row))
 
 
+@router.post("/assessments/{assessmentId}/delete")
+def delete_assessment(
+    assessmentId: str,
+    request: Request,
+    client: Annotated[UserScopedClient, Depends(get_user_client)],
+    user_id: str = Depends(require_user),  # noqa: ARG001
+) -> JSONResponse:
+    """Enqueue an owner-scoped deletion job for an assessment.
+
+    202 + AsyncJob mirroring regenerate; the service-role worker runs the
+    delete because `authenticated` holds no DELETE grant (migration 018). A
+    second confirm while a deletion is open answers `conflict` (the open-job
+    unique index, migration 034); an assessment that is already gone answers
+    `not_found`. `generating` rows are deletable on purpose: the generation
+    worker's orphan guard archives their queued message.
+    """
+    try:
+        client.get_assessment(assessmentId)
+    except IngestionError as exc:
+        return service_error(request, exc)
+
+    job_id = str(uuid.uuid4())
+    correlation_id = str(uuid.uuid4())
+    try:
+        job_row = client.enqueue_deletion(assessmentId, job_id, correlation_id)
+    except IngestionError as exc:
+        return service_error(request, exc)
+    return JSONResponse(status_code=202, content=async_job_from_row(job_row))
+
+
 @router.get("/assessments/{assessmentId}")
 def get_assessment(
     assessmentId: str,

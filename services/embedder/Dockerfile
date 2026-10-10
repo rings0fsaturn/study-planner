@@ -16,4 +16,7 @@ RUN python3 -m pip install --no-cache-dir --upgrade pip && \
 
 EXPOSE 8000
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# nice -n 19: the ROCr AsyncEventsLoop spin (rule 54) cannot be stopped on
+# this ROCm build, but it can be made to yield. GPU inference is unaffected
+# (GPU-bound); co-tenants recover roughly half the contention.
+CMD ["nice", "-n", "19", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

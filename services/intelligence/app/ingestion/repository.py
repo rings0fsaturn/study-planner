@@ -312,6 +312,14 @@ class SupabaseIngestionRepo:
             raise IngestionError("not_found", "assessment not found")
         return rows[0]
 
+    def delete_assessment(self, assessment_id: str) -> None:
+        """Delete the assessment row; dependents cascade (018/025/033).
+
+        DELETE is idempotent: a missing row answers 204, so a redelivered
+        message whose assessment a cleanup already removed is still success.
+        """
+        self._delete(f"{self._base}/rest/v1/{ASSESSMENTS_TABLE}?id=eq.{assessment_id}")
+
     def update_assessment_status(
         self, assessment_id: str, status: str, warnings: list[dict]
     ) -> None:

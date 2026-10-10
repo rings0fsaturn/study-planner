@@ -45,10 +45,13 @@ services:
     # Upstream ROCm bug (ROCm/librocdxg#60): on WSL2 DXG there are no GPU
     # interrupts, so ROCr's AsyncEventsLoop falls into a no-sleep polling loop
     # and burns two full CPU cores (~200%) for the whole lifetime of the GPU
-    # context, even when completely idle. Fix PR ROCm/rocm-systems#7898 is not
-    # merged into any release yet. Containment only: cap total container CPU so
-    # the idle spin cannot consume the host; embedding stays GPU-bound and the
-    # two spinning threads plus real tokenization work fit under 4 cores.
+    # context, even when completely idle. The upstream fix (ROCm/rocm-systems
+    # #7898, merged 2026-08-18) is NOT in this build: ROCm 7.14.0 predates it
+    # and 7.14.1 still lacks it (checked 2026-10-01, issue #12674). Containment
+    # only: the cpus cap plus the nice -n 19 in the Dockerfile CMD (spinners
+    # yield; GPU-bound inference is unaffected). True fix: re-pin ROCM_IMAGE
+    # to a release carrying the fix - verify with
+    # `strings libhsa-runtime64.so.1 | grep PollNap` (present = fixed).
     deploy:
       resources:
         limits:

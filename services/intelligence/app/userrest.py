@@ -139,6 +139,31 @@ class UserScopedClient:
             )
         return response.json()
 
+    def enqueue_deletion(
+        self, assessment_id: str, job_id: str, correlation_id: str
+    ) -> dict[str, Any]:
+        """Call the DB-atomic deletion enqueue RPC; returns the job row."""
+        response = self._http.post(
+            f"{self._base}/rest/v1/rpc/enqueue_assessment_deletion",
+            json={
+                "p_assessment_id": assessment_id,
+                "p_job_id": job_id,
+                "p_correlation_id": correlation_id,
+            },
+            headers=self._headers(),
+        )
+        if response.status_code in (403, 404):
+            raise IngestionError("not_found", "assessment not found")
+        if response.status_code == 409:
+            # The partial unique index on open deletion jobs (migration 034):
+            # a second confirm while the first job is in flight.
+            raise IngestionError("conflict", "assessment deletion already in progress")
+        if response.status_code >= 400:
+            raise IngestionError(
+                "provider_unavailable", "deletion enqueue rejected", retryable=True
+            )
+        return response.json()
+
     def submit_attempt(
         self,
         assessment_id: str,

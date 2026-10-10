@@ -35,6 +35,10 @@ export class FakeAssessmentClient implements AssessmentClientLike {
     throw new Error('regenerateAssessment not scripted')
   })
 
+  deleteAssessment = vi.fn(async (_assessmentId: string): Promise<AsyncJob> => {
+    throw new Error('deleteAssessment not scripted')
+  })
+
   submitAssessmentAttempt = vi.fn(
     async (
       _assessmentId: string,
@@ -92,6 +96,13 @@ export class FakeAssessmentClient implements AssessmentClientLike {
 
   scriptRegenerate(result: AsyncJob | Error): void {
     this.regenerateAssessment.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptDelete(result: AsyncJob | Error): void {
+    this.deleteAssessment.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })

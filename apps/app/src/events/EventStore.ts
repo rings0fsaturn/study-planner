@@ -4,6 +4,9 @@ import { liveQuery } from 'dexie';
 /** Durable event kind for a server-owned assessment generation request. */
 export const ASSESSMENT_CREATED = 'AssessmentCreated' as const;
 
+/** Durable tombstone: the owner deleted a server-owned assessment. */
+export const ASSESSMENT_DELETED = 'AssessmentDeleted' as const;
+
 /** Durable event kind: the learner submitted an answer (answer-free payload). */
 export const QUESTION_ATTEMPTED = 'QuestionAttempted' as const;
 

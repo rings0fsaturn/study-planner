@@ -1,15 +1,23 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { useState } from 'react'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import Dexie from 'dexie'
 import { EventStoreProvider, createEventStore } from '../../events/EventStoreProvider'
-import { ASSESSMENT_CREATED } from '../../events/EventStore'
+import { ASSESSMENT_CREATED, ASSESSMENT_DELETED, EventStore } from '../../events/EventStore'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
-import { FakeAssessmentClient, readyAssessment, attemptRecord } from '../../assessments/testing/fakeAssessmentClient'
+import {
+  FakeAssessmentClient,
+  attemptRecord,
+  queuedJob,
+  readyAssessment,
+} from '../../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import type { MaterialRecord } from '../../materials/types'
-import type { Assessment } from '../../assessments/types'
+import { AssessmentServiceError, type Assessment, type AsyncJob } from '../../assessments/types'
 import { MATERIAL_TITLE_PENDING, MATERIAL_UNAVAILABLE } from '../../library/useLibraryRows'
 import { AssessmentLibrary } from './AssessmentLibrary'
 
@@ -18,7 +26,9 @@ vi.mock('../../lib/supabase', () => ({
 }))
 
 const USER = 'assessment-library-user'
+const USER2 = 'assessment-library-user-2'
 const DB_NAME = `StudyTracker_${USER}`
+const DB_NAME2 = `StudyTracker_${USER2}`
 
 function material(id: string, title: string): MaterialRecord {
   return {
@@ -63,6 +73,22 @@ async function seedCached(envelopes: Assessment[]) {
   store.close()
 }
 
+async function readEvents() {
+  const store = createEventStore(USER)
+  const events = await store.getAll()
+  store.close()
+  return events
+}
+
+async function readCachedEnvelope(assessmentId: string): Promise<unknown> {
+  const store = createEventStore(USER)
+  const db = (store as unknown as { db: Dexie }).db
+  await db.open()
+  const row = await db.table('assessmentContentCache').get(assessmentId)
+  store.close()
+  return row
+}
+
 function renderLibrary(
   assessments: FakeAssessmentClient,
   materials: FakeMaterialClient,
@@ -86,15 +112,47 @@ function renderLibrary(
   )
 }
 
+function renderLibraryWithAccountSwitch(
+  assessments: FakeAssessmentClient,
+  materials: FakeMaterialClient,
+) {
+  function Switcher() {
+    const [userId, setUserId] = useState(USER)
+    return (
+      <div>
+        <button type="button" onClick={() => setUserId(USER2)}>switch-user</button>
+        <EventStoreProvider userId={userId}>
+          <MaterialsProvider client={materials}>
+            <AssessmentProvider client={assessments}>
+              <Routes>
+                <Route path="/assessments" element={<AssessmentLibrary />} />
+              </Routes>
+            </AssessmentProvider>
+          </MaterialsProvider>
+        </EventStoreProvider>
+      </div>
+    )
+  }
+  return render(
+    <MemoryRouter initialEntries={['/assessments']}>
+      <Switcher />
+    </MemoryRouter>,
+  )
+}
+
 beforeEach(async () => {
   await Dexie.delete(DB_NAME)
+  await Dexie.delete(DB_NAME2)
 })
 
 afterEach(async () => {
   cleanup()
   const store = createEventStore(USER)
   store.close()
+  const store2 = createEventStore(USER2)
+  store2.close()
   await Dexie.delete(DB_NAME)
+  await Dexie.delete(DB_NAME2)
 })
 
 describe('AssessmentLibrary', () => {
@@ -287,5 +345,431 @@ describe('AssessmentLibrary', () => {
     expect(title.getAttribute('href')).toBe('/assessments/a-1')
     fireEvent.click(title)
     expect(await screen.findByTestId('assessment-detail')).toBeInTheDocument()
+  })
+})
+
+describe('AssessmentLibrary delete flow', () => {
+  it('shows the delete control on ready, generating, failed, and unavailable cards', async () => {
+    await seed([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-ready', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-gen', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-fail', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-gone', materialIds: ['mat-1'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(async (assessmentId: string) => {
+      if (assessmentId === 'a-gen') {
+        return readyAssessment({
+          id: 'a-gen',
+          materialIds: ['mat-1'],
+          status: 'generating',
+          recipe: { formats: ['objective'], questionCount: 3 },
+          questions: [],
+        })
+      }
+      if (assessmentId === 'a-fail') {
+        return readyAssessment({
+          id: 'a-fail',
+          materialIds: ['mat-1'],
+          status: 'failed',
+          questions: [],
+          warnings: [{ code: 'code_not_derivable', message: 'notes ship the solution' }],
+        })
+      }
+      if (assessmentId === 'a-gone') throw new Error('offline')
+      return readyAssessment({ id: assessmentId, materialIds: ['mat-1'] })
+    })
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    expect(await screen.findAllByRole('button', { name: 'Delete OS assessment' })).toHaveLength(4)
+    expect(document.querySelectorAll('.library-card-deletable .library-card-delete')).toHaveLength(4)
+    expect(screen.getByText('Ready')).toBeInTheDocument()
+    expect(screen.getByText('Generating')).toBeInTheDocument()
+    expect(screen.getByText('Failed')).toBeInTheDocument()
+    expect(screen.getByText('Unavailable offline')).toBeInTheDocument()
+  })
+
+  it('hides the corner X at rest and pins the hover/focus reveal contract in the stylesheet', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    const x = await screen.findByRole('button', { name: 'Delete OS assessment' })
+    expect(x.closest('.material-card')).toHaveClass('library-card-deletable')
+
+    // jsdom applies static rules but never matches :hover / :focus-within, so
+    // the hidden-at-rest state is computed and the reveal is pinned on the
+    // stylesheet selectors (PracticeCoach.test.tsx withRealStyles precedent).
+    const style = document.createElement('style')
+    style.textContent = readFileSync(join(import.meta.dirname, '..', '..', 'library', 'library.css'), 'utf8')
+    document.head.appendChild(style)
+    try {
+      expect(getComputedStyle(x).opacity).toBe('0')
+      expect(style.textContent).toMatch(/\.library-card:hover \.library-card-delete/)
+      expect(style.textContent).toMatch(/\.library-card:focus-within \.library-card-delete/)
+      expect(style.textContent).toMatch(/\.library-card-delete:focus-visible/)
+    } finally {
+      style.remove()
+    }
+  })
+
+  it('opens the confirm dialog from the X with the assessment named and focus on Cancel', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'Operating Systems')]))
+
+    const x = await screen.findByRole('button', { name: 'Delete Operating Systems assessment' })
+    x.focus()
+    fireEvent.click(x)
+
+    const dialog = await screen.findByRole('dialog', { name: 'Confirm delete this assessment?' })
+    expect(within(dialog).getByText('Operating Systems')).toBeInTheDocument()
+    expect(within(dialog).getByText(/Objective/)).toBeInTheDocument()
+    expect(within(dialog).getByText(/1 question/)).toBeInTheDocument()
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toHaveFocus())
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('cancels without calling the client and restores focus to the X', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    const x = await screen.findByRole('button', { name: 'Delete OS assessment' })
+    // No x.focus(): the page hands the X to the dialog as the opener, so
+    // restoration works even where a click does not focus the button (Safari).
+    fireEvent.click(x)
+    await screen.findByRole('dialog', { name: 'Confirm delete this assessment?' })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(x).toHaveFocus())
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(assessments.deleteAssessment).not.toHaveBeenCalled()
+  })
+
+  it('appends the tombstone, evicts the cached envelope, and drops the row on success', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    await seedCached([readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-del', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockResolvedValue(
+      queuedJob({ jobId: 'job-del', kind: 'deletion', status: 'succeeded', resultId: 'a-1' }),
+    )
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    await waitFor(() => expect(assessments.deleteAssessment).toHaveBeenCalledWith('a-1'))
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'OS' })).toBeNull())
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(assessments.getJob).toHaveBeenCalledWith('job-del')
+
+    const events = await readEvents()
+    expect(
+      events.some(
+        (event) =>
+          event.kind === ASSESSMENT_DELETED &&
+          (event.payload as { assessmentId?: string }).assessmentId === 'a-1',
+      ),
+    ).toBe(true)
+    expect(await readCachedEnvelope('a-1')).toBeUndefined()
+  })
+
+  it('keeps the card and renders the typed conflict error inline', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(
+      new AssessmentServiceError('conflict', 'A deletion job is already open for this assessment.', false),
+    )
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('A deletion job is already open for this assessment.')
+    expect(assessments.deleteAssessment).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('link', { name: 'OS' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Confirm delete this assessment?' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Delete assessment' })).toBeEnabled()
+  })
+
+  it('locks the confirm, cancel, and the card X while the job is in flight', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-slow', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockImplementation(() => new Promise<AsyncJob>(() => {}))
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    const x = await screen.findByRole('button', { name: 'Delete OS assessment' })
+    fireEvent.click(x)
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    const confirm = await screen.findByRole('button', { name: 'Deleting…' })
+    await waitFor(() => expect(confirm).toBeDisabled())
+    expect(confirm).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    await waitFor(() => expect(x).toBeDisabled())
+    expect(x).toHaveAttribute('aria-busy', 'true')
+    const card = x.closest('.material-card') as HTMLElement
+    expect(within(card).getByRole('status')).toHaveTextContent('Deleting...')
+
+    fireEvent.click(x)
+    fireEvent.click(confirm)
+    expect(assessments.deleteAssessment).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole('dialog', { name: 'Confirm delete this assessment?' })).toBeInTheDocument()
+  })
+
+  it('ignores a second card X while a delete job is in flight', async () => {
+    await seed([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-2', materialIds: ['mat-2'] } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockImplementation(async (assessmentId: string) =>
+      readyAssessment({ id: assessmentId, materialIds: [assessmentId === 'a-2' ? 'mat-2' : 'mat-1'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-first', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockImplementation(() => new Promise<AsyncJob>(() => {}))
+    renderLibrary(
+      assessments,
+      new FakeMaterialClient([material('mat-1', 'OS'), material('mat-2', 'Networks')]),
+    )
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+    await screen.findByRole('button', { name: 'Deleting…' })
+
+    // The second X belongs to a live card, but the in-flight flow owns the dialog.
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete Networks assessment' }))
+    expect(assessments.deleteAssessment).toHaveBeenCalledTimes(1)
+    const dialog = screen.getByRole('dialog', { name: 'Confirm delete this assessment?' })
+    expect(within(dialog).getByText('OS')).toBeInTheDocument()
+    expect(within(dialog).queryByText('Networks')).toBeNull()
+  })
+
+  it('surfaces a failed deletion job, keeps the card, and unlocks the dialog', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-fail', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockResolvedValue(
+      queuedJob({
+        jobId: 'job-fail',
+        kind: 'deletion',
+        status: 'failed',
+        resultId: 'a-1',
+        error: {
+          code: 'provider_error',
+          message: 'deletion worker failed',
+          requestId: 'req-job-fail',
+          retryable: false,
+        },
+      }),
+    )
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('deletion worker failed')
+    expect(screen.getByRole('button', { name: 'Delete assessment' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+    expect(screen.getByRole('link', { name: 'OS' })).toBeInTheDocument()
+  })
+
+  it('stops polling and unlocks the dialog on a non-retryable poll failure', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-lost', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockRejectedValue(
+      new AssessmentServiceError('not_found', 'resource not found', false),
+    )
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Could not confirm the deletion. Reload to check.')
+    expect(screen.getByRole('button', { name: 'Delete assessment' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled()
+    expect(screen.getByRole('link', { name: 'OS' })).toBeInTheDocument()
+  })
+
+  it('retries from an inline error and finalizes on the second confirm', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(new AssessmentServiceError('service', 'temporary failure', true))
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('temporary failure')
+
+    assessments.scriptDelete(queuedJob({ jobId: 'job-r', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockResolvedValue(
+      queuedJob({ jobId: 'job-r', kind: 'deletion', status: 'succeeded', resultId: 'a-1' }),
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Delete assessment' }))
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'OS' })).toBeNull())
+    expect(assessments.deleteAssessment).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps polling after a transient failure and settles on the next tick', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-net', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob
+      .mockRejectedValueOnce(new AssessmentServiceError('network', 'assessment request failed', true))
+      .mockResolvedValue(
+        queuedJob({ jobId: 'job-net', kind: 'deletion', status: 'succeeded', resultId: 'a-1' }),
+      )
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    await waitFor(() => expect(assessments.getJob).toHaveBeenCalledTimes(1))
+    // Transient failure keeps the flow locked with no error surfaced.
+    expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled()
+    expect(screen.queryByRole('alert')).toBeNull()
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'OS' })).toBeNull(), {
+      timeout: 4500,
+    })
+    expect(assessments.getJob).toHaveBeenCalledTimes(2)
+  }, 6000)
+
+  it('never overlaps poll ticks: a slow getJob yields one request and one tombstone', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-overlap', kind: 'deletion', resultId: 'a-1' }))
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    assessments.getJob.mockImplementation(async () => {
+      await gate
+      return queuedJob({ jobId: 'job-overlap', kind: 'deletion', status: 'succeeded', resultId: 'a-1' })
+    })
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+    await waitFor(() => expect(assessments.getJob).toHaveBeenCalledTimes(1))
+
+    // Let the 3s interval tick pass while the first poll is still in flight.
+    await new Promise((resolve) => setTimeout(resolve, 3100))
+    expect(assessments.getJob).toHaveBeenCalledTimes(1)
+
+    release()
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'OS' })).toBeNull())
+    const events = await readEvents()
+    expect(events.filter((event) => event.kind === ASSESSMENT_DELETED)).toHaveLength(1)
+  }, 8000)
+
+  it('finalizes an already-deleted assessment when the enqueue answers not_found', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(new AssessmentServiceError('not_found', 'resource not found', false))
+    renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+    await waitFor(() => expect(screen.queryByRole('link', { name: 'OS' })).toBeNull())
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+    const events = await readEvents()
+    expect(
+      events.some(
+        (event) =>
+          event.kind === ASSESSMENT_DELETED &&
+          (event.payload as { assessmentId?: string }).assessmentId === 'a-1',
+      ),
+    ).toBe(true)
+  })
+
+  it('keeps the dialog with honest copy when the local tombstone cannot be recorded', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    assessments.scriptDelete(queuedJob({ jobId: 'job-record', kind: 'deletion', resultId: 'a-1' }))
+    assessments.getJob.mockResolvedValue(
+      queuedJob({ jobId: 'job-record', kind: 'deletion', status: 'succeeded', resultId: 'a-1' }),
+    )
+    const appendSpy = vi
+      .spyOn(EventStore.prototype, 'append')
+      .mockRejectedValueOnce(new Error('quota exceeded'))
+    try {
+      renderLibrary(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+      fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+
+      const alert = await screen.findByRole('alert')
+      expect(alert).toHaveTextContent(
+        'Deleted on the server, but this device could not record it. Reload to refresh.',
+      )
+      expect(screen.getByRole('link', { name: 'OS' })).toBeInTheDocument()
+    } finally {
+      appendSpy.mockRestore()
+    }
+  })
+
+  it('drops a delete enqueue that resolves after an account switch', async () => {
+    await seed([{ kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } }])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }))
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    let releaseDelete = (_job: AsyncJob) => {}
+    assessments.deleteAssessment.mockImplementation(
+      () =>
+        new Promise<AsyncJob>((resolve) => {
+          releaseDelete = resolve
+        }),
+    )
+    renderLibraryWithAccountSwitch(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete OS assessment' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete assessment' }))
+    await waitFor(() => expect(assessments.deleteAssessment).toHaveBeenCalledTimes(1))
+
+    fireEvent.click(screen.getByRole('button', { name: 'switch-user' }))
+    await act(async () => {
+      releaseDelete(queuedJob({ jobId: 'job-switch', kind: 'deletion', resultId: 'a-1' }))
+    })
+
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(assessments.getJob).not.toHaveBeenCalled()
   })
 })

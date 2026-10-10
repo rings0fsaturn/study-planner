@@ -710,6 +710,12 @@ def test_mastery_recommendations_route_is_typed() -> None:
     assert "modelVersion" in schema["required"]
 
 
+def test_async_job_kind_enums_stay_in_sync() -> None:
+    openapi_kinds = _openapi()["components"]["schemas"]["AsyncJob"]["properties"]["kind"]["enum"]
+    schema_kinds = load_json(ROOT / "async-job.schema.json")["properties"]["kind"]["enum"]
+    assert openapi_kinds == schema_kinds
+
+
 def test_contract_pack_has_no_em_or_en_dashes() -> None:
     suffixes = {".json", ".yaml", ".yml", ".md", ".py"}
     offenders = []

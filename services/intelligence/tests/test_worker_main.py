@@ -174,6 +174,33 @@ def test_build_grading_worker_wires_the_sandbox_client() -> None:
     assert without._sandbox is None
 
 
+def test_build_deletion_worker_parses_env_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in (
+        "DELETION_POLL_INTERVAL_SECONDS",
+        "DELETION_VISIBILITY_SECONDS",
+        "DELETION_MAX_IN_FLIGHT",
+    ):
+        monkeypatch.delenv(name, raising=False)
+
+    worker = worker_main._build_deletion_worker(object(), object())
+
+    assert worker.config.poll_interval_seconds == 1.0
+    assert worker.config.visibility_seconds == 30
+    assert worker.config.max_in_flight == 1
+
+
+def test_build_deletion_worker_parses_env_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("DELETION_POLL_INTERVAL_SECONDS", "2.5")
+    monkeypatch.setenv("DELETION_VISIBILITY_SECONDS", "45")
+    monkeypatch.setenv("DELETION_MAX_IN_FLIGHT", "2")
+
+    worker = worker_main._build_deletion_worker(object(), object())
+
+    assert worker.config.poll_interval_seconds == 2.5
+    assert worker.config.visibility_seconds == 45
+    assert worker.config.max_in_flight == 2
+
+
 def test_build_piston_client_parses_env_defaults(monkeypatch: pytest.MonkeyPatch) -> None:
     captured: dict = {}
 

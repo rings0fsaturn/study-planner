@@ -5,10 +5,12 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import jwt
+from fastapi import Depends
 from fastapi.testclient import TestClient
 
 from app.logging_config import JsonFormatter, configure_logging
 from app.main import app
+from app.security import rate_limit_user, require_user
 from py_progress import PRODUCTION_PRIOR_STRATEGY
 
 SECRET = "test-supabase-jwt-secret-32-bytes-min"
@@ -74,6 +76,16 @@ def _progress_body(sessions: list[dict[str, Any]]) -> dict[str, Any]:
 @app.get("/__test__/boom")
 def _boom() -> None:
     raise RuntimeError("exploded")
+
+
+@app.get("/__test__/limited", dependencies=[Depends(require_user), Depends(rate_limit_user)])
+def _limited_get() -> dict[str, bool]:
+    return {"ok": True}
+
+
+@app.post("/__test__/limited", dependencies=[Depends(require_user), Depends(rate_limit_user)])
+def _limited_post() -> dict[str, bool]:
+    return {"ok": True}
 
 
 def test_request_id_model_version_and_structured_log(monkeypatch, caplog) -> None:
@@ -221,3 +233,18 @@ def test_rate_limit_stub_returns_429_past_threshold(monkeypatch) -> None:
     assert first.status_code == 200
     assert second.status_code == 200
     assert third.status_code == 429
+
+
+def test_rate_limit_skips_safe_reads(monkeypatch) -> None:
+    """GETs never consume quota; writes still throttle (assessment-detail fan-out)."""
+    monkeypatch.setenv("SUPABASE_JWT_SECRET", SECRET)
+    monkeypatch.setenv("INTELLIGENCE_RATE_LIMIT_PER_MINUTE", "2")
+    client = TestClient(app)
+    headers = _headers(sub=f"reads-{datetime.now(UTC).timestamp()}")
+
+    gets = [client.get("/__test__/limited", headers=headers).status_code for _ in range(5)]
+    assert gets == [200] * 5
+
+    assert client.post("/__test__/limited", headers=headers).status_code == 200
+    assert client.post("/__test__/limited", headers=headers).status_code == 200
+    assert client.post("/__test__/limited", headers=headers).status_code == 429

@@ -36,7 +36,7 @@ export const CODING_TIME_LIMIT_DEFAULT_MS = 15000
 export const CODING_MEMORY_DEFAULT_MB = 256
 export type AssessmentStatus = 'generating' | 'ready' | 'partial' | 'failed'
 export type JobStatus = 'queued' | 'running' | 'succeeded' | 'partial' | 'failed' | 'cancelled'
-export type JobKind = 'ingestion' | 'generation' | 'grading' | 'roadmap_feedback'
+export type JobKind = 'ingestion' | 'generation' | 'grading' | 'roadmap_feedback' | 'deletion'
 
 /** The learner's page scope for one generation request (openapi AssessmentScope). */
 export interface AssessmentScope {

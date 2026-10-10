@@ -374,6 +374,26 @@ def test_replace_chunks_with_no_chunks_only_deletes() -> None:
     assert methods == ["DELETE"]
 
 
+def test_delete_assessment_is_idempotent_and_sends_the_service_role_delete() -> None:
+    """A 204 means success even for 0 rows: the orphan message must not retry."""
+    captured: dict[str, str] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        captured["method"] = request.method
+        captured["url"] = str(request.url)
+        captured["prefer"] = request.headers.get("Prefer", "")
+        return httpx.Response(204, content=b"")
+
+    repo = SupabaseIngestionRepo("https://example.supabase.co", "service-key")
+    repo._client = httpx.Client(transport=httpx.MockTransport(handler))
+
+    repo.delete_assessment("a1")
+
+    assert captured["method"] == "DELETE"
+    assert "assessments?id=eq.a1" in captured["url"]
+    assert captured["prefer"] == "return=minimal"
+
+
 def test_publish_ready_calls_atomic_rpc() -> None:
     captured: dict[str, object] = {}
 

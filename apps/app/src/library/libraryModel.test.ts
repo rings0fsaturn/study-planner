@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   ASSESSMENT_CREATED,
+  ASSESSMENT_DELETED,
   PRACTICE_RUN_FINISHED,
   PRACTICE_RUN_STARTED,
   type Event,
@@ -11,6 +12,7 @@ import type { AssessmentCreatedPayload, PracticeRunStartedPayload } from '../syn
 import {
   buildAssessmentRow,
   buildPracticeRunRow,
+  deletedAssessmentIds,
   listAssessmentPointers,
   listPracticeRunEntries,
   orderAssessmentRows,
@@ -33,6 +35,10 @@ function assessmentCreated(
 
 function runStarted(payload: PracticeRunStartedPayload, createdAt: string): Event {
   return event(PRACTICE_RUN_STARTED, payload as unknown as Record<string, unknown>, createdAt)
+}
+
+function assessmentDeleted(assessmentId: string, createdAt: string): Event {
+  return event(ASSESSMENT_DELETED, { assessmentId }, createdAt)
 }
 
 function runFinished(runId: string, outcome: 'completed' | 'abandoned', createdAt: string): Event {
@@ -120,6 +126,45 @@ describe('listAssessmentPointers', () => {
     expect(all.map((p) => p.assessmentId)).toEqual(['a-2', 'a-3', 'a-1'])
     const filtered = listAssessmentPointers(events, { materialId: 'mat-1' })
     expect(filtered.map((p) => p.assessmentId)).toEqual(['a-3', 'a-1'])
+  })
+
+  it('masks tombstoned ids and keeps the surviving pointers in order', () => {
+    const events = [
+      assessmentCreated('a-1', ['mat-1'], '2026-09-20T10:00:00Z', 1),
+      assessmentCreated('a-2', ['mat-1'], '2026-09-22T10:00:00Z', 2),
+      assessmentCreated('a-3', ['mat-1'], '2026-09-21T10:00:00Z', 3),
+      assessmentDeleted('a-2', '2026-09-23T10:00:00Z'),
+    ]
+    expect(listAssessmentPointers(events).map((p) => p.assessmentId)).toEqual(['a-3', 'a-1'])
+    expect(listAssessmentPointers(events, { materialId: 'mat-1' }).map((p) => p.assessmentId)).toEqual([
+      'a-3',
+      'a-1',
+    ])
+  })
+
+  it('ignores a tombstone without a usable assessmentId (legacy reader fallback)', () => {
+    const events = [
+      assessmentCreated('a-1', ['mat-1'], '2026-09-20T10:00:00Z', 1),
+      event(ASSESSMENT_DELETED, {}, '2026-09-21T10:00:00Z'),
+      event(ASSESSMENT_DELETED, { assessmentId: 7 }, '2026-09-21T11:00:00Z'),
+    ]
+    expect(listAssessmentPointers(events).map((p) => p.assessmentId)).toEqual(['a-1'])
+  })
+})
+
+describe('deletedAssessmentIds', () => {
+  it('collects the usable tombstoned ids into a set', () => {
+    const events = [
+      assessmentDeleted('a-1', '2026-09-23T10:00:00Z'),
+      assessmentDeleted('a-2', '2026-09-23T11:00:00Z'),
+      event(ASSESSMENT_DELETED, { assessmentId: 7 }, '2026-09-23T12:00:00Z'),
+      assessmentCreated('a-3', ['mat-1'], '2026-09-20T10:00:00Z', 1),
+    ]
+    expect(deletedAssessmentIds(events)).toEqual(new Set(['a-1', 'a-2']))
+  })
+
+  it('returns an empty set for a log without tombstones', () => {
+    expect(deletedAssessmentIds([])).toEqual(new Set())
   })
 })
 
@@ -380,6 +425,38 @@ describe('buildPracticeRunRow', () => {
     })
     expect(row.state).toBe('unavailable')
     expect(row.gradedCount).toBe(0)
+  })
+
+  it('reads a tombstoned problem as terminal-missing, never generating', () => {
+    const row = buildPracticeRunRow({
+      entry: {
+        started: started({ assessmentIds: ['a-1', 'a-2'], count: 2 }),
+        finished: null,
+        startedAt: '2026-09-20T10:00:00Z',
+      },
+      // The hook masks a tombstoned id to null; the sibling problem is readable.
+      assessments: [null, readyAssessment('a-2', [question('q2', 'a-2')])],
+      attemptsByAssessment: {},
+      deletedAssessmentIds: new Set(['a-1']),
+    })
+    expect(row.state).toBe('unavailable')
+  })
+
+  it('still reports generating when a live problem generates beside a tombstoned one', () => {
+    const row = buildPracticeRunRow({
+      entry: {
+        started: started({ assessmentIds: ['a-1', 'a-2'], count: 2 }),
+        finished: null,
+        startedAt: '2026-09-20T10:00:00Z',
+      },
+      assessments: [
+        null,
+        readyAssessment('a-2', [question('q2', 'a-2')], { status: 'generating' }),
+      ],
+      attemptsByAssessment: {},
+      deletedAssessmentIds: new Set(['a-1']),
+    })
+    expect(row.state).toBe('generating')
   })
 
   it('falls back to mode for legacy pointers without families', () => {

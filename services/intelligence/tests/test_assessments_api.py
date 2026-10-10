@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 from datetime import UTC, datetime, timedelta
 
@@ -11,6 +12,7 @@ import pytest
 from app.dependencies import get_user_client
 from app.ingestion.models import IngestionError
 from app.main import app
+from app.userrest import UserScopedClient
 
 TEST_AUTH_SECRET = "test-supabase-jwt-secret-32-bytes-min"
 # The learner's own answer IS echoed on the owner-scoped attempts read route
@@ -79,6 +81,30 @@ class FakeUserClient:
             "user_id": self.assessments[assessment_id]["user_id"],
             "material_id": material_id,
             "kind": "generation",
+            "status": "queued",
+            "attempt": 1,
+            "correlation_id": correlation_id,
+            "result_id": assessment_id,
+        }
+        self.jobs[job_id] = row
+        return row
+
+    def enqueue_deletion(self, assessment_id: str, job_id: str, correlation_id: str) -> dict:
+        """Mirror of the 034 enqueue_assessment_deletion RPC semantics."""
+        if assessment_id not in self.assessments:
+            raise IngestionError("not_found", "assessment not found")
+        for job in self.jobs.values():
+            if (
+                job.get("kind") == "deletion"
+                and job.get("result_id") == assessment_id
+                and job.get("status") in ("queued", "running")
+            ):
+                raise IngestionError("conflict", "assessment deletion already in progress")
+        row = {
+            "id": job_id,
+            "user_id": self.assessments[assessment_id]["user_id"],
+            "material_id": self.assessments[assessment_id]["material_id"],
+            "kind": "deletion",
             "status": "queued",
             "attempt": 1,
             "correlation_id": correlation_id,
@@ -636,6 +662,107 @@ def test_regenerate_assessment_requires_auth() -> None:
 
     response = asyncio.run(run())
     assert response.status_code in (401, 403)
+
+
+def test_delete_assessment_returns_202_async_job(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    response = asyncio.run(_request("POST", "/v1/assessments/a1/delete"))
+    assert response.status_code == 202, response.text
+    body = response.json()
+    assert body["kind"] == "deletion"
+    assert body["status"] == "queued"
+    assert body["ownerId"] == "fixture-user"
+    assert body["resultId"] == "a1"
+    assert body["jobId"]
+    assert _override_client.jobs[body["jobId"]]["result_id"] == "a1"
+
+
+def test_delete_assessment_unknown_is_404_with_request_id(
+    _override_client: FakeUserClient,
+) -> None:
+    response = asyncio.run(_request("POST", "/v1/assessments/nope/delete"))
+    assert response.status_code == 404
+    body = response.json()
+    assert body["code"] == "not_found"
+    # Rule 17: every typed error carries the joinable request id.
+    assert body["requestId"]
+
+
+def test_delete_assessment_second_confirm_is_409(_override_client: FakeUserClient) -> None:
+    _seed_generating_assessment(_override_client)
+    first = asyncio.run(_request("POST", "/v1/assessments/a1/delete"))
+    assert first.status_code == 202
+    second = asyncio.run(_request("POST", "/v1/assessments/a1/delete"))
+    assert second.status_code == 409
+    assert second.json()["code"] == "conflict"
+
+
+def test_delete_assessment_requires_auth() -> None:
+    os.environ["SUPABASE_JWT_SECRET"] = TEST_AUTH_SECRET
+    transport = httpx.ASGITransport(app=app)
+
+    async def run() -> httpx.Response:
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            return await client.post("/v1/assessments/a1/delete")
+
+    response = asyncio.run(run())
+    assert response.status_code in (401, 403)
+
+
+def _real_client(handler) -> UserScopedClient:
+    return UserScopedClient(
+        supabase_url="https://example.supabase.co",
+        anon_key="anon",
+        user_token="token",
+        _http=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+
+
+def test_delete_client_posts_the_enqueue_rpc_payload() -> None:
+    """The real client seam: URL and RPC parameter names match migration 034."""
+    seen: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["body"] = json.loads(request.content.decode())
+        return httpx.Response(200, json={"id": "j1", "kind": "deletion"})
+
+    row = _real_client(handler).enqueue_deletion("a1", "j1", "corr-1")
+
+    assert seen["url"].endswith("/rest/v1/rpc/enqueue_assessment_deletion")
+    assert seen["body"] == {
+        "p_assessment_id": "a1",
+        "p_job_id": "j1",
+        "p_correlation_id": "corr-1",
+    }
+    assert row == {"id": "j1", "kind": "deletion"}
+
+
+def test_delete_client_maps_409_to_a_non_retryable_conflict() -> None:
+    client = _real_client(
+        lambda request: httpx.Response(409, json={"code": "23505", "message": "duplicate key"})
+    )
+    with pytest.raises(IngestionError) as caught:
+        client.enqueue_deletion("a1", "j1", "corr-1")
+    assert caught.value.code == "conflict"
+    assert caught.value.retryable is False
+
+
+def test_delete_client_maps_404_to_not_found_and_5xx_to_a_retryable_fault() -> None:
+    missing = _real_client(
+        lambda request: httpx.Response(404, json={"code": "P0002", "message": "not found"})
+    )
+    with pytest.raises(IngestionError) as caught:
+        missing.enqueue_deletion("a1", "j1", "corr-1")
+    assert caught.value.code == "not_found"
+
+    broken = _real_client(
+        lambda request: httpx.Response(500, json={"code": "XX000", "message": "boom"})
+    )
+    with pytest.raises(IngestionError) as caught:
+        broken.enqueue_deletion("a1", "j1", "corr-1")
+    assert caught.value.code == "provider_unavailable"
+    assert caught.value.retryable is True
 
 
 def test_get_assessment_returns_redacted_shape(_override_client: FakeUserClient) -> None:

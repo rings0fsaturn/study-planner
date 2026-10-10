@@ -1,9 +1,10 @@
 """Ingestion + generation worker entrypoint (D-04).
 
 Runs the stage pipeline against Supabase (REST + Storage, service role) and
-the configured embedding provider, plus a second daemon arm polling the
-`assessment_generate` queue. The generation call is network-bound, so the
-two arms share one connection pool without blocking each other.
+the configured embedding provider, plus daemon arms polling the
+`assessment_generate`, `assessment_grade`, and `assessment_delete` queues. The
+LLM calls and the sandbox runs are network-bound, so the arms share one
+connection pool without blocking each other.
 Requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. `EMBEDDING_PROVIDER`
 selects the adapter: `gemini` (default, needs `GEMINI_API_KEY`) or `sidecar`
 (local Docker embedder at `EMBEDDER_URL`, default http://localhost:8200).
@@ -177,6 +178,21 @@ def _build_grading_worker(repo, queue, adapter, sandbox=None):
     )
 
 
+def _build_deletion_worker(repo, queue):
+    """Construct the deletion arm (migration 034 `assessment_delete`)."""
+    from app.deletion.worker import DeletionWorker, DeletionWorkerConfig
+
+    return DeletionWorker(
+        repo=repo,
+        queue=queue,
+        config=DeletionWorkerConfig(
+            poll_interval_seconds=float(os.getenv("DELETION_POLL_INTERVAL_SECONDS", "1")),
+            visibility_seconds=int(os.getenv("DELETION_VISIBILITY_SECONDS", "30")),
+            max_in_flight=int(os.getenv("DELETION_MAX_IN_FLIGHT", "1")),
+        ),
+    )
+
+
 def _build_piston_client():
     """Construct the sandbox client from PISTON_* env (#42, D-02 fallback)."""
     from app.grading.piston_client import PistonClient
@@ -197,7 +213,7 @@ def _arm_loop(worker, stop: threading.Event, poll_interval: float) -> None:
         try:
             worker.run_once()
         except Exception:
-            logger.exception("generation arm iteration failed; backing off")
+            logger.exception("worker arm iteration failed; backing off")
             time.sleep(5)
         if stop.is_set():
             break
@@ -257,6 +273,7 @@ def main() -> None:
         _build_openrouter_adapter("GRADING", "written_rubric"),
         sandbox,
     )
+    deletion_worker = _build_deletion_worker(repo, queue)
 
     logger.info("ingestion worker starting against %s", supabase_url)
     stop = threading.Event()
@@ -282,6 +299,13 @@ def main() -> None:
     )
     grading_thread.start()
 
+    deletion_thread = threading.Thread(
+        target=_arm_loop,
+        args=(deletion_worker, stop, deletion_worker.config.poll_interval_seconds),
+        daemon=True,
+    )
+    deletion_thread.start()
+
     while not stop.is_set():
         try:
             worker.run_once()
@@ -295,6 +319,7 @@ def main() -> None:
     stop.set()
     generation_thread.join(timeout=10.0)
     grading_thread.join(timeout=10.0)
+    deletion_thread.join(timeout=10.0)
     shared_client.close()
     logger.info("ingestion worker stopped")
 

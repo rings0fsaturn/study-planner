@@ -52,6 +52,7 @@ from app.grading.rubric_grader import (
     rubric_criteria,
     written_answer_text,
 )
+from app.ingestion.arm import run_assessment_arm_once
 from app.ingestion.models import IngestionError, QueueMessage
 from app.ingestion.queue import WorkQueue
 
@@ -201,49 +202,16 @@ class GradingWorker:
         self.config = config
 
     def run_once(self) -> int:
-        messages = self._queue.poll(
-            GRADING_QUEUE,
+        return run_assessment_arm_once(
+            queue_name=GRADING_QUEUE,
+            label="grading",
+            process=self._process,
+            repo=self._repo,
+            queue=self._queue,
             visibility_seconds=self.config.visibility_seconds,
             quantity=self.config.max_in_flight,
+            max_deliveries=self.config.max_deliveries,
         )
-        for message in messages:
-            try:
-                self._process(message)
-            except IngestionError as exc:
-                job_id = str(message.payload.get("jobId") or "")
-                if not exc.retryable or message.read_ct >= self.config.max_deliveries:
-                    # A terminal error (the attempt or question was deleted
-                    # while the message was in flight, say) can never succeed:
-                    # mark the job failed when it still exists and archive the
-                    # message instead of redelivering forever — one orphaned
-                    # message head-of-line blocks the single-in-flight arm.
-                    logger.warning(
-                        "grading message %s dropped (%s): %s",
-                        message.msg_id,
-                        exc.code,
-                        exc.message,
-                    )
-                    try:
-                        self._repo.update_job_status(
-                            job_id,
-                            "failed",
-                            error_code=exc.code,
-                            error_message=exc.message,
-                            retryable=False,
-                        )
-                    except Exception:
-                        logger.exception("grading job %s could not be marked failed", job_id)
-                    self._queue.complete(GRADING_QUEUE, message.msg_id, True)
-                else:
-                    # Transient storage fault: return the message for redelivery
-                    # and reset the job to queued so no running row is orphaned.
-                    logger.exception("grading message %s failed transiently", message.msg_id)
-                    self._repo.update_job_status(job_id, "queued")
-                    self._queue.complete(GRADING_QUEUE, message.msg_id, False)
-            except Exception:
-                logger.exception("grading message %s failed", message.msg_id)
-                self._queue.complete(GRADING_QUEUE, message.msg_id, False)
-        return len(messages)
 
     def _process(self, message: QueueMessage) -> None:
         payload = message.payload

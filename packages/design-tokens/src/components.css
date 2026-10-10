@@ -1139,6 +1139,7 @@ a.settings-row:hover { background: var(--paper-deep); }
   color: var(--terracotta-d); background: transparent; border: none; cursor: pointer;
   flex-shrink: 0; padding: 2px 4px; align-self: center;
 }
+.banner-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .banner-dismiss {
   flex-shrink: 0; color: var(--text-tertiary); cursor: pointer;
   background: transparent; border: none; padding: 2px; line-height: 1;

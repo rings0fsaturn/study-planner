@@ -1,13 +1,14 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import { useState } from 'react'
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import Dexie from 'dexie'
 import { EventStoreProvider, createEventStore } from '../events/EventStoreProvider'
-import { ASSESSMENT_CREATED, PRACTICE_RUN_STARTED } from '../events/EventStore'
+import { ASSESSMENT_CREATED, ASSESSMENT_DELETED, PRACTICE_RUN_STARTED } from '../events/EventStore'
 import { AssessmentProvider } from '../assessments/AssessmentProvider'
 import { MaterialsProvider } from '../materials/MaterialsProvider'
 import { FakeAssessmentClient, readyAssessment, attemptRecord } from '../assessments/testing/fakeAssessmentClient'
 import { FakeMaterialClient } from '../materials/testing/fakeMaterialClient'
+import { AssessmentServiceError } from '../assessments/types'
 import type { MaterialRecord } from '../materials/types'
 import type { Assessment } from '../assessments/types'
 import { useLibraryRows, useLibraryCounts, MATERIAL_UNAVAILABLE } from './useLibraryRows'
@@ -75,6 +76,7 @@ function Probe({ materialId }: { materialId?: string }) {
       <div data-testid="runs">{rows.runRows.map((r) => `${r.runId}:${r.state}`).join(',')}</div>
       <div data-testid="titles">{JSON.stringify(rows.materialTitles)}</div>
       <button type="button" onClick={() => void rows.reload()}>reload</button>
+      <button type="button" onClick={() => void rows.evictAssessment('a-1')}>evict</button>
     </div>
   )
 }
@@ -293,6 +295,105 @@ describe('useLibraryRows', () => {
     renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
     await waitFor(() => expect(screen.getByTestId('errors')).toHaveTextContent('1'))
     expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:unavailable')
+  })
+
+  it('records a tombstone and evicts a seeded row whose server read answers 404', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockRejectedValue(
+      new AssessmentServiceError('not_found', 'resource not found', false),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('done'))
+    // The seeded cache paints first; the 404 then masks the pointer for good.
+    await waitFor(() => expect(screen.getByTestId('assessments').textContent).toBe(''))
+    expect(screen.getByTestId('errors')).toHaveTextContent('0')
+
+    const store = createEventStore(USER)
+    const events = await store.getAll()
+    store.close()
+    expect(
+      events.some(
+        (event) =>
+          event.kind === ASSESSMENT_DELETED &&
+          (event.payload as { assessmentId?: string }).assessmentId === 'a-1',
+      ),
+    ).toBe(true)
+
+    const probe = createEventStore(USER)
+    const probeDb = (probe as unknown as { db: Dexie }).db
+    await probeDb.open()
+    expect(await probeDb.table('assessmentContentCache').get('a-1')).toBeUndefined()
+    probe.close()
+  })
+
+  it('masks a tombstoned assessment and reads its run as unavailable', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+      {
+        kind: PRACTICE_RUN_STARTED,
+        payload: { runId: 'run-1', materialIds: ['mat-1'], mode: 'written', assessmentIds: ['a-1'], count: 1 },
+      },
+      { kind: ASSESSMENT_DELETED, payload: { assessmentId: 'a-1' } },
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(
+      readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('done'))
+    expect(screen.getByTestId('assessments').textContent).toBe('')
+    expect(screen.getByTestId('runs')).toHaveTextContent('run-1:unavailable')
+    // A tombstoned id never enters the fetch/poll union again.
+    expect(assessments.getAssessment).not.toHaveBeenCalled()
+  })
+
+  it('evicts the cached envelope and local attempts for an id', async () => {
+    await seedEvents([
+      { kind: ASSESSMENT_CREATED, payload: { assessmentId: 'a-1', materialIds: ['mat-1'] } },
+    ])
+    await seedCached(USER, [readyAssessment({ id: 'a-1', materialIds: ['mat-1'] })])
+    const seed = createEventStore(USER)
+    const seedDb = (seed as unknown as { db: Dexie }).db
+    await seedDb.open()
+    await seedDb.table('assessmentAttempts').put({
+      clientAttemptId: 'ca-1',
+      attemptId: 'att-1',
+      questionId: 'q1',
+      assessmentId: 'a-1',
+      status: 'graded',
+      submittedAt: '2026-09-20T10:00:00Z',
+    })
+    seed.close()
+
+    const assessments = new FakeAssessmentClient()
+    assessments.getAssessment.mockResolvedValue(
+      readyAssessment({ id: 'a-1', materialIds: ['mat-1'] }),
+    )
+    assessments.listAssessmentAttempts.mockResolvedValue([])
+    renderProbe(assessments, new FakeMaterialClient([material('mat-1', 'OS')]))
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('done'))
+
+    fireEvent.click(screen.getByRole('button', { name: 'evict' }))
+
+    await waitFor(() =>
+      expect(screen.getByTestId('assessments')).toHaveTextContent('a-1:unavailable'),
+    )
+    const probe = createEventStore(USER)
+    const probeDb = (probe as unknown as { db: Dexie }).db
+    await probeDb.open()
+    await waitFor(async () => {
+      expect(await probeDb.table('assessmentContentCache').get('a-1')).toBeUndefined()
+      expect(
+        await probeDb.table('assessmentAttempts').where('assessmentId').equals('a-1').count(),
+      ).toBe(0)
+    })
+    probe.close()
   })
 
   it('reloads only failed ids', async () => {

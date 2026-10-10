@@ -497,6 +497,19 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       .toArray()) as LocalAttemptRow[]
   }
 
+  /**
+   * Evict the per-assessment local artifacts after a confirmed server delete:
+   * the cached envelope and every local attempt row. Advisory cache rows, so a
+   * missing row is a successful no-op. Both deletes start together; a hiccup in
+   * one never strands the other (the caller logs the first rejection).
+   */
+  async function evictAssessment(assessmentId: string): Promise<void> {
+    await Promise.all([
+      cache().delete(assessmentId),
+      attempts().where('assessmentId').equals(assessmentId).delete(),
+    ])
+  }
+
   /** Objective taking (#39): the answer is one of the indexed objective shapes. */
   async function submitObjectiveAttempt(
     assessment: Assessment,
@@ -572,6 +585,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
     cacheAssessment,
     cachedAssessment,
     listLocalAttempts,
+    evictAssessment,
   }
 }
 

@@ -28,6 +28,8 @@ export interface AssessmentClientLike {
   getAssessment(assessmentId: string): Promise<Assessment>
   getJob(jobId: string): Promise<AsyncJob>
   regenerateAssessment(assessmentId: string): Promise<AsyncJob>
+  /** Owner-scoped deletion job; the second open job answers `conflict`. */
+  deleteAssessment(assessmentId: string): Promise<AsyncJob>
   submitAssessmentAttempt(
     assessmentId: string,
     questionId: string,
@@ -69,12 +71,15 @@ function isAbortError(err: unknown): boolean {
   )
 }
 
-async function errorCode(response: Response): Promise<string | undefined> {
+async function errorBody(response: Response): Promise<{ code?: string; message?: string }> {
   try {
-    const body = (await response.json()) as { code?: unknown }
-    return typeof body.code === 'string' ? body.code : undefined
+    const body = (await response.json()) as { code?: unknown; message?: unknown }
+    return {
+      code: typeof body.code === 'string' ? body.code : undefined,
+      message: typeof body.message === 'string' ? body.message : undefined,
+    }
   } catch {
-    return undefined
+    return {}
   }
 }
 
@@ -143,11 +148,23 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
         if (response.status === 401) {
           throw new AssessmentServiceError('unauthorized', 'not signed in', false, undefined, requestId)
         }
+        if (response.status === 404) {
+          // 404 is a resolved "gone" for every resource this client reads
+          // (assessment delete flow: the row is gone, never resurrect).
+          const body = await errorBody(response)
+          throw new AssessmentServiceError(
+            'not_found',
+            body.message ?? 'resource not found',
+            false,
+            undefined,
+            requestId,
+          )
+        }
         if (response.status === 409) {
           // serialization maps validation_failed to 409 too; distinguish the
           // two 409 meanings by the body code.
-          const code = await errorCode(response)
-          if (code === 'validation_failed') {
+          const body = await errorBody(response)
+          if (body.code === 'validation_failed') {
             throw new AssessmentServiceError(
               'validation',
               'material is not ready for generation',
@@ -156,7 +173,13 @@ export class HttpAssessmentFetch implements AssessmentFetchLike {
               requestId,
             )
           }
-          throw new AssessmentServiceError('conflict', 'assessment already exists', false, undefined, requestId)
+          throw new AssessmentServiceError(
+            'conflict',
+            body.message ?? 'assessment already exists',
+            false,
+            undefined,
+            requestId,
+          )
         }
         if (response.status === 429) {
           throw new AssessmentServiceError(
@@ -216,19 +239,27 @@ export class AssessmentClient implements AssessmentClientLike {
     }
   }
 
-  generateAssessment(input: GenerationRequest): Promise<AsyncJob> {
+  /**
+   * One logical POST: fresh X-Request-ID + Idempotency-Key per call, body
+   * only when the route takes one. Errors normalize through `run`.
+   */
+  private post<T>(path: string, body?: unknown): Promise<T> {
     return this.run(async () => {
-      const payload = await this.fetchLike.fetchJson('/v1/assessments/generate', {
+      const payload = await this.fetchLike.fetchJson(path, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
           'X-Request-ID': crypto.randomUUID(),
           'Idempotency-Key': crypto.randomUUID(),
+          ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
         },
-        body: JSON.stringify(input),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       })
-      return payload as AsyncJob
+      return payload as T
     })
+  }
+
+  generateAssessment(input: GenerationRequest): Promise<AsyncJob> {
+    return this.post('/v1/assessments/generate', input)
   }
 
   getAssessment(assessmentId: string): Promise<Assessment> {
@@ -250,20 +281,16 @@ export class AssessmentClient implements AssessmentClientLike {
    * retry: the run pointer keeps the assessment id, so the same id re-queues).
    */
   regenerateAssessment(assessmentId: string): Promise<AsyncJob> {
-    return this.run(async () => {
-      const payload = await this.fetchLike.fetchJson(
-        `/v1/assessments/${assessmentId}/regenerate`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Request-ID': crypto.randomUUID(),
-            'Idempotency-Key': crypto.randomUUID(),
-          },
-        },
-      )
-      return payload as AsyncJob
-    })
+    return this.post(`/v1/assessments/${assessmentId}/regenerate`)
+  }
+
+  /**
+   * Enqueue an owner-scoped deletion job (202 + AsyncJob). The service-role
+   * worker removes the assessment and its cascades; a second confirm while the
+   * first job is open answers `conflict`.
+   */
+  deleteAssessment(assessmentId: string): Promise<AsyncJob> {
+    return this.post(`/v1/assessments/${assessmentId}/delete`)
   }
 
   submitAssessmentAttempt(
@@ -271,21 +298,10 @@ export class AssessmentClient implements AssessmentClientLike {
     questionId: string,
     input: AttemptSubmitInput,
   ): Promise<AttemptCreated> {
-    return this.run(async () => {
-      const payload = await this.fetchLike.fetchJson(
-        `/v1/assessments/${assessmentId}/questions/${questionId}/attempts`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Request-ID': crypto.randomUUID(),
-            'Idempotency-Key': crypto.randomUUID(),
-          },
-          body: JSON.stringify(input),
-        },
-      )
-      return payload as AttemptCreated
-    })
+    return this.post(
+      `/v1/assessments/${assessmentId}/questions/${questionId}/attempts`,
+      input,
+    )
   }
 
   listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]> {
@@ -309,18 +325,7 @@ export class AssessmentClient implements AssessmentClientLike {
   }
 
   getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy> {
-    return this.run(async () => {
-      const payload = await this.fetchLike.fetchJson('/v1/feedback/copy', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-Request-ID': crypto.randomUUID(),
-          'Idempotency-Key': crypto.randomUUID(),
-        },
-        body: JSON.stringify({ ...input, materialIds }),
-      })
-      return payload as FeedbackCopy
-    })
+    return this.post('/v1/feedback/copy', { ...input, materialIds })
   }
 
   /** AttemptTransport view over the same calls (attemptFlow DI seam). */

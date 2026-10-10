@@ -69,6 +69,15 @@ export function PracticeRun() {
   /** In-flight generation retry for a stuck problem (warnings present). */
   const [regenerating, setRegenerating] = useState(false)
   const [regenerateError, setRegenerateError] = useState<string | null>(null)
+  /**
+   * Assessments with an accepted retry whose worker job has not resolved yet.
+   * The envelope stays `generating` with the same warnings for 20-40s after
+   * the 202, so without this the button re-enables instantly and a second
+   * click double-enqueues the same assessment.
+   */
+  const [retryRequestedIds, setRetryRequestedIds] = useState<ReadonlySet<string>>(new Set())
+  /** Sync guard for two clicks inside one render flush (state alone cannot catch it). */
+  const regenerateInFlight = useRef(false)
   /** Rebuilt projections for the summary advisory (#44 AC3); null until fetched. */
   const [mastery, setMastery] = useState<MasteryProjection[] | null>(null)
 
@@ -218,19 +227,41 @@ export function PracticeRun() {
 
   const current = problems[active]
   const currentEnvelope = current ? envelopes[current.assessmentId] : undefined
+  const retryPending = currentEnvelope != null && retryRequestedIds.has(currentEnvelope.id)
+
+  // A retry resolves when the worker flips the row out of `generating` or
+  // clears its warnings; until then the request stays visibly received.
+  useEffect(() => {
+    setRetryRequestedIds((previous) => {
+      if (previous.size === 0) return previous
+      const next = new Set(previous)
+      for (const id of previous) {
+        const envelope = envelopes[id]
+        if (!envelope || envelope.status !== 'generating' || envelope.warnings.length === 0) {
+          next.delete(id)
+        }
+      }
+      return next.size === previous.size ? previous : next
+    })
+  }, [envelopes])
 
   /** Re-enqueue the SAME assessment (the run pointer is immutable) and resume polling. */
   async function handleRegenerateGeneration() {
     const envelope = currentEnvelope
-    if (!envelope || regenerating) return
+    if (!envelope || regenerating || retryRequestedIds.has(envelope.id) || regenerateInFlight.current) {
+      return
+    }
+    regenerateInFlight.current = true
     setRegenerating(true)
     setRegenerateError(null)
     try {
       await assessments.regenerateAssessment(envelope.id)
+      setRetryRequestedIds((previous) => new Set(previous).add(envelope.id))
       setReloadTick((value) => value + 1)
     } catch (err) {
       setRegenerateError(err instanceof Error ? err.message : 'Could not restart generation.')
     } finally {
+      regenerateInFlight.current = false
       setRegenerating(false)
     }
   }
@@ -527,6 +558,12 @@ export function PracticeRun() {
                         <div className="banner-desc">
                           {currentEnvelope.warnings.map((warning) => warning.message).join(' ')}
                         </div>
+                        {retryPending && !regenerateError && (
+                          <div className="banner-desc" role="status">
+                            Retry requested. Generating problem {current.number}… This can take up
+                            to a minute for coding questions.
+                          </div>
+                        )}
                         {regenerateError && (
                           <div className="banner-desc" role="status">
                             {regenerateError}
@@ -536,9 +573,13 @@ export function PracticeRun() {
                           type="button"
                           className="banner-action-btn"
                           onClick={() => void handleRegenerateGeneration()}
-                          disabled={regenerating}
+                          disabled={regenerating || retryPending}
                         >
-                          {regenerating ? 'Requesting…' : 'Retry generation'}
+                          {regenerating
+                            ? 'Requesting…'
+                            : retryPending
+                              ? 'Retry requested – generating…'
+                              : 'Retry generation'}
                         </button>
                       </div>
                     </div>

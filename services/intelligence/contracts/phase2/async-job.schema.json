@@ -7,7 +7,7 @@
   "required": ["jobId", "kind", "status", "ownerId", "correlationId", "createdAt"],
   "properties": {
     "jobId": { "type": "string", "minLength": 1 },
-    "kind": { "type": "string", "enum": ["ingestion", "generation", "grading", "roadmap_feedback"] },
+    "kind": { "type": "string", "enum": ["ingestion", "generation", "grading", "roadmap_feedback", "deletion"] },
     "status": { "type": "string", "enum": ["queued", "running", "succeeded", "partial", "failed", "cancelled"] },
     "ownerId": { "type": "string", "minLength": 1 },
     "correlationId": { "type": "string", "minLength": 1 },

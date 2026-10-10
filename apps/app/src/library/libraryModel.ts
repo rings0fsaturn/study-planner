@@ -9,6 +9,7 @@
 import type { Event } from '../events/EventStore'
 import {
   ASSESSMENT_CREATED,
+  ASSESSMENT_DELETED,
   PRACTICE_RUN_FINISHED,
   PRACTICE_RUN_STARTED,
 } from '../events/EventStore'
@@ -19,6 +20,7 @@ import type {
 } from '../assessments/types'
 import type {
   AssessmentCreatedPayload,
+  AssessmentDeletedPayload,
   PracticeRunFinishedPayload,
   PracticeRunStartedPayload,
 } from '../sync/types'
@@ -91,13 +93,31 @@ function compareNewest(aCreatedAt: string, aId: number | undefined, bCreatedAt: 
 }
 
 /**
+ * Tombstoned assessment ids. A malformed payload (no usable assessmentId)
+ * cannot name a row, so it is ignored rather than throwing (rule 42).
+ */
+export function deletedAssessmentIds(events: Event[]): Set<string> {
+  const deleted = new Set<string>()
+  for (const event of events) {
+    if (event.kind !== ASSESSMENT_DELETED) continue
+    const payload = payloadOf<AssessmentDeletedPayload>(event)
+    if (typeof payload?.assessmentId === 'string' && payload.assessmentId) {
+      deleted.add(payload.assessmentId)
+    }
+  }
+  return deleted
+}
+
+/**
  * Latest AssessmentCreated wins per assessmentId (createdAt, tie-break id).
- * Newest first. Optional materialId filter on the pointer's materialIds.
+ * Ids carrying an AssessmentDeleted tombstone are masked. Newest first.
+ * Optional materialId filter on the pointer's materialIds.
  */
 export function listAssessmentPointers(
   events: Event[],
   options?: { materialId?: string },
 ): AssessmentPointer[] {
+  const deleted = deletedAssessmentIds(events)
   const latest = new Map<string, { pointer: AssessmentPointer; eventId: number | undefined }>()
   for (const event of events) {
     if (event.kind !== ASSESSMENT_CREATED) continue
@@ -113,7 +133,9 @@ export function listAssessmentPointers(
       latest.set(candidate.assessmentId, { pointer: candidate, eventId: event.id })
     }
   }
-  const pointers = [...latest.values()].map((entry) => entry.pointer)
+  const pointers = [...latest.values()]
+    .map((entry) => entry.pointer)
+    .filter((pointer) => !deleted.has(pointer.assessmentId))
   const filtered = options?.materialId
     ? pointers.filter((pointer) => pointer.materialIds.includes(options.materialId as string))
     : pointers
@@ -248,12 +270,17 @@ export function buildAssessmentRow(input: {
   }
 }
 
+const NO_DELETED_IDS: ReadonlySet<string> = new Set()
+
 export function buildPracticeRunRow(input: {
   entry: PracticeRunEntry
   assessments: Array<Assessment | null>
   attemptsByAssessment: Record<string, LocalAttemptRow[]>
+  /** Tombstoned ids: a deleted problem is terminal-missing, never `generating`. */
+  deletedAssessmentIds?: ReadonlySet<string>
 }): PracticeRunRow {
   const { entry, assessments, attemptsByAssessment } = input
+  const deleted = input.deletedAssessmentIds ?? NO_DELETED_IDS
   const { started, finished, startedAt } = entry
   const primaryMaterialId = started.materialIds[0] ?? ''
   const model = buildPracticeRunModel({ started, finished, assessments, attemptsByAssessment })
@@ -286,9 +313,16 @@ export function buildPracticeRunRow(input: {
   }
   const ungradedOpen = model.problems.some((problem) => {
     if (isGraded(problem)) return false
+    // A tombstoned problem resolves as missing forever; reading it as
+    // `generating` would park the run in a poll loop no worker can finish.
+    if (deleted.has(problem.assessmentId)) return false
     return problem.assessmentStatus === 'generating' || problem.assessmentStatus == null
   })
   if (ungradedOpen) return { ...base, state: 'generating' }
+  const lostToDeletion = model.problems.some(
+    (problem) => !isGraded(problem) && deleted.has(problem.assessmentId),
+  )
+  if (lostToDeletion) return { ...base, state: 'unavailable' }
   return { ...base, state: 'in-progress' }
 }
 

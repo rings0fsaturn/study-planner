@@ -183,3 +183,178 @@
   display: inline-flex;
   align-items: center;
 }
+
+/* ---- Assessment delete: corner X on the card (dir-detach precedent) ---- */
+
+/* z-index is mandatory: the title link's stretched ::after (inset:0) sits
+   above static siblings and would swallow every click on the X. */
+.library-card-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--rust);
+  color: var(--paper);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition:
+    opacity var(--duration-2) var(--ease-out),
+    background var(--duration-2) var(--ease-out);
+}
+
+/* Long titles never slide under the corner X. */
+.library-card-deletable .library-title {
+  padding-right: 2rem;
+}
+
+.library-card:hover .library-card-delete,
+.library-card:focus-within .library-card-delete,
+.library-card-delete:focus-visible {
+  opacity: 1;
+}
+
+.library-card-delete:hover,
+.library-card-delete:focus-visible {
+  background: color-mix(in srgb, var(--rust) 86%, var(--ink));
+}
+
+.library-card-delete:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* Busy or blocked: the control stays readable, never half-invisible. */
+.library-card-delete:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+@media (pointer: coarse) {
+  /* 28px visual circle, 44px tap target (components.css 44px floor). */
+  .library-card-delete::after {
+    content: '';
+    position: absolute;
+    inset: -8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-card-delete {
+    transition: none;
+  }
+}
+
+/* ---- Assessment delete: confirm dialog (ProgressLabModal overlay shell) ---- */
+
+.assessment-delete-overlay,
+.assessment-delete-overlay * {
+  box-sizing: border-box;
+}
+
+.assessment-delete-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal, 1100);
+  display: grid;
+  place-items: center;
+  width: 100vw;
+  height: 100dvh;
+  padding:
+    max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(16px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  overflow: hidden;
+  background: rgba(42, 31, 24, 0.58);
+  backdrop-filter: blur(4px);
+}
+
+.assessment-delete-shell {
+  display: flex;
+  flex-direction: column;
+  width: min(440px, 100%);
+  max-height: 100%;
+  padding: 20px 22px;
+  overflow-y: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--surface-card);
+  box-shadow: var(--shadow-modal);
+}
+
+.assessment-delete-eyebrow {
+  color: var(--text-tertiary);
+}
+
+.assessment-delete-heading {
+  margin: 6px 0 0;
+  font: 500 1.4rem/1.2 var(--font-display);
+  color: var(--text-primary);
+}
+
+.assessment-delete-target {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  overflow-wrap: anywhere;
+}
+
+.assessment-delete-target strong {
+  color: var(--text-primary);
+}
+
+.assessment-delete-target-meta {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.assessment-delete-list {
+  margin: 10px 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.assessment-delete-list li + li {
+  margin-top: 4px;
+}
+
+.assessment-delete-warning {
+  margin: 10px 0 0;
+  color: var(--rust);
+  font-size: 0.85rem;
+}
+
+.assessment-delete-error {
+  margin: 10px 0 0;
+  color: var(--rust);
+  font-size: 0.85rem;
+}
+
+.assessment-delete-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+@media (max-width: 480px) {
+  .assessment-delete-actions {
+    flex-direction: column-reverse;
+  }
+
+  .assessment-delete-actions .btn {
+    width: 100%;
+  }
+}

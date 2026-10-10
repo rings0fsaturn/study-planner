@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-10-07_
+_Last reconciled: 2026-10-10_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -33,6 +33,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Done
 | Tag | Task | Durable record |
 |---|---|---|
+| [APP] | assessment-delete | **Done 2026-10-10**: card hover-X + confirm dialog + backend delete job - migration 034 live, typed delete + tombstone/evict flow, live spec 2/2 at 1280/375 with request-id join, AC1-AC6 PASS, full app 1133 + 2 pre-existing TZ flakes, both P4 reviews PASS. | archive/assessment-delete/state.md |
 | [APP] | practice-coach-sources-overflow | **Done 2026-10-07**: coach sources disclosure capped (card min(70vh,560px) flex, body scroll, ul 180px scroll, phone dvh guard) - unit 11/11, live 1280+375 2/2 zero errors, R1/R2/R3 PASS; code on branch project/phase-2. | archive/practice-coach-sources-overflow/state.md |
 | [APP] | assessment-library-practice-hub | **Done 2026-10-05**: #81 Assessment library + Practice hub - `/assessments` + `/practice` nested under Materials (sub-nav, variant B card grid), pure libraryModel + useLibraryRows hydration, material backlink, all honest states at 1280+375 zero errors; live E2E 2 passed 2.8m with request-id join + cleanup; suite 1077 + 2 pre-existing flakes; build green with prototype removed (0 dist hits); OCR PASS + thermo PASS-WITH-MINORS (test-only). Wayfinder exit (resolution, 7/7 ACs, closed, map #4 line, archived). | archive/assessment-library-practice-hub/state.md |
 | [APP][RESEARCH] | coding-generation-context | **Done 2026-09-28**: #67 coding generation (code-aware context + derived contracts) - build `b6e286b` live-verified AC1-AC6 2026-09-21, residual hardening 2026-09-28 (mandatory negative coding gold in the registry; no-steer listing paged past the hosted PostgREST 1000-row cap, DDIA 1094 chunks fetched) + fresh live AC1/AC2/AC4 re-verification with redaction CLEAN; two review rounds APPROVE/READY. Wayfinder exit (resolution, ACs ticked, closed, map #4 decision line, archived); unblocks #49. | archive/coding-generation-context/state.md |

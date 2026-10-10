@@ -5,7 +5,7 @@ import time
 from dataclasses import dataclass
 
 import jwt
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, Request
 
 _SYMMETRIC_ALGS = ["HS256"]
 _ASYMMETRIC_ALGS = {"ES256", "RS256"}
@@ -102,8 +102,11 @@ def require_user(authorization: str | None = Header(default=None)) -> str:
     return sub
 
 
-def rate_limit_user(user_id: str = Depends(require_user)) -> None:
+def rate_limit_user(request: Request, user_id: str = Depends(require_user)) -> None:
     """Dev-only in-memory per-user rate-limit stub."""
+    # ponytail: safe reads never call the LLM, so they never consume quota.
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
     raw_limit = os.getenv("INTELLIGENCE_RATE_LIMIT_PER_MINUTE", "120")
     try:
         limit = int(raw_limit)

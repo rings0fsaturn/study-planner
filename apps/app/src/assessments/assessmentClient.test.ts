@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   AssessmentClient,
   HttpAssessmentFetch,
@@ -82,6 +82,10 @@ class FakeFetch implements AssessmentFetchLike {
     return this.respond()
   }
 }
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('AssessmentClient', () => {
   it('generateAssessment posts the request and returns the AsyncJob', async () => {
@@ -173,6 +177,87 @@ describe('AssessmentClient', () => {
     expect(headers['Idempotency-Key']).toBeDefined()
     expect(headers['X-Request-ID']).toBeDefined()
     expect(init.body).toBeUndefined()
+  })
+
+  it('deleteAssessment posts to the assessment delete route and returns the AsyncJob', async () => {
+    const job = asyncJob({ kind: 'deletion', resultId: undefined })
+    const fetchLike = new FakeFetch(async () => job)
+    const client = new AssessmentClient(fetchLike)
+
+    await expect(client.deleteAssessment('assessment-1')).resolves.toEqual(job)
+    expect(fetchLike.calls[0].path).toBe('/v1/assessments/assessment-1/delete')
+    const init = fetchLike.calls[0].init!
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers['Idempotency-Key']).toBeDefined()
+    expect(headers['Idempotency-Key']!.length).toBeGreaterThanOrEqual(16)
+    expect(headers['X-Request-ID']).toBeDefined()
+    expect(init.body).toBeUndefined()
+  })
+
+  it('deleteAssessment preserves the conflict of an already-open delete job', async () => {
+    const conflict = new AssessmentServiceError('conflict', 'assessment deletion already in progress', false)
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw conflict
+      }),
+    )
+    await expect(client.deleteAssessment('assessment-1')).rejects.toBe(conflict)
+  })
+
+  it('deleteAssessment normalizes an AbortError into a retryable timeout', async () => {
+    const abortError = new Error('aborted')
+    abortError.name = 'AbortError'
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw abortError
+      }),
+    )
+    await expect(client.deleteAssessment('assessment-1')).rejects.toMatchObject({
+      code: 'timeout',
+      retryable: true,
+    })
+  })
+
+  it('deleteAssessment normalizes a TypeError into a retryable network error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new TypeError('fetch failed')
+      }),
+    )
+    await expect(client.deleteAssessment('assessment-1')).rejects.toMatchObject({
+      code: 'network',
+      retryable: true,
+    })
+  })
+
+  it('deleteAssessment classifies an unknown non-Error value as unknown', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw 'string failure'
+      }),
+    )
+    await expect(client.deleteAssessment('assessment-1')).rejects.toMatchObject({
+      code: 'unknown',
+    })
+  })
+
+  it('deleteAssessment surfaces the request id sent on the wire, reused across the retry (rule 17)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: 'internal_error', message: 'boom' }), { status: 500 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new AssessmentClient(new HttpAssessmentFetch(async () => null, 'http://intel'))
+
+    const error = await client.deleteAssessment('assessment-1').catch((err: unknown) => err)
+    expect(error).toBeInstanceOf(AssessmentServiceError)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const headersOf = (call: number) =>
+      fetchMock.mock.calls[call][1].headers as Record<string, string>
+    expect(headersOf(1)['X-Request-ID']).toBe(headersOf(0)['X-Request-ID'])
+    expect(headersOf(1)['Idempotency-Key']).toBe(headersOf(0)['Idempotency-Key'])
+    expect((error as AssessmentServiceError).requestId).toBe(headersOf(0)['X-Request-ID'])
+    vi.unstubAllGlobals()
   })
 
   it('normalizes a 401 into unauthorized', async () => {
@@ -324,6 +409,55 @@ describe('HttpAssessmentFetch', () => {
       (err: unknown) => err,
     )
     expect((conflictError as AssessmentServiceError).code).toBe('conflict')
+    vi.unstubAllGlobals()
+  })
+
+  it('preserves the service conflict message of a delete double-confirm', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ code: 'conflict', message: 'assessment deletion already in progress' }),
+        { status: 409 },
+      ),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const fetchLike = new HttpAssessmentFetch(async () => null, 'http://intel')
+    const error = await fetchLike
+      .fetchJson('/v1/assessments/a1/delete', {})
+      .catch((err: unknown) => err)
+    expect(error).toMatchObject({
+      code: 'conflict',
+      message: 'assessment deletion already in progress',
+    })
+    vi.unstubAllGlobals()
+  })
+
+  it('maps a 404 to a non-retryable not_found with the service message and request id', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ code: 'not_found', message: 'assessment not found' }), {
+          status: 404,
+        }),
+      )
+      .mockResolvedValueOnce(new Response('{}', { status: 404 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const fetchLike = new HttpAssessmentFetch(async () => null, 'http://intel')
+    const error = await fetchLike
+      .fetchJson('/v1/assessments/gone', { headers: { 'X-Request-ID': 'req-404' } })
+      .catch((err: unknown) => err)
+    expect(error).toBeInstanceOf(AssessmentServiceError)
+    expect((error as AssessmentServiceError).code).toBe('not_found')
+    expect((error as AssessmentServiceError).retryable).toBe(false)
+    expect((error as AssessmentServiceError).message).toBe('assessment not found')
+    expect((error as AssessmentServiceError).requestId).toBe('req-404')
+
+    const fallback = await fetchLike
+      .fetchJson('/v1/assessments/gone')
+      .catch((err: unknown) => err)
+    expect((fallback as AssessmentServiceError).message).toBe('resource not found')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
     vi.unstubAllGlobals()
   })
 

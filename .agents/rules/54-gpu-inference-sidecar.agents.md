@@ -132,13 +132,26 @@ WSL2 DXG cannot deliver GPU interrupts, so ROCr's `AsyncEventsLoop` threads
 no-sleep polling loop.
 OpenMP env vars such as `OMP_WAIT_POLICY=PASSIVE` and `OMP_NUM_THREADS` do not
 stop it; they only bound the intra-op pool.
+`HSA_TOOLS_DISABLE_REGISTER=1` does not stop it either; that workaround targets
+a different (`InterruptSignal::WaitRelaxed`, ROCm 10-only) spin class.
 The upstream fix (`ROCm/rocm-systems#7898`, escalating backoff in the polling
-loop, measured 182% down to 1%) is not merged into any released ROCm yet.
+loop, measured 182% down to 1%) was merged 2026-08-18 but is not in any release
+as of 2026-10-01: ROCm 7.14.0 predates it and 7.14.1 still lacks it
+(`ROCm/rocm-systems#12674`).
+This checkout's `rocm7.14` build (`ROCR 1.21.0-local-build-2b22ab01`) was
+verified unfixed 2026-10-10 (no `PollNap` symbols, 196% idle, two threads at
+99.9% with `wchan=0`).
 Contain it with the compose `deploy.resources.limits.cpus` cap already present
 in `services/embedder/docker-compose.yml` (currently 4 cores: the two spin
-threads plus headroom for real tokenization work).
+threads plus headroom for real tokenization work) plus the `nice -n 19` in the
+Dockerfile `CMD` (spinners yield to co-tenants; GPU-bound inference throughput
+is unaffected).
 Verify the cap with `docker inspect <id> --format '{{.HostConfig.NanoCpus}}'`.
-Inference stays GPU-bound, so the cap does not change throughput.
+Verify fix presence in any candidate image with
+`strings /opt/rocm/lib/libhsa-runtime64.so.1 | grep PollNap` (present means the
+`#7898` backoff is compiled in); when a release carries it, re-pin `ROCM_IMAGE`
+and drop the `nice` wrapper.
+Inference stays GPU-bound, so neither containment changes throughput.
 Do not chase env-var workarounds for the spin; the defect is in the bundled
 runtime.
 

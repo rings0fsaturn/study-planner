@@ -40,18 +40,26 @@ export function familyLabel(family: AssessmentRow['family']): string {
   }
 }
 
+export function assessmentMeta(row: AssessmentRow): string {
+  return `${familyLabel(row.family)} · ${formatShortDate(row.createdAt)} · ${row.totalCount} question${row.totalCount === 1 ? '' : 's'}`
+}
+
 export function AssessmentCard({
   row,
   title,
   onRetry,
+  onDelete,
+  deleting,
 }: {
   row: AssessmentRow
   title: string
   onRetry: (assessmentId: string) => void
+  onDelete: (assessmentId: string, opener: HTMLElement) => void
+  deleting: boolean
 }) {
-  const meta = `${familyLabel(row.family)} · ${formatShortDate(row.createdAt)} · ${row.totalCount} question${row.totalCount === 1 ? '' : 's'}`
+  const meta = assessmentMeta(row)
   return (
-    <article className="material-card library-card">
+    <article className="material-card library-card library-card-deletable" aria-busy={deleting}>
       <div className="material-body">
         <h3 className="library-title">
           <Link className="library-title-link" to={`/assessments/${row.assessmentId}`}>
@@ -61,23 +69,44 @@ export function AssessmentCard({
         <div className="library-meta">{meta}</div>
         <div className="material-row-status">
           <StateTag state={row.state} />
-          {row.state === 'generating' && (
+          {deleting ? (
             <>
               <GeneratingDots />
-              <span className="library-note">{`${row.readyCount} of ${row.totalCount} ready`}</span>
+              <span className="library-note" role="status">
+                Deleting...
+              </span>
+            </>
+          ) : (
+            <>
+              {row.state === 'generating' && (
+                <>
+                  <GeneratingDots />
+                  <span className="library-note">{`${row.readyCount} of ${row.totalCount} ready`}</span>
+                </>
+              )}
+              {row.state === 'failed' && row.warningReason && (
+                <span className="library-warning">{row.warningReason}</span>
+              )}
+              {row.state === 'ready' &&
+                (row.score != null ? (
+                  <span className="library-score">{row.score.toFixed(2)}</span>
+                ) : (
+                  <span className="library-note">Not started</span>
+                ))}
             </>
           )}
-          {row.state === 'failed' && row.warningReason && (
-            <span className="library-warning">{row.warningReason}</span>
-          )}
-          {row.state === 'ready' &&
-            (row.score != null ? (
-              <span className="library-score">{row.score.toFixed(2)}</span>
-            ) : (
-              <span className="library-note">Not started</span>
-            ))}
         </div>
       </div>
+      <button
+        type="button"
+        className="library-card-delete"
+        aria-label={`Delete ${title || MATERIAL_UNAVAILABLE} assessment`}
+        aria-busy={deleting}
+        disabled={deleting}
+        onClick={(event) => onDelete(row.assessmentId, event.currentTarget)}
+      >
+        <span aria-hidden="true">&times;</span>
+      </button>
       {row.state === 'generating' && (
         <div className="material-card-actions-wrap library-card-actions">
           <div className="material-card-actions">

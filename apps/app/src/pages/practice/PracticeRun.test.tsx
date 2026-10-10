@@ -324,6 +324,46 @@ describe('PracticeRun', () => {
     expect(client.regenerateAssessment).toHaveBeenCalledWith('a-1')
   })
 
+  it('disables retry after the request lands so a second click cannot double-enqueue', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    client.scriptRegenerate(queuedJob({ resultId: 'a-1' }))
+    client.getAssessment.mockImplementation(async () =>
+      assessment('a-1', 'mat-1', [], 'generating', [
+        { code: 'provider_error', message: 'generation interrupted' },
+      ]),
+    )
+    client.listAssessmentAttempts.mockImplementation(async () => [])
+
+    renderRun(client)
+
+    const retry = await screen.findByRole('button', { name: 'Retry generation' })
+    fireEvent.click(retry)
+    expect(await screen.findByRole('button', { name: /Retry requested/ })).toBeDisabled()
+    expect(screen.getByText(/Retry requested\. Generating problem 1/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Retry requested/ }))
+    expect(client.regenerateAssessment).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-enables retry with the error when the retry request itself fails', async () => {
+    await seedRun({ assessmentIds: ['a-1'], count: 1 })
+    const client = new FakeAssessmentClient()
+    client.scriptRegenerate(new Error('offline'))
+    client.getAssessment.mockImplementation(async () =>
+      assessment('a-1', 'mat-1', [], 'generating', [
+        { code: 'provider_error', message: 'generation interrupted' },
+      ]),
+    )
+    client.listAssessmentAttempts.mockImplementation(async () => [])
+
+    renderRun(client)
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry generation' }))
+    expect(await screen.findByText('offline')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry generation' })).toBeEnabled()
+    expect(screen.queryByText(/Retry requested\. Generating problem/)).not.toBeInTheDocument()
+  })
+
   it('takes a coding problem through the code editor, not the written textarea', async () => {
     await seedRun({
       mode: 'coding',

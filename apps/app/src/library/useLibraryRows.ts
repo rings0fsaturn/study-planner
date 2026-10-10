@@ -2,16 +2,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks'
 import type Dexie from 'dexie'
 import type { Assessment } from '../assessments/types'
+import { AssessmentServiceError } from '../assessments/types'
 import type { LocalAttemptRow } from '../assessments/attemptFlow'
 import { createAttemptFlow, type AttemptFlow } from '../assessments/attemptFlow'
 import { useAssessmentClient } from '../assessments/AssessmentProvider'
 import { useMaterialsClient } from '../materials/MaterialsProvider'
+import { ASSESSMENT_DELETED, type EventStore } from '../events/EventStore'
 import { useEventStoreContext } from '../events/EventStoreProvider'
 import { logger } from '../lib/logger'
 import { mergeEnvelopes } from '../pages/practice/practiceRunModel'
 import {
   buildAssessmentRow,
   buildPracticeRunRow,
+  deletedAssessmentIds,
   listAssessmentPointers,
   listPracticeRunEntries,
   orderAssessmentRows,
@@ -26,7 +29,8 @@ export const MATERIAL_UNAVAILABLE = 'Material unavailable'
 export const MATERIAL_TITLE_PENDING = 'Loading title…'
 
 const HYDRATION_CONCURRENCY = 4
-const POLL_INTERVAL_MS = 3000
+/** Shared poll cadence for in-flight assessments and the delete job. */
+export const POLL_INTERVAL_MS = 3000
 
 async function pool<T>(ids: string[], fn: (id: string) => Promise<T>, concurrency: number): Promise<T[]> {
   const results: T[] = []
@@ -139,12 +143,21 @@ export function useLibraryRows(options?: { materialId?: string }) {
     () => listPracticeRunEntries(events ?? [], materialId ? { materialId } : undefined),
     [events, materialId],
   )
+  // Tombstones mask run rows too: a run's problem reads missing, never the
+  // stale envelope of a deleted assessment (rule 42: pointer-scoped runs).
+  const deletedIds = useMemo(() => deletedAssessmentIds(events ?? []), [events])
   const uniqueIds = useMemo(() => {
     const ids = new Set<string>()
     for (const pointer of pointers) ids.add(pointer.assessmentId)
-    for (const entry of entries) for (const id of entry.started.assessmentIds) ids.add(id)
+    for (const entry of entries) {
+      for (const id of entry.started.assessmentIds) {
+        // The tombstone is the local truth: a deleted assessment referenced by
+        // a run must never enter the fetch/poll union again (rule 42).
+        if (!deletedIds.has(id)) ids.add(id)
+      }
+    }
     return [...ids]
-  }, [pointers, entries])
+  }, [pointers, entries, deletedIds])
   const uniqueKey = uniqueIds.join(',')
 
   const uniqueIdSet = useMemo(() => new Set(uniqueIds), [uniqueIds])
@@ -161,10 +174,12 @@ export function useLibraryRows(options?: { materialId?: string }) {
       ids: string[],
       activeFlow: AttemptFlow,
       getAssessment: (id: string) => Promise<Assessment>,
+      store: EventStore,
       cancelled: { current: boolean },
     ): Promise<{ loaded: Record<string, Assessment>; failed: string[] }> => {
       const loaded: Record<string, Assessment> = {}
       const failed: string[] = []
+      const gone: string[] = []
       await pool(
         ids,
         async (id) => {
@@ -176,7 +191,19 @@ export function useLibraryRows(options?: { materialId?: string }) {
             } catch (error) {
               logger.debug('[library] cache write advisory', error)
             }
-          } catch {
+          } catch (error) {
+            // 404 is a resolved outcome: the server is authoritative and the
+            // assessment is gone (deleted here or on another device). Record
+            // the tombstone, evict the cached copy, and never resurrect a
+            // stale envelope over it (assessment delete flow).
+            if (error instanceof AssessmentServiceError && error.code === 'not_found') {
+              logger.debug('[library] assessment gone from server', {
+                assessmentId: id,
+                requestId: error.requestId,
+              })
+              gone.push(id)
+              return
+            }
             let cached: Assessment | null = null
             try {
               cached = await activeFlow.cachedAssessment(id)
@@ -193,6 +220,30 @@ export function useLibraryRows(options?: { materialId?: string }) {
         HYDRATION_CONCURRENCY,
       )
       if (cancelled.current) return { loaded, failed }
+      if (gone.length > 0) {
+        for (const id of gone) {
+          try {
+            await activeFlow.evictAssessment(id)
+          } catch (error) {
+            logger.debug('[library] eviction advisory', error)
+          }
+          try {
+            await store.append(ASSESSMENT_DELETED, { assessmentId: id })
+          } catch (error) {
+            logger.warn('[library] tombstone append failed', error)
+          }
+        }
+        setEnvelopes((previous) => {
+          const next = { ...previous }
+          for (const id of gone) delete next[id]
+          return next
+        })
+        setRowsByAssessment((previous) => {
+          const next = { ...previous }
+          for (const id of gone) delete next[id]
+          return next
+        })
+      }
       setEnvelopes((previous) => mergeEnvelopes(previous, loaded))
       const nextRows: Record<string, LocalAttemptRow[]> = {}
       await pool(
@@ -297,7 +348,7 @@ export function useLibraryRows(options?: { materialId?: string }) {
         // revalidation and fill in (or fall back in the pages) whenever the
         // material list lands.
         const titles = hydrateTitles(fetchTitles, snapshotPointers, snapshotEntries, cancelled)
-        const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, cancelled)
+        const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, eventStore, cancelled)
         if (cancelled.current) return
         setFailedIds(failed)
         setHydrated(true)
@@ -315,12 +366,13 @@ export function useLibraryRows(options?: { materialId?: string }) {
 
   // Reload retries only failed ids.
   const reload = useCallback(() => {
-    if (!flow || flowOwner !== eventStore) return
+    if (!flow || !eventStore || flowOwner !== eventStore) return
     const cancelled = { current: false }
     const retried = [...visibleFailedIds]
     if (retried.length === 0) return
+    const store = eventStore
     void (async () => {
-      const { failed } = await hydrateEnvelopes(retried, flow, getAssessment, cancelled)
+      const { failed } = await hydrateEnvelopes(retried, flow, getAssessment, store, cancelled)
       if (cancelled.current) return
       setFailedIds((previous) => [
         ...previous.filter((id) => !retried.includes(id)),
@@ -349,12 +401,13 @@ export function useLibraryRows(options?: { materialId?: string }) {
     if (!eventStore || !flow || flowOwner !== eventStore || activeKey === '') return
     const cancelled = { current: false }
     const ids = activeKey.split(',')
+    const store = eventStore
     const timer = setInterval(() => {
       if (pollInFlight.current) return
       pollInFlight.current = true
       void (async () => {
         try {
-          const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, cancelled)
+          const { failed } = await hydrateEnvelopes(ids, flow, getAssessment, store, cancelled)
           if (cancelled.current) return
           setFailedIds((previous) => {
             const surviving = previous.filter((id) => !ids.includes(id) || failed.includes(id))
@@ -391,14 +444,46 @@ export function useLibraryRows(options?: { materialId?: string }) {
         .map((entry) =>
           buildPracticeRunRow({
             entry,
-            assessments: entry.started.assessmentIds.map((id) => envelopes[id] ?? null),
+            assessments: entry.started.assessmentIds.map(
+              (id) => (deletedIds.has(id) ? null : envelopes[id] ?? null),
+            ),
             attemptsByAssessment: rowsByAssessment,
+            deletedAssessmentIds: deletedIds,
           }),
         )
         .sort((a, b) => (a.startedAt < b.startedAt ? 1 : a.startedAt > b.startedAt ? -1 : a.runId.localeCompare(b.runId))),
-    [entries, envelopes, rowsByAssessment],
+    [entries, envelopes, rowsByAssessment, deletedIds],
   )
   const { resume, history } = useMemo(() => splitRunRows(runRows), [runRows])
+
+  /**
+   * After a confirmed server delete, drop the per-assessment local artifacts
+   * (advisory cache rows) and the in-memory copy so run rows converge to
+   * missing. A read/write hiccup here never fails the delete.
+   */
+  const evictAssessment = useCallback(
+    async (assessmentId: string) => {
+      if (!flow || flowOwner !== eventStore) return
+      try {
+        await flow.evictAssessment(assessmentId)
+      } catch (error) {
+        logger.debug('[library] eviction advisory', error)
+      }
+      setEnvelopes((previous) => {
+        if (!(assessmentId in previous)) return previous
+        const next = { ...previous }
+        delete next[assessmentId]
+        return next
+      })
+      setRowsByAssessment((previous) => {
+        if (!(assessmentId in previous)) return previous
+        const next = { ...previous }
+        delete next[assessmentId]
+        return next
+      })
+    },
+    [flow, flowOwner, eventStore],
+  )
 
   return {
     assessmentRows,
@@ -411,5 +496,6 @@ export function useLibraryRows(options?: { materialId?: string }) {
     errorCount: visibleFailedIds.length,
     failedIds: visibleFailedIds,
     reload,
+    evictAssessment,
   }
 }

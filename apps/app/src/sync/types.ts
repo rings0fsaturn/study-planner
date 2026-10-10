@@ -94,6 +94,15 @@ export interface AssessmentCreatedPayload {
 }
 
 /**
+ * Tombstone half of the assessment pointer: the owner deleted the assessment.
+ * `AssessmentCreated` history stays additive; every reader masks the id with a
+ * malformed-payload fallback (rule 42: widen the pointer, not the reader).
+ */
+export interface AssessmentDeletedPayload {
+  assessmentId: string
+}
+
+/**
  * The run's focus (#45). `mixed` alternates written and coding per problem;
  * every generation call still carries exactly one family, because the server
  * admits one family per call.
