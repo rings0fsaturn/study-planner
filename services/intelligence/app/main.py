@@ -13,6 +13,7 @@ from app.routers import (
     feedback,
     guide,
     jobs,
+    loop,
     mastery,
     materials,
     progress,
@@ -99,3 +100,4 @@ app.include_router(retrieval.router, prefix="/v1", dependencies=_V1_DEPENDENCIES
 app.include_router(mastery.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(guide.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
 app.include_router(feedback.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)
+app.include_router(loop.router, prefix="/v1", dependencies=_V1_DEPENDENCIES)

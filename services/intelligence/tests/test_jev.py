@@ -13,14 +13,17 @@ from app.jev.questions import (
     batch_passage_questions,
     citation_questions,
     criterion_score_questions,
+    loop_questions,
     passage_questions,
     relevance_question,
     route_batch_passage,
     route_citation,
+    route_loop_action,
     route_passage,
     route_suitability,
     suitability_questions,
 )
+from app.jev.thresholds import sweep_evidence_floor
 
 
 class _Answer:
@@ -255,3 +258,66 @@ def test_route_batch_passage_matches_single_router_per_index() -> None:
         "p1_contains_prompt_injection": {"noul": 0.99},
     }
     assert route_batch_passage(answers, 2) == ["include", "exclude"]
+
+
+def test_loop_questions_shape() -> None:
+    questions = loop_questions()
+    assert set(questions) == {"loop_action", "evidence_sufficient"}
+    assert questions["loop_action"]["type"] == "choice"
+    assert questions["evidence_sufficient"]["type"] == "noul"
+    assert set(questions["loop_action"]["criteria"]) == {"hold", "reprioritize", "suggest_replan"}
+    assert set(questions["evidence_sufficient"]["criteria"]) == {"true", "false"}
+
+
+def test_loop_criteria_cross_contrast() -> None:
+    criteria = loop_questions()["loop_action"]["criteria"]
+    assert "replan territory" in criteria["reprioritize"]["not_for"]
+    assert "reprioritize territory" in criteria["suggest_replan"]["not_for"]
+    assert "pace_vs_plan" in criteria["suggest_replan"]["what"]
+
+
+def test_sweep_evidence_floor_finds_data_backed_split() -> None:
+    logged = [
+        {"sufficient": 0.81, "thin": False},
+        {"sufficient": 0.76, "thin": False},
+        {"sufficient": 0.84, "thin": False},
+        {"sufficient": 0.07, "thin": True},
+    ]
+    result = sweep_evidence_floor(logged)
+    assert result["agreement"] == 1.0
+    assert result["floor"] == 0.7
+    assert [row["floor"] for row in result["table"]] == [
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+    ]
+
+
+def test_sweep_evidence_floor_honest_on_overlap() -> None:
+    logged = [
+        {"sufficient": 0.5, "thin": True},
+        {"sufficient": 0.55, "thin": False},
+    ]
+    result = sweep_evidence_floor(logged)
+    assert result["agreement"] < 1.0
+
+
+def test_sweep_evidence_floor_refuses_empty() -> None:
+    with pytest.raises(ValueError, match="at least one logged verdict"):
+        sweep_evidence_floor([])
+
+
+def test_route_loop_action_table() -> None:
+    assert route_loop_action("reprioritize", 0.95, 0.9) == "reprioritize"
+    assert route_loop_action("suggest_replan", 0.95, 0.9) == "suggest_replan"
+    assert route_loop_action("hold", 0.95, 0.9) == "hold"
+    assert route_loop_action("reprioritize", 0.95, 0.2) == "hold"
+    assert route_loop_action("reprioritize", 0.5, 0.9) == "hold"
+    assert route_loop_action("reprioritize", 0.05, 0.9) == "hold"
+    assert route_loop_action("unknown", 0.95, 0.9) == "hold"

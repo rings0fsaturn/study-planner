@@ -1,9 +1,9 @@
-# Scratchpad – phase2-wayfinder · session 2026-09-28
-_state.md: active/phase2-wayfinder/state.md · Updated: 2026-09-28T07:11_
+# Scratchpad – phase2-wayfinder · session 2026-10-12
+_state.md: active/phase2-wayfinder/state.md · Updated: 2026-10-12T02:11_
 
 ## Now / Next
-- Doing: map #4 ticket-creation session - #80 Assessment library prototype chartered.
-- Next: #49 Phase 2 Integrated Verification, or #80 prototype in parallel.
+- Doing: Slice 1 DONE - POST /v1/loop/decision built + verified (11 tests, ruff, live smoke); code + security reviews PASS
+- Next: Slice 2 client + useLoopDecision hook (next phase owner; this session sticks to Slice 1)
 - Blocked: none
 
 ## Session log
@@ -14,3 +14,68 @@ _state.md: active/phase2-wayfinder/state.md · Updated: 2026-09-28T07:11_
 - 07:10 DONE   created GitHub issue #80 "Prototype: Assessment library and Practice hub UX" (`wayfinder:prototype` + `wayfinder:phase2` + `ready-for-agent`, child of map #4): both hubs, all three families, material-detail backlinks, honest states; impeccable design direction embedded.
 - 07:11 EDIT   active/phase2-wayfinder/state.md - frontier line now #49 + #80 - verified
 - 07:11 EDIT   .work/STATUS.md - phase2-wayfinder row refreshed - verified
+- 02:11 NEXT   new session 2026-10-12: Phase-2 closed-loop final work starts here; 2026-09-28 lines above verified durable in state.md (#80 chartered + #81 closed, frontier #49)
+- 02:11 FOUND  live mastery is (materialId, skillTag) BKT bkt-v1 TS/Python parity (packages/progress/src/mastery.ts:13,26; packages/py-progress/src/py_progress/mastery.py:21,39-42)
+- 02:11 FOUND  /replan is full local UI, not stub (apps/app/src/pages/Replan.tsx:99-543 via commitReplan.ts:89-125); POST /v1/roadmap/regenerate has zero live callers - issue 010 stub wording is stale
+- 02:11 FOUND  feedback default provider is LLM not static (RoadmapFeedbackSection.tsx:226-230); masterySnapshot seam defined but dead both ends (types.ts:60-67 vs PracticeThis.tsx:204-215, generation/models.py:14-20); AssessmentDetail never refreshes mastery, only PracticeRun.tsx:181-203 does
+- 02:11 DECIDED Q1 agreed per recommendation: mastery key stays (materialId, skillTag) because generation mints one clean KT signal per (material, skill) and cache/ledger/goldens are built on it; cross-material concept extraction rejected for this slice
+- 02:11 NEXT   grill Q2: what mastery gets to change - schedule re-proposal, study-time recalibration, or advisory-only
+- 02:11 FOUND  Jev answers typed questions with probabilities, never prose; builders pure in app/jev/questions.py, route on probabilities in code (APPROVE_AT 0.9 / BLOCK_AT 0.1); model pinned jev-1.13 never jev-latest (.agents/skills/jev/SKILL.md:11-16,41-56)
+- 02:11 FOUND  prose copy arm is separate: POST /v1/feedback/copy via feedback-v1 template + OpenRouter adapter, exact-schema output, one repair, typed errors, advisory-only (services/intelligence/app/routers/feedback.py:1-14,235-307)
+- 02:11 DECIDED Q2 agreed with direction, JEV-shaped: loop-action decision dynamic via Jev typed judgment + code router; learner-facing words stay on feedback-v1 prose arm; advisory boundary holds (no silent booking writes, /replan Apply stays explicit)
+- 02:11 DECIDED Q3 agreed: 3-way choice hold / reprioritize / suggest_replan, each maps 1:1 onto an existing writer (static copy, up-next+ledger reorder, /replan Apply); no adjust_hours option because it has no direct writer
+- 02:11 NEXT   grill Q4: fire trigger for the Jev loop-decision call
+- 02:11 DECIDED Q4 agreed: Jev call fires on entering roadmap detail, only when state is updated (cold/stale/rebuilding stay static, no call); post-Rebuild stale-to-updated transition refires without remount
+- 02:11 DECIDED gap-fix scope for the loop: AssessmentDetail grades must refresh/save mastery like PracticeRun does (root-cause the stale-after-assessment gap); Jev/loop failure stays fail-closed static fallback, never blocks
+- 02:11 EDIT   apps/app/src/assessments/attemptFlow.ts - optional onGradesObserved dep, fires on gradeless-to-graded transitions (poll/recordGrade + refreshAttempts merge), throwing observer logged never breaking - verified
+- 02:11 EDIT   apps/app/src/assessments/masteryCache.ts - refreshMasteryProjections helper (fetch + save, throws so callers keep advisory fallback) - verified
+- 02:11 EDIT   PracticeRun.tsx (effect replaced by callback), AssessmentDetail.tsx, AttemptTaker.tsx, useLibraryRows.ts (one-line wirings) - verified
+- 02:11 DONE   stale-after-assessment gap fixed at the shared choke point: all 4 grade-landing surfaces rebuild the cache; flow 24/24, bands 6/6, 4 surface suites 76/76, tsc clean, eslint clean
+- 02:11 NEXT   Jev loop-decision endpoint build (questions.py builders + POST /v1/loop/decision + roadmap wiring); snapshot/recommendations/regenerate seams stay deferred (adaptive-generation and dead-code concerns, not loop-critical)
+- 02:11 DECIDED Q5 agreed: suggest_replan deep-links to /replan with no lever presets; Jev scores never used as magnitudes, presets stay a code-side follow-up from the capacity model
+- 02:11 NEXT   grill Q6: endpoint shape for the Jev loop decision
+- 02:11 DECIDED Q6 agreed: new POST /v1/loop/decision on the JEV key (jev-1.13 via typesafe_sdk), not folded into feedback/copy (chat-completion prose arm on OPENROUTER_API_KEY); separate failure taxonomies, verdict runs where copy stays static
+- 02:11 NEXT   grill Q7: verdict caching across roadmap visits
+- 02:11 DECIDED Q7 agreed per pushback: dedupe on identical input - session memo keyed on hash of the exact Jev state (projections+evidence+posture+modelVersion), no new Dexie table or migration; same hash skips the call, failed calls never cached, reload-repeat costs ~$0.0001
+- 02:11 NEXT   grill Q8: verdict/confidence surfacing in the UI
+- 02:11 DECIDED Q8 agreed as modified: technical params never lead for end users; one batched LLM translation turns all on-screen technical params into plain STE-style prose (single batch, not per-param calls)
+- 02:11 NEXT   grill Q9: where the batched translation runs
+- 02:11 DECIDED Q9 agreed: verdict folds into the feedback/copy ceiling (feedback-v1 to v2: one verdict input line + plain-words system rule); output contract stays 7 fields, verdict reshapes advisory/advisoryNote only; sample accepted
+- 02:11 NEXT   grill Q10: Jev state ceiling - mastery-only vs mastery plus schedule posture
+- 02:11 FOUND  loop v0 probe 3/3 live ($0.0001, ~800 in-tokens each): choices discriminate correctly (reprioritize 1.0 / suggest_replan 0.64 / hold 0.7) but evidence_sufficient reads 0.47-0.49 on realistic 3-5 obs volumes so the 0.5 guard routes everything to hold; posture separated reprioritize vs replan as predicted
+- 02:11 NEXT   lock v1 loop questions (guard drop + posture confirm)
+- 02:11 FOUND  context package works: evidence_summary + anchored noul criteria moved sufficiency 0.47-0.49 to 0.76-0.84 on real volumes and 0.07 on the thin case; 4-case probe $0.000148 routes reprioritize / hold-via-mid-band / hold / guard-hold; 0.5 floor now data-confirmed
+- 02:11 NEXT   lock v1 (choice + anchored guard + posture, floor 0.5)
+- 02:11 FOUND  A/B 4 states x 2 wordings (~$0.0003): V1 cross-contrast sharpened replan-original 0.86 to 1.0 above the band, held extreme/borderline/control identical, no bleed into replan on the control; v0 wobbled 0.56 to 0.86 on the identical state across runs, so bands stay wide
+- 02:11 EDIT   services/intelligence/app/jev/questions.py - V1 criteria ported (cross-contrast not_for + posture anchors + third replan example) - verified
+- 02:11 EDIT   services/intelligence/tests/test_jev.py - cross-contrast lock test - verified
+- 02:11 DONE   loop questions v1 locked pending user sign-off: unit 15/15, ruff clean
+- 02:11 NEXT   user lock decision, then endpoint build plan
+- 02:11 DECIDED loop v1 LOCKED: choice + anchored guard + posture, floor 0.5, cross-contrast criteria, fail-closed hold; A/B evidence above
+- 02:11 NEXT   endpoint build plan (POST /v1/loop/decision + client + roadmap hook + feedback-v2 fold)
+- 02:11 DECIDED Q11 agreed: wire the masterySnapshot seam (PracticeThis sends, GenerationRequest accepts, blueprint steers per-skill); the Adaptive promise is half-built while generation ignores mastery
+- 02:11 NEXT   grill Q12: server recommendations endpoint vs local recommendBand
+- 02:11 DECIDED Q12 agreed: wire recommendations with local fallback (server authoritative online, recommendBand offline; parity goldens guarantee agreement, server shape becomes the consumed one)
+- 02:11 NEXT   grill Q13: orphaned regenerate seam - delete or revive
+- 02:11 DECIDED Q13 agreed: delete the app-side regenerate seam (client fn, mappers, their tests), keep pure engine fn; scrub stale doc references except frozen history
+- 02:11 NEXT   execute regenerate-seam removal
+- 02:11 EDIT   apps/app/src/lib/intelligenceClient.ts - postRoadmapRegenerate + RoadmapServiceError/shouldRetryRoadmap/normalizedRoadmapError removed (regenerate-only) - verified
+- 02:11 EDIT   deleted replanRoadmap.ts + test, mapToRegenerateRequest.ts + test (zero live callers); pruned postRoadmapRegenerate describe from intelligenceClient.test.ts - verified
+- 02:11 EDIT   specs/issues/010 (supersession banner), specs/issues/README.md (removal note), 021 (partial option-1 decision record); frozen tracker + handovers untouched as history - verified
+- 02:11 DONE   regenerate seam removed: lib + replan suites 27/27, tsc clean, eslint clean, no src/e2e/design/active-doc references left; server routers + engine exports deliberately remain (021 second half, undecided)
+- 02:11 NEXT   grill Q14: threshold tuning protocol (last unpinned aspect)
+- 02:11 EDIT   services/intelligence/app/jev/thresholds.py - sweep_evidence_floor (explicit candidates, full table, ties strictest, raises on empty) - verified
+- 02:11 EDIT   services/intelligence/tests/test_jev.py - sweep split/honest-overlap/refuses-empty tests - verified
+- 02:11 DONE   tuning protocol proven mechanically: probe-like logs pick floor 0.7 at 1.0 agreement, overlap reports below 1.0 without crashing, empty input raises; unit 18/18, ruff clean
+- 02:11 NEXT   lock Q14 tuning protocol, then endpoint build plan
+- 02:11 DECIDED Q14 locked: thresholds frozen until app volume; sweep_evidence_floor picks table-backed splits, strictest-on-ties, raises on empty; 0.5 stays incumbent
+- 02:11 NEXT   write endpoint build plan (POST /v1/loop/decision + client + roadmap hook + feedback-v2 + snapshot + recommendations)
+- 02:11 EDIT   .work/active/phase2-wayfinder/plan/2026-10-12-closed-loop-build.md - 6-slice build plan (loop endpoint, client+hook, feedback-v2, snapshot, recommendations, verification) - UNVERIFIED (plan only, no code)
+- 02:11 NEXT   build Slice 1 (POST /v1/loop/decision) on user go-ahead
+- 02:11 EDIT   plan/2026-10-12-closed-loop-build.md - folded review findings a-f: input-builder owner, verdict-to-action wiring, server plumbing + steering rule, Q4 transition subscription, repair threading, recommendations signature + X-Request-ID, floor pin + docstring correction - UNVERIFIED (plan only)
+- 02:11 NEXT   build Slice 1 on user go-ahead
+- 02:11 EDIT   services/intelligence/app/routers/loop.py (new: v1 ceiling validation, owner-scope, JevClient.decide + route_loop_action, typed service_error, request_id info log) + main.py mount + questions.py v0-draft to v1-locked docstrings - verified
+- 02:11 EDIT   services/intelligence/tests/test_loop_decision.py (new: ceiling/caps/unowned rejects, 3 verdicts + guard/mid/unknown holds, typed failure, X-Request-ID join, 422/401) - 11/11 green
+- 02:11 DONE   Slice 1 verified: pytest 11/11 loop (+31 jev/feedback green), ruff check + format clean, no v0-draft refs left; live smoke reprioritize 0.97/suff 0.78, 862 in-tokens ~$0.000036
+- 02:11 DONE   review findings applied (code-reviewer + security-reviewer PASS): docstring ceiling fix, skill/title length bounds, coercion warning logs, symmetric unowned-materialIds test; full re-run 42/42 green
+- 02:11 NEXT   Slice 2 client + useLoopDecision hook (next phase owner)

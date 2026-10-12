@@ -271,3 +271,106 @@ def criterion_score_questions(criteria: list[str]) -> dict[str, Any]:
         }
         for i, criterion in enumerate(criteria)
     }
+
+
+#: Loop v1 locked: the guard floor for the evidence-sufficiency Noul.
+#: Data-confirmed 0.5 (context-package probe moved sufficiency 0.47-0.49 to
+#: 0.76-0.84 on real volumes, 0.07 thin); retune only via sweep_evidence_floor.
+LOOP_EVIDENCE_SUFFICIENT_MIN = 0.5
+
+#: Loop v1 locked: the verdicts the code router accepts.
+LOOP_ACTION_CHOICES = frozenset({"hold", "reprioritize", "suggest_replan"})
+
+
+def loop_questions() -> dict[str, Any]:
+    """Loop v1 locked: which closed-loop action fits the week.
+
+    State shape: ``{"signals": [{"material": ..., "skill": ...,
+    "mastery": 0..1, "confidence": 0..1, "observations": int,
+    "trend": float}], "evidence_summary": {"total_attempts": int,
+    "skills_observed": int, "min_obs_per_skill": int,
+    "max_obs_per_skill": int, "days_span": int}, "posture":
+    {"behind_days": float, "days_left": int, "pace_vs_plan": float,
+    "capacity_hours_per_week": float}}``. All numbers are precomputed in
+    code (the model never counts or does dates); titles and skill tags are
+    untrusted data.
+    """
+    return {
+        "loop_action": {
+            "type": "choice",
+            "instructions": (
+                "Given `signals` and `posture`, which loop action fits this learner's week?"
+            ),
+            "criteria": {
+                "hold": {
+                    "what": "Mastery is on plan or the evidence is too thin to act on",
+                    "not_for": "Clear struggling signals with room left to act",
+                    "examples": [
+                        "Every skill has graded attempts and mastery is steady or rising",
+                        "A single fresh grade with nothing else moved",
+                    ],
+                },
+                "reprioritize": {
+                    "what": (
+                        "Reorder practice within the current schedule toward the weakest topics"
+                    ),
+                    "not_for": (
+                        "Most topics weak at once, or days left in single digits "
+                        "with behind days piling up - that is replan territory, "
+                        "not reordering"
+                    ),
+                    "examples": [
+                        "One topic stuck low while others cruise and the deadline is comfortable",
+                        "A negative trend on one skill with pace near plan and weeks left",
+                    ],
+                },
+                "suggest_replan": {
+                    "what": (
+                        "The plan itself needs re-cutting: suggest opening the replan view. "
+                        "This fits when time pressure and weak mastery coincide - pace_vs_plan "
+                        "well under 1.0, days_left short, behind_days large against days_left."
+                    ),
+                    "not_for": (
+                        "One stuck topic while the rest cruise with comfortable time left - "
+                        "that is reprioritize territory"
+                    ),
+                    "examples": [
+                        "Pace far under plan with few days left",
+                        "Weak mastery across most topics at once",
+                        "Mastery under one half on every skill with pace 0.6 and six days left",
+                    ],
+                },
+            },
+        },
+        "evidence_sufficient": {
+            "type": "noul",
+            "instructions": (
+                "Given `evidence_summary` and the per-skill rows in `signals`, "
+                "is the graded evidence enough to act on, or a thin snapshot?"
+            ),
+            "criteria": {
+                "true": (
+                    "Several skills with repeated attempts spread across days; "
+                    "totals in the double digits."
+                ),
+                "false": (
+                    "A single attempt, a single skill, or everything from one "
+                    "sitting; totals under a handful."
+                ),
+            },
+        },
+    }
+
+
+def route_loop_action(choice: str, confidence: float, evidence_sufficient: float) -> str:
+    """Loop v1 locked router: ``hold`` / ``reprioritize`` / ``suggest_replan``.
+
+    Fail-closed advisory: a thin evidence base, a low-confidence verdict, the
+    middle band, or an unknown choice all land on ``hold`` (no review queue
+    for the loop; the static copy renders instead).
+    """
+    if evidence_sufficient < LOOP_EVIDENCE_SUFFICIENT_MIN:
+        return "hold"
+    if confidence >= APPROVE_AT:
+        return choice if choice in LOOP_ACTION_CHOICES else "hold"
+    return "hold"
