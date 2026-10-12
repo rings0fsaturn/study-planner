@@ -2,6 +2,7 @@ import { vi } from 'vitest'
 import type { AssessmentClientLike } from '../assessmentClient'
 import type { FeedbackCopy, FeedbackCopyInput } from '../../roadmap/feedback/types'
 import type {
+  AdaptiveRecommendation,
   Assessment,
   AsyncJob,
   AttemptCreated,
@@ -61,6 +62,21 @@ export class FakeAssessmentClient implements AssessmentClientLike {
    */
   getMastery = vi.fn(
     async (_materialId?: string, _skillTag?: string): Promise<MasteryProjection[]> => [],
+  )
+
+  /**
+   * Defaults to unscripted (throws): scripted tests pin the server value,
+   * unscripted callers fall back to the local `recommendBand` path, so the
+   * pre-Slice-5 suites keep exercising the fallback without changes.
+   */
+  getRecommendations = vi.fn(
+    async (
+      _materialId?: string,
+      _skillTag?: string,
+      _currentBand?: number,
+    ): Promise<AdaptiveRecommendation[]> => {
+      throw new Error('getRecommendations not scripted')
+    },
   )
 
   getFeedbackCopy = vi.fn(
@@ -129,6 +145,13 @@ scriptListAttempts(result: AttemptRecord[] | Error): void {
 
   scriptGetMastery(result: MasteryProjection[] | Error): void {
     this.getMastery.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptGetRecommendations(result: AdaptiveRecommendation[] | Error): void {
+    this.getRecommendations.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })
@@ -223,6 +246,24 @@ export function masteryProjection(
     n: 6,
     modelVersion: 'bkt-v1',
     recentTrend: 0.031,
+    ...overrides,
+  }
+}
+
+/**
+ * A server-computed adaptive recommendation (#49 Slice 5): the exact
+ * `AdaptiveRecommendation` shape the recommendations route returns.
+ */
+export function difficultyRecommendation(
+  overrides: Partial<AdaptiveRecommendation> = {},
+): AdaptiveRecommendation {
+  return {
+    materialId: 'mat-1',
+    skillTag: 'Exam structure',
+    currentBand: 3,
+    recommendedBand: 4,
+    targetExpectedCorrectness: 0.7,
+    modelVersion: 'bkt-v1',
     ...overrides,
   }
 }

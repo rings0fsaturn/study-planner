@@ -9,6 +9,7 @@
 
 import { AssessmentServiceError } from './types'
 import type {
+  AdaptiveRecommendation,
   Assessment,
   AsyncJob,
   AttemptCreated,
@@ -40,6 +41,16 @@ export interface AssessmentClientLike {
   listAssessmentAttempts(assessmentId: string): Promise<AttemptRecord[]>
   /** Rebuildable mastery projections from the owner's durable grades (#43). */
   getMastery(materialId?: string, skillTag?: string): Promise<MasteryProjection[]>
+  /**
+   * Server-computed one-band recommendations over the same projections
+   * (#49 Slice 5). Authoritative online; callers fall back to local
+   * `recommendBand` when it throws.
+   */
+  getRecommendations(
+    materialId?: string,
+    skillTag?: string,
+    currentBand?: number,
+  ): Promise<AdaptiveRecommendation[]>
   /** LLM learner-feedback copy for owned materials in the updated state (#68). */
   getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy>
   /** Advisory Jev loop verdict for owned materials in the updated state (#49). */
@@ -325,6 +336,29 @@ export class AssessmentClient implements AssessmentClientLike {
       const query = params.toString()
       const payload = await this.fetchLike.fetchJson(`/v1/mastery${query ? `?${query}` : ''}`)
       return payload as MasteryProjection[]
+    })
+  }
+
+  getRecommendations(
+    materialId?: string,
+    skillTag?: string,
+    currentBand?: number,
+  ): Promise<AdaptiveRecommendation[]> {
+    return this.run(async () => {
+      const params = new URLSearchParams()
+      if (materialId) params.set('materialId', materialId)
+      if (skillTag) params.set('skillTag', skillTag)
+      if (typeof currentBand === 'number' && Number.isInteger(currentBand) && currentBand >= 1 && currentBand <= 5) {
+        params.set('currentBand', String(currentBand))
+      }
+      const query = params.toString()
+      const payload = await this.fetchLike.fetchJson(
+        `/v1/mastery/recommendations${query ? `?${query}` : ''}`,
+      )
+      if (!Array.isArray(payload)) {
+        throw new AssessmentServiceError('service', 'malformed recommendations', false)
+      }
+      return payload as AdaptiveRecommendation[]
     })
   }
 

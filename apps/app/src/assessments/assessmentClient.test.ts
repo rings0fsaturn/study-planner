@@ -11,7 +11,7 @@ import {
   type GenerationRequest,
   type LoopDecisionInput,
 } from './types'
-import { masteryProjection, feedbackCopy, loopDecision } from './testing/fakeAssessmentClient'
+import { masteryProjection, difficultyRecommendation, feedbackCopy, loopDecision } from './testing/fakeAssessmentClient'
 import type { FeedbackCopyInput } from '../roadmap/feedback/types'
 
 function copyInput(overrides: Partial<FeedbackCopyInput> = {}): FeedbackCopyInput {
@@ -151,6 +151,107 @@ describe('AssessmentClient', () => {
 
     await client.getMastery('mat-1', 'Exam structure')
     expect(fetchLike.calls[0].path).toBe('/v1/mastery?materialId=mat-1&skillTag=Exam+structure')
+  })
+
+  it('getRecommendations returns the server bands without filters', async () => {
+    const recommendations = [difficultyRecommendation()]
+    const fetchLike = new FakeFetch(async () => recommendations)
+    const client = new AssessmentClient(fetchLike)
+
+    await expect(client.getRecommendations()).resolves.toEqual(recommendations)
+    expect(fetchLike.calls[0].path).toBe('/v1/mastery/recommendations')
+  })
+
+  it('getRecommendations adds material, skill, and band filters to the query', async () => {
+    const fetchLike = new FakeFetch(async () => [])
+    const client = new AssessmentClient(fetchLike)
+
+    await client.getRecommendations('mat-1', 'Exam structure', 2)
+    expect(fetchLike.calls[0].path).toBe(
+      '/v1/mastery/recommendations?materialId=mat-1&skillTag=Exam+structure&currentBand=2',
+    )
+  })
+
+  it('getRecommendations omits an out-of-range band instead of sending it', async () => {
+    const fetchLike = new FakeFetch(async () => [])
+    const client = new AssessmentClient(fetchLike)
+
+    await client.getRecommendations('mat-1', undefined, 99)
+    expect(fetchLike.calls[0].path).toBe('/v1/mastery/recommendations?materialId=mat-1')
+
+    await client.getRecommendations('mat-1', undefined, Number.NaN)
+    expect(fetchLike.calls[1].path).toBe('/v1/mastery/recommendations?materialId=mat-1')
+  })
+
+  it('getRecommendations rejects a non-array payload as a typed error', async () => {
+    const client = new AssessmentClient(new FakeFetch(async () => ({ recommendedBand: 4 })))
+    await expect(client.getRecommendations()).rejects.toMatchObject({
+      code: 'service',
+      retryable: false,
+    })
+  })
+
+  it('getRecommendations sends X-Request-ID on the wire (rule 17)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify([difficultyRecommendation()]), { status: 200 }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const client = new AssessmentClient(new HttpAssessmentFetch(async () => null, 'http://intel'))
+
+    await expect(client.getRecommendations()).resolves.toEqual([difficultyRecommendation()])
+    const headers = fetchMock.mock.calls[0][1].headers as Record<string, string>
+    expect(headers['X-Request-ID']).toBeDefined()
+    expect(headers['X-Request-ID']!.length).toBeGreaterThanOrEqual(16)
+    vi.unstubAllGlobals()
+  })
+
+  it('getRecommendations surfaces a service failure as a typed error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new AssessmentServiceError('service', 'recommendations unavailable', true)
+      }),
+    )
+    await expect(client.getRecommendations()).rejects.toMatchObject({
+      code: 'service',
+      retryable: true,
+    })
+  })
+
+  it('getRecommendations normalizes an AbortError into a retryable timeout', async () => {
+    const abortError = new Error('aborted')
+    abortError.name = 'AbortError'
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw abortError
+      }),
+    )
+    await expect(client.getRecommendations()).rejects.toMatchObject({
+      code: 'timeout',
+      retryable: true,
+    })
+  })
+
+  it('getRecommendations normalizes a TypeError into a retryable network error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new TypeError('fetch failed')
+      }),
+    )
+    await expect(client.getRecommendations()).rejects.toMatchObject({
+      code: 'network',
+      retryable: true,
+    })
+  })
+
+  it('getRecommendations classifies an unknown non-Error value as unknown', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw 'string failure'
+      }),
+    )
+    await expect(client.getRecommendations()).rejects.toMatchObject({
+      code: 'unknown',
+    })
   })
 
   it('getFeedbackCopy posts the copy input with material ids', async () => {

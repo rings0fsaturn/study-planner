@@ -92,6 +92,13 @@ export interface DifficultyRecommendation {
   modelVersion: string
 }
 
+/**
+ * Server shape name for the same recommendation
+ * (`GET /v1/mastery/recommendations`, #49 Slice 5). Alias, not a second
+ * shape: the consumed fields never diverge from `DifficultyRecommendation`.
+ */
+export type AdaptiveRecommendation = DifficultyRecommendation
+
 /** Client-supplied mastery snapshot that rides a GenerationRequest (#43). */
 export interface MasterySnapshot {
   version: string

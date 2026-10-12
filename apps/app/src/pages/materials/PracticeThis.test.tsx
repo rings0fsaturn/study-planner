@@ -7,6 +7,7 @@ import { AssessmentProvider } from '../../assessments/AssessmentProvider'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
 import {
   FakeAssessmentClient,
+  difficultyRecommendation,
   masteryProjection,
   queuedJob,
 } from '../../assessments/testing/fakeAssessmentClient'
@@ -421,6 +422,124 @@ describe('PracticeThis', () => {
     const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
     expect(requests.map((request) => request.recipe.difficulty)).toEqual([3, 3])
     expect(mockTablePut).not.toHaveBeenCalled()
+  })
+
+  it('adaptive prefers the server recommendations over the local bands', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    // Local projections imply [4, 2], but the server says [5, 1]: the server
+    // value is authoritative online.
+    assessments.scriptGetRecommendations([
+      difficultyRecommendation({ materialId: 'mat-1', recommendedBand: 5 }),
+      difficultyRecommendation({ materialId: 'mat-2', recommendedBand: 1 }),
+    ])
+    assessments.scriptGetMastery([
+      masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 }),
+      masteryProjection({ materialId: 'mat-2', mastery: 0.1, n: 3 }),
+    ])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([5, 1])
+    // The mastery fetch still runs behind the server bands (cache + snapshot).
+    expect(mockTablePut).toHaveBeenCalledTimes(2)
+    expect(assessments.getRecommendations).toHaveBeenCalledWith()
+    // Bands come from the server, the snapshot from the local projections.
+    for (const request of requests) {
+      expect(request.masterySnapshot?.entries).toEqual([
+        { materialId: 'mat-1', skillTag: 'Exam structure', mastery: 0.95 },
+        { materialId: 'mat-2', skillTag: 'Exam structure', mastery: 0.1 },
+      ])
+    }
+  })
+
+  it('adaptive falls back to the local bands when the recommendations fetch fails', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetRecommendations(
+      new AssessmentServiceError('network', 'request failed', true),
+    )
+    assessments.scriptGetMastery([
+      masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 }),
+      masteryProjection({ materialId: 'mat-2', mastery: 0.1, n: 3 }),
+    ])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([4, 2])
+    expect(mockTablePut).toHaveBeenCalledTimes(2)
+  })
+
+  it('adaptive falls back to the local bands when the server returns nothing', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetRecommendations([])
+    assessments.scriptGetMastery([masteryProjection({ mastery: 0.95, n: 8 })])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await screen.findByText('Focus')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([4, 4])
+  })
+
+  it('adaptive mixes server bands with local bands per material and skips bad rows', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    // One poisoned row plus a server band for mat-1 only: mat-1 takes the
+    // server value, mat-2 keeps its local band.
+    assessments.scriptGetRecommendations([
+      null as unknown as ReturnType<typeof difficultyRecommendation>,
+      difficultyRecommendation({ materialId: 'mat-1', recommendedBand: 5 }),
+      difficultyRecommendation({ materialId: 'mat-99', recommendedBand: 1 }),
+    ])
+    assessments.scriptGetMastery([
+      masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 }),
+      masteryProjection({ materialId: 'mat-2', mastery: 0.1, n: 3 }),
+    ])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    expect(requests.map((request) => request.recipe.difficulty)).toEqual([5, 2])
   })
 
   it('keeps the problems that generated when some generations fail', async () => {

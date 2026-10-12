@@ -197,9 +197,10 @@ export function PracticeThis() {
    * keeps its own clientId/correlationId so a retried request is a fresh
    * idempotency key rather than a replay.
    *
-   * Adaptive (#43): when the learner picks Adaptive, each problem's band is
-   * the one-band recommendation from the material's mastery projection
-   * (target ~0.7 expected correctness; the cold start keeps the mid band).
+   * Adaptive (#43, #49 Slice 5): when the learner picks Adaptive, each
+   * problem's band is the server's one-band recommendation when reachable
+   * (target ~0.7 expected correctness), else the local `recommendBand` over
+   * the fetched projections; the cold start keeps the mid band.
    * The projections are fetched once per run and cached in masteryCache.
    */
   async function startRun() {
@@ -212,6 +213,39 @@ export function PracticeThis() {
     let bandByMaterial = new Map<string, number>()
     let masterySnapshot: MasterySnapshot | null = null
     if (adaptive) {
+      // #49 Slice 5: server recommendations are authoritative online; the
+      // local one-band rule covers what the server misses, per material.
+      // Any failure falls back, never blocking. One unfiltered call covers
+      // the whole run (the route takes one materialId, a run holds up to 5).
+      const wanted = new Set(runMaterials.map((entry) => entry.id))
+      const serverBands = new Map<string, number>()
+      try {
+        const recommendations = await assessments.getRecommendations()
+        for (const recommendation of recommendations) {
+          if (serverBands.size >= wanted.size) break
+          if (typeof recommendation !== 'object' || recommendation === null) continue
+          const { materialId, recommendedBand } = recommendation
+          if (
+            typeof materialId !== 'string' ||
+            materialId.trim() === '' ||
+            materialId.length > 200 ||
+            !wanted.has(materialId) ||
+            !Number.isFinite(recommendedBand)
+          ) {
+            continue
+          }
+          // Per-skill rows collapse to the hardest band; the local reader
+          // takes the strongest skill's band instead. Same direction while
+          // the server base band stays DEFAULT_BAND and recommend_band stays
+          // monotonic in mastery (parity goldens pin the per-skill values).
+          const band = Math.min(5, Math.max(1, Math.trunc(recommendedBand)))
+          const prev = serverBands.get(materialId)
+          if (prev === undefined || band > prev) serverBands.set(materialId, band)
+        }
+      } catch (recommendationsError) {
+        logger.warn('[practice] recommendations fetch failed, falling back to local bands', recommendationsError)
+        serverBands.clear()
+      }
       try {
         const projections = await assessments.getMastery()
         await saveMasteryProjections(eventStore, projections)
@@ -219,15 +253,22 @@ export function PracticeThis() {
         bandByMaterial = new Map(
           runMaterials.map((entry) => [
             entry.id,
-            guidance.get(entry.id)?.recommendedBand ?? DEFAULT_BAND,
+            serverBands.get(entry.id) ?? guidance.get(entry.id)?.recommendedBand ?? DEFAULT_BAND,
           ]),
         )
         masterySnapshot = buildMasterySnapshot(projections, runMaterials.map((entry) => entry.id))
       } catch (masteryError) {
-        // Adaptive is advisory: a failed mastery fetch falls back to the mid
-        // band instead of blocking the run (#43).
-        logger.warn('[practice] mastery fetch failed, using mid band', masteryError)
-        bandByMaterial = new Map(runMaterials.map((entry) => [entry.id, DEFAULT_BAND]))
+        if (serverBands.size > 0) {
+          logger.warn('[practice] mastery fetch failed, using server recommendations', masteryError)
+          bandByMaterial = new Map(
+            runMaterials.map((entry) => [entry.id, serverBands.get(entry.id) ?? DEFAULT_BAND]),
+          )
+        } else {
+          // Adaptive is advisory: a failed mastery fetch falls back to the mid
+          // band instead of blocking the run (#43).
+          logger.warn('[practice] mastery fetch failed, using mid band', masteryError)
+          bandByMaterial = new Map(runMaterials.map((entry) => [entry.id, DEFAULT_BAND]))
+        }
         masterySnapshot = null
       }
     }
