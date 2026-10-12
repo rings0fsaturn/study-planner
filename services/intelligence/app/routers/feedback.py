@@ -1,7 +1,7 @@
 """LLM-backed learner feedback copy (#68, builds on the #50 contract).
 
 `POST /v1/feedback/copy` renders one `FeedbackCopy` for an `updated` roadmap
-feedback state through the OpenRouter adapter (`feedback-v1` template, model
+feedback state through the OpenRouter adapter (`feedback-v2` template, model
 `meta/muse-spark-1.3-contributor` unless `FEEDBACK_MODEL` says otherwise).
 Owner-scoped to the roadmap's materials; advisory only, never writes.
 
@@ -25,6 +25,7 @@ from app.dependencies import get_user_client
 from app.generation.factory import build_openrouter_adapter
 from app.generation.prompts import (
     FEEDBACK_COPY_FIELDS,
+    FEEDBACK_LOOP_VERDICTS,
     FEEDBACK_PROMPT_TEMPLATE_VERSION,
     build_feedback_messages,
     feedback_copy_schema,
@@ -157,6 +158,21 @@ def _as_evidence(row: Any) -> dict | None:
     }
 
 
+def _as_loop_decision(value: Any) -> tuple[dict | None, bool]:
+    """Normalize the optional loop verdict; (None, True) is no-verdict (v1 path)."""
+    if value is None:
+        return None, True
+    if not isinstance(value, dict):
+        return None, False
+    verdict = value.get("verdict")
+    if verdict not in FEEDBACK_LOOP_VERDICTS:
+        return None, False
+    confidence = value.get("confidence")
+    if not _unit_number(confidence):
+        return None, False
+    return {"verdict": str(verdict), "confidence": float(confidence)}, True
+
+
 def _validate(body: Any) -> tuple[dict, str | None]:
     """Validate the FeedbackCopyInput ceiling; error message or None."""
     if not isinstance(body, dict):
@@ -193,6 +209,9 @@ def _validate(body: Any) -> tuple[dict, str | None]:
     evidence = [_as_evidence(row) for row in raw_evidence]
     if any(row is None for row in evidence):
         return {}, "every evidence row needs materialId, skillTag, observations, read"
+    loop_decision, loop_ok = _as_loop_decision(body.get("loopDecision"))
+    if not loop_ok:
+        return {}, "loopDecision must be null or carry verdict, confidence 0..1"
     return (
         {
             "materialIds": [str(mid) for mid in material_ids],
@@ -200,6 +219,7 @@ def _validate(body: Any) -> tuple[dict, str | None]:
             "projections": [row for row in projections if row is not None],
             "recommendation": recommendation,
             "evidence": [row for row in evidence if row is not None],
+            "loopDecision": loop_decision,
         },
         None,
     )
@@ -262,6 +282,7 @@ def copy_feedback(
         parsed["projections"],
         parsed["recommendation"],
         parsed["evidence"],
+        loop_decision=parsed["loopDecision"],
     )
     adapter = _get_adapter()
     response = adapter.generate(messages, schema, request_id=request_id, correlation_id=request_id)
@@ -276,6 +297,7 @@ def copy_feedback(
                 parsed["projections"],
                 parsed["recommendation"],
                 parsed["evidence"],
+                loop_decision=parsed["loopDecision"],
                 repair_feedback=repair_feedback,
                 assistant_content=response.content,
             ),
@@ -302,6 +324,7 @@ def copy_feedback(
             "latency_ms": response.latency_ms,
             "materials": len(parsed["materialIds"]),
             "projections": len(parsed["projections"]),
+            "verdict": (parsed["loopDecision"] or {}).get("verdict"),
         },
     )
     return {**payload, "source": model}

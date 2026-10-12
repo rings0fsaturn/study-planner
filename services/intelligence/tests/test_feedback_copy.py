@@ -262,3 +262,124 @@ def test_builder_repair_appends_pair():
         [], [], None, [], repair_feedback="bad", assistant_content="{}"
     )
     assert [message["role"] for message in messages[-2:]] == ["assistant", "user"]
+
+
+def _loop_decision(**overrides) -> dict:
+    decision = {"verdict": "reprioritize", "confidence": 0.97}
+    decision.update(overrides)
+    return decision
+
+
+def test_no_verdict_matches_v1_words():
+    from app.generation.prompts import FEEDBACK_USER_TEMPLATE
+
+    messages = build_feedback_messages(["Kinematics"], [], None, [])
+    user_text = messages[1]["content"]
+    assert "Loop verdict" not in user_text
+    expected = FEEDBACK_USER_TEMPLATE.format(
+        titles="<title>Kinematics</title>",
+        signals="(no graded work yet)",
+        suggestion="no suggestion yet; advise steady practice at the current level",
+        evidence="(no evidence yet)",
+        verdict_section="",
+    )
+    assert user_text == expected
+
+
+def test_system_carries_plain_words_verdict_rule():
+    messages = build_feedback_messages([], [], None, [])
+    system_text = messages[0]["content"]
+    assert "loop verdict" in system_text.lower()
+    assert "advisoryNote" in system_text or "advisory" in system_text
+    assert "plain" in system_text.lower()
+
+
+def test_verdict_line_shapes_user_message():
+    messages = build_feedback_messages(["Kinematics"], [], None, [], loop_decision=_loop_decision())
+    user_text = messages[1]["content"]
+    assert "Loop verdict" in user_text
+    assert "reprioritize" in user_text
+    assert "0.97" in user_text
+
+
+def test_verdict_in_returns_exact_shape(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(monkeypatch, [_response("ok", dict(COPY))])
+    body = _body()
+    body["loopDecision"] = _loop_decision()
+    response = _post(body)
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload == {**COPY, "source": feedback_module._feedback_model()}
+    assert "Loop verdict" in fake.calls[0]["messages"][1]["content"]
+    assert "reprioritize" in fake.calls[0]["messages"][1]["content"]
+
+
+def test_suggest_replan_verdict_threads_through_repair(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(
+        monkeypatch,
+        [_response("malformed_output", code="malformed_output"), _response("ok", dict(COPY))],
+    )
+    body = _body()
+    body["loopDecision"] = _loop_decision(verdict="suggest_replan", confidence=0.64)
+    response = _post(body)
+    assert response.status_code == 200
+    assert len(fake.calls) == 2
+    for call in fake.calls:
+        user_text = call["messages"][1]["content"]
+        assert "Loop verdict" in user_text
+        assert "suggest_replan" in user_text
+
+
+def test_hold_verdict_accepted(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(monkeypatch, [_response("ok", dict(COPY))])
+    body = _body()
+    body["loopDecision"] = _loop_decision(verdict="hold", confidence=0.7)
+    response = _post(body)
+    assert response.status_code == 200
+    assert "hold" in fake.calls[0]["messages"][1]["content"]
+
+
+def test_unknown_verdict_rejected(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(monkeypatch, [_response("ok", dict(COPY))])
+    body = _body()
+    body["loopDecision"] = _loop_decision(verdict="adjust_hours")
+    response = _post(body)
+    assert response.status_code == 400
+    assert response.json()["code"] == "invalid_request"
+    assert fake.calls == []
+
+
+def test_verdict_confidence_out_of_range_rejected(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(monkeypatch, [_response("ok", dict(COPY))])
+    for bad in (1.5, -0.1, "high", None):
+        body = _body()
+        body["loopDecision"] = {"verdict": "hold", "confidence": bad}
+        response = _post(body)
+        assert response.status_code == 400
+        assert response.json()["code"] == "invalid_request"
+    assert fake.calls == []
+
+
+def test_non_dict_loop_decision_rejected(monkeypatch: pytest.MonkeyPatch):
+    fake = _use_adapter(monkeypatch, [_response("ok", dict(COPY))])
+    response = _post(_body(loopDecision="reprioritize"))
+    assert response.status_code == 400
+    assert fake.calls == []
+
+
+def test_verdict_set_matches_loop_v1_lock():
+    from app.generation.prompts import FEEDBACK_LOOP_VERDICTS
+    from app.jev.questions import LOOP_ACTION_CHOICES
+
+    assert set(FEEDBACK_LOOP_VERDICTS) == set(LOOP_ACTION_CHOICES)
+
+
+def test_builder_ignores_unvalidated_verdict_fail_closed():
+    messages = build_feedback_messages(
+        ["Kinematics"], [], None, [], loop_decision={"verdict": "adjust_hours", "confidence": 0.9}
+    )
+    assert "Loop verdict" not in messages[1]["content"]
+    messages = build_feedback_messages(
+        ["Kinematics"], [], None, [], loop_decision={"verdict": "hold", "confidence": "high"}
+    )
+    assert "Loop verdict" not in messages[1]["content"]
