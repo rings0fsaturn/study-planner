@@ -352,11 +352,15 @@ export class AssessmentClient implements AssessmentClientLike {
         params.set('currentBand', String(currentBand))
       }
       const query = params.toString()
+      // Mint the id here (fetchJson reuses a caller-provided X-Request-ID)
+      // so the malformed-payload throw below keeps the rule-17 log join.
+      const requestId = crypto.randomUUID()
       const payload = await this.fetchLike.fetchJson(
         `/v1/mastery/recommendations${query ? `?${query}` : ''}`,
+        { headers: { 'X-Request-ID': requestId } },
       )
       if (!Array.isArray(payload)) {
-        throw new AssessmentServiceError('service', 'malformed recommendations', false)
+        throw new AssessmentServiceError('service', 'malformed recommendations', false, undefined, requestId)
       }
       return payload as AdaptiveRecommendation[]
     })

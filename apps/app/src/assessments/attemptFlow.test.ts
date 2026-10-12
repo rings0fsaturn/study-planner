@@ -99,6 +99,7 @@ const WRITTEN_GRADE = {
 function harness(
   responder: (path: string, init?: RequestInit) => unknown,
   dbName = 'StudyTrackerAttemptFlowTest',
+  flowExtra: { onGradesObserved?: () => void } = {},
 ) {
   const db = new Dexie(dbName) as AssessmentAttemptsDexie
   db.version(1).stores({
@@ -115,6 +116,7 @@ function harness(
     db,
     eventStore: store,
     transport: client.transport,
+    ...flowExtra,
     now: () => '2026-09-03T10:00:00Z',
     uuid: (() => {
       let n = 0
@@ -684,6 +686,120 @@ describe('submitPredictionAttempt (#42 D-01)', () => {
       '1e3',
       '+42',
     ])
+    await db.delete()
+  })
+})
+
+describe('onGradesObserved (closed-loop mastery refresh)', () => {
+  const gradedListing = () => [
+    {
+      attemptId: 'att-server-7',
+      clientAttemptId: 'ca-1',
+      questionId: 'q-1',
+      assessmentId: 'ass-1',
+      submittedAt: '2026-09-03T10:00:00Z',
+      status: 'graded',
+      grade: GRADE,
+    },
+  ]
+
+  it('fires once when pollGrade lands a fresh grade', async () => {
+    await Dexie.delete('AttemptFlowNotifyPollTest')
+    let calls = 0
+    const { db, flow } = harness(
+      (path, init) => {
+        if (path.endsWith('/attempts') && init?.method === 'POST') {
+          return { attemptId: 'att-server-7', questionId: 'q-1', status: 'queued', jobId: 'job-7' }
+        }
+        if (path.includes('/attempts') && init?.method === undefined) {
+          return gradedListing()
+        }
+        throw new Error('unexpected call: ' + path)
+      },
+      'AttemptFlowNotifyPollTest',
+      { onGradesObserved: () => { calls++ } },
+    )
+
+    const submitted = await flow.submitObjectiveAttempt(ASSESSMENT, ASSESSMENT.questions[0], {
+      index: 0,
+    })
+    const graded = await flow.pollGrade(submitted.local.clientAttemptId, ASSESSMENT.id)
+    expect(graded.grade?.score).toBe(0)
+    expect(calls).toBe(1)
+    await db.delete()
+  })
+
+  it('fires once per refreshAttempts that merges new grades, silent otherwise', async () => {
+    await Dexie.delete('AttemptFlowNotifyRefreshTest')
+    let calls = 0
+    const { db, flow } = harness(() => gradedListing(), 'AttemptFlowNotifyRefreshTest', {
+      onGradesObserved: () => { calls++ },
+    })
+    await db.table('assessmentAttempts').add({
+      clientAttemptId: 'ca-1',
+      attemptId: null,
+      questionId: 'q-1',
+      assessmentId: 'ass-1',
+      answer: { index: 0 },
+      status: 'submitted',
+      submittedAt: '2026-09-03T10:00:00Z',
+    })
+
+    await flow.refreshAttempts(ASSESSMENT)
+    expect(calls).toBe(1)
+    await flow.refreshAttempts(ASSESSMENT)
+    expect(calls).toBe(1)
+    await db.delete()
+  })
+
+  it('stays silent when the merge carries no grades', async () => {
+    await Dexie.delete('AttemptFlowNotifySilentTest')
+    let calls = 0
+    const { db, flow } = harness(
+      () => [
+        {
+          attemptId: 'att-server-8',
+          clientAttemptId: 'ca-2',
+          questionId: 'q-1',
+          assessmentId: 'ass-1',
+          submittedAt: '2026-09-03T10:00:00Z',
+          status: 'submitted',
+        },
+      ],
+      'AttemptFlowNotifySilentTest',
+      { onGradesObserved: () => { calls++ } },
+    )
+
+    await flow.refreshAttempts(ASSESSMENT)
+    expect(calls).toBe(0)
+    await db.delete()
+  })
+
+  it('a throwing observer never breaks grading', async () => {
+    await Dexie.delete('AttemptFlowNotifyThrowTest')
+    const { db, store, flow } = harness(
+      (path, init) => {
+        if (path.endsWith('/attempts') && init?.method === 'POST') {
+          return { attemptId: 'att-server-7', questionId: 'q-1', status: 'queued', jobId: 'job-7' }
+        }
+        if (path.includes('/attempts') && init?.method === undefined) {
+          return gradedListing()
+        }
+        throw new Error('unexpected call: ' + path)
+      },
+      'AttemptFlowNotifyThrowTest',
+      {
+        onGradesObserved: () => { throw new Error('observer blew up') },
+      },
+    )
+
+    const submitted = await flow.submitObjectiveAttempt(ASSESSMENT, ASSESSMENT.questions[0], {
+      index: 0,
+    })
+    const graded = await flow.pollGrade(submitted.local.clientAttemptId, ASSESSMENT.id)
+    expect(graded.grade?.score).toBe(0)
+    const kinds = await loggedKinds(store)
+    expect(kinds).toContain(QUESTION_GRADED)
     await db.delete()
   })
 })

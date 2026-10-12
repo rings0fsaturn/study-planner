@@ -188,6 +188,17 @@ def test_unknown_choice_holds():
     assert _post(_body()).json()["verdict"] == "hold"
 
 
+def test_string_confidence_and_sufficiency_hold():
+    answers = _answers("reprioritize", 0.95, 0.9)
+    answers["loop_action"]["confidence"] = "0.95"
+    answers["evidence_sufficient"]["noul"] = "0.9"
+    _use_jev(answers)
+    payload = _post(_body()).json()
+    assert payload["verdict"] == "hold"
+    assert payload["confidence"] == 0.0
+    assert payload["sufficiency"] == 0.0
+
+
 def test_bad_shape_rejected_before_jev():
     fake = _use_jev(_answers("hold", 0.95, 0.9))
     bad = _body()

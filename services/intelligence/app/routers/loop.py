@@ -258,22 +258,26 @@ def loop_decision(
     action = result.answers.get("loop_action") or {}
     sufficient = result.answers.get("evidence_sufficient") or {}
     choice = str(action.get("choice") or "")
-    try:
-        confidence = float(action.get("confidence", 0.0))
-    except (TypeError, ValueError):
+    # Fail closed on non-numeric Jev numbers: a string "0.95" must hold, not
+    # pass the gate. (bool is an int subclass, so it is rejected explicitly.)
+    raw_confidence = action.get("confidence", 0.0)
+    if isinstance(raw_confidence, bool) or not isinstance(raw_confidence, (int, float)):
         logger.warning(
             "loop decision coerced confidence to hold",
             extra={"request_id": request_id, "choice": choice},
         )
         confidence = 0.0
-    try:
-        sufficiency = float(sufficient.get("noul", 0.0))
-    except (TypeError, ValueError):
+    else:
+        confidence = float(raw_confidence)
+    raw_sufficiency = sufficient.get("noul", 0.0)
+    if isinstance(raw_sufficiency, bool) or not isinstance(raw_sufficiency, (int, float)):
         logger.warning(
             "loop decision coerced sufficiency to hold",
             extra={"request_id": request_id, "choice": choice},
         )
         sufficiency = 0.0
+    else:
+        sufficiency = float(raw_sufficiency)
     verdict = route_loop_action(choice, confidence, sufficiency)
     logger.info(
         "loop decision",

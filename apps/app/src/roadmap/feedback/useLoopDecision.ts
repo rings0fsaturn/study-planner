@@ -101,8 +101,12 @@ export function buildLoopInput(
 }
 
 function daysBetween(from: string, to: string): number {
+  // Calendar-day diff: inputs may be date-only or datetime-shaped, so compare
+  // the first 10 chars (YYYY-MM-DD), never a raw datetime string.
   return Math.round(
-    (Date.parse(`${to}T00:00:00.000Z`) - Date.parse(`${from}T00:00:00.000Z`)) / 86_400_000,
+    (Date.parse(`${to.slice(0, 10)}T00:00:00.000Z`) -
+      Date.parse(`${from.slice(0, 10)}T00:00:00.000Z`)) /
+      86_400_000,
   )
 }
 

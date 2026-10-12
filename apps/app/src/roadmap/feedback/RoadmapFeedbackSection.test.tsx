@@ -117,6 +117,54 @@ describe('RoadmapFeedbackSection', () => {
     expect(client.getFeedbackCopy).toHaveBeenCalledTimes(1)
   })
 
+  it('passes the loop verdict into the copy request once it lands', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetLoopDecision(
+      loopDecision({ verdict: 'reprioritize', choice: 'reprioritize', confidence: 0.97 }),
+    )
+    client.scriptGetFeedbackCopy(feedbackCopy({ summary: 'LLM test summary.' }))
+    renderSection(client)
+
+    expect(await screen.findByText('LLM test summary.')).toBeInTheDocument()
+    // First call fires before the verdict lands (null keeps the v1 words);
+    // the late verdict refires the one batched copy call carrying it.
+    await waitFor(() => expect(client.getFeedbackCopy).toHaveBeenCalledTimes(2))
+    const calls = client.getFeedbackCopy.mock.calls as unknown[][]
+    expect((calls[0][0] as { loopDecision: unknown }).loopDecision).toBeNull()
+    expect((calls[1][0] as { loopDecision: unknown }).loopDecision).toEqual({
+      verdict: 'reprioritize',
+      confidence: 0.97,
+    })
+  })
+
+  it('ignores a slow pre-verdict copy that resolves after the shaped one', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetLoopDecision(loopDecision({ verdict: 'hold', choice: 'hold' }))
+    const pending: Array<(copy: ReturnType<typeof feedbackCopy>) => void> = []
+    client.getFeedbackCopy.mockImplementation(
+      () =>
+        new Promise<ReturnType<typeof feedbackCopy>>((resolve) => {
+          pending.push(resolve)
+        }),
+    )
+    renderSection(client)
+
+    await waitFor(() => expect(client.getFeedbackCopy).toHaveBeenCalledTimes(2))
+    await act(async () => {
+      pending[1](feedbackCopy({ summary: 'Shaped hold words.' }))
+    })
+    expect(await screen.findByText('Shaped hold words.')).toBeInTheDocument()
+    await act(async () => {
+      pending[0](feedbackCopy({ summary: 'First pre-verdict words.' }))
+    })
+    expect(screen.getByText('Shaped hold words.')).toBeInTheDocument()
+    expect(screen.queryByText('First pre-verdict words.')).not.toBeInTheDocument()
+  })
+
   it('holds the render until the mastery fetch settles (no cold flash)', async () => {
     const client = new FakeAssessmentClient()
     let resolveFetch: (rows: MasteryProjection[]) => void = () => {}

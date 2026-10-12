@@ -70,6 +70,18 @@ vs. some future reuse), but it substantially strengthens the case for **option 1
 so keeping the code "in case the Python-routed engine comes back" has less to hang on than
 it might otherwise.
 
+## Update (2026-10-12) — human decision, partial option 1 executed
+
+Rohit chose **option 1 (removal)** for the app-side regenerate seam, plus stale-doc scrub.
+Executed 2026-10-12: deleted `replanRoadmap.ts`, `mapToRegenerateRequest.ts`, their test
+files, and `intelligenceClient.ts::postRoadmapRegenerate` (+ `RoadmapServiceError` /
+`shouldRetryRoadmap` / `normalizedRoadmapError`, used only by that path); scrubbed the
+stale references in issues #010 and `specs/issues/README.md`.
+Verified: `intelligenceClient` + `roadmap/replan` suites 27/27 green.
+Still open (not decided here): the server half — `/v1/roadmap/regenerate`, `/v1/progress`,
+`/v1/calibration/prompt-detail` routers and the deprecated packed-slot engine exports
+(TS + Python) — and the STATUS "Python-routed seam" language.
+
 ## Why this needs a human decision (HITL)
 
 This isn't a bug with one obvious fix — it's a maintenance-cost/clarity question with at

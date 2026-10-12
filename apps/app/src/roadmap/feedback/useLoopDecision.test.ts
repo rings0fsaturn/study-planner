@@ -132,7 +132,7 @@ describe('buildLoopPosture', () => {
     })
   })
 
-  it('stays finite on datetime-shaped dates and clamps an extreme pace', () => {
+  it('parses datetime-shaped dates by calendar day and clamps an extreme pace', () => {
     expect(
       buildLoopPosture({
         deadline: '2026-11-01',
@@ -143,7 +143,7 @@ describe('buildLoopPosture', () => {
         plannedMinutesThisWeek: 60,
       }),
     ).toEqual({
-      behind_days: 0,
+      behind_days: 3,
       days_left: 20,
       pace_vs_plan: 5,
       capacity_hours_per_week: 6,

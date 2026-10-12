@@ -1,9 +1,9 @@
 # Scratchpad – phase2-wayfinder · session 2026-10-12
-_state.md: active/phase2-wayfinder/state.md · Updated: 2026-10-12T02:11_
+_state.md: active/phase2-wayfinder/state.md · Updated: 2026-10-12T09:55_
 
 ## Now / Next
-- Doing: Slice 1 DONE - POST /v1/loop/decision built + verified (11 tests, ruff, live smoke); code + security reviews PASS
-- Next: Slice 2 client + useLoopDecision hook (next phase owner; this session sticks to Slice 1)
+- Doing: Slice 6 DONE - verification + wrap (static matrix green, live 3/3, reviews applied, committing)
+- Next: #49 wayfinder exit (next session; full-journey live matrix + resolution + close + map line)
 - Blocked: none
 
 ## Session log
@@ -96,3 +96,10 @@ _state.md: active/phase2-wayfinder/state.md · Updated: 2026-10-12T02:11_
 - 02:11 DONE   review findings applied (code-reviewer + security-reviewer PASS-WITH-MINORS after fixes): HIGH recipe-carried bypass closed via _validate_recipe reject + worker truncation; version first-non-blank, skill trim, client caps, unknown-key echo cap, log tag cap, boundary + _process threading tests
 - 02:11 DONE   Slice 4 verified: backend 267 (generation+assessments+snapshot+contracts) + 53 loop/jev/feedback green, ruff check+format clean, app PracticeThis 30/30 + practice/assessments 220/220, tsc clean, eslint clean; rule-42 contract tests untouched and green
 - 02:11 NEXT   Slice 5 recommendations wiring (next phase owner)
+- 09:55 DONE   Slice 5 verified (explore subagent: code DONE, evidence missing): getRecommendations matches server params with X-Request-ID, alias shape no churn, PracticeThis server-first + local fallback; focused vitest + tsc + eslint green, parity goldens untouched
+- 09:55 DONE   review round (code-reviewer FAIL, security-reviewer PASS-WITH-MINORS): 3 blocking fixed - thresholds.py staged (was untracked while test_jev imports it), verdict→copy wired (FeedbackCopyInput.loopDecision + section threading + effect dep), daysBetween slices calendar day + test corrected; plus string-confidence isinstance gate + test, recommendations requestId threading + test; non-blocking noted as follow-ups (bulkPut atomicity, posture sentinel, currentBand unexercised, M1/M2/M3/M4)
+- 09:55 DONE   Slice 6 static matrix: backend 937 passed (20 pre-existing fails in retrieval-probe/v1-integration/calibration + 1 flaky session-titles golden that passes isolated; affected suites 91/91 loop+jev+feedback+snapshot+mastery); app 1176 passed + 2 pre-existing seedTestData TZ flakes (pass --pool=forks); pnpm typecheck + lint clean; ruff clean; both builds fresh (marketing+app dist)
+- 09:55 FOUND  live copy 500d with provider_code unsupported_request: OpenRouter now 400s meta/muse-spark-1.3-contributor on full-size payloads ("Reasoning is mandatory for this endpoint"); tiny probes still 200. Fix per #68 post-wrap note: FEEDBACK_REASONING_EFFORT=low persisted to gitignored services/intelligence/.env + restart; exact live payload replays ok with 7-field output
+- 09:55 FOUND  refire race (live-found): second verdict-shaped copy resolves before/after the first, UI could paint stale v1 words; fixed with copySeq guard (only latest provider call paints) + stale-wins unit test; e2e rewritten to pair-linked assertions (request↔response linked, verdict threading asserted, no value pinning for shared-account drift)
+- 09:55 DONE   live E2E feedback-copy-live 3/3 (1280 + 390, zero console errors, request-id join, account cleaned): loop verdict live (hold @ conf 0.27-0.3/suff 0.44-0.52, jev-1.13, 5040 in-tokens) → threaded verdict → shaped copy rendered verbatim; forced-500 static green; screenshots refreshed
+- 09:55 NEXT   #49 wayfinder exit (next session): #49 ACs cover the whole Phase-2 journey, not just this loop slice; run/record the full live matrix then exit

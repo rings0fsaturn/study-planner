@@ -9,6 +9,7 @@
  */
 
 import type Dexie from 'dexie'
+import { logger } from '../lib/logger'
 import { QUESTION_ATTEMPTED, QUESTION_GRADED } from '../events/EventStore'
 import type { EventStore } from '../events/EventStore'
 import type { QuestionAttemptedPayload, QuestionGradedPayload } from '../sync/types'
@@ -61,6 +62,14 @@ export interface AttemptFlowDeps {
   eventStore: EventStore
   /** Submit/read transport; AssessmentClient satisfies this structurally. */
   transport: AttemptTransport
+  /**
+   * Fires once per newly observed grade (gradeless row gaining one, on the
+   * poll path and the refresh-merge path). Fire-and-forget: the flow calls
+   * it after the grade is durable, catches a throwing observer, and keeps
+   * grading. Owners use it to rebuild derived projections (mastery cache);
+   * it must never block or fetch synchronously.
+   */
+  onGradesObserved?: () => void
   now?: () => string
   uuid?: (prefix: string) => string
 }
@@ -189,12 +198,23 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
     db,
     eventStore,
     transport,
+    onGradesObserved,
     now = () => new Date().toISOString(),
     uuid = defaultUuid,
   } = deps
 
   const attempts = () => db.table('assessmentAttempts')
   const cache = () => db.table('assessmentContentCache')
+
+  /** A throwing observer is logged, never allowed to break grading. */
+  function notifyGradesObserved() {
+    if (!onGradesObserved) return
+    try {
+      onGradesObserved()
+    } catch (error) {
+      logger.warn('[attempt-flow] onGradesObserved failed', error)
+    }
+  }
 
   async function submitAssessmentAttempt(
     assessmentId: string,
@@ -347,6 +367,9 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
     _unused: QuestionGradedResult | null,
   ): Promise<LocalAttemptRow> {
     const grade = record.grade
+    const previous = (await attempts().get(record.clientAttemptId)) as
+      | LocalAttemptRow
+      | undefined
     await attempts().update(record.clientAttemptId, {
       attemptId: record.attemptId,
       status: record.status,
@@ -376,6 +399,7 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       | undefined
     // The row can be gone if the database closed mid-poll (user switch,
     // teardown): keep the contract by falling back to the known identity.
+    if (grade && !previous?.grade) notifyGradesObserved()
     return row ?? { ...EMPTY_ROW, clientAttemptId: record.clientAttemptId }
   }
 
@@ -442,11 +466,13 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
       return 0
     }
     let merged = 0
+    let observed = false
     for (const record of records) {
       const existing = (await attempts().get(record.clientAttemptId)) as
         | LocalAttemptRow
         | undefined
       if (existing) {
+        if (!existing.grade && record.grade) observed = true
         if (
           existing.status !== record.status ||
           existing.attemptId !== record.attemptId ||
@@ -473,8 +499,10 @@ export function createAttemptFlow(deps: AttemptFlowDeps) {
         }
         await attempts().add(row)
         merged++
+        if (record.grade) observed = true
       }
     }
+    if (observed) notifyGradesObserved()
     return merged
   }
 

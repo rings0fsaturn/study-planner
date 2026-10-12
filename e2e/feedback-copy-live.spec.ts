@@ -8,10 +8,13 @@ import { test, grepIntelligenceLog } from './fixtures';
  * roadmap over the frozen ACCA material (which carries durable grades, so
  * the empty local cache adopts the server projection as `updated`), opens
  * the roadmap page, and asserts the section renders the LLM copy shaped
- * exactly as FeedbackCopy with a model-version source. A second scenario
- * forces a provider failure and asserts the static copy renders without
- * blocking. The seeded roadmap is abandoned afterward so the account is
- * left as found; no material, grade, or snapshot row is touched.
+ * exactly as FeedbackCopy with a model-version source. Since the #49
+ * closed loop, the mount fires TWO copy calls (pre-verdict v1 words, then
+ * the verdict-shaped refire once the loop verdict lands), so the scenarios
+ * assert on the LAST served copy. A second scenario forces a provider
+ * failure and asserts the static copy renders without blocking. The seeded
+ * roadmap is abandoned afterward so the account is left as found; no
+ * material, grade, or snapshot row is touched.
  *
  * Requires E2E_LIVE_EMAIL / E2E_LIVE_PASSWORD (kept out of source; the
  * credentials-file values are backtick-wrapped, so they are stripped here)
@@ -20,6 +23,13 @@ import { test, grepIntelligenceLog } from './fixtures';
  *   FEEDBACK_MODEL=<serving model> ./full-app start full
  * (The contract default needs an OpenRouter age attestation; the run
  * overrides it with a serving model. Restart the runtime after app edits.)
+ *
+ * Operator note (2026-10-12): meta/muse-spark-1.3-contributor mandates
+ * reasoning on full-size copy payloads and answers 400 ("Reasoning is
+ * mandatory for this endpoint") when the adapter sends reasoning disabled.
+ * services/intelligence/.env must carry FEEDBACK_REASONING_EFFORT=low
+ * (restart intelligence after adding it) or every LLM-copy scenario 500s
+ * with provider_code unsupported_request while tiny probes still 200.
  *
  * Run scoped to the React app project with one worker:
  *   pnpm exec playwright test -c e2e/playwright.config.ts e2e/feedback-copy-live.spec.ts --project=app --workers=1
@@ -214,46 +224,88 @@ test.describe('Live feedback copy (real login)', () => {
     const token = await userToken();
     const title = await accaTitle(token);
     await signIn(page);
-    // Seed before navigating: raw IndexedDB writes bypass Dexie's
-    // liveQuery, so only a fresh EventStore read sees the seeded roadmap
-    // (which is then the newest unterminated, hence selected, one).
+    // The closed loop fires two copy calls: the pre-verdict v1-words call,
+    // then the verdict-shaped refire once the loop verdict lands. Requests
+    // and responses are linked through the pair both arrive on, so the
+    // assertion cannot race resolution order; the section's sequence guard
+    // guarantees the render converges on the shaped pair.
+    interface CopyPair {
+      status: number;
+      requestId: string;
+      verdict: unknown;
+      body: Record<string, unknown> | null;
+    }
+    const pairs: CopyPair[] = [];
+    let loopTime = 0;
+    page.on('response', (response) => {
+      if (response.request().method() !== 'POST') return;
+      if (response.url().includes('/v1/loop/decision')) {
+        if (response.status() === 200) loopTime = Date.now();
+        return;
+      }
+      if (!response.url().includes('/v1/feedback/copy')) return;
+      void (async () => {
+        let verdict: unknown = null;
+        try {
+          verdict = (response.request().postDataJSON() as { loopDecision?: unknown }).loopDecision ?? null;
+        } catch {
+          verdict = null;
+        }
+        let body: Record<string, unknown> | null = null;
+        try {
+          body = (await response.json()) as Record<string, unknown>;
+        } catch {
+          body = null;
+        }
+        pairs.push({
+          status: response.status(),
+          requestId: response.headers()['x-request-id'] ?? '',
+          verdict,
+          body,
+        });
+      })();
+    });
     const roadmapCreatedAt = await seedRoadmap(page, title);
-
-    // Attach before navigating: the mount fires the copy request, and the
-    // section only appears after it resolves. The predicate pins the wait
-    // to the seeded roadmap so a stale selection cannot satisfy it.
-    const responsePromise = page
-      .waitForResponse(
-        (response) =>
-          response.url().includes('/v1/feedback/copy') &&
-          response.request().method() === 'POST' &&
-          (() => {
-            try {
-              const data = response.request().postDataJSON() as {
-                materialIds?: unknown;
-              };
-              return (
-                Array.isArray(data.materialIds) &&
-                data.materialIds.length === 1 &&
-                data.materialIds[0] === ACCA_MATERIAL_ID
-              );
-            } catch {
-              return false;
-            }
-          })(),
-        { timeout: 120_000 },
-      )
-      .catch(() => null);
     await gotoRoadmap(page);
 
     try {
       const section = page.getByTestId('roadmap-feedback');
       await expect(section).toBeVisible({ timeout: 60_000 });
 
-      const copyResponse = await responsePromise;
-      if (!copyResponse) throw new Error('seeded-roadmap copy request never fired');
-      expect(copyResponse.status()).toBe(200);
-      const copyBody = (await copyResponse.json()) as Record<string, unknown>;
+      // The loop verdict fires live, and the shaped pair (request carrying
+      // the verdict, served copy answering it) lands after it.
+      await expect
+        .poll(
+          () => {
+            if (!loopTime) return null;
+            const shaped = pairs.filter(
+              (pair) =>
+                pair.status === 200 &&
+                pair.body &&
+                pair.verdict !== null &&
+                typeof pair.verdict === 'object',
+            );
+            return shaped.length > 0 ? shaped[shaped.length - 1].requestId : null;
+          },
+          { timeout: 180_000 },
+        )
+        .not.toBeNull();
+      const shapedPairs = pairs.filter(
+        (pair) =>
+          pair.status === 200 &&
+          pair.body &&
+          pair.verdict !== null &&
+          typeof pair.verdict === 'object',
+      );
+      const shaped = shapedPairs[shapedPairs.length - 1];
+      // The verdict is threaded into the copy request, not recomputed: an
+      // object with a 3-way verdict and a unit confidence. The value itself
+      // is not pinned - shared-account grades evolve, and any routed verdict
+      // proves the threading.
+      const threaded = shaped.verdict as { verdict?: unknown; confidence?: unknown };
+      expect(['hold', 'reprioritize', 'suggest_replan']).toContain(threaded.verdict);
+      expect(typeof threaded.confidence).toBe('number');
+      const copyBody = shaped.body as Record<string, unknown>;
       expect(Object.keys(copyBody).sort()).toEqual(
         ['advisory', 'advisoryNote', 'knowBody', 'knowTitle', 'source', 'summary', 'watchBody', 'watchTitle'],
       );
@@ -261,10 +313,10 @@ test.describe('Live feedback copy (real login)', () => {
         expect(typeof copyBody[field], field).toBe('string');
         expect((copyBody[field] as string).length, field).toBeGreaterThan(0);
       }
-      const requestId = copyResponse.headers()['x-request-id'];
+      const requestId = shaped.requestId;
       expect(requestId).toBeTruthy();
 
-      // The rendered story repeats the served copy verbatim.
+      // The rendered story repeats the served shaped copy verbatim.
       await expect(section.getByText(copyBody['summary'] as string)).toBeVisible({
         timeout: 30_000,
       });
@@ -343,17 +395,35 @@ test.describe('Live feedback copy (real login)', () => {
       const token = await userToken();
       const title = await accaTitle(token);
       await signIn(page);
+      // Same two-call contract as desktop; link each served copy to the
+      // request that produced it and assert on the verdict-shaped pair.
+      interface MobilePair {
+        status: number;
+        shaped: boolean;
+        body: Record<string, unknown> | null;
+      }
+      const mobilePairs: MobilePair[] = [];
+      page.on('response', (response) => {
+        if (response.request().method() !== 'POST') return;
+        if (!response.url().includes('/v1/feedback/copy')) return;
+        void (async () => {
+          let shaped = false;
+          try {
+            const sent = response.request().postDataJSON() as { loopDecision?: unknown };
+            shaped = sent.loopDecision !== null && typeof sent.loopDecision === 'object';
+          } catch {
+            shaped = false;
+          }
+          let body: Record<string, unknown> | null = null;
+          try {
+            body = (await response.json()) as Record<string, unknown>;
+          } catch {
+            body = null;
+          }
+          mobilePairs.push({ status: response.status(), shaped, body });
+        })();
+      });
       const roadmapCreatedAt = await seedRoadmap(page, title);
-      // Observe the one copy call the mount fires: waiting for its words
-      // keeps the screenshot truthful (no pre-LLM paint).
-      const responsePromise = page
-        .waitForResponse(
-          (response) =>
-            response.url().includes('/v1/feedback/copy') &&
-            response.request().method() === 'POST',
-          { timeout: 120_000 },
-        )
-        .catch(() => null);
       await gotoRoadmap(page);
 
       try {
@@ -362,10 +432,15 @@ test.describe('Live feedback copy (real login)', () => {
         await expect(section.getByText('Feedback refreshed')).toBeVisible({
           timeout: 120_000,
         });
-        const copyResponse = await responsePromise;
-        if (!copyResponse) throw new Error('copy request never fired');
-        expect(copyResponse.status()).toBe(200);
-        const copyBody = (await copyResponse.json()) as Record<string, unknown>;
+        await expect
+          .poll(
+            () =>
+              mobilePairs.filter((pair) => pair.status === 200 && pair.shaped && pair.body).length,
+            { timeout: 180_000 },
+          )
+          .toBeGreaterThanOrEqual(1);
+        const okPairs = mobilePairs.filter((pair) => pair.status === 200 && pair.shaped && pair.body);
+        const copyBody = okPairs[okPairs.length - 1].body as Record<string, unknown>;
         await expect(section.getByText(copyBody['summary'] as string)).toBeVisible({
           timeout: 30_000,
         });

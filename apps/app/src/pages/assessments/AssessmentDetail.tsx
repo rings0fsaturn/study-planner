@@ -8,6 +8,8 @@ import {
   type Question,
 } from '../../assessments/types'
 import { createAttemptFlow, type AttemptFlow, type LocalAttemptRow } from '../../assessments/attemptFlow'
+import { refreshMasteryProjections } from '../../assessments/masteryCache'
+import { logger } from '../../lib/logger'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
 import { AttemptTaker } from './AttemptTaker'
 import { ReviewSurface } from './review/ReviewSurface'
@@ -210,6 +212,18 @@ export function AssessmentDetail() {
         db,
         eventStore,
         transport: assessments.transport,
+        // Closed loop: grades landing on the review surface (hydrate,
+        // in-flight refresh, cross-device) rebuild the mastery cache, so the
+        // roadmap stops reading stale after assessment-only grading.
+        onGradesObserved: () => {
+          void (async () => {
+            try {
+              await refreshMasteryProjections(assessments, eventStore)
+            } catch (error) {
+              logger.warn('[assessment-detail] mastery refresh failed', error)
+            }
+          })()
+        },
       }),
     )
   }, [eventStore, assessments])

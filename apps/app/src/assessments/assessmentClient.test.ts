@@ -191,6 +191,17 @@ describe('AssessmentClient', () => {
     })
   })
 
+  it('getRecommendations keeps the request id on a malformed payload (rule 17)', async () => {
+    const fetchLike = new FakeFetch(async () => ({ recommendedBand: 4 }))
+    const client = new AssessmentClient(fetchLike)
+
+    const error = await client.getRecommendations().catch((err) => err)
+    expect(error).toBeInstanceOf(AssessmentServiceError)
+    expect(error.requestId).toBe(
+      (fetchLike.calls[0].init?.headers as Record<string, string>)['X-Request-ID'],
+    )
+  })
+
   it('getRecommendations sends X-Request-ID on the wire (rule 17)', async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(JSON.stringify([difficultyRecommendation()]), { status: 200 }),

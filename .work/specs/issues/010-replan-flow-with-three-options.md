@@ -9,6 +9,14 @@ covers_user_stories: [30, 31, 32, 71, 72]
 
 PRD: `PRD-study-tracker-web.md`
 
+> **Update 2026-10-12 — the regenerate seam referenced below is removed.**
+> `replanRoadmap.ts`, `mapToRegenerateRequest.ts`, and `intelligenceClient.ts::postRoadmapRegenerate`
+> are deleted (zero live callers; live replan is local no-slot `commitReplan` via
+> `apps/app/src/pages/Replan.tsx`, see issue #021 for the removal record).
+> The 2026-06-26 block below is kept as history; do not build on it.
+> Remaining live value in this ticket: the three-option scope-picker UX on top of the
+> existing `/replan` levers, not a Python-routed seam.
+
 > **Update 2026-06-26 — the regenerate seam now exists (built + Cowork-verified in roadmap-calendar Phase 7, commit `84abbd2`).** Per plan decision D-12, replan **routes to the Python intelligence service**, not the in-browser TS engine. This slice should build the `/replan` UI on top of the existing seam rather than re-deriving it:
 > - `apps/app/src/roadmap/replan/replanRoadmap.ts` — typed boundary `replanRoadmap(events, opts): Promise<RoadmapOutput>` (default transport = Python; opt-in TS `offlineReplan` fallback behind the same signature).
 > - `apps/app/src/roadmap/replan/mapToRegenerateRequest.ts` — pure mapper to the Python `RoadmapRegenerateRequest` shape (`materials[{id,title,totalMinutes,role,additionOrder}]`, capacity fields, `pins[]` with `reason ∈ {completed,today,user-edited}`).

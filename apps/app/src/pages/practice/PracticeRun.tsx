@@ -7,7 +7,7 @@ import {
   type LocalAttemptRow,
 } from '../../assessments/attemptFlow'
 import { useMaterialsClient } from '../../materials/MaterialsProvider'
-import { saveMasteryProjections } from '../../assessments/masteryCache'
+import { refreshMasteryProjections } from '../../assessments/masteryCache'
 import { PRACTICE_RUN_FINISHED, type Event } from '../../events/EventStore'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
 import type { Assessment, MasteryProjection } from '../../assessments/types'
@@ -99,11 +99,35 @@ export function PracticeRun() {
   )
 
   // ---- Attempt flow (per-user Dexie, DI transport) -------------------------
+  // ---- Mastery refresh (closed loop): every freshly observed grade rebuilds
+  // the projection behind the next Adaptive run's band. Only graded attempts
+  // are observations: unsubmitted, paused, or abandoned work never reaches a
+  // server grade, so it never triggers a rebuild and never creates one.
+  const refreshMastery = useCallback(() => {
+    void (async () => {
+      try {
+        if (!eventStore) return
+        setMastery(await refreshMasteryProjections(assessments, eventStore))
+      } catch (error) {
+        // Advisory: a failed rebuild leaves the summary without guidance
+        // instead of blocking the run.
+        logger.warn('[practice] mastery refresh failed', error)
+      }
+    })()
+  }, [assessments, eventStore])
+
   useEffect(() => {
     if (!eventStore) return
     const db = (eventStore as unknown as { db: import('dexie').Dexie }).db
-    setFlow(createAttemptFlow({ db, eventStore, transport: assessments.transport }))
-  }, [eventStore, assessments])
+    setFlow(
+      createAttemptFlow({
+        db,
+        eventStore,
+        transport: assessments.transport,
+        onGradesObserved: refreshMastery,
+      }),
+    )
+  }, [eventStore, assessments, refreshMastery])
 
   const assessmentIds = useMemo(
     () => pointer?.started.assessmentIds ?? [],
@@ -173,34 +197,6 @@ export function PracticeRun() {
   useEffect(() => {
     void hydrate()
   }, [hydrate])
-
-  // ---- Mastery refresh (#44 AC3): every fresh grade rebuilds the projection
-  // behind the next Adaptive run's band. Only graded attempts are observations:
-  // unsubmitted, paused, or abandoned work never reaches a server grade, so it
-  // never triggers a rebuild and never creates an observation.
-  const gradedRowCount = useMemo(
-    () => Object.values(rowsByAssessment).flat().filter((row) => row.grade != null).length,
-    [rowsByAssessment],
-  )
-  useEffect(() => {
-    if (gradedRowCount === 0 || !eventStore) return
-    let cancelled = false
-    void (async () => {
-      try {
-        const projections = await assessments.getMastery()
-        if (cancelled) return
-        await saveMasteryProjections(eventStore, projections)
-        if (!cancelled) setMastery(projections)
-      } catch (error) {
-        // Advisory: a failed rebuild leaves the summary without guidance
-        // instead of blocking the run.
-        logger.warn('[practice] mastery refresh failed', error)
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [assessments, eventStore, gradedRowCount])
 
   // ---- Model ---------------------------------------------------------------
   const model = useMemo(() => {

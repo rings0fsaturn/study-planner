@@ -11,6 +11,25 @@ import type { MasteryProjection } from './types'
 
 export interface MasteryCacheRow extends MasteryProjection {}
 
+/** Narrow fetch the refresh needs (rule 22: DI over hidden fetches). */
+export interface MasteryFetchLike {
+  getMastery(): Promise<MasteryProjection[]>
+}
+
+/**
+ * Rebuild the derived projection from durable grades and adopt it into the
+ * cache (closed loop). Throws on fetch/save failure so callers keep their
+ * own advisory fallback; the cache is never authority.
+ */
+export async function refreshMasteryProjections(
+  client: MasteryFetchLike,
+  store: EventStore,
+): Promise<MasteryProjection[]> {
+  const projections = await client.getMastery()
+  await saveMasteryProjections(store, projections)
+  return projections
+}
+
 function table(store: EventStore) {
   return store.table('masteryCache')
 }

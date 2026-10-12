@@ -10,7 +10,7 @@
  * the same input/output shape without any UI change.
  */
 
-import type { DifficultyRecommendation, MasteryProjection } from '../../assessments/types'
+import type { DifficultyRecommendation, LoopVerdict, MasteryProjection } from '../../assessments/types'
 
 /** The four learner-visible projection states plus the transient rebuild. */
 export type FeedbackState = 'cold' | 'updated' | 'stale' | 'rebuilding'
@@ -42,6 +42,12 @@ export interface FeedbackCopyInput {
   /** The one-band recommendation; null before any observation (cold start). */
   recommendation: DifficultyRecommendation | null
   evidence: FeedbackEvidence[]
+  /**
+   * Advisory loop verdict (#49 Slice 3, feedback-v2): null stays on the v1
+   * words; a verdict reshapes advisory/advisoryNote only, through the one
+   * batched copy call.
+   */
+  loopDecision?: { verdict: LoopVerdict; confidence: number } | null
 }
 
 /** The learner-facing copy, in the locked #35 hierarchy order. */

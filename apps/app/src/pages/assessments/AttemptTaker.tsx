@@ -10,6 +10,8 @@ import {
   type AttemptFlow,
   type LocalAttemptRow,
 } from '../../assessments/attemptFlow'
+import { refreshMasteryProjections } from '../../assessments/masteryCache'
+import { logger } from '../../lib/logger'
 import { WRITTEN_ANSWER_MAX_LENGTH, OUTPUT_PREDICTION_SUBTYPE } from '../../assessments/types'
 import type { Assessment, ObjectiveAnswer, Question } from '../../assessments/types'
 import { useEventStoreContext } from '../../events/EventStoreProvider'
@@ -93,6 +95,17 @@ export function AttemptTaker({
         db,
         eventStore,
         transport: serviceClient.transport,
+        // Closed loop: a grade landing in the taker warms the mastery cache
+        // at submit time, not on the next surface visit.
+        onGradesObserved: () => {
+          void (async () => {
+            try {
+              await refreshMasteryProjections(serviceClient, eventStore)
+            } catch (error) {
+              logger.warn('[attempt-taker] mastery refresh failed', error)
+            }
+          })()
+        },
       }),
     )
     void refreshAttempts(db, assessment.id, setAttempts)

@@ -5,6 +5,7 @@ import type { Assessment } from '../assessments/types'
 import { AssessmentServiceError } from '../assessments/types'
 import type { LocalAttemptRow } from '../assessments/attemptFlow'
 import { createAttemptFlow, type AttemptFlow } from '../assessments/attemptFlow'
+import { refreshMasteryProjections } from '../assessments/masteryCache'
 import { useAssessmentClient } from '../assessments/AssessmentProvider'
 import { useMaterialsClient } from '../materials/MaterialsProvider'
 import { ASSESSMENT_DELETED, type EventStore } from '../events/EventStore'
@@ -131,7 +132,23 @@ export function useLibraryRows(options?: { materialId?: string }) {
       setFlowOwner(null)
       return
     }
-    setFlow(createAttemptFlow({ db, eventStore, transport: assessments.transport }))
+    setFlow(
+      createAttemptFlow({
+        db,
+        eventStore,
+        transport: assessments.transport,
+        // Closed loop: grades merged during hub hydration rebuild the cache.
+        onGradesObserved: () => {
+          void (async () => {
+            try {
+              await refreshMasteryProjections(assessments, eventStore)
+            } catch (error) {
+              logger.warn('[library] mastery refresh failed', error)
+            }
+          })()
+        },
+      }),
+    )
     setFlowOwner(eventStore)
   }, [eventStore, assessments])
 

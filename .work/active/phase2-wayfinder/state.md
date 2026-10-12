@@ -1,5 +1,5 @@
 # State – phase2-wayfinder
-_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-09-28_
+_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-10-12_
 
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
@@ -15,7 +15,8 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - #67 coding-generation-context closed 2026-09-28 (wayfinder exit run: residual hardening - mandatory negative coding gold + paged no-steer listing past the hosted 1000-row cap; fresh live AC1/AC2/AC4 re-verification + redaction CLEAN; resolution comment, ACs ticked, map #4 decision line, task archived). #49 was the sole open frontier ticket.
 - #80 Prototype: Assessment library and Practice hub UX chartered 2026-09-28 (wayfinder:prototype + wayfinder:phase2 + ready-for-agent, child of map #4): return paths to generated assessments and practice runs across objective/written/coding, with material-detail backlinks; code ground truth and a starting impeccable design direction are in the ticket body; no blockers. Implemented + closed via #81 on 2026-10-05 (prototype removed in the build diff per D-09).
 - Open frontier (2026-10-05): #49 Phase 2 Integrated Verification (only).
-- Next: #49.
+- Closed-loop final build done 2026-10-12 (slices 1–6, plan `2026-10-12-closed-loop-build.md`): `POST /v1/loop/decision` (Jev verdict, fail-closed hold, floor 0.5) + `useLoopDecision` hook (updated-entry only, session memo, failure-to-null) + `feedback-v2` verdict fold (7 fields intact) + `masterySnapshot` steering + server-first recommendations + full verification (static matrix green, live feedback loop 3/3 at 1280/390 with request-id join). Two live-found fixes in the build: `FEEDBACK_REASONING_EFFORT=low` persisted to the gitignored intelligence `.env` (provider now mandates reasoning on full-size copy payloads) and a copy sequence guard against the refire race. Review follow-ups recorded in SCRATCHPAD (bulkPut atomicity, posture sentinel, M1/M2/M3/M4, plan Slice-2 wording).
+- Next: #49 wayfinder exit (full-journey live matrix + resolution + close + map #4 line).
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).

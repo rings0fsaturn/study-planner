@@ -254,6 +254,11 @@ export function RoadmapFeedbackSection({
 
   const { state, projections, recommendation, evidence, headline, rebuild, settled } = feedback
 
+  // Sequence guard for the verdict refire below: only the latest provider
+  // call may paint, so a slow pre-verdict response never overwrites the
+  // shaped copy.
+  const copySeq = useRef(0)
+
   // Advisory loop verdict (#49): updated-entry only, null while cold or on
   // failure, so the static copy always renders. Reprioritize reorders the
   // displayed trail weakest-first within the current bookings; suggest_replan
@@ -279,17 +284,25 @@ export function RoadmapFeedbackSection({
     // badge (#68 live-found).
     if (!settled) return
     let cancelled = false
+    // The verdict refire sends a second call; a slow first response must
+    // never overwrite the shaped words that resolve later.
+    const seq = ++copySeq.current
     const result = provider({
       state,
       materialTitles: [...materialTitlesById.values()],
       projections,
       recommendation,
       evidence,
+      // A late verdict refires this effect, so the one batched copy call
+      // carries it; null keeps the v1 words (server treats it as no-verdict).
+      loopDecision: loopVerdict
+        ? { verdict: loopVerdict.verdict, confidence: loopVerdict.confidence }
+        : null,
     })
     // Sync providers resolve on the spot; an async provider (#68) lands later.
     if (typeof (result as Promise<FeedbackCopy>).then === 'function') {
       void (result as Promise<FeedbackCopy>).then((next) => {
-        if (!cancelled) setCopy(next)
+        if (!cancelled && seq === copySeq.current) setCopy(next)
       })
     } else {
       setCopy(result as FeedbackCopy)
@@ -297,7 +310,7 @@ export function RoadmapFeedbackSection({
     return () => {
       cancelled = true
     }
-  }, [provider, settled, state, projections, recommendation, evidence, materialTitlesById])
+  }, [provider, settled, state, projections, recommendation, evidence, materialTitlesById, loopVerdict])
 
   // Hold the render until the first mastery fetch settles: the pre-fetch
   // state is a guess that would flash a cold copy the LLM copy replaces.
