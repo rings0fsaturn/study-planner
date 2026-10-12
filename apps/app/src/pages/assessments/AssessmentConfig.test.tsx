@@ -119,6 +119,24 @@ describe('AssessmentConfig', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/assessments/assessment-1')
   })
 
+  it('sends trimmed skill tags when the steer field is filled', async () => {
+    const materials = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGenerate(queuedJob({ resultId: 'assessment-2' }))
+    renderConfig(materials, assessments)
+
+    fireEvent.change(await screen.findByLabelText('Skill tags (optional, comma-separated)'), {
+      target: { value: ' multi-part comparison , extended derivation,' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Generate question' }))
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    const input = assessments.generateAssessment.mock.calls[0][0]
+    expect(input.recipe.skillTags).toEqual(['multi-part comparison', 'extended derivation'])
+  })
+
   it('sends the chapter range and its label when a chapter is picked', async () => {
     const materials = new FakeMaterialClient([
       material({

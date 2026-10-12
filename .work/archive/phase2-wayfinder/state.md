@@ -1,5 +1,5 @@
 # State – phase2-wayfinder
-_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: active · Updated: 2026-10-12_
+_Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: archive/phase2-wayfinder/plan/ · STATUS row: phase2-wayfinder · Status: done 2026-10-12 · Updated: 2026-10-12_
 
 ## Current state & next
 - Umbrella execution program for Phase 2 (map #4). Wave 0 frame (#5 App IA, #6 assessment types, #10 persistence) resolved + closed; execution now rides the #33–#49 ticket spine.
@@ -16,7 +16,8 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - #80 Prototype: Assessment library and Practice hub UX chartered 2026-09-28 (wayfinder:prototype + wayfinder:phase2 + ready-for-agent, child of map #4): return paths to generated assessments and practice runs across objective/written/coding, with material-detail backlinks; code ground truth and a starting impeccable design direction are in the ticket body; no blockers. Implemented + closed via #81 on 2026-10-05 (prototype removed in the build diff per D-09).
 - Open frontier (2026-10-05): #49 Phase 2 Integrated Verification (only).
 - Closed-loop final build done 2026-10-12 (slices 1–6, plan `2026-10-12-closed-loop-build.md`): `POST /v1/loop/decision` (Jev verdict, fail-closed hold, floor 0.5) + `useLoopDecision` hook (updated-entry only, session memo, failure-to-null) + `feedback-v2` verdict fold (7 fields intact) + `masterySnapshot` steering + server-first recommendations + full verification (static matrix green, live feedback loop 3/3 at 1280/390 with request-id join). Two live-found fixes in the build: `FEEDBACK_REASONING_EFFORT=low` persisted to the gitignored intelligence `.env` (provider now mandates reasoning on full-size copy payloads) and a copy sequence guard against the refire race. Review follow-ups recorded in SCRATCHPAD (bulkPut atomicity, posture sentinel, M1/M2/M3/M4, plan Slice-2 wording).
-- Next: #49 wayfinder exit (full-journey live matrix + resolution + close + map #4 line).
+- Next: none - umbrella closed 2026-10-12 (#49 exit done, folder archived).
+- #49 exit done 2026-10-12: full-journey live matrix green (request-id 1/1, mastery 2/2, ingestion 5+2skipped, generation 3/3, taking-39 2/2, review-40 4/4, written-41 4/4, coding 3/3, guide 2/2, practice-run 2/2, feedback-copy 3/3; zero console/page errors throughout). AC1/AC3/AC4 PASS, AC2 pass-with-skips (cross-user isolation + YouTube deferred single-account/flag; account switching unit-covered). Static: backend focused 84 green, app suite green except 2 pre-existing seedTestData TZ flakes (pass --pool=forks), typecheck + lint clean, parity goldens untouched. Three exit repairs: mastery-live seeds newest ready assessment (failed-terminal rows carry no questions); taking-39 spec enters via per-question retry and asserts the #40 review-first surface (evidence plan/evidence/evidence-39-*.png); AssessmentConfig regains the skill-tags steer field the #62 rework dropped while the server contract still honors it (steer verified live, long_form first roll) + unit test. Resolution posted, #49 closed, map #4 decision line added.
 
 ## Done so far
 - Charted the Phase 2 wayfinder map on GitHub Issues (map #4) 2026-07-31; locked 7 design decisions (destination = spec + working prototypes; tiered Socratic guidance; hybrid on-demand trigger; inline-hint surface; full RAG; full KT coupling; hybrid code execution).
@@ -26,13 +27,13 @@ _Spec: GitHub map #4 (rings0fsaturn/study-planner) + specs/ · Plan: active/phas
 - Execution slices #36–#57 landed on the #33–#49 spine (see their own task rows in STATUS).
 
 ## Flow trace
-- The GitHub map #4 is the canonical artifact; this folder indexes it. A local snapshot lives at active/phase2-wayfinder/research/map-4.md.
+- The GitHub map #4 is the canonical artifact; this folder indexes it. A local snapshot lives at archive/phase2-wayfinder/research/map-4.md.
 - Tickets carry `wayfinder:<type>` labels; the frontier is `gh issue list --label wayfinder:phase2 --state open` minus any open "Blocked by:" ref.
 - Decision tickets (grilling + domain-modeling) resolve AFK-able research tickets and open one decision ticket per session. Claim a ticket by assigning it to yourself.
 
 ## Files affected
-- active/phase2-wayfinder/plan/PLAN.md + VERIFICATION.md – charting runbook + running log.
-- active/phase2-wayfinder/research/map-4.md – local snapshot of GitHub map #4.
+- archive/phase2-wayfinder/plan/PLAN.md + VERIFICATION.md – charting runbook + running log.
+- archive/phase2-wayfinder/research/map-4.md – local snapshot of GitHub map #4.
 - research/external/open-notebook-findings.md, research/external/code-sandbox-comparison.md – research subagent outputs referenced by the map.
 
 ## Pitfalls & rules

@@ -53,6 +53,9 @@ export function AssessmentConfig() {
   const [loadStatus, setLoadStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [difficulty, setDifficulty] = useState<number>(3)
   const [family, setFamily] = useState<AssessmentFormat>('objective')
+  // Optional skill-tag steer (contract `recipe.skillTags`): free text the
+  // generator steers topics and written subtypes from; empty sends nothing.
+  const [skillTags, setSkillTags] = useState('')
   // The scope (D-05): a chapter chip fills the range and carries its label;
   // editing either page by hand drops the label, because it no longer
   // describes the range the learner asked for. A viewer handoff (`?from=&to=`)
@@ -194,6 +197,10 @@ export function AssessmentConfig() {
     if (submitting || rangeError !== '') return
     setSubmitting(true)
     setError(null)
+    const tags = skillTags
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter((tag) => tag !== '')
     const request: GenerationRequest = {
       clientId: crypto.randomUUID(),
       materialIds: [materialIdForRequest],
@@ -201,6 +208,7 @@ export function AssessmentConfig() {
         formats: [family],
         questionCount: 1,
         difficulty,
+        ...(tags.length > 0 ? { skillTags: tags } : {}),
         ...(scope ? { scope } : {}),
       },
       correlationId: crypto.randomUUID(),
@@ -278,6 +286,23 @@ export function AssessmentConfig() {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="field-group" style={{ maxWidth: '100%' }}>
+            <label className="field-label" htmlFor="assessment-skill-tags">
+              Skill tags (optional, comma-separated)
+            </label>
+            <input
+              id="assessment-skill-tags"
+              className="field"
+              type="text"
+              value={skillTags}
+              onChange={(event) => setSkillTags(event.target.value)}
+              placeholder="e.g. multi-part comparison, extended derivation"
+            />
+            <p className="field-hint">
+              Steer the question toward these skills or subtypes; leave blank for the whole
+              material.
+            </p>
           </div>
           <div className="field-group" style={{ maxWidth: '100%' }}>
             <label className="field-label">Scope (optional)</label>

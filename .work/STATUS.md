@@ -1,5 +1,5 @@
 # study-planner-web — STATUS
-_Last reconciled: 2026-10-10_
+_Last reconciled: 2026-10-12_
 
 Read first. One line per task — follow Detail for everything else. No stale line survives an edit.
 
@@ -9,7 +9,6 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | Tag | Task | Where it stands (one line) | Detail |
 |---|---|---|---|
 | [APP][INFRA] | document-pipeline | **Planned 2026-09-12, no code, no ticket yet** (D0 owns both). Upload/storage/queue/worker already exist; the missing stages are conversion (docx/pptx/odt → PDF, LibreOffice headless in the existing `ingestion-worker` image) and normalization/compression of the **derived viewer copy** only, so the frozen retrieval baseline never moves. Measured ceilings recorded (corpus file: 95.9% streams, 89% images, text 6.8%, whole-file gzip 0.882; `ff3ab07`'s clone inflates 2,998,611 → 3,420,085 B). Serving consumes #62 P7. | active/document-pipeline/state.md |
-| [APP][RESEARCH][KT] | phase2-wayfinder | Phase 2 umbrella (map #4); Wave 0 done, execution on the #33-#49 spine; closed-loop build done 2026-10-12 (loop endpoint + hook + feedback-v2 + snapshot + recommendations, static matrix green, live loop 3/3 at 1280/390); frontier #49 exit (only). | active/phase2-wayfinder/state.md |
 | [APP] | marginalia-visual-refresh | Session 3 (2026-09-20): all remaining unblocked P3s + the critique re-run's P1s fixed - nav `aria-current`, skip link, three-dots loading state (also fixes the unstyled `PlaylistLoadingPopup` dots), calendar-to-week link, no-email greeting, ended-banner 3px single-meaning edge; browser-verified 1280/375; critique re-run **32/40 (from 23/40)**. `e2e/session-log.spec.ts` repaired to actually assert + sign-out verified live. **User Home review gate still open** (blocks steps 6-8). | active/marginalia-visual-refresh/state.md |
 | [APP][RESEARCH] | jev-integration | **#77 DONE 2026-09-26**: slice-4 rubric graduation - disagreement-flag queue (`jev_review_flags`, migration 033, `JEV_SLICE4_FLAGS` default false, owner RLS) + Score-to-action mapping; **the #74 cutoff/margin prior 0.6/0.10 holds** (train favours 0.7, test contradicts it `agree_met` 1.0->0.5); 2 live-found defects fixed (import outside the fail-open guard wedged grading; missing NOT NULL `id` 400'd every insert). Frontier now **#78** (retrieval insertion point) + **#79** (reranked-754). | active/jev-integration/state.md |
 
@@ -33,6 +32,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 ## Done
 | Tag | Task | Durable record |
 |---|---|---|
+| [APP][RESEARCH][KT] | phase2-wayfinder | **Done 2026-10-12**: Phase 2 umbrella (map #4) closed via #49 exit - closed-loop build (loop endpoint + hook + feedback-v2 + snapshot + recommendations) + full-journey live matrix green at 1280/375/390 (ingestion 5, generation 3/3, taking 2/2, review 4/4, written 4/4, coding 3/3, guide 2/2, practice-run 2/2, mastery 2/2, feedback loop 3/3; zero console errors; AC1/AC3/AC4 PASS, AC2 pass-with-skips). Three exit repairs (ready-filtered mastery seed, review-first taking-39 spec, restored skill-tags steer + unit test). Wayfinder exit (resolution, #49 closed, map #4 line, archived). | archive/phase2-wayfinder/state.md |
 | [APP] | assessment-delete | **Done 2026-10-10**: card hover-X + confirm dialog + backend delete job - migration 034 live, typed delete + tombstone/evict flow, live spec 2/2 at 1280/375 with request-id join, AC1-AC6 PASS, full app 1133 + 2 pre-existing TZ flakes, both P4 reviews PASS. | archive/assessment-delete/state.md |
 | [APP] | practice-coach-sources-overflow | **Done 2026-10-07**: coach sources disclosure capped (card min(70vh,560px) flex, body scroll, ul 180px scroll, phone dvh guard) - unit 11/11, live 1280+375 2/2 zero errors, R1/R2/R3 PASS; code on branch project/phase-2. | archive/practice-coach-sources-overflow/state.md |
 | [APP] | assessment-library-practice-hub | **Done 2026-10-05**: #81 Assessment library + Practice hub - `/assessments` + `/practice` nested under Materials (sub-nav, variant B card grid), pure libraryModel + useLibraryRows hydration, material backlink, all honest states at 1280+375 zero errors; live E2E 2 passed 2.8m with request-id join + cleanup; suite 1077 + 2 pre-existing flakes; build green with prototype removed (0 dist hits); OCR PASS + thermo PASS-WITH-MINORS (test-only). Wayfinder exit (resolution, 7/7 ACs, closed, map #4 line, archived). | archive/assessment-library-practice-hub/state.md |
@@ -85,7 +85,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | [APP] | material-session-ui-bugs | Phases 1–8 (verdicts waived 2026-08-23); Phase 9 (suggested upcoming sessions) parked open, not abandoned. | plans/archive/2026-07-02-material-session-ui-bugs/ |
 | [APP][RESEARCH] | material-session-decoupling | All 7 phases Cowork-verified 2026-07-02: retires prescriptive dated-slot packer; capacity-aware live replan. | plans/archive/2026-06-30-material-session-decoupling/ |
 | [DISSERTATION] | 3rd-review-report | Done 2026-07-03: full app trace cross-referenced; findings filed as issues 019–022. | plans/archive/2026-07-03-third-review-report-work/ |
-| [APP][RESEARCH][KT] | phase2-charted-and-decisions | Charted 2026-07-31; #5–#22 resolved/closed 2026-08-13; folded into the Active phase2-wayfinder row. | active/phase2-wayfinder/state.md |
+| [APP][RESEARCH][KT] | phase2-charted-and-decisions | Charted 2026-07-31; #5–#22 resolved/closed 2026-08-13; folded into the Active phase2-wayfinder row. | archive/phase2-wayfinder/state.md |
 | [APP] | enriched-shrink-prod | Cowork-verified 2026-06-20: enriched_shrink shipped server-side; net win with small-band caveat (claims ledger). | plans/archive/2026-06-20-enriched-shrink-production-integration/ |
 | [INFRA] | agent-rules-skills-refresh | Added work-journal skill mirrors + typed-error rule + architecture PNG (`944ce56`). | ../.agents/skills/work-journal/SKILL.md |
 | [APP] | dev-production-readiness | All 5 phases Cowork-verified 2026-06-25: auth on all /v1, resilient calibration client, Dexie stale cache, one-command dev. | plans/archive/2026-06-20-dev-production-readiness/ |

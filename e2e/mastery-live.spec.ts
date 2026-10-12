@@ -92,7 +92,7 @@ function walkKeys(value: unknown, keys: string[] = []): string[] {
 async function seedObservation(marker: string): Promise<string> {
   const assessments = (await (
     await fetch(
-      `${SUPABASE_URL}/rest/v1/assessments?material_id=eq.${ACCA_MATERIAL_ID}&select=id&limit=1&order=created_at.desc`,
+      `${SUPABASE_URL}/rest/v1/assessments?material_id=eq.${ACCA_MATERIAL_ID}&status=eq.ready&select=id&limit=1&order=created_at.desc`,
       { headers: serviceHeaders() },
     )
   ).json()) as Array<{ id: string }>;
