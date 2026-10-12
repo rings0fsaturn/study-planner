@@ -15,6 +15,8 @@ import type {
   AttemptRecord,
   AttemptSubmitInput,
   GenerationRequest,
+  LoopDecision,
+  LoopDecisionInput,
   MasteryProjection,
 } from './types'
 import type { FeedbackCopy, FeedbackCopyInput } from '../roadmap/feedback/types'
@@ -40,6 +42,8 @@ export interface AssessmentClientLike {
   getMastery(materialId?: string, skillTag?: string): Promise<MasteryProjection[]>
   /** LLM learner-feedback copy for owned materials in the updated state (#68). */
   getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy>
+  /** Advisory Jev loop verdict for owned materials in the updated state (#49). */
+  getLoopDecision(input: LoopDecisionInput): Promise<LoopDecision>
   /** AttemptTransport view (attemptFlow's DI seam) — same calls, fewer args. */
   readonly transport: {
     submitAttempt(
@@ -326,6 +330,10 @@ export class AssessmentClient implements AssessmentClientLike {
 
   getFeedbackCopy(input: FeedbackCopyInput, materialIds: string[]): Promise<FeedbackCopy> {
     return this.post('/v1/feedback/copy', { ...input, materialIds })
+  }
+
+  getLoopDecision(input: LoopDecisionInput): Promise<LoopDecision> {
+    return this.post('/v1/loop/decision', input)
   }
 
   /** AttemptTransport view over the same calls (attemptFlow DI seam). */

@@ -8,6 +8,7 @@ import type {
   AttemptRecord,
   AttemptSubmitInput,
   GenerationRequest,
+  LoopDecision,
   MasteryProjection,
   Question,
   QuestionGradedResult,
@@ -67,6 +68,10 @@ export class FakeAssessmentClient implements AssessmentClientLike {
       throw new Error('getFeedbackCopy not scripted')
     },
   )
+
+  getLoopDecision = vi.fn(async (): Promise<LoopDecision> => {
+    throw new Error('getLoopDecision not scripted')
+  })
 
   /** AttemptTransport view over the scripted calls (attemptFlow DI seam). */
   readonly transport = {
@@ -131,6 +136,13 @@ scriptListAttempts(result: AttemptRecord[] | Error): void {
 
   scriptGetFeedbackCopy(result: FeedbackCopy | Error): void {
     this.getFeedbackCopy.mockImplementation(async () => {
+      if (result instanceof Error) throw result
+      return result
+    })
+  }
+
+  scriptGetLoopDecision(result: LoopDecision | Error): void {
+    this.getLoopDecision.mockImplementation(async () => {
       if (result instanceof Error) throw result
       return result
     })
@@ -226,6 +238,18 @@ export function feedbackCopy(overrides: Partial<FeedbackCopy> = {}): FeedbackCop
     advisory: 'Try a slightly harder challenge next.',
     advisoryNote: 'This suggestion does not edit your roadmap.',
     source: 'meta/muse-spark-1.3-contributor',
+    ...overrides,
+  }
+}
+
+/** A Jev loop-action verdict (#49 Slice 2): exact LoopDecision shape. */
+export function loopDecision(overrides: Partial<LoopDecision> = {}): LoopDecision {
+  return {
+    verdict: 'reprioritize',
+    choice: 'reprioritize',
+    confidence: 0.97,
+    sufficiency: 0.78,
+    model: 'typesafe/jev-1.13-20260917',
     ...overrides,
   }
 }

@@ -9,8 +9,9 @@ import {
   type Assessment,
   type AsyncJob,
   type GenerationRequest,
+  type LoopDecisionInput,
 } from './types'
-import { masteryProjection, feedbackCopy } from './testing/fakeAssessmentClient'
+import { masteryProjection, feedbackCopy, loopDecision } from './testing/fakeAssessmentClient'
 import type { FeedbackCopyInput } from '../roadmap/feedback/types'
 
 function copyInput(overrides: Partial<FeedbackCopyInput> = {}): FeedbackCopyInput {
@@ -20,6 +21,23 @@ function copyInput(overrides: Partial<FeedbackCopyInput> = {}): FeedbackCopyInpu
     projections: [],
     recommendation: null,
     evidence: [],
+    ...overrides,
+  }
+}
+
+function loopInput(overrides: Partial<LoopDecisionInput> = {}): LoopDecisionInput {
+  return {
+    materialIds: ['mat-1'],
+    materialTitles: ['Operating Systems'],
+    signals: [],
+    evidence_summary: {
+      total_attempts: 0,
+      skills_observed: 0,
+      min_obs_per_skill: 0,
+      max_obs_per_skill: 0,
+      days_span: 0,
+    },
+    posture: { behind_days: 0, days_left: 20, pace_vs_plan: 1, capacity_hours_per_week: 6 },
     ...overrides,
   }
 }
@@ -161,6 +179,73 @@ describe('AssessmentClient', () => {
     await expect(client.getFeedbackCopy(copyInput(), ['mat-1'])).rejects.toMatchObject({
       code: 'service',
       retryable: true,
+    })
+  })
+
+  it('getLoopDecision posts the loop input to the decision route', async () => {
+    const decision = loopDecision()
+    const fetchLike = new FakeFetch(async () => decision)
+    const client = new AssessmentClient(fetchLike)
+
+    const result = await client.getLoopDecision(loopInput())
+
+    expect(result).toEqual(decision)
+    expect(fetchLike.calls[0].path).toBe('/v1/loop/decision')
+    const init = fetchLike.calls[0].init!
+    expect(init.method).toBe('POST')
+    const headers = init.headers as Record<string, string>
+    expect(headers['Idempotency-Key']).toBeDefined()
+    expect(headers['Idempotency-Key']!.length).toBeGreaterThanOrEqual(16)
+    expect(headers['X-Request-ID']).toBeDefined()
+    expect(JSON.parse(String(init.body))).toEqual(loopInput())
+  })
+
+  it('getLoopDecision surfaces a Jev failure as a typed error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new AssessmentServiceError('service', 'loop decision unavailable', true)
+      }),
+    )
+    await expect(client.getLoopDecision(loopInput())).rejects.toMatchObject({
+      code: 'service',
+      retryable: true,
+    })
+  })
+
+  it('getLoopDecision normalizes an AbortError into a retryable timeout', async () => {
+    const abortError = new Error('aborted')
+    abortError.name = 'AbortError'
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw abortError
+      }),
+    )
+    await expect(client.getLoopDecision(loopInput())).rejects.toMatchObject({
+      code: 'timeout',
+      retryable: true,
+    })
+  })
+
+  it('getLoopDecision normalizes a TypeError into a retryable network error', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw new TypeError('fetch failed')
+      }),
+    )
+    await expect(client.getLoopDecision(loopInput())).rejects.toMatchObject({
+      code: 'network',
+      retryable: true,
+    })
+  })
+
+  it('getLoopDecision classifies an unknown non-Error value as unknown', async () => {
+    const client = new AssessmentClient(
+      new FakeFetch(async () => {
+        throw 'string failure'
+      }),
+    )
+    await expect(client.getLoopDecision(loopInput())).rejects.toMatchObject({
+      code: 'unknown',
     })
   })
 

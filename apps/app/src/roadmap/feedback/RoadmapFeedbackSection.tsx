@@ -14,6 +14,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useEventStore } from '../../events/useEventStore'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
+import type { LoopPosture } from '../../assessments/types'
+import { useLoopDecision } from './useLoopDecision'
 import { useRoadmapFeedback } from './useRoadmapFeedback'
 import { makeLlmFeedbackProvider } from './llmFeedbackProvider'
 import type {
@@ -48,7 +50,20 @@ interface RoadmapFeedbackSectionProps {
   pinnedTitle: string
   pinnedDetail: string
   copyProvider?: FeedbackCopyProvider
+  /** Schedule posture from the roadmap page; neutral when the page has none. */
+  posture?: LoopPosture
 }
+
+/** Neutral posture: the verdict degrades to mastery-only, never to noise. */
+const NEUTRAL_POSTURE: LoopPosture = {
+  behind_days: 0,
+  days_left: 0,
+  pace_vs_plan: 1,
+  capacity_hours_per_week: 0,
+}
+
+/** Weakest read first, so a reprioritize verdict leads with what needs work. */
+const READ_RANK: Record<FeedbackRead, number> = { revisit: 0, mixed: 1, clear: 2 }
 
 function AdvisoryBox({ copy, onReview }: { copy: FeedbackCopy; onReview: () => void }) {
   return (
@@ -110,11 +125,18 @@ function ModelContext({
 function ReviewDialog({
   onConfirm,
   onClose,
+  initialChoice = 'keep',
 }: {
   onConfirm: (choice: BoundaryChoice) => void
   onClose: () => void
+  initialChoice?: BoundaryChoice
 }) {
-  const [choice, setChoice] = useState<BoundaryChoice>('keep')
+  const [choice, setChoice] = useState<BoundaryChoice>(initialChoice)
+  // A late verdict (async fetch) still steers the open dialog; a verdict that
+  // lands while the learner already chose resets to the suggestion.
+  useEffect(() => {
+    setChoice(initialChoice)
+  }, [initialChoice])
   const dialogRef = useRef<HTMLElement>(null)
   const restoreRef = useRef<HTMLElement | null>(null)
 
@@ -213,6 +235,7 @@ export function RoadmapFeedbackSection({
   pinnedTitle,
   pinnedDetail,
   copyProvider,
+  posture = NEUTRAL_POSTURE,
 }: RoadmapFeedbackSectionProps) {
   const eventStore = useEventStore()
   const client = useAssessmentClient()
@@ -230,6 +253,25 @@ export function RoadmapFeedbackSection({
   const provider = copyProvider ?? llmProvider
 
   const { state, projections, recommendation, evidence, headline, rebuild, settled } = feedback
+
+  // Advisory loop verdict (#49): updated-entry only, null while cold or on
+  // failure, so the static copy always renders. Reprioritize reorders the
+  // displayed trail weakest-first within the current bookings; suggest_replan
+  // preselects Open replan (deep-link, no presets); hold keeps static order.
+  const loopVerdict = useLoopDecision(client, {
+    materialIds,
+    materialTitles: [...materialTitlesById.values()],
+    state,
+    projections,
+    evidence,
+    posture,
+  })
+  const orderedEvidence = useMemo(() => {
+    if (loopVerdict?.verdict !== 'reprioritize') return evidence
+    return [...evidence].sort(
+      (a, b) => READ_RANK[a.read] - READ_RANK[b.read] || b.observations - a.observations,
+    )
+  }, [evidence, loopVerdict])
 
   useEffect(() => {
     // Hold the copy until the first mastery fetch settles: the pre-fetch
@@ -314,11 +356,11 @@ export function RoadmapFeedbackSection({
             </div>
             <span className="rfb-version">Inspectable</span>
           </div>
-          {evidence.length === 0 ? (
+          {orderedEvidence.length === 0 ? (
             <p className="rfb-muted">No graded work yet. Take an assessment or practice run to start the trail.</p>
           ) : (
             <>
-              {evidence.slice(0, MAX_EVIDENCE_ROWS).map((row) => (
+              {orderedEvidence.slice(0, MAX_EVIDENCE_ROWS).map((row) => (
                 <Link
                   className="rfb-evidence-row"
                   key={`${row.materialId}:${row.skillTag}`}
@@ -334,9 +376,11 @@ export function RoadmapFeedbackSection({
                   <span className={`rfb-mark rfb-mark-${row.read}`}>{MARK_LABEL[row.read]}</span>
                 </Link>
               ))}
-              {evidence.length > MAX_EVIDENCE_ROWS && (
+              {orderedEvidence.length > MAX_EVIDENCE_ROWS && (
                 <p className="rfb-evidence-more">
-                  Showing the {MAX_EVIDENCE_ROWS} most-practised skills of {evidence.length}.
+                  {loopVerdict?.verdict === 'reprioritize'
+                    ? `Showing the ${MAX_EVIDENCE_ROWS} skills needing most work of ${orderedEvidence.length}.`
+                    : `Showing the ${MAX_EVIDENCE_ROWS} most-practised skills of ${orderedEvidence.length}.`}
                 </p>
               )}
             </>
@@ -362,6 +406,7 @@ export function RoadmapFeedbackSection({
 
       {reviewing && (
         <ReviewDialog
+          initialChoice={loopVerdict?.verdict === 'suggest_replan' ? 'replan' : 'keep'}
           onConfirm={(choice) => {
             setReviewing(false)
             if (choice === 'replan') navigate('/replan')

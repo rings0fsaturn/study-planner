@@ -98,6 +98,54 @@ export interface MasterySnapshot {
   entries: Array<{ materialId: string; skillTag: string; mastery: number }>
 }
 
+/** Advisory loop action routed by POST /v1/loop/decision (#49 Slice 1). */
+export type LoopVerdict = 'hold' | 'reprioritize' | 'suggest_replan'
+
+/** One mastery signal in the loop-decision state ceiling. */
+export interface LoopSignal {
+  material: string
+  skill: string
+  mastery: number
+  confidence: number
+  observations: number
+  trend: number
+}
+
+/** Code-computed evidence totals in the loop-decision state ceiling. */
+export interface LoopEvidenceSummary {
+  total_attempts: number
+  skills_observed: number
+  min_obs_per_skill: number
+  max_obs_per_skill: number
+  days_span: number
+}
+
+/** Code-computed schedule posture in the loop-decision state ceiling. */
+export interface LoopPosture {
+  behind_days: number
+  days_left: number
+  pace_vs_plan: number
+  capacity_hours_per_week: number
+}
+
+/** Whole request body of POST /v1/loop/decision (the v1 state ceiling). */
+export interface LoopDecisionInput {
+  materialIds: string[]
+  materialTitles: string[]
+  signals: LoopSignal[]
+  evidence_summary: LoopEvidenceSummary
+  posture: LoopPosture
+}
+
+/** Advisory verdict of POST /v1/loop/decision (fail-closed hold upstream). */
+export interface LoopDecision {
+  verdict: LoopVerdict
+  choice: string
+  confidence: number
+  sufficiency: number
+  model: string
+}
+
 export interface Citation {
   chunkId: string
   materialId: string

@@ -37,6 +37,7 @@ import { deriveRoadmapLifecycle } from './roadmapLifecycle'
 import { DayDetailModal, SessionDetailModal } from './SessionDetailModal'
 import { RoadmapEndedBanner } from './RoadmapEndedBanner'
 import { RoadmapFeedbackSection } from './feedback/RoadmapFeedbackSection'
+import { buildLoopPosture } from './feedback/useLoopDecision'
 import { summarizeRoadmapProgress } from './roadmapProgress'
 import { resolveRoadmap as resolveRoadmapEvent, type RoadmapResolutionKind } from './resolveRoadmap'
 import { deriveRoadmapEndedState } from './useRoadmapEndedState'
@@ -250,6 +251,27 @@ export function RoadmapCalendar({
   const daysEarlyOrLate = projectedFinish && roadmapPayload?.deadline
     ? differenceInCalendarDays(parseISO(roadmapPayload.deadline), parseISO(projectedFinish))
     : null
+  // Schedule posture for the advisory loop verdict: values the page already
+  // holds (payload deadline/hours + progress snapshot), no new fetch.
+  const loopPosture = useMemo(
+    () =>
+      buildLoopPosture({
+        deadline: roadmapPayload?.deadline ?? null,
+        today,
+        weeklyHours: roadmapPayload?.weeklyHours ?? 0,
+        projectedFinish,
+        minutesThisWeek: progress?.weeklyStats.minutesThisWeek ?? 0,
+        plannedMinutesThisWeek: progress?.weeklyStats.plannedMinutesThisWeek ?? 0,
+      }),
+    [
+      roadmapPayload?.deadline,
+      roadmapPayload?.weeklyHours,
+      today,
+      projectedFinish,
+      progress?.weeklyStats.minutesThisWeek,
+      progress?.weeklyStats.plannedMinutesThisWeek,
+    ],
+  )
   const materialPercent = materialLedger.length > 0
     ? Math.round(
       (materialLedger.reduce((total, material) => total + material.estimatedConsumedMinutes, 0) /
@@ -593,6 +615,7 @@ export function RoadmapCalendar({
           materialTitlesById={materialTitlesById}
           pinnedTitle={title}
           pinnedDetail={`${studyDays.join(', ')} · ${bookings.length} session${bookings.length === 1 ? '' : 's'} booked`}
+          posture={loopPosture}
         />
       )}
 
