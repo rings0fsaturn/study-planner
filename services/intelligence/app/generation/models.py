@@ -18,6 +18,10 @@ class GenerationRequest:
     material_id: str
     recipe: dict
     correlation_id: str
+    # Client-supplied per-skill mastery snapshot (#43 Q11 Slice 4): the
+    # server stores no mastery, so the client computes p and the blueprint
+    # reads it here. None when the caller is legacy (adaptive off / cold).
+    mastery_snapshot: dict | None = None
 
 
 @dataclass(frozen=True)

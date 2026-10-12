@@ -5,6 +5,8 @@ import {
   AssessmentServiceError,
   type AssessmentFormat,
   type GenerationRequest,
+  type MasteryProjection,
+  type MasterySnapshot,
 } from '../../assessments/types'
 import { saveMasteryProjections } from '../../assessments/masteryCache'
 import { DEFAULT_BAND, bandGuidanceByMaterial } from '../../assessments/masteryBands'
@@ -45,6 +47,41 @@ const MAX_MATERIALS = 5
 function familyForProblem(mode: PracticeRunMode, index: number): AssessmentFormat {
   if (mode === 'mixed') return index % 2 === 0 ? 'written' : 'coding'
   return mode
+}
+
+/**
+ * #43 Q11: the snapshot behind the Adaptive band, in GenerationRequest shape.
+ * Scoped to the run's materials and capped so one envelope stays bounded;
+ * null when there is nothing to steer (cold start), so the server proceeds
+ * legacy. Mastery is clamped to 0..1 and finite; malformed rows are dropped.
+ */
+export function buildMasterySnapshot(
+  projections: MasteryProjection[],
+  materialIds: string[],
+): MasterySnapshot | null {
+  const wanted = new Set(materialIds)
+  const entries = projections
+    .filter(
+      (projection) =>
+        wanted.has(projection.materialId) &&
+        typeof projection.skillTag === 'string' &&
+        projection.skillTag.trim() !== '' &&
+        projection.skillTag.trim().length <= 120 &&
+        projection.materialId.length <= 200 &&
+        Number.isFinite(projection.mastery),
+    )
+    .map((projection) => ({
+      materialId: projection.materialId,
+      skillTag: projection.skillTag.trim(),
+      mastery: Math.min(1, Math.max(0, projection.mastery)),
+    }))
+    .slice(0, 50)
+  if (entries.length === 0) return null
+  const version = projections
+    .find((projection) => wanted.has(projection.materialId) && projection.modelVersion?.trim())
+    ?.modelVersion.trim()
+    .slice(0, 32)
+  return { version: version ? version : 'bkt-v1', entries }
 }
 
 function formatMinutes(mins: number | null): string {
@@ -173,6 +210,7 @@ export function PracticeThis() {
     setError(null)
 
     let bandByMaterial = new Map<string, number>()
+    let masterySnapshot: MasterySnapshot | null = null
     if (adaptive) {
       try {
         const projections = await assessments.getMastery()
@@ -184,11 +222,13 @@ export function PracticeThis() {
             guidance.get(entry.id)?.recommendedBand ?? DEFAULT_BAND,
           ]),
         )
+        masterySnapshot = buildMasterySnapshot(projections, runMaterials.map((entry) => entry.id))
       } catch (masteryError) {
         // Adaptive is advisory: a failed mastery fetch falls back to the mid
         // band instead of blocking the run (#43).
         logger.warn('[practice] mastery fetch failed, using mid band', masteryError)
         bandByMaterial = new Map(runMaterials.map((entry) => [entry.id, DEFAULT_BAND]))
+        masterySnapshot = null
       }
     }
 
@@ -212,6 +252,10 @@ export function PracticeThis() {
           difficulty: adaptive ? (bandByMaterial.get(source.id) ?? DEFAULT_BAND) : Number(difficulty),
         },
         correlationId: crypto.randomUUID(),
+        // #43 Q11: the same projections behind the Adaptive band ride the
+        // request so the server steers within the one-family gate. Absent on
+        // fixed bands, cold start, and fetch failure (legacy path).
+        ...(masterySnapshot ? { masterySnapshot } : {}),
       }
       try {
         const job = await assessments.generateAssessment(request)

@@ -111,6 +111,79 @@ def _recipe_format(recipe: dict) -> str:
     return OBJECTIVE_FORMAT
 
 
+def _is_unit(value: object) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and 0.0 <= float(value) <= 1.0
+    )
+
+
+def apply_mastery_snapshot(
+    difficulty: int,
+    skill_tags: tuple[str, ...],
+    material_id: str,
+    snapshot: object,
+) -> tuple[int, tuple[str, ...]]:
+    """Steer one single-question blueprint from the client snapshot (#43 Q11).
+
+    Pure (no I/O): the weakest in-scope skill tag picks the band (one-band
+    ~0.7 rule around the recipe difficulty, clamped 1..5) and topics prefer
+    weakest-tagged coverage. In-scope is this call's material; when the
+    recipe names skill tags they intersect first, falling back to all of the
+    material's entries. Malformed or out-of-scope snapshots return the inputs
+    unchanged so legacy callers never break; family mix, counts, and refusal
+    behavior are untouched (only difficulty + skill order move).
+    """
+    if not isinstance(snapshot, dict):
+        return difficulty, tuple(skill_tags)
+    entries = snapshot.get("entries")
+    if not isinstance(entries, list):
+        return difficulty, tuple(skill_tags)
+    # Defense in depth: the router caps entries at 50, but a stored recipe
+    # predating the cap (or a recipe-carried bypass) must never spin the
+    # shared worker over an unbounded list.
+    entries = list(entries[:50])
+    scoped: dict[str, float] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if str(entry.get("materialId") or "") != material_id:
+            continue
+        tag = entry.get("skillTag")
+        mastery = entry.get("mastery")
+        if not isinstance(tag, str) or not tag.strip() or not _is_unit(mastery):
+            continue
+        key = tag.strip()
+        if len(key) > 120:
+            continue
+        value = float(mastery)
+        if key not in scoped or value < scoped[key]:
+            scoped[key] = value
+    if not scoped:
+        return difficulty, tuple(skill_tags)
+    if skill_tags:
+        wanted = {str(tag) for tag in skill_tags}
+        in_scope = {tag: mastery for tag, mastery in scoped.items() if tag in wanted}
+        if in_scope:
+            scoped = in_scope
+    weakest_tag = min(scoped, key=lambda tag: scoped[tag])
+    weakest = scoped[weakest_tag]
+    if weakest >= 0.75:
+        steered_difficulty = min(5, difficulty + 1)
+    elif weakest <= 0.65:
+        steered_difficulty = max(1, difficulty - 1)
+    else:
+        steered_difficulty = difficulty
+    if not skill_tags:
+        return steered_difficulty, (weakest_tag,)
+    ranked = sorted(
+        (str(tag) for tag in skill_tags),
+        key=lambda tag: (scoped.get(tag, float("inf")), tag),
+    )
+    return steered_difficulty, tuple(ranked)
+
+
 def _written_answer_block(accepted: dict) -> dict:
     """Server-only grading material written to `questions.answer_block`.
 
@@ -380,6 +453,28 @@ class GenerationWorker:
         # steer and the prompt. No tags and no scope means no steer, which the
         # context builder rejects rather than grounding on noise.
         skill_tags = tuple(str(tag) for tag in (recipe.get("skillTags") or []))
+        # Mastery snapshot steer (#43 Q11): absent proceeds legacy; present
+        # steers band by the weakest in-scope skill with weakest-first topics.
+        snapshot = recipe.get("masterySnapshot")
+        if snapshot is None:
+            logger.info(
+                "generation proceeding without mastery snapshot",
+                extra={"trace_id": correlation_id, "assessment_id": assessment_id},
+            )
+        else:
+            steered_difficulty, steered_tags = apply_mastery_snapshot(
+                difficulty, skill_tags, material_id, snapshot
+            )
+            logger.info(
+                "generation steered by mastery snapshot",
+                extra={
+                    "trace_id": correlation_id,
+                    "assessment_id": assessment_id,
+                    "difficulty": steered_difficulty,
+                    "skill_tags": list(steered_tags)[:10],
+                },
+            )
+            difficulty, skill_tags = steered_difficulty, steered_tags
         # The learner's page range, when one was requested (P4/D-05). The
         # router already rejected a malformed or out-of-range scope; an
         # unparseable one is treated as absent rather than crashing the job.

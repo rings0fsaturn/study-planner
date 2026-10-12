@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, afterEach } from 'vitest'
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
-import { PracticeThis } from './PracticeThis'
+import { PracticeThis, buildMasterySnapshot } from './PracticeThis'
 import { MaterialsProvider } from '../../materials/MaterialsProvider'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
 import { FakeMaterialClient } from '../../materials/testing/fakeMaterialClient'
@@ -497,5 +497,122 @@ describe('PracticeThis', () => {
 
     expect(await screen.findByText('Material is not ready yet')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Start practice run' })).not.toBeInTheDocument()
+  })
+
+  it('adaptive sends the snapshot behind the band on every call', async () => {
+    const client = new FakeMaterialClient([
+      material({}),
+      material({ id: 'mat-2', title: 'Database Internals', source: 'db.pdf' }),
+    ])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetMastery([
+      masteryProjection({ materialId: 'mat-1', mastery: 0.95, n: 8 }),
+      masteryProjection({ materialId: 'mat-2', mastery: 0.1, n: 3 }),
+    ])
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await addMaterial('Database Internals')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    for (const request of requests) {
+      expect(request.masterySnapshot).toEqual({
+        version: 'bkt-v1',
+        entries: [
+          { materialId: 'mat-1', skillTag: 'Exam structure', mastery: 0.95 },
+          { materialId: 'mat-2', skillTag: 'Exam structure', mastery: 0.1 },
+        ],
+      })
+    }
+  })
+
+  it('fixed bands send no snapshot (legacy path)', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    scriptGenerations(assessments, ['a-1', 'a-2'])
+
+    renderPractice(client, assessments)
+    await startRun(2)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(2)
+    })
+    const requests = assessments.generateAssessment.mock.calls.map(([request]) => request)
+    for (const request of requests) {
+      expect(request.masterySnapshot).toBeUndefined()
+    }
+  })
+
+  it('adaptive cold start sends no snapshot', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetMastery([])
+    scriptGenerations(assessments, ['a-1'])
+
+    renderPractice(client, assessments)
+    await screen.findByText('Focus')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(1)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    const [request] = assessments.generateAssessment.mock.calls.map(([entry]) => entry)
+    expect(request.masterySnapshot).toBeUndefined()
+  })
+
+  it('adaptive fetch failure sends no snapshot', async () => {
+    const client = new FakeMaterialClient([material({})])
+    const assessments = new FakeAssessmentClient()
+    assessments.scriptGetMastery(new AssessmentServiceError('network', 'request failed', true))
+    scriptGenerations(assessments, ['a-1'])
+
+    renderPractice(client, assessments)
+    await screen.findByText('Focus')
+    fireEvent.click(screen.getByRole('button', { name: 'Adaptive' }))
+    await startRun(1)
+
+    await waitFor(() => {
+      expect(assessments.generateAssessment).toHaveBeenCalledTimes(1)
+    })
+    const [request] = assessments.generateAssessment.mock.calls.map(([entry]) => entry)
+    expect(request.masterySnapshot).toBeUndefined()
+  })
+})
+
+describe('buildMasterySnapshot', () => {
+  it('returns null on empty projections', () => {
+    expect(buildMasterySnapshot([], ['mat-1'])).toBeNull()
+  })
+
+  it('scopes to the run materials and clamps mastery', () => {
+    const snapshot = buildMasterySnapshot(
+      [
+        masteryProjection({ materialId: 'mat-1', skillTag: 'Algebra', mastery: 1.4 }),
+        masteryProjection({ materialId: 'other', skillTag: 'Algebra', mastery: 0.5 }),
+      ],
+      ['mat-1'],
+    )
+    expect(snapshot).toEqual({
+      version: 'bkt-v1',
+      entries: [{ materialId: 'mat-1', skillTag: 'Algebra', mastery: 1 }],
+    })
+  })
+
+  it('drops malformed rows and caps at 50', () => {
+    const rows = [
+      masteryProjection({ materialId: 'mat-1', skillTag: '  ', mastery: 0.5 }),
+      masteryProjection({ materialId: 'mat-1', skillTag: 'NaN', mastery: NaN }),
+      ...Array.from({ length: 60 }, (_, index) =>
+        masteryProjection({ materialId: 'mat-1', skillTag: `s${index}`, mastery: 0.5 }),
+      ),
+    ]
+    const snapshot = buildMasterySnapshot(rows, ['mat-1'])
+    expect(snapshot?.entries).toHaveLength(50)
   })
 })

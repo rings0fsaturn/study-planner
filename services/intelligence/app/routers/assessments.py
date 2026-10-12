@@ -41,6 +41,13 @@ DIFFICULTY_MAX = 5
 SUPPORTED_FORMATS = (["objective"], ["written"], ["coding"])
 # Contract bound for WrittenAnswer.text (openapi, Phase 2 #41).
 WRITTEN_TEXT_MAX_LENGTH = 20000
+# Mastery-snapshot ceiling (#43 Q11 Slice 4): mirrors the loop/feedback caps
+# so one client envelope stays bounded. The snapshot rides top-level
+# `masterySnapshot` (openapi GenerationRequest), never inside the recipe.
+MASTERY_SNAPSHOT_MAX_ENTRIES = 50
+MASTERY_SNAPSHOT_VERSION_MAX_CHARS = 32
+MASTERY_SNAPSHOT_SKILL_MAX_CHARS = 120
+MASTERY_SNAPSHOT_ID_MAX_CHARS = 200
 
 
 def _coding_answer_failures(answer: dict) -> list[str]:
@@ -82,8 +89,7 @@ def _coding_answer_failures(answer: dict) -> list[str]:
             or not MEMORY_MIN_MB <= memory_limit_mb <= MEMORY_MAX_MB
         ):
             failures.append(
-                f"config.memoryLimitMb must be an integer from "
-                f"{MEMORY_MIN_MB} to {MEMORY_MAX_MB}"
+                f"config.memoryLimitMb must be an integer from {MEMORY_MIN_MB} to {MEMORY_MAX_MB}"
             )
     return failures
 
@@ -92,9 +98,7 @@ def _validate_recipe(recipe: dict) -> list[str]:
     failures: list[str] = []
     formats = recipe.get("formats")
     if formats not in SUPPORTED_FORMATS:
-        failures.append(
-            "formats must be ['objective'], ['written'], or ['coding'] for this slice"
-        )
+        failures.append("formats must be ['objective'], ['written'], or ['coding'] for this slice")
     question_count = recipe.get("questionCount")
     if question_count != 1:
         failures.append("questionCount must be 1 for this slice")
@@ -111,6 +115,11 @@ def _validate_recipe(recipe: dict) -> list[str]:
     ):
         failures.append("skillTags must be a list of non-empty strings")
     failures.extend(_validate_scope(recipe.get("scope")))
+    # The snapshot rides top-level `masterySnapshot`, never inside the
+    # recipe: a recipe-carried copy would bypass the snapshot caps (the
+    # worker reads the stored recipe), so reject it fail-closed here.
+    if "masterySnapshot" in recipe:
+        failures.append("masterySnapshot must ride top-level, not inside recipe")
     return failures
 
 
@@ -138,6 +147,91 @@ def _validate_scope(scope: object) -> list[str]:
 
 def _is_page(value: object) -> bool:
     return isinstance(value, int) and not isinstance(value, bool) and value >= 1
+
+
+def _is_unit(value: object) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and 0.0 <= float(value) <= 1.0
+    )
+
+
+def _validate_mastery_snapshot(value: object) -> list[str]:
+    """Shape check for top-level `masterySnapshot` (#43 Q11 Slice 4).
+
+    Absent stays absent (legacy callers never break): only a present but
+    malformed snapshot is rejected. Mirrors the openapi MasterySnapshot
+    (`additionalProperties: false`, entries capped).
+    """
+    if value is None:
+        return []
+    if not isinstance(value, dict):
+        return ["masterySnapshot must be an object with version and entries"]
+    failures: list[str] = []
+    unknown = sorted(set(value) - {"version", "entries"})
+    if unknown:
+        shown = ", ".join(unknown[:5])
+        suffix = f" (+{len(unknown) - 5} more)" if len(unknown) > 5 else ""
+        failures.append(f"masterySnapshot has unsupported keys: {shown}{suffix}")
+    version = value.get("version")
+    if (
+        not isinstance(version, str)
+        or not version.strip()
+        or len(version) > MASTERY_SNAPSHOT_VERSION_MAX_CHARS
+    ):
+        failures.append("masterySnapshot.version must be a non-empty string")
+    entries = value.get("entries")
+    if not isinstance(entries, list) or len(entries) > MASTERY_SNAPSHOT_MAX_ENTRIES:
+        failures.append(
+            f"masterySnapshot.entries must be a list of at most {MASTERY_SNAPSHOT_MAX_ENTRIES}"
+        )
+        return failures
+    for entry in entries:
+        if not isinstance(entry, dict):
+            failures.append("masterySnapshot.entries must be objects")
+            break
+        entry_unknown = sorted(set(entry) - {"materialId", "skillTag", "mastery"})
+        if entry_unknown:
+            shown = ", ".join(entry_unknown[:5])
+            suffix = f" (+{len(entry_unknown) - 5} more)" if len(entry_unknown) > 5 else ""
+            failures.append(f"masterySnapshot.entries have unsupported keys: {shown}{suffix}")
+            break
+        material_id = entry.get("materialId")
+        skill_tag = entry.get("skillTag")
+        if (
+            not isinstance(material_id, str)
+            or not material_id.strip()
+            or len(material_id) > MASTERY_SNAPSHOT_ID_MAX_CHARS
+        ):
+            failures.append("masterySnapshot.entries need a materialId string")
+            break
+        if (
+            not isinstance(skill_tag, str)
+            or not skill_tag.strip()
+            or len(skill_tag) > MASTERY_SNAPSHOT_SKILL_MAX_CHARS
+        ):
+            failures.append("masterySnapshot.entries need a non-empty skillTag")
+            break
+        if not _is_unit(entry.get("mastery")):
+            failures.append("masterySnapshot.entries need mastery in 0..1")
+            break
+    return failures
+
+
+def _normalized_snapshot(value: dict) -> dict:
+    """The validated snapshot in store shape (floats, no extra keys)."""
+    return {
+        "version": str(value["version"]).strip(),
+        "entries": [
+            {
+                "materialId": str(entry["materialId"]),
+                "skillTag": str(entry["skillTag"]).strip(),
+                "mastery": float(entry["mastery"]),
+            }
+            for entry in value["entries"]
+        ],
+    }
 
 
 def _scope_range_failure(recipe: dict, material: dict) -> str:
@@ -212,6 +306,7 @@ def generate_assessment(
     material_id = str(material_ids[0])
     recipe = body.get("recipe") or {}
     failures = _validate_recipe(recipe)
+    failures.extend(_validate_mastery_snapshot(body.get("masterySnapshot")))
     if failures:
         return service_error(request, IngestionError("invalid_request", "; ".join(failures)))
 
@@ -230,6 +325,12 @@ def generate_assessment(
     assessment_id = str(uuid.uuid4())
     job_id = str(uuid.uuid4())
     correlation_id = str(body.get("correlationId") or uuid.uuid4())
+    # The snapshot rides inside the stored recipe JSONB (no new column, no
+    # RPC change): the worker reads it from the same row, while the read
+    # route strips it so the echoed recipe stays the openapi AssessmentRecipe.
+    stored_recipe = dict(recipe)
+    if isinstance(body.get("masterySnapshot"), dict):
+        stored_recipe["masterySnapshot"] = _normalized_snapshot(body["masterySnapshot"])
     try:
         client.insert_assessment(
             {
@@ -237,7 +338,7 @@ def generate_assessment(
                 "user_id": user_id,
                 "client_id": str(body.get("clientId") or ""),
                 "material_id": material_id,
-                "recipe": recipe,
+                "recipe": stored_recipe,
                 "status": "generating",
                 "warnings": [],
                 "correlation_id": correlation_id,
@@ -341,10 +442,14 @@ def get_assessment(
         # The stored recipe is echoed so the client can re-request the same
         # shape after a failed generation. The retry path used to infer the
         # family from questions[0] — which does not exist when generation
-        # failed, so a written retry silently became objective (#41).
+        # failed, so a written retry silently became objective (#41). The
+        # mastery snapshot stays server-side: it steered this assessment's
+        # blueprint and never belongs on the openapi AssessmentRecipe.
         recipe = assessment.get("recipe")
         if isinstance(recipe, dict) and recipe:
-            payload["recipe"] = recipe
+            payload["recipe"] = {
+                key: value for key, value in recipe.items() if key != "masterySnapshot"
+            }
         return payload
     except IngestionError as exc:
         return service_error(request, exc)
@@ -375,9 +480,7 @@ def submit_assessment_attempt(
             ),
         )
     if not isinstance(body.get("answer"), dict):
-        return service_error(
-            request, IngestionError("invalid_request", "answer must be an object")
-        )
+        return service_error(request, IngestionError("invalid_request", "answer must be an object"))
     # Coding answers (#42): `{language, source, config}` is the only accepted
     # shape, and the contract caps are enforced here so a malformed submission
     # never reaches the queue. Output-prediction answers (`{value}`) carry no
@@ -387,9 +490,7 @@ def submit_assessment_attempt(
     if "source" in answer:
         failures = _coding_answer_failures(answer)
         if failures:
-            return service_error(
-                request, IngestionError("invalid_request", "; ".join(failures))
-            )
+            return service_error(request, IngestionError("invalid_request", "; ".join(failures)))
     # Written answers (#41, D-02): `{ text }` is the only accepted shape, and an
     # empty or oversized submission never reaches the queue. Objective answers
     # carry no `text` key, so this gate cannot touch them.
@@ -466,6 +567,4 @@ def list_assessment_attempts(
         rows = client.list_attempts(assessmentId)
     except IngestionError as exc:
         return service_error(request, exc)
-    return JSONResponse(
-        status_code=200, content=[_attempt_record(row) for row in rows]
-    )
+    return JSONResponse(status_code=200, content=[_attempt_record(row) for row in rows])
