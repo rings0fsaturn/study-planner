@@ -292,7 +292,7 @@ flowchart LR
 
 ### Phase 1: Pure archetype history builder + red-first tests
 
-**Status:** ✅ Complete 2026-10-16 — code review APPROVE-WITH-FIXES (3 med + 3 low, all applied), post-fix tests 5/5 + typecheck green
+**Status:** ✅ Complete — `913b527` (2026-10-16; review APPROVE-WITH-FIXES, 3 med + 3 low all applied; post-fix tests 5/5 + typecheck green)
 **Depends on:** none - can start immediately
 **Estimated scope:** ~3 files, ~400 lines
 

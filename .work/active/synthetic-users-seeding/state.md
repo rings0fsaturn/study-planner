@@ -2,7 +2,7 @@
 _Spec: .work/active/synthetic-users-seeding/plan/DECISIONS.md · Plan: .work/active/synthetic-users-seeding/plan/PLAN.md · STATUS row: synthetic-users-seeding · Status: active · Updated: 2026-10-16_
 
 ## Current state & next
-- Phase 1 complete + reviewed 2026-10-16 (builder + 5 contract tests + DevSeeder hooks, review APPROVE-WITH-FIXES with 6 fixes applied, post-fix verification green; commit + SHA record follow in this session).
+- Phase 1 complete + reviewed 2026-10-16 (builder + 5 contract tests + DevSeeder hooks, review APPROVE-WITH-FIXES with 6 fixes applied, post-fix verification green; committed as `913b527`).
 - Next: Phase 2 steady live pilot - needs SYNTH_STEADY_* env, generation/grading budget sign-off, rule-80 dry-run first.
 
 ## Done so far
@@ -13,7 +13,7 @@ _Spec: .work/active/synthetic-users-seeding/plan/DECISIONS.md · Plan: .work/act
 - ADR-0001 recorded for the no-backdoor boundary.
 - Credential hygiene repaired: .gitignore forward-slash pattern, cred file untracked, working-tree secrets preserved (staged, uncommitted).
 - Phase 1 done 2026-10-16: apps/app/src/dev/synthSeed.ts (pure ARCHETYPES builder, 20 bookings, Logged-only sessions, 1 run-pair/week, zero graded) + synthSeed.test.ts (plan-verbatim 3 contract tests, red-then-green) + DevSeeder.tsx __seedSynth/__wipeSynth hooks; DONE verification green (synthSeed 3/3, src/dev/ 5/5, typecheck clean, no console.*), pre-review.
-- Phase 1 review 2026-10-16 (code-reviewer subagent via open-code-review-delegate): verdict APPROVE-WITH-FIXES, 3/3 files covered, payload shapes + rules 17/30/31 clean; 6 fixes applied (entry guards + walk cap, DevSeeder try/catch + logger.error, D-07 zero-graded/run-count test pins, explicit material-miss throw, determinism comment, past-gated run emission); post-fix green (synthSeed 5/5, src/dev/ 7/7, typecheck clean, no console.*).
+- Phase 1 review 2026-10-16 (code-reviewer subagent via open-code-review-delegate): verdict APPROVE-WITH-FIXES, 3/3 files covered, payload shapes + rules 17/30/31 clean; 6 fixes applied (entry guards + walk cap, DevSeeder try/catch + logger.error, D-07 zero-graded/run-count test pins, explicit material-miss throw, determinism comment, past-gated run emission); post-fix green (synthSeed 5/5, src/dev/ 7/7, typecheck clean, no console.*); committed as `913b527`.
 - Provisioning script kept at /tmp/opencode/provision_synth_users.py (outside repo, prints no secrets).
 
 ## Flow trace
