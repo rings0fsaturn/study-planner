@@ -42,6 +42,8 @@ export function Session() {
   const { logEvent } = useSync();
 
   const lcRef = useRef<SessionLifecycle | null>(null);
+  const logEventRef = useRef(logEvent);
+  logEventRef.current = logEvent;
   const durabilityRef = useRef<DurabilityHooks | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const playerAdapterRef = useRef<YouTubePlayerAdapter | null>(null);
@@ -80,6 +82,7 @@ export function Session() {
 
     const lc = new SessionLifecycle({
       eventStore,
+      logEvent: (kind, payload, createdAt) => logEventRef.current(kind, payload, createdAt),
       durabilityHooks: durability,
       pomodoroConfig: DEFAULT_POMODORO_CONFIG,
       audioContext: null,

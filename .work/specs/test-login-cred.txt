@@ -1,2 +1,0 @@
-email=iamrohitsaji@gmail.com
-password=123456

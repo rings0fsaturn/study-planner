@@ -39,6 +39,7 @@ describe('SessionLifecycle', () => {
   function makeDeps(overrides?: Partial<SessionLifecycleDeps>): SessionLifecycleDeps {
     return {
       eventStore,
+      logEvent: (kind, payload, createdAt) => eventStore.append(kind, payload, createdAt),
       durabilityHooks: durability,
       now: makeNow(),
       pomodoroConfig: DEFAULT_POMODORO_CONFIG,

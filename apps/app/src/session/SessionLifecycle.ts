@@ -26,8 +26,15 @@ const STALE_PAUSED_MS = 12 * 60 * 60_000;   // 12 hours continuous pause
 
 export type SessionLifecycleListener = (state: SessionState) => void;
 
+export type SessionEventWriter = (
+  kind: string,
+  payload: Record<string, unknown>,
+  createdAt?: string,
+) => Promise<number>;
+
 export interface SessionLifecycleDeps {
   eventStore: EventStore;
+  logEvent: SessionEventWriter;
   durabilityHooks: DurabilityHooks;
   now?: () => Date;
   pomodoroConfig?: PomodoroConfig;
@@ -37,6 +44,7 @@ export interface SessionLifecycleDeps {
 
 export class SessionLifecycle {
   private readonly eventStore: EventStore;
+  private readonly logEvent: SessionEventWriter;
   private readonly durabilityHooks: DurabilityHooks;
   private readonly now: () => Date;
   private readonly pomodoroConfig: PomodoroConfig;
@@ -52,6 +60,7 @@ export class SessionLifecycle {
 
   constructor(deps: SessionLifecycleDeps) {
     this.eventStore = deps.eventStore;
+    this.logEvent = deps.logEvent;
     this.durabilityHooks = deps.durabilityHooks;
     this.now = deps.now ?? (() => new Date());
     this.pomodoroConfig = deps.pomodoroConfig ?? DEFAULT_POMODORO_CONFIG;
@@ -195,10 +204,7 @@ export class SessionLifecycle {
       plannedSessionMinutes: slotData.plannedSessionMinutes ?? slotData.plannedMinutes,
     };
 
-    await this.eventStore.append(
-      SESSION_EVENT_KINDS.STARTED,
-      payload as unknown as Record<string, unknown>
-    );
+    await this.emit(SESSION_EVENT_KINDS.STARTED, payload as unknown as Record<string, unknown>);
 
     this.lastPomodoroPhase = 'none';
     this.state = 'active';
@@ -252,10 +258,7 @@ export class SessionLifecycle {
       currentPomodoro: this.getPomodoroPhase().current,
     };
 
-    await this.eventStore.append(
-      SESSION_EVENT_KINDS.PAUSED,
-      payload as unknown as Record<string, unknown>
-    );
+    await this.emit(SESSION_EVENT_KINDS.PAUSED, payload as unknown as Record<string, unknown>);
 
     this.state = 'paused';
     this.notify();
@@ -284,10 +287,7 @@ export class SessionLifecycle {
       resumedAt,
     };
 
-    await this.eventStore.append(
-      SESSION_EVENT_KINDS.RESUMED,
-      payload as unknown as Record<string, unknown>
-    );
+    await this.emit(SESSION_EVENT_KINDS.RESUMED, payload as unknown as Record<string, unknown>);
 
     this.state = 'active';
     this.notify();
@@ -517,10 +517,7 @@ export class SessionLifecycle {
       abandonedAt: this.now().toISOString(),
     };
 
-    await this.eventStore.append(
-      SESSION_EVENT_KINDS.ABANDONED,
-      payload as unknown as Record<string, unknown>
-    );
+    await this.emit(SESSION_EVENT_KINDS.ABANDONED, payload as unknown as Record<string, unknown>);
 
     await this.clearActiveSession();
     this.state = 'idle';
@@ -606,14 +603,15 @@ export class SessionLifecycle {
       date: this.record.slotDate,
     };
 
-    await this.eventStore.append(
-      SESSION_EVENT_KINDS.LOGGED,
-      payload as unknown as Record<string, unknown>
-    );
+    await this.emit(SESSION_EVENT_KINDS.LOGGED, payload as unknown as Record<string, unknown>);
 
     await this.clearActiveSession();
     this.state = 'idle';
     this.notify();
+  }
+
+  private emit(kind: string, payload: Record<string, unknown>, createdAt?: string): Promise<number> {
+    return this.logEvent(kind, payload, createdAt);
   }
 
   private async persistToDb(): Promise<void> {
