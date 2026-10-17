@@ -16,3 +16,4 @@ Use property tests for invariants and focused examples for boundary behavior.
 Check `packages/py-roadmap-engine/` whenever shared engine behavior changes.
 Update TypeScript and Python parity tests when the same contract exists in both stacks.
 Update `design/algo/ROADMAP_ENGINE_GUIDE.md` when public algorithm behavior or guarantees change.
+Reuse the app-side event-to-engine mapping in `apps/app/src/progress/mapEvents.ts` (`mapSessions`, `findRoadmap`, `mapBookings`) for extraction and readers instead of re-deriving slots or weeks from events.

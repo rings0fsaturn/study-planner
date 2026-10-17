@@ -57,6 +57,7 @@ _No product behavior changes, no prod backdoors, no committed secrets._
 ## D6 - Shared React materials (locked 2026-10-16)
 
 - One set shared across all 4 users (titles suffixed per archetype): YouTube `LDB4uaJ87e0`, `e2e/pdf/learningreact.pdf` (350 pages, 7.2 MB, verified text-selectable), Comeau CSS-in-RSC article.
+- Source links (recorded 2026-10-16 so they are not lost): ARTICLE-URL `https://www.joshwcomeau.com/react/css-in-rsc/`, YOUTUBE-URL `https://www.youtube.com/watch?v=LDB4uaJ87e0`, PDF `e2e/pdf/learningreact.pdf`. Canonical copy: `.work/active/synthetic-users-seeding/docs/materials.txt`.
 - Sharing keeps ingestion cost ×1 and isolates learner behavior as the report variable instead of confounding it with content difficulty.
 - `learningreact.pdf` has no frozen retrieval baseline, so one full ingestion run (extract → chunk → embed via sidecar :8200) must precede grounded generation.
 - Per-user coverage per family: YouTube for session variety, PDF for scoped generation, code-bearing article for the coding arm (bare-notes refusal `code_not_derivable` is honest output, never patched around).

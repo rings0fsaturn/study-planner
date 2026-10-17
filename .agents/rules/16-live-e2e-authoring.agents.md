@@ -13,6 +13,12 @@ Gate the whole suite on `E2E_LIVE_EMAIL` / `E2E_LIVE_PASSWORD` and keep credenti
 `.work/specs/test-login-cred.txt` holds the shared dev account's `email` and `password` lines. They are of format email=<emailValue>
 password=<passowrd>
 A Supabase password grant sent the raw wrapped value answers `invalid_credentials` for an account that is perfectly valid, which reads exactly like a stale credential and sends you hunting for the wrong problem.
+Synthetic TEST USERs use `synth-<archetype>-email` and `synth-<archetype>-password` keys in the same file (one pair per archetype: steady, crammer, struggling, returning).
+Export one account per run into `SYNTH_*` env vars with a CRLF-safe extraction that never prints values:
+
+```bash
+export SYNTH_CRAMMER_EMAIL=$(grep '^synth-crammer-email=' .work/specs/test-login-cred.txt | cut -d= -f2- | tr -d '\r')
+```
 
 ## Skip scoping
 
@@ -51,6 +57,11 @@ Scope create-page clicks to the source grid so strict-mode collisions cannot hap
 const createSourceGrid = (page: Page) => page.locator('.material-source-grid')
 await createSourceGrid(page).getByRole('button', { name: /PDF document/i }).click()
 ```
+
+## Sign-in controls
+
+The sign-in form submits through a button named exactly `Continue`.
+`Continue` also matches the disabled `Continue with Google` button, so click with `{ exact: true }` or strict mode fails the run.
 
 ## Shared-account hygiene
 

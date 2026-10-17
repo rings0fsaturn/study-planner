@@ -428,7 +428,7 @@ Delete the two new files and revert `DevSeeder.tsx` (`git checkout -- apps/app/s
 
 ### Phase 2: Steady live pilot (ingest → study → generate → grade)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete (uncommitted - pilot PASS 2026-10-16, commit on explicit request per AGENTS.md)
 **Depends on:** Phase 1
 **Estimated scope:** ~2 files, ~350 lines (+ live runbook steps, no code for those)
 
@@ -465,7 +465,12 @@ If any of these fail, STOP - the codebase isn't in the expected state. Surface t
    import type { MaterialClientLike } from '../materials/materialClient'
    import { buildSynthHistory } from './synthSeed'
 
-   export interface GradeScript { format: 'objective' | 'written' | 'coding'; correct: boolean }
+    export interface GradeScript {
+      format: 'objective' | 'written' | 'coding'
+      correct: boolean
+      /** Server gate requires integer 1-5; ground truth is _validate_recipe in services/intelligence/app/routers/assessments.py. */
+      difficulty?: number
+    }
 
    export interface SynthDriverDeps {
      eventStore: EventStore
@@ -519,13 +524,22 @@ Delete the two new files. Pilot live data: `__wipeSynth()` clears local events; 
 
 #### Notes (filled in during implementation)
 
-*(empty - implementing agent records blockers, surprises, learnings here)*
+- Code half done 2026-10-16 (uncommitted): apps/app/src/dev/synthDriver.ts (ingestSharedSet + runGradedWeek, DI-only, sequential one-family calls, intent-only answer templates + opts.answerFor override for operator-authored steady answers) + synthDriver.test.ts (14 tests on FakeAssessmentClient/FakeMaterialClient, zero live calls).
+- TDD slices: 1 objective tracer (red: missing module) -> 2 written/coding routing (red: unsupported format) -> 3 mixed-week lock-in (fan-out shape, generating-poll, partial counts) -> 4 ingestSharedSet (red: not a function; order, ready poll, file upload, failed surfaces) -> 5 failure lock-ins (terminal failed, no-question, typed pass-through).
+- Review 2026-10-16 (code-reviewer subagent, ocr delegate: synthDriver.ts reviewable + test passed explicitly, system TS rules): APPROVE-WITH-FIXES, 3 med + 6 low all applied (failure-path log lines, answerFor override seam, server warning reason on failed generation, corrected sequential comment, generating-exhaustion timeout, partial-week warn, per-material requestId, validate-file-before-create, submit pass-through test). Post-fix: 14/14 green, typecheck clean, no console.*, no em-dashes.
+- Deviations from sketch (surfaced, not silent): getJob unused (assessment status is the ground truth; mirrors PracticeThis precedent); sequential not bounded-2 (conservative pilot choice; migration-032 carries an advisory lock so concurrency would be safe); script.correct documented as effort-intent (driver cannot derive real solutions; steady mostly-correct weeks need operator-authored answers via opts.answerFor at run time).
+- Live verification deferred, not attempted: managed runtime stopped, no SYNTH_STEADY_* in shell, no budget sign-off. Remaining for unblock: rule-80 dry-run (1 article + 1 generation + 1 scripted submit), then steady runbook (study-half append, shared-set ingest, 5 weekly runs, loop verdict capture, pilot asserts >=15 logged / 5 runs / >=12 graded / 1 verdict).
+- Dry-run PASS 2026-10-16 (user-approved spend, secret-safe /tmp/opencode/synth_dryrun.py): all 4 TEST USERs confirmed existing in Supabase Auth (no provisioning needed); steady sign-in, article insert, ingest ready (1 chunk), 1 objective generation, 1 scripted submit, server grade landed (score 0.0 correct False, grader objective - honest blind-index grade); X-Request-ID join verified in intelligence logs (generate 202 -> polls -> submit 201 -> attempts).
+- Dry-run caught 1 live contract bug the unit tests could not: server recipe gate requires integer difficulty 1-5 (assessments.py _validate_recipe), which the driver omitted. Fixed test-first: GradeScript.difficulty (default DEFAULT_BAND 3, reused from masteryBands) rides every generate call; synthDriver 15/15 green, typecheck clean. Dry-run materials to delete at pilot cleanup: e7923cc9 (first attempt, pre-difficulty-fix) + c7f4957d (passing run).
+- Second review 2026-10-16 (code-reviewer subagent, ocr delegate: synthDriver.ts + synthDriver.test.ts both passed explicitly, system TS rules): APPROVE-WITH-FIXES, 4 med + 4 low. Applied test-first: one requestId per material (clientId reuse, rule 17 join), single-material guard (server takes exactly one, assessments.py:302), no-question logger.warn, full-UUID clientAttemptId, upload-throw markUploadFailed + warn + rethrow; new pins: requestId reuse, ingest timeout, upload-failure mark, empty-input contracts, multi-material reject, partial-ready accept, bogus-format refuse. Skipped: resultId-fallback explicit throw (matches PracticeThis/AssessmentConfig precedent). Post-fix: synthDriver 23/23, src/dev/ 30/30, typecheck clean, no console.*, no em-dashes; uncommitted.
+- Pilot PASS 2026-10-16 (spend approved, secret-safe /tmp/opencode scripts, steady account): ingest shared set x3 ready (book 422 chunks, talk 167, article 15); temp env-gated spec (deleted after) __wipeSynth + __seedSynth steady 2026-09-11 -> LOCAL total 53 / logged 19 / runs 5 / roadmaps 1; 5 weekly runs attempted 12 graded 12 (w1-3 obj+written 6/6, coding self-check terminals 0/3; w4-5 3/3 incl. judge0 grades; w5 objective 1.0 correct); mastery rows book 10 / talk 8 / article 9; loop verdict `hold` (jev-1.13, requestId pilot-verdict-6b688c99, log join verified 4 lines); full app suite 105 files / 1213 tests green.
+- Pilot deviations (surfaced, not silent): coding self-check flakiness 3/5 (reference failed hidden tests, repair exhausted, honest terminal per rule 42; fresh-run retries available, unused); loop-decision endpoint requires Idempotency-Key header (422 without; verdict rerun with it); bulk-seeded events bypass sync_queue (only SyncEngine.logEvent enqueues, so CLOUD events = 0 while LOCAL = 53 - Phase 3 follow-up: route seeding through the queue or add an enqueue path, needs rule-33 care); dry-run junk materials e7923cc9 + c7f4957d still on the steady account for pilot cleanup.
 
 ---
 
 ### Phase 3: Remaining archetypes + replan → rebound proof
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete (uncommitted - live PASS 2026-10-16: 3-account ingest + synced appends + graded weeks + verdicts + cleanup + replay; commit on explicit request per AGENTS.md)
 **Depends on:** Phase 2 (pilot counts verified)
 **Estimated scope:** ~0-1 files, mostly live runbook + 1 test update
 
@@ -573,12 +587,24 @@ Per-user `__wipeSynth()` + material/assessment deletion; each account is isolate
 #### Notes (filled in during implementation)
 
 - Heads-up from Phase 1 (2026-10-16, not a re-plan): the study-half sums to ~50 logged (steady 19, crammer 10, struggling 10, returning 11) under the locked skip params, so logged >= 80 is unreachable before live grades land; cohort N >= 160 needs reconciling here (graded-per-run shape, or a surfaced decision to amend D-04) - stop and surface per plan protocol instead of improvising.
+- Code half done 2026-10-16 via TDD slices (struggling emission RED->GREEN -> returning/steady/crammer/additive/past-gate pins): ArchetypeParams.replan { afterWeek 0-indexed, option } (plan-verbatim name); struggling { afterWeek 2, increase-hours }, returning { afterWeek 2, extend-deadline }; emission 22:00 local on the last booking of afterWeek, past-gated (strict <, mirrors run gate), payload spreads the original RoadmapCreated plus roadmapCreatedAt back-pointer + option; hour/deadline intent rides option only, past bookings immutable.
+- Review 2026-10-16 (code-reviewer subagent, ocr delegate rule on both files, system TS group): APPROVE-WITH-FIXES, 2 warnings + 4 suggestions. Applied: hoisted replan const (closure ! fix), gap-week comment qualification, +1h timestamp pin (replan exactly 3600s after that week's run finish) + strict-boundary pin (anchor-date today emits 0), redundant Date-copy drop, jammed test-line fix. Skipped with reason: afterWeek rename (plan sketch names afterWeek; semantics pinned by tests instead), out-of-range warn (optional), prettier (binary absent; file style semicolon-free, matched). Post-fix: synthSeed 11/11, src/dev/ 36/36, typecheck clean, no console.*, no em-dashes; uncommitted.
+- Cohort math reconciled 2026-10-16 (surfaced, NOT decided): study-half logged 19+10+10+11 = 50, runs 5+5+5+3 = 18, graded ~48 projected at pilot shape (12/user over 5 weeks) -> N ~ 116 vs D-04 gate 160 (80 logged / 20 runs / 60 graded). Gaps: logged -30 (structural under locked skip params), runs -2 (returning gap weeks), graded -12. Needs a D-04 decision: amend the gate vs raise graded density (e.g. ~3 Q/week/user closes graded; logged-80 needs param changes). No silent change made.
+- Sync-gap disposition 2026-10-16 (surfaced for the live session): DevSeeder mounts OUTSIDE SyncRouter (App.tsx:270 vs 271-277) and logged-out render has no provider, so __seedSynth cannot reach useSync/logEvent without a move + guard + rule-34 provider tests. Options: (A) move DevSeeder inside with an optional-sync guard and loop logEvent preserving createdAt (recommended: reuses the existing enqueue path, zero new sync API); (B) new SyncEngine enqueue method for seeded batches (new contract surface, needs rule-33 offline/retry/restore/switching tests). Either way live verification (cloud row counts + fresh-device restore) needs the same creds + spend as the step-2 runbook, so the fix rides that session.
+- Live-gated remainder: per-account runbook (crammer/struggling/returning ingest + study-half append + weekly graded runs + verdicts + post-replan rebound), cohort gate check, junk-material delete (e7923cc9 + c7f4957d on steady), one seeded-user e2e replay (rule 10). Blocked: no SYNTH_*/E2E_LIVE_* names in shell env 2026-10-16, no spend sign-off this session.
+- UNBLOCKED 2026-10-16 (creds in .work/specs/test-login-cred.txt, spend approved). Sidecar/piston demand-started healthy.
+- Sync-gap fix implemented test-first 2026-10-16 (state.md Open item): useOptionalSyncContext export + __seedSynth logEvent loop (createdAt preserved) + bulkAppend logged-out fallback + DevSeeder moved inside SyncRouter (App.tsx) + __wipeSynth queue drain (review fix). Tests: DevSeeder.test.tsx 4 tests (synced path, fallback, wipe drain). Review (code-reviewer subagent, ocr): APPROVE-WITH-FIXES, both warnings applied test-first (wipe drain + ref stabilization for effect churn), cast simplified, BootScreen-gating documented. Post-fix: src/dev/ 39/39, full suite 105/1222, typecheck clean. Review also confirmed: App move safe (children always rendered), sequential loop intentional, test-over-spy justified.
+- Live runbook PASS 2026-10-16 (secret-safe /tmp/opencode scripts): ingest all 3 accounts ready 422/167/15 each. Study halves appended via temp browser spec (deleted after; fixes: Continue-exact button, waitForFunction for BootScreen-gated __seedSynth, IDB reset of events+sync_queue after run-1 pre-flush close, 25s flush hold): cloud crammer 44/44 (10 logged/5 runs/0 replan), struggling 45/45 (10/5/1), returning 42/42 (11/3/1). Steady re-appended synced 53/53 (19/5/0, matches pilot local) after discovering pilot bulkAppend left cloud 0. SYNC GAP CLOSED live. Latent defect found (follow-up, not changed): EventStore.wipe() clears events but not sync_queue (production contract question).
+- Graded weeks PASS: crammer 14/14 hold, struggling 11/11 hold, returning 6/9-slots hold (all jev-1.13, Idempotency-Key http 200). Answer effort is the honest lever (low: thin text/bare pass/blind index; high: full text/starterCode/blind index); server graded honestly (low weeks 0.0s; high weeks mixed). 8 coding honest terminals (fresh-run rule); retries gained 2/8 (crammer w2 + returning w1, both 0.0 judge0; struggling 0/4 twice - LLM grounding noise, accepted). Final server grades: steady 12, crammer 15, struggling 11, returning 7 = 45. Mastery rows: crammer 10/8/8, struggling 7/8/6, returning 3/2/9 (steady pilot 10/8/9).
+- Cohort gate AMENDED per user decision 2026-10-16 (not silent): D-04 literal (80 logged + 20 runs + 60 graded events) unreachable - locked skip params cap logged at 50, scripts bypass browser attemptFlow so local QuestionGraded = 0 (pilot precedent). Amended reading counts server-side grades as observations: N = 50 logged + 18 runs + 45 grades = 113 analyzable observations, disclosed. Each user spans 5 weeks; replan->rebound windows present (struggling increase-hours w3, returning extend-deadline post-gap).
+- Pilot cleanup DONE: junk assessment fd9d16f2 deleted via typed flow (row gone), junk materials e7923cc9 + c7f4957d deleted (204s), steady left with exactly its 3 pilot materials.
+- E2E replay PASS (steady, read-only, temp spec deleted after): sign-in renders onboarding step 1 cleanly, zero pageerrors. TEST USERs never onboard so the gate holds them there; library data verified API-side. No writes.
 
 ---
 
 ### Phase 4: Extraction through packages only (report tables)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete (uncommitted - code + review done 2026-10-16, live artifact emission deferred to report assembly; commit on explicit request per AGENTS.md)
 **Depends on:** Phase 3 (cohort gate met)
 **Estimated scope:** ~1 file, ~200 lines
 
@@ -646,7 +672,13 @@ Delete the new files and `plan/evidence/` artifacts. Live histories stay intact 
 
 #### Notes (filled in during implementation)
 
-*(empty - implementing agent records blockers, surprises, learnings here)*
+- Implemented 2026-10-16 via 5 TDD slices (trace gate -> adherence -> parity -> mastery -> verdict): apps/app/src/dev/synthExtract.ts (collectTraceIds, assertTraceable, adherenceTable, masteryTable, verdictTable) + synthExtract.test.ts (18 tests, 22 after review fixes).
+- Deviations from sketch (surfaced, not silent): (1) assertTraceable takes Event[] | Set<string> - server grades live outside local events (local QuestionGraded = 0, pilot/Phase-3 precedent), so mastery rows assert against server attempt-id sets; rows carry additive traceIds (+n on MasteryRow) or the gate cannot function. (2) Adherence reads via the existing mapSessions/findRoadmap/mapBookings (zero new event mapping); week fallback weekIndexForDate agrees with slot weekIndexes on date-only strings (pinned by the 390/week rows). (3) collectTraceIds includes event.createdAt - the RoadmapReplanned back-pointer is a creation timestamp by construction. (4) masteryTable takes server GradedObservation[] per material; empty observations emit no row (no grades, no claim).
+- Live-data honesty (no fabrication): all 4 loop verdicts are hold (jev-1.13), so converted=false everywhere and the D-02 suggest_replan->replan proof is ABSENT in the data - verdictTable pins the join and reports false honestly; struggling/returning replans exist scripted, not verdict-triggered. Amended N=113 (50 logged + 18 runs + 45 server grades) is the extraction universe, not the literal D-04 160.
+- Parity finding: table actuals read activeMinutes-first (matches 3 of 4 package readers) while computeProgress totals duration-only; synth emits them equal so reconciliation holds on synth data, and a dedicated test pins the exact divergence (snapshot - table = duration - activeMinutes) on divergent input instead of masking it. Extraction uses findRoadmap (slot denominator), not the UI's findActiveRoadmap (ledger denominator) - both package-owned.
+- plan/evidence/ artifacts NOT emitted: per-material correct sequences need live server reads and the managed runtime is stopped (user FYI 2026-10-16); emission runs at report assembly against live reads, using these functions. Report prose drafting stays out of scope.
+- Review 2026-10-16 (code-reviewer subagent, ocr delegate rule on both files, system TS group): APPROVE-WITH-FIXES, 3 med + 10 low. Applied test-first: parity-test false-green guard (throw), activeMinutes divergence pin, converted-row replan trace, NaN-date throw + agreement comment, planned-week scope + single-roadmap docs, reprioritize pin (never converts), verdict order-assumption doc, 390 derivation comment, cold-start-delta JSDoc, typeof-narrowed test cast. Skipped with reason: permissive trace-id set (accepted for N=4, fabrication test pins the gate), empty-traceIds legacy week (unreachable on synth). Post-fix: synthExtract 22/22, src/dev/ 61/61, typecheck + eslint clean, no console.*, no em-dashes.
+- DONE verification: synthExtract 22/22 incl. fabrication-negative tests; src/dev/ 61/61; full app 1238/1240 (2 pre-existing TZ flakes, forks-green); typecheck + app lint clean. Backend pytest: failures are order-dependent integration flakes (5 alone, 20 full-run, solo-pass) in files a frontend-only diff cannot influence; recorded as pre-existing, not Phase 4 scope.
 
 ---
 

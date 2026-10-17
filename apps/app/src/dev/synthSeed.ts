@@ -4,6 +4,7 @@ import type {
   PracticeRunFinishedPayload,
   PracticeRunStartedPayload,
   RoadmapCreatedPayload,
+  RoadmapReplannedPayload,
   SessionBookedPayload,
 } from '../sync/types'
 import type { SessionLoggedPayload } from '../session/types'
@@ -13,13 +14,15 @@ export interface ArchetypeParams {
   weeklyPace: number[]
   skipProbability: number
   gapWeeks?: number[]
+  /** 0-indexed week after which a RoadmapReplanned fires (D-02 loop-close proof). */
+  replan?: { afterWeek: number; option: NonNullable<RoadmapReplannedPayload['option']> }
 }
 
 export const ARCHETYPES: Record<ArchetypeParams['key'], ArchetypeParams> = {
   steady: { key: 'steady', weeklyPace: [0.9, 0.92, 0.88, 0.95, 0.93], skipProbability: 0.05 },
   crammer: { key: 'crammer', weeklyPace: [0.4, 0.45, 0.5, 1.1, 1.2], skipProbability: 0.25 },
-  struggling: { key: 'struggling', weeklyPace: [0.6, 0.55, 0.5, 0.62, 0.8], skipProbability: 0.3 },
-  returning: { key: 'returning', weeklyPace: [0.85, 0.0, 0.0, 0.7, 0.9], skipProbability: 0.05, gapWeeks: [1, 2] },
+  struggling: { key: 'struggling', weeklyPace: [0.6, 0.55, 0.5, 0.62, 0.8], skipProbability: 0.3, replan: { afterWeek: 2, option: 'increase-hours' } },
+  returning: { key: 'returning', weeklyPace: [0.85, 0.0, 0.0, 0.7, 0.9], skipProbability: 0.05, gapWeeks: [1, 2], replan: { afterWeek: 2, option: 'extend-deadline' } },
 }
 
 type OmitId = Omit<Event, 'id'>
@@ -272,6 +275,32 @@ export function buildSynthHistory(
       payload: finishedPayload as unknown as Record<string, unknown>,
       createdAt: iso(finishedAt),
     })
+  }
+
+  // Replan is additive: one RoadmapReplanned revising the original (back-pointer
+  // roadmapCreatedAt, never rewritten), fired 22:00 on the last booking date of
+  // replan.afterWeek (0-indexed week whose last booking anchors it) so it sorts
+  // after that week's run finish (21:00) where one exists; gap weeks emit no runs.
+  // Past-gated like runs. Hour/deadline intent rides option only; past bookings
+  // stay immutable.
+  if (params.replan) {
+    const replan = params.replan
+    const weekBookings = bookings.filter((b) => b.weekIndex === replan.afterWeek)
+    const anchorDateStr = weekBookings.length > 0 ? weekBookings[weekBookings.length - 1].date : undefined
+    if (anchorDateStr !== undefined && anchorDateStr < todayStr) {
+      const replannedAt = dateFromDateStr(anchorDateStr)
+      replannedAt.setHours(22, 0, 0, 0)
+      const replannedPayload: RoadmapReplannedPayload = {
+        ...roadmapPayload,
+        roadmapCreatedAt,
+        option: replan.option,
+      }
+      events.push({
+        kind: 'RoadmapReplanned',
+        payload: replannedPayload as unknown as Record<string, unknown>,
+        createdAt: iso(replannedAt),
+      })
+    }
   }
 
   events.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())

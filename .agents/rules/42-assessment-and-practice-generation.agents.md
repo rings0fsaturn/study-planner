@@ -8,6 +8,7 @@ description: Preserve the generation, attempt, and practice-run contracts for as
 ## One family per generation call
 
 Send exactly one entry in `recipe.formats` and `questionCount: 1`.
+Verify required recipe fields against the server gate before sending: `_validate_recipe` in `services/intelligence/app/routers/assessments.py` is the ground truth, not the plan sketch or the contract file.
 The service gate in `services/intelligence/app/routers/assessments.py` admits a single family and a single question per call, so an N-question run is N calls.
 Build a mixed run by alternating the family per call, never by sending two families in one recipe.
 Use the bounded concurrency the practice config already uses, not an unbounded fan-out.

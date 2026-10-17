@@ -1,0 +1,2 @@
+ARTICLE-URL=https://www.joshwcomeau.com/react/css-in-rsc/
+YOUTUBE-URL=https://www.youtube.com/watch?v=LDB4uaJ87e0

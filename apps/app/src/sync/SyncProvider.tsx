@@ -252,3 +252,7 @@ export function useSyncContext() {
   }
   return context;
 }
+
+export function useOptionalSyncContext() {
+  return useContext(SyncContext);
+}

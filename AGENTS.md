@@ -160,7 +160,7 @@ pnpm dev:intelligence
 
 # Verification
 pnpm --filter app test
-uv run pytest
+uv run pytest # from services/intelligence/ (root collection collides across packages)
 pnpm typecheck
 pnpm lint
 pnpm test:e2e

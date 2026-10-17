@@ -1,5 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useEventStoreContext } from '../events/EventStoreProvider'
+import { useOptionalSyncContext } from '../sync/SyncProvider'
 import { logger } from '../lib/logger'
 import { seedTestData, wipeTestData } from './seedTestData'
 import { buildSynthHistory, type ArchetypeParams } from './synthSeed'
@@ -19,6 +20,14 @@ declare global {
 
 export function DevSeeder() {
   const { eventStore, ready } = useEventStoreContext()
+  // Ref, not dep: SyncContext value is a fresh literal per provider render, so
+  // depending on it would re-register window hooks on every syncState tick
+  // (including ticks the seed loop itself causes). The ref always reads the
+  // latest engine; an in-flight loop keeps its captured sync object, which is
+  // safe because logEvent resolves the engine at call time.
+  const sync = useOptionalSyncContext()
+  const syncRef = useRef(sync)
+  syncRef.current = sync
 
   useEffect(() => {
     if (!ready || !eventStore) return
@@ -32,7 +41,18 @@ export function DevSeeder() {
     window.__seedSynth = async (archetype, materialIds, startDate) => {
       try {
         const events = buildSynthHistory(archetype, materialIds, startDate)
-        await eventStore.bulkAppend(events)
+        // N ~50: sequential logEvent is intentional (order + createdAt
+        // preserved; flush debounce coalesces network). Unavailable while
+        // SyncProvider BootScreen-gates initial restore; logged-out falls back
+        // to local-only bulkAppend (pre-fix behavior).
+        const sync = syncRef.current
+        if (sync) {
+          for (const event of events) {
+            await sync.logEvent(event.kind, event.payload, event.createdAt)
+          }
+        } else {
+          await eventStore.bulkAppend(events)
+        }
         logger.info(`[dev] Seeded synth history for ${archetype}: ${events.length} events.`)
       } catch (error) {
         logger.error('[dev] __seedSynth failed:', error)
@@ -41,6 +61,10 @@ export function DevSeeder() {
     }
     window.__wipeSynth = async () => {
       await wipeTestData(eventStore)
+      // DEV-only queue drain: wipe() clears events but not sync_queue, so
+      // without this a wipe-then-reseed (or wipe-before-flush) would push
+      // wiped events to cloud. Checkpoint (sync_meta) intentionally kept.
+      await eventStore.table('sync_queue').clear()
     }
 
     logger.info(

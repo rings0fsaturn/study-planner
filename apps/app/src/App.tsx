@@ -267,8 +267,8 @@ function App() {
           <MaterialsProvider>
             <AssessmentProvider>
               <GuideProvider>
-                {import.meta.env.DEV && <DevSeeder />}
                 <SyncRouter>
+                  {import.meta.env.DEV && <DevSeeder />}
                   <div className="app">
                     <ErrorBoundary>
                       <AppRoutes />
