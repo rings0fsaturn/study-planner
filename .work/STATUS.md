@@ -16,7 +16,7 @@ Tags: `[APP]` product web app · `[RESEARCH]` research tier · `[KT]` knowledge-
 | [APP][RESEARCH] | repair-validation-resilience | **Code complete + verified 2026-09-27, uncommitted**: repair terminal names the real gate, bounded resample for every family, every silent terminal/retry branch logs `trace_id`; 101 focused tests green, live coding run clean, 2 review-agent rounds APPROVE. Awaiting commit decision. | active/repair-validation-resilience/state.md |
 | [APP] | assessment-library-cache | **P1-P3 + live verification done 2026-10-09**: cache-first hubs green (62 focused tests, R1 PASS, R2 PASS-WITH-MINORS on both phases); live reload painted 9 cached rows at 1.3 s under 4 s-delayed revalidation, offline retry honest, request-id joined; AC4 live deferred (single account). Awaiting wrap. | active/assessment-library-cache/state.md |
 | [DISSERTATION] | phase2-report-prep | Grill complete 2026-10-14: 7/7 OQs resolved (toolchain READY, Letter/Times switch, front-matter facts, Ch2-only, appendix shell); build task unblocked. | active/phase2-report-prep/state.md |
-| [APP][RESEARCH] | synthetic-users-seeding | Phase 4 extraction DONE 2026-10-16 (synthExtract 22/22 via packages only + traceability gate, review APPROVE-WITH-FIXES applied; honest holds: 4x hold verdicts, 0 conversions; uncommitted). | active/synthetic-users-seeding/state.md |
+| [APP][RESEARCH] | synthetic-users-seeding | Phases 2-4 committed `9f7d08e` 2026-10-16 (extraction 22/22 via packages only + traceability gate, review fixes applied; honest holds: 4x hold, 0 conversions; report assembly next). | active/synthetic-users-seeding/state.md |
 
 ## Queued
 | Tag | Task | Note (one line) | Detail |

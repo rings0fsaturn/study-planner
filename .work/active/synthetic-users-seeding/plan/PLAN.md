@@ -428,7 +428,7 @@ Delete the two new files and revert `DevSeeder.tsx` (`git checkout -- apps/app/s
 
 ### Phase 2: Steady live pilot (ingest → study → generate → grade)
 
-**Status:** ✅ Complete (uncommitted - pilot PASS 2026-10-16, commit on explicit request per AGENTS.md)
+**Status:** ✅ Complete — `9f7d08e` (pilot PASS 2026-10-16)
 **Depends on:** Phase 1
 **Estimated scope:** ~2 files, ~350 lines (+ live runbook steps, no code for those)
 
@@ -539,7 +539,7 @@ Delete the two new files. Pilot live data: `__wipeSynth()` clears local events; 
 
 ### Phase 3: Remaining archetypes + replan → rebound proof
 
-**Status:** ✅ Complete (uncommitted - live PASS 2026-10-16: 3-account ingest + synced appends + graded weeks + verdicts + cleanup + replay; commit on explicit request per AGENTS.md)
+**Status:** ✅ Complete — `9f7d08e` (live PASS 2026-10-16: 3-account ingest + synced appends + graded weeks + verdicts + cleanup + replay)
 **Depends on:** Phase 2 (pilot counts verified)
 **Estimated scope:** ~0-1 files, mostly live runbook + 1 test update
 
@@ -604,7 +604,7 @@ Per-user `__wipeSynth()` + material/assessment deletion; each account is isolate
 
 ### Phase 4: Extraction through packages only (report tables)
 
-**Status:** ✅ Complete (uncommitted - code + review done 2026-10-16, live artifact emission deferred to report assembly; commit on explicit request per AGENTS.md)
+**Status:** ✅ Complete — `9f7d08e` (code + review done 2026-10-16; live artifact emission deferred to report assembly)
 **Depends on:** Phase 3 (cohort gate met)
 **Estimated scope:** ~1 file, ~200 lines
 

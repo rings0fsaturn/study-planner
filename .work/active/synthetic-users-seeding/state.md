@@ -1,13 +1,13 @@
 # State - synthetic-users-seeding
-_Status: active (Phase 4 code + review DONE 2026-10-16, uncommitted) · Updated: 2026-10-16_
+_Status: active (Phases 2-4 committed as 9f7d08e 2026-10-16; report assembly next) · Updated: 2026-10-16_
 
 ## Current state & next
 - Phase 1 complete + reviewed 2026-10-16 (builder + 5 contract tests + DevSeeder hooks, review APPROVE-WITH-FIXES with 6 fixes applied, post-fix verification green; committed as `913b527`).
-- Phase 2 code half done + reviewed 2026-10-16, uncommitted (synthDriver.ts + 23 tests after second review: APPROVE-WITH-FIXES, 4 med + 4 low applied test-first, post-fix 23/23 + src/dev/ 30/30 + typecheck green).
+- Phase 2 code half done + reviewed 2026-10-16, committed as `9f7d08e` (synthDriver.ts + 23 tests after second review: APPROVE-WITH-FIXES, 4 med + 4 low applied test-first, post-fix 23/23 + src/dev/ 30/30 + typecheck green).
 - Dry-run PASS 2026-10-16 (approved spend): all 4 TEST USERs exist (no provisioning); steady sign-in/insert/ingest-ready-1-chunk/generate/submit/grade all green, request-id join verified; caught + fixed missing recipe difficulty (GradeScript.difficulty default 3, 15/15 green).
 - Retro follow-ups done 2026-10-16: contract-drift ticket filed as rings0fsaturn/study-planner#82; rule 42 + PLAN.md step-2 sketch now point at `_validate_recipe` as the recipe-shape ground truth.
-- Phase 4 DONE 2026-10-16 (uncommitted): synthExtract.ts + 22 tests via packages only + traceability gate, review APPROVE-WITH-FIXES (3 med + 8 low applied test-first), post-fix green (synthExtract 22/22, src/dev/ 61/61, typecheck + lint clean); honest holds (4x hold verdicts, 0 conversions, D-02 proof absent); live artifact emission deferred to report assembly (runtime stopped).
-- Next: commit on explicit request only (AGENTS.md); then report assembly (live artifact emission against server reads). Pilot scripts + Phase 3 scripts kept at /tmp/opencode/synth_{pilot,phase3}_*.py + logs + results JSONs (outside repo, print no secrets); runtime stays stopped unless report work needs it (user FYI 2026-10-16).
+- Phase 4 DONE 2026-10-16, committed as `9f7d08e`: synthExtract.ts + 22 tests via packages only + traceability gate, review APPROVE-WITH-FIXES (3 med + 8 low applied test-first), post-fix green (synthExtract 22/22, src/dev/ 61/61, typecheck + lint clean); honest holds (4x hold verdicts, 0 conversions, D-02 proof absent); live artifact emission deferred to report assembly (runtime stopped).
+- Next: report assembly (live artifact emission against server reads, then prose drafting as a later task). Pilot scripts + Phase 3 scripts kept at /tmp/opencode/synth_{pilot,phase3}_*.py + logs + results JSONs (outside repo, print no secrets); runtime stays stopped unless report work needs it (user FYI 2026-10-16).
 
 ## Done so far
 - Grill 2026-10-16 locked 8 decisions (claims, loop + proof, 4 archetypes, 5x4 matrix N>=160, live-USER boundary, shared React set, accounts, hygiene); see plan/DECISIONS.md.
@@ -39,17 +39,17 @@ _Status: active (Phase 4 code + review DONE 2026-10-16, uncommitted) · Updated:
 - apps/app/src/dev/synthSeed.ts - Phase 1 pure history builder (new, committed with Phase 1).
 - apps/app/src/dev/synthSeed.test.ts - Phase 1 contract tests, 3 plan-verbatim + 2 review pins (new, committed with Phase 1).
 - apps/app/src/dev/DevSeeder.tsx - added test-only __seedSynth/__wipeSynth with error logging (modified, committed with Phase 1).
-- apps/app/src/dev/synthDriver.ts - Phase 2 live driver, ingestSharedSet + runGradedWeek (new, uncommitted).
-- apps/app/src/dev/synthDriver.test.ts - Phase 2 driver tests, 23 fake-client tests (new, uncommitted).
-- apps/app/src/dev/synthSeed.ts - Phase 3 replan param + RoadmapReplanned emission (modified, uncommitted).
-- apps/app/src/dev/synthSeed.test.ts - Phase 3 replan tests, 11 total (modified, uncommitted).
-- apps/app/src/dev/DevSeeder.tsx - Phase 3 sync-gap fix: logEvent loop + fallback + wipe drain (modified, uncommitted).
-- apps/app/src/dev/DevSeeder.test.tsx - Phase 3 provider tests, 4 tests (new, uncommitted).
-- apps/app/src/sync/SyncProvider.tsx - useOptionalSyncContext export (modified, uncommitted).
-- apps/app/src/App.tsx - DevSeeder moved inside SyncRouter (modified, uncommitted).
-- .work/active/synthetic-users-seeding/plan/PLAN.md - Phase 2 + Phase 3 + Phase 4 Status + Notes recorded (modified, uncommitted).
-- apps/app/src/dev/synthExtract.ts - Phase 4 table/figure extraction through packages only + traceability gate (new, uncommitted).
-- apps/app/src/dev/synthExtract.test.ts - Phase 4 tests, 22 (new, uncommitted).
+- apps/app/src/dev/synthDriver.ts - Phase 2 live driver, ingestSharedSet + runGradedWeek (new, committed 9f7d08e).
+- apps/app/src/dev/synthDriver.test.ts - Phase 2 driver tests, 23 fake-client tests (new, committed 9f7d08e).
+- apps/app/src/dev/synthSeed.ts - Phase 3 replan param + RoadmapReplanned emission (modified, committed 9f7d08e).
+- apps/app/src/dev/synthSeed.test.ts - Phase 3 replan tests, 11 total (modified, committed 9f7d08e).
+- apps/app/src/dev/DevSeeder.tsx - Phase 3 sync-gap fix: logEvent loop + fallback + wipe drain (modified, committed 9f7d08e).
+- apps/app/src/dev/DevSeeder.test.tsx - Phase 3 provider tests, 4 tests (new, committed 9f7d08e).
+- apps/app/src/sync/SyncProvider.tsx - useOptionalSyncContext export (modified, committed 9f7d08e).
+- apps/app/src/App.tsx - DevSeeder moved inside SyncRouter (modified, committed 9f7d08e).
+- .work/active/synthetic-users-seeding/plan/PLAN.md - Phase 2 + Phase 3 + Phase 4 Status + Notes recorded (modified, committed 9f7d08e).
+- apps/app/src/dev/synthExtract.ts - Phase 4 table/figure extraction through packages only + traceability gate (new, committed 9f7d08e).
+- apps/app/src/dev/synthExtract.test.ts - Phase 4 tests, 22 (new, committed 9f7d08e).
 
 ## Pitfalls & rules
 - Must never print, commit, or copy test credentials or service keys (AGENTS.md env rules).
@@ -64,7 +64,6 @@ _Status: active (Phase 4 code + review DONE 2026-10-16, uncommitted) · Updated:
 - Pilot-first sequencing: steady live pilot (Phase 2) gates the other three archetypes (2026-10-16).
 
 ## Open
-- Commit Phase 1-4 work on explicit request (AGENTS.md: no auto-commit).
 - Report assembly follow-up: emit plan/evidence/ artifacts via Phase 4 functions against live reads (needs runtime + server attempt records); report prose drafting is a later task.
 - Pre-existing backend failure (observed 2026-10-16, not this task): tests/test_v1_integration.py golden mismatch on compute-calibration globalMultiplier (0.9030 vs golden 0.8993); fails deterministically at file level with varying counts under full-suite load. Frontend-only task diff cannot influence it; needs a backend owner (possible parallel-lane drift).
 - Follow-up (found, not changed): EventStore.wipe() clears events but not sync_queue - decide if production wipe should drain the queue or DEV-only drain stands.
