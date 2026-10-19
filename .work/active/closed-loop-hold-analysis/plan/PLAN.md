@@ -204,7 +204,7 @@ flowchart LR
 
 ### Phase 1: Recalibrate the loop confidence gate from logged verdicts
 
-**Status:** ✅ Complete — uncommitted (2026-10-19; pending explicit commit per AGENTS.md; review APPROVE-WITH-FIXES, 3 low applied)
+**Status:** ✅ Complete — `493e1be` (2026-10-19; review APPROVE-WITH-FIXES, 3 low applied; loop 17/17 + loop/jev 35/35 green, ruff clean, live B-dip routes suggest_replan)
 **Depends on:** none
 **Estimated scope:** ~2 files, threshold value plus tests (sweep script lives in `/tmp`, not the repo)
 

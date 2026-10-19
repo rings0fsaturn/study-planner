@@ -22,5 +22,5 @@ _state.md: .work/active/closed-loop-hold-analysis/state.md · Updated: 2026-10-1
 - 2026-10-19 DONE live E2E at gate 0.7: restart intelligence, B-dip probe rid hold-probe-B-dip-4c4e27f1 -> choice suggest_replan 0.83/0.72 -> verdict suggest_replan; 4-line join verified.
 - 2026-10-19 CORRECTED evidence arithmetic: the final 0.83 sample joins the sweep case set -> N=21, gates 0.5-0.7 = 0.857, 0.8 = 0.810, 0.9 = 0.476; comment + Notes updated to match.
 - 2026-10-19 REVIEW (OCR delegate preview/rule + code-reviewer subagent, both files, reviewer re-ran the sweep): APPROVE-WITH-FIXES, 3 low, no higher. Applied: 0.9-gate claim corrected (keeps 10/21, discards B-dip 0.79-0.85), test BUG-pin comment narrowed, brittle `LOOP_APPROVE_AT < APPROVE_AT` assert dropped. Post-fix: loop 17/17, loop+jev 35/35, ruff clean.
-- 2026-10-19 DONE Phase 1 COMPLETE (uncommitted per AGENTS.md): PLAN Status + Notes, state.md, STATUS.md row updated; runtime stopped; probe scripts kept in /tmp/opencode (print no secrets).
+- 2026-10-19 DONE Phase 1 COMPLETE (committed `493e1be`): PLAN Status + Notes, state.md, STATUS.md row updated; runtime stopped; probe scripts kept in /tmp/opencode (print no secrets). Docs sha follow-up committed separately.
 
