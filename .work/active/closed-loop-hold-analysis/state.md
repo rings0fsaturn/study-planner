@@ -1,12 +1,12 @@
 # State - closed-loop-hold-analysis
-_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 committed `249f6fa`, Phase 4 implemented + reviewed + verified, commit pending) · Updated: 2026-10-19_
+_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phases 1-4 complete: `493e1be`, `2a15115`, `249f6fa`, `5b1f61a`) · Updated: 2026-10-19_
 
 ## Current state & next
 - Phase 1 COMPLETE 2026-10-19, committed `493e1be`: `LOOP_APPROVE_AT = 0.7` shipped, live-verified; review APPROVE-WITH-FIXES, 3 low all applied.
 - Phase 2 COMPLETE 2026-10-19, committed `2a15115`: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified.
 - Phase 3 COMPLETE 2026-10-19, committed `249f6fa`: verdict identity (hash + settle time) -> `/replan` nav handoff -> `RoadmapReplanned` mirror -> extraction exact-pair join with verdict-before-replan, real `option`, legacy rows read as not-converted. Suites green (full app 1278/1278 forks), review APPROVE-WITH-FIXES fully applied (2 high + 2 med + 5 low) and re-verified.
-- Phase 4 COMPLETE (test files only) 2026-10-19, commit pending user go-ahead: backend gate brace + live-band pins in `test_loop_decision.py` (18/18), frontend live B-dip input pin in `useLoopDecision.test.ts` (33/33), full app 1279/1279 forks, typecheck + lint + ruff clean. Review APPROVE-WITH-FIXES (2 medium + 4 low) all applied + re-verified.
-- Next: commit Phase 4 (plan step 7) after user go-ahead, then record the SHA in a docs follow-up.
+- Phase 4 COMPLETE (test files only) 2026-10-19, committed `5b1f61a`: backend gate brace + live-band pins in `test_loop_decision.py` (18/18), frontend live B-dip input pin in `useLoopDecision.test.ts` (33/33), full app 1279/1279 forks, typecheck + lint + ruff clean. Review APPROVE-WITH-FIXES (2 medium + 4 low) all applied + re-verified.
+- All four plan phases complete; no further phase work in this plan. Next: user direction (task wrap vs follow-on report work); the SHA of Phase 4 is recorded by the docs follow-up.
 - Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 3 needed no JEV spend. Ask before further spend.
 
 ## Done so far
@@ -89,5 +89,5 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - User selected Phase 1, 2, and 3 (2026-10-19), then Phase 4 on a fresh instruction (2026-10-19, this session).
 
 ## Open
-- Phase 4 commit pending user go-ahead (implementation + review + verification done); record the SHA in a docs follow-up afterwards.
+- none (all four plan phases complete and committed; the docs follow-up records the Phase 4 SHA).
 - Live probe budget exhausted; ask before more JEV spend.

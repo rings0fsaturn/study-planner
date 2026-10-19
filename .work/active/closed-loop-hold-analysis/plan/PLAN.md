@@ -387,7 +387,7 @@ Revert the four files (`git checkout --` if uncommitted). Additive fields alread
 
 ### Phase 4: Coverage that would have caught the hold
 
-**Status:** ✅ Complete - uncommitted (2026-10-19; review APPROVE-WITH-FIXES applied; backend loop 18/18, full app 1279/1279 forks, typecheck + lint clean; commit pending user go-ahead)
+**Status:** ✅ Complete - `5b1f61a` (2026-10-19; review APPROVE-WITH-FIXES applied; backend loop 18/18, full app 1279/1279 forks, typecheck + lint clean)
 **Depends on:** Phases 1-3 (pins the fixed behavior end to end)
 **Estimated scope:** test files only, no production change
 
