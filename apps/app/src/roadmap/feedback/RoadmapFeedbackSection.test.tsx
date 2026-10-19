@@ -82,6 +82,32 @@ async function seedCache(projection: ReturnType<typeof masteryProjection>) {
   store.close()
 }
 
+async function seedGradedAttempts(
+  rows: Array<{ clientAttemptId: string; materialId: string; gradedAt: string }>,
+) {
+  const store = createEventStore(USER)
+  for (const row of rows) {
+    await store.table('assessmentAttempts').put({
+      clientAttemptId: row.clientAttemptId,
+      attemptId: `att-${row.clientAttemptId}`,
+      questionId: 'q1',
+      assessmentId: 'assessment-1',
+      status: 'graded',
+      submittedAt: row.gradedAt,
+      grade: {
+        attemptId: `att-${row.clientAttemptId}`,
+        questionId: 'q1',
+        materialId: row.materialId,
+        score: 1,
+        correct: true,
+        grader: 'objective',
+        gradedAt: row.gradedAt,
+      },
+    })
+  }
+  store.close()
+}
+
 describe('RoadmapFeedbackSection', () => {
   it('shows the cold-start state and no model context', async () => {
     const client = new FakeAssessmentClient()
@@ -137,6 +163,28 @@ describe('RoadmapFeedbackSection', () => {
       verdict: 'reprioritize',
       confidence: 0.97,
     })
+  })
+
+  it('sends the real days_span from the local graded attempts', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetLoopDecision(loopDecision())
+    await seedGradedAttempts([
+      { clientAttemptId: 'ca-1', materialId: 'mat-1', gradedAt: '2026-09-19T10:00:00Z' },
+      { clientAttemptId: 'ca-2', materialId: 'mat-1', gradedAt: '2026-10-10T10:00:00Z' },
+      // Out-of-scope material: other roadmaps' grades must not widen the span.
+      { clientAttemptId: 'ca-3', materialId: 'mat-9', gradedAt: '2026-01-01T10:00:00Z' },
+    ])
+    renderSection(client)
+
+    // The hook holds the call until the grade rows load, so the first POST
+    // already carries the real span (no span-0 then refire).
+    await waitFor(() => expect(client.getLoopDecision).toHaveBeenCalledTimes(1))
+    const sent = (client.getLoopDecision.mock.calls[0] as unknown[])[0] as {
+      evidence_summary: { days_span: number }
+    }
+    expect(sent.evidence_summary.days_span).toBe(21)
   })
 
   it('ignores a slow pre-verdict copy that resolves after the shaped one', async () => {
@@ -236,10 +284,12 @@ describe('RoadmapFeedbackSection', () => {
 
     await screen.findByText('Feedback refreshed')
     fireEvent.click(screen.getByRole('button', { name: 'Review before applying' }))
-    expect(screen.getByRole('radio', { name: /Open replan/ })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: /Open replan/ })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      )
+    })
     expect(screen.getByRole('button', { name: 'Review replan' })).toBeInTheDocument()
   })
 
@@ -296,11 +346,13 @@ describe('RoadmapFeedbackSection', () => {
     renderSection(client, ['mat-1', 'mat-2'], TWO_TITLES)
 
     await screen.findByText('Feedback refreshed')
-    const rows = screen.getAllByRole('link', { name: /spot|suit/ })
-    expect(rows.map((row) => row.textContent ?? '')).toEqual([
-      expect.stringContaining('Weak spot'),
-      expect.stringContaining('Strong suit'),
-    ])
+    await waitFor(() => {
+      const rows = screen.getAllByRole('link', { name: /spot|suit/ })
+      expect(rows.map((row) => row.textContent ?? '')).toEqual([
+        expect.stringContaining('Weak spot'),
+        expect.stringContaining('Strong suit'),
+      ])
+    })
   })
 
   it('keeps most-practised order when the loop verdict holds', async () => {

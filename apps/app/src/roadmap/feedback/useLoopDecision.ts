@@ -43,18 +43,47 @@ export function __clearLoopDecisionMemo(): void {
   memo.clear()
 }
 
+/** Structural subset of a local graded attempt row (attemptFlow owns the real shape). */
+interface GradedAttemptRowLike {
+  grade?: { materialId?: unknown; gradedAt?: unknown } | null
+}
+
+/**
+ * The server-authored grade dates behind the observed signals: local graded
+ * attempt rows scoped to the roadmap's materials by `grade.materialId`.
+ * Malformed rows are dropped; a missing source degrades to an empty list,
+ * and `days_span` then stays 0 (fail-closed, never fabricated).
+ */
+export function observedGradeDates(
+  rows: GradedAttemptRowLike[],
+  materialIds: string[],
+): string[] {
+  const ids = new Set(materialIds)
+  const dates: string[] = []
+  for (const row of rows) {
+    const grade = row.grade
+    if (!grade) continue
+    if (typeof grade.materialId !== 'string' || !ids.has(grade.materialId)) continue
+    if (typeof grade.gradedAt !== 'string' || grade.gradedAt.length === 0) continue
+    dates.push(grade.gradedAt)
+  }
+  return dates
+}
+
 /**
  * Build the canonical loop-decision input. Signals cover the observed
  * (material, skill) pairs the evidence trail shows, sorted for a stable
  * hash; the evidence summary is code-computed totals over those rows.
- * `days_span` is 0: projections carry no dates, and the server treats it
- * as an opaque count the model reads, never a computed span.
+ * `observedDates` are the durable dates behind the material-scoped grades
+ * (see `observedGradeDates`); `days_span` is their calendar-day spread, so
+ * a multi-week history reads as spread across days, a single sitting as 0.
  */
 export function buildLoopInput(
   projections: MasteryProjection[],
   evidence: FeedbackEvidence[],
   posture: LoopPosture,
   ids: { materialIds: string[]; materialTitles: string[] },
+  observedDates: string[] = [],
 ): LoopDecisionInput {
   const observed = new Set(
     evidence.map(
@@ -94,10 +123,40 @@ export function buildLoopInput(
       skills_observed: signals.length,
       min_obs_per_skill: counts.length > 0 ? Math.min(...counts) : 0,
       max_obs_per_skill: counts.length > 0 ? Math.max(...counts) : 0,
-      days_span: 0,
+      days_span: observedSpanDays(observedDates),
     },
     posture,
   }
+}
+
+const DAY_PATTERN = /^\d{4}-\d{2}-\d{2}$/
+
+/**
+ * One strict `YYYY-MM-DD` day, or null when the value is not a real calendar
+ * day. `Date.parse` alone is too lenient ('2026' becomes Jan 1, '2026-02-30'
+ * rolls to Mar 2), and a rolled day would fabricate a span.
+ */
+function parseDay(value: string): string | null {
+  const day = value.slice(0, 10)
+  if (!DAY_PATTERN.test(day)) return null
+  const parsed = Date.parse(`${day}T00:00:00.000Z`)
+  if (!Number.isFinite(parsed)) return null
+  return new Date(parsed).toISOString().slice(0, 10) === day ? day : null
+}
+
+/**
+ * Calendar-day spread of the observed grade dates (date-only discipline, the
+ * same as `buildLoopPosture`'s `daysBetween`). Malformed dates are dropped; a
+ * single sitting (fewer than two days) yields 0.
+ */
+function observedSpanDays(dates: string[]): number {
+  const days = dates
+    .filter((date): date is string => typeof date === 'string')
+    .map(parseDay)
+    .filter((day): day is string => day !== null)
+    .sort()
+  if (days.length < 2) return 0
+  return clampDays(daysBetween(days[0], days[days.length - 1]))
 }
 
 function daysBetween(from: string, to: string): number {
@@ -176,9 +235,29 @@ export function useLoopDecision(
     projections: MasteryProjection[]
     evidence: FeedbackEvidence[]
     posture: LoopPosture
+    /**
+     * Durable grade dates behind the observed signals (see
+     * `observedGradeDates`). `undefined` means the local rows are not loaded
+     * yet, so the hook holds the call instead of firing a span-0 verdict;
+     * an empty list is a loaded source with nothing graded.
+     */
+    observedDates?: string[]
+    /**
+     * Which posture fed this call: `real` from the page's roadmap and progress
+     * values, or `neutral` because the projection is genuinely unknown. Recorded
+     * per fired call so a captured verdict names its posture source (D-03).
+     */
+    postureSource?: 'real' | 'neutral'
   },
 ): LoopDecision | null {
-  const { state, projections, evidence, posture } = args
+  const {
+    state,
+    projections,
+    evidence,
+    posture,
+    observedDates,
+    postureSource = 'neutral',
+  } = args
   // Ids and titles arrive positionally aligned (roadmap payload order); sort
   // the pairs together so the canonical order never breaks the pairing and
   // no title can smuggle an extra entry through a join/split round-trip.
@@ -192,11 +271,17 @@ export function useLoopDecision(
   }, [args.materialIds, args.materialTitles])
   const input = useMemo(
     () =>
-      buildLoopInput(projections, evidence, posture, {
-        materialIds: sortedIds.map((pair) => pair.id),
-        materialTitles: sortedIds.map((pair) => pair.title),
-      }),
-    [projections, evidence, posture, sortedIds],
+      buildLoopInput(
+        projections,
+        evidence,
+        posture,
+        {
+          materialIds: sortedIds.map((pair) => pair.id),
+          materialTitles: sortedIds.map((pair) => pair.title),
+        },
+        observedDates,
+      ),
+    [projections, evidence, posture, sortedIds, observedDates],
   )
   const key = useMemo(() => {
     const versions = [...new Set(projections.map((projection) => projection.modelVersion))]
@@ -212,14 +297,20 @@ export function useLoopDecision(
   inputRef.current = input
 
   useEffect(() => {
-    if (state !== 'updated') {
+    if (state !== 'updated' || observedDates === undefined) {
       setVerdict(null)
       return
     }
     let cancelled = false
     let pending = memo.get(key)
     if (!pending) {
-      pending = client.getLoopDecision(inputRef.current).then(
+      // Memo misses are the only real calls (a memo hit fires nothing), so
+      // this line names the posture source behind exactly one POST.
+      const fired = inputRef.current
+      logger.info(
+        `[roadmap-feedback] loop decision firing posture=${postureSource} days_span=${fired.evidence_summary.days_span}`,
+      )
+      pending = client.getLoopDecision(fired).then(
         (decision) => (isLoopDecision(decision) ? decision : null),
         (error) => {
           // Advisory: a failed verdict keeps the static copy and is never
@@ -247,7 +338,7 @@ export function useLoopDecision(
     return () => {
       cancelled = true
     }
-  }, [client, key, state])
+  }, [client, key, state, postureSource, observedDates])
 
   return verdict
 }

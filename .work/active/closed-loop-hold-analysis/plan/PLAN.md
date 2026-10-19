@@ -271,7 +271,7 @@ Revert the constant and the test pins (`git checkout -- services/intelligence/ap
 
 ### Phase 2: Real `days_span` and dip-timed real posture
 
-**Status:** `☐ Not started`
+**Status:** ✅ Complete — 2026-10-19 (review APPROVE-WITH-FIXES applied; hook 30/30, `src/roadmap` 161/161, typecheck + lint clean)
 **Depends on:** Phase 1 (gate values settled, so input changes are measured against the real router)
 **Estimated scope:** ~2 files, ~100 lines
 
@@ -317,7 +317,13 @@ Revert the two source files plus the test (`git checkout --` if uncommitted). Se
 
 #### Notes (filled in during implementation)
 
-- Empty. Fill in per the preamble protocol.
+- Implemented 2026-10-19 via TDD (3 red-then-green slices + review fixes; hook 30/30, `src/roadmap/feedback/` 68/68, `src/roadmap/` 161/161, `pnpm typecheck` + `pnpm lint` clean, no `console.*` in touched feedback source).
+- D-02: `buildLoopInput` gained a 5th `observedDates: string[]` argument; `observedSpanDays` does a strict `YYYY-MM-DD` round-trip parse (review M1: lenient `Date.parse` rolled `'2026'` to Jan 1 and `'2026-02-30'` to Mar 2), date-only diff via `daysBetween`, fewer than two valid days -> 0. `observedGradeDates(rows, materialIds)` extracts server-authored `grade.gradedAt` from local `assessmentAttempts` rows scoped by `grade.materialId` (user decision 2026-10-19; the material-scoped grades behind the observed signals). No Dexie schema change; the section read-only live-queries the non-synced attempts table (rule 30/31/33 boundaries hold).
+- D-03 (user interpretation 2026-10-19): capture stays on `updated`-entry; `postureSource` threads `RoadmapCalendar` (`'real'` iff `projectedFinish`, else `'neutral'`) -> section (defaults `'neutral'` beside `NEUTRAL_POSTURE`) -> hook, which logs one `logger.info` line per fired POST (memo misses only): `[roadmap-feedback] loop decision firing posture=<src> days_span=<n>`. The plan's "dip-timed" wording was reinterpreted with the user: no dip-detection heuristic; capture timing at the dip stays operational and timestamp/ordering belongs to Phase 3 (B4).
+- Review race fix (second reviewer, high): the section passes the live-query tri-state (`undefined` = rows not loaded) and the hook holds the call until dates load, so the first POST already carries the real span (no span-0 POST then refire). Two pre-existing section tests were made `waitFor`-safe because they had read the verdict before it landed.
+- Tests: span math (multi-day 21, same-day 0, malformed/truncated/rolled 0, no-dates 0), attempt-row scoping, hook pass-through, date-hold refire, posture-source log content, memo-hit log suppression, calendar source prop, section end-to-end span from Dexie rows. The old `days_span: 0` summary pins were removed per step 3 (dedicated default-0 test kept).
+- Deviations from the plan index: `RoadmapFeedbackSection.tsx` (+ tests) was touched beyond the listed 2 files because the grade-date data source lives there; `RoadmapCalendar.tsx` changed only the posture-source derivation/prop (no dip-window computation).
+- Review 2026-10-19 (OCR delegate preview/rules + two code-reviewer subagents, correctness/spec and thermo-nuclear maintainability): APPROVE-WITH-FIXES, no critical/high after fixes. Applied: strict date parse + tests, tri-state hold + test, memo-hit log pin, calendar test waitFors, log/doc/comment trims, `materialIdList` memo dedupe. Not applied: restoring the `toEqual` `days_span: 0` pins (step 3 asks their removal; the dedicated span tests cover the behavior).
 
 ---
 

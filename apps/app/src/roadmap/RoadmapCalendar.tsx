@@ -272,6 +272,11 @@ export function RoadmapCalendar({
       progress?.weeklyStats.plannedMinutesThisWeek,
     ],
   )
+  // Neutral fallback is for genuinely unknown projections (D-03): without a
+  // projected finish the projection-driven fields stay at their neutral
+  // values, and the verdict records that source instead of implying real
+  // schedule pressure.
+  const loopPostureSource = projectedFinish ? 'real' : 'neutral'
   const materialPercent = materialLedger.length > 0
     ? Math.round(
       (materialLedger.reduce((total, material) => total + material.estimatedConsumedMinutes, 0) /
@@ -616,6 +621,7 @@ export function RoadmapCalendar({
           pinnedTitle={title}
           pinnedDetail={`${studyDays.join(', ')} · ${bookings.length} session${bookings.length === 1 ? '' : 's'} booked`}
           posture={loopPosture}
+          postureSource={loopPostureSource}
         />
       )}
 

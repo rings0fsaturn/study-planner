@@ -11,7 +11,10 @@ import { RoadmapCalendar } from './RoadmapCalendar'
 // The feedback section has its own suite (feedback/RoadmapFeedbackSection.test.tsx)
 // and fetches mastery asynchronously; stub it so these calendar tests stay focused.
 vi.mock('./feedback/RoadmapFeedbackSection', () => ({
-  RoadmapFeedbackSection: () => null,
+  RoadmapFeedbackSection: (props: unknown) => {
+    mockState.feedbackProps = props
+    return null
+  },
 }))
 
 vi.mock('../lib/supabase', () => ({
@@ -21,6 +24,8 @@ vi.mock('../lib/supabase', () => ({
 const mockState = vi.hoisted(() => ({
   events: [] as Event[],
   logEvent: vi.fn(),
+  progressSnapshot: null as unknown,
+  feedbackProps: null as unknown,
 }))
 
 const mockViewport = vi.hoisted(() => ({ isCompact: false }))
@@ -47,7 +52,7 @@ vi.mock('dexie-react-hooks', () => ({
 
 vi.mock('../progress', () => ({
   useCalibrationState: () => ({ calibration: null, status: 'ready' }),
-  useProgressSnapshot: () => null,
+  useProgressSnapshot: () => mockState.progressSnapshot,
 }))
 
 vi.mock('../lib/useMatchMedia', () => ({
@@ -182,7 +187,29 @@ describe('RoadmapCalendar booking interactions', () => {
     mockState.events = baseEvents()
     mockState.logEvent.mockReset()
     mockState.logEvent.mockResolvedValue(1)
+    mockState.progressSnapshot = null
+    mockState.feedbackProps = null
     mockViewport.isCompact = false
+  })
+
+  it('marks the loop posture source real when a projection exists', () => {
+    mockState.progressSnapshot = {
+      projection: { finishDate: '2099-06-20', basis: 'analytic' },
+      weeklyStats: { minutesThisWeek: 90, plannedMinutesThisWeek: 120 },
+    }
+    renderCalendar()
+
+    expect(
+      (mockState.feedbackProps as { postureSource?: string }).postureSource,
+    ).toBe('real')
+  })
+
+  it('marks the loop posture source neutral when the projection is unknown', () => {
+    renderCalendar()
+
+    expect(
+      (mockState.feedbackProps as { postureSource?: string }).postureSource,
+    ).toBe('neutral')
   })
 
   it('renders booking statuses instead of slot statuses', () => {

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import {
   FakeAssessmentClient,
@@ -12,6 +12,7 @@ import {
   __clearLoopDecisionMemo,
   buildLoopInput,
   buildLoopPosture,
+  observedGradeDates,
   useLoopDecision,
 } from './useLoopDecision'
 
@@ -23,6 +24,8 @@ const POSTURE: LoopPosture = {
 }
 
 const IDS = { materialIds: ['mat-1'], materialTitles: ['Operating Systems'] }
+/** One shared empty list so the effect dependency stays identity-stable. */
+const NO_DATES: string[] = []
 
 function argsFor(state: FeedbackState, n = 4) {
   const projections = [masteryProjection({ materialId: 'mat-1', n })]
@@ -32,6 +35,7 @@ function argsFor(state: FeedbackState, n = 4) {
     projections,
     evidence: buildEvidence(projections, 0.7),
     posture: POSTURE,
+    observedDates: NO_DATES,
   }
 }
 
@@ -58,12 +62,11 @@ describe('buildLoopInput', () => {
       mastery: 0.9,
       observations: 8,
     })
-    expect(input.evidence_summary).toEqual({
+    expect(input.evidence_summary).toMatchObject({
       total_attempts: 11,
       skills_observed: 2,
       min_obs_per_skill: 3,
       max_obs_per_skill: 8,
-      days_span: 0,
     })
     expect(input.posture).toEqual(POSTURE)
   })
@@ -85,13 +88,86 @@ describe('buildLoopInput', () => {
     const input = buildLoopInput([], [], POSTURE, IDS)
 
     expect(input.signals).toEqual([])
-    expect(input.evidence_summary).toEqual({
+    expect(input.evidence_summary).toMatchObject({
       total_attempts: 0,
       skills_observed: 0,
       min_obs_per_skill: 0,
       max_obs_per_skill: 0,
-      days_span: 0,
     })
+  })
+})
+
+describe('buildLoopInput days_span', () => {
+  const projections = [masteryProjection({ materialId: 'mat-1', n: 4 })]
+
+  it('computes the calendar-day span from the observed grade dates', () => {
+    const input = buildLoopInput(projections, buildEvidence(projections, 0.7), POSTURE, IDS, [
+      '2026-09-19',
+      '2026-10-02T10:00:00Z',
+      '2026-10-10',
+    ])
+
+    expect(input.evidence_summary.days_span).toBe(21)
+  })
+
+  it('zeroes the span for a single sitting', () => {
+    const input = buildLoopInput(projections, buildEvidence(projections, 0.7), POSTURE, IDS, [
+      '2026-10-02',
+      '2026-10-02T18:30:00Z',
+    ])
+
+    expect(input.evidence_summary.days_span).toBe(0)
+  })
+
+  it('ignores malformed dates and degrades to 0 when fewer than two days remain', () => {
+    const input = buildLoopInput(projections, buildEvidence(projections, 0.7), POSTURE, IDS, [
+      'not-a-date',
+      '2026-10-02',
+    ])
+
+    expect(input.evidence_summary.days_span).toBe(0)
+  })
+
+  it('rejects truncated and out-of-calendar day strings instead of fabricating a span', () => {
+    const truncated = buildLoopInput(
+      projections,
+      buildEvidence(projections, 0.7),
+      POSTURE,
+      IDS,
+      ['2026', '2026-10-10'],
+    )
+    expect(truncated.evidence_summary.days_span).toBe(0)
+
+    // V8 rolls 2026-02-30 to 2026-03-02; a lenient parse would report 30.
+    const rolled = buildLoopInput(
+      projections,
+      buildEvidence(projections, 0.7),
+      POSTURE,
+      IDS,
+      ['2026-02-30', '2026-04-02'],
+    )
+    expect(rolled.evidence_summary.days_span).toBe(0)
+  })
+
+  it('defaults the span to 0 without observed dates', () => {
+    const input = buildLoopInput(projections, buildEvidence(projections, 0.7), POSTURE, IDS)
+
+    expect(input.evidence_summary.days_span).toBe(0)
+  })
+})
+
+describe('observedGradeDates', () => {
+  it('keeps server-authored grade dates scoped to the roadmap materials', () => {
+    const rows = [
+      { grade: { materialId: 'mat-1', gradedAt: '2026-09-19T10:00:00Z' } },
+      { grade: { materialId: 'mat-2', gradedAt: '2026-10-10T10:00:00Z' } },
+      { grade: null },
+      {},
+      { grade: { materialId: 'mat-1', gradedAt: 42 } },
+      { grade: { materialId: 'mat-1', gradedAt: '' } },
+    ]
+
+    expect(observedGradeDates(rows, ['mat-1'])).toEqual(['2026-09-19T10:00:00Z'])
   })
 })
 
@@ -177,6 +253,62 @@ describe('useLoopDecision', () => {
     expect(sent.posture).toEqual(POSTURE)
   })
 
+  it('sends the real days_span from the observed grade dates', async () => {
+    const client = new FakeAssessmentClient()
+    client.scriptGetLoopDecision(loopDecision())
+    const { result } = renderHook(() =>
+      useLoopDecision(client, {
+        ...argsFor('updated'),
+        observedDates: ['2026-09-19', '2026-10-10'],
+      }),
+    )
+
+    await waitFor(() => expect(result.current?.verdict).toBe('reprioritize'))
+    const sent = (client.getLoopDecision.mock.calls[0] as unknown[])[0] as ReturnType<
+      typeof buildLoopInput
+    >
+    expect(sent.evidence_summary.days_span).toBe(21)
+  })
+
+  it('waits for the observed dates before firing', async () => {
+    const client = new FakeAssessmentClient()
+    client.scriptGetLoopDecision(loopDecision())
+    const hook = renderHook(
+      (props: { dates: string[] | undefined }) =>
+        useLoopDecision(client, { ...argsFor('updated'), observedDates: props.dates }),
+      { initialProps: { dates: undefined as string[] | undefined } },
+    )
+
+    await waitFor(() => expect(client.getLoopDecision).not.toHaveBeenCalled())
+    hook.rerender({ dates: ['2026-09-19', '2026-10-10'] })
+    await waitFor(() => expect(hook.result.current?.verdict).toBe('reprioritize'))
+    expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
+    const sent = (client.getLoopDecision.mock.calls[0] as unknown[])[0] as ReturnType<
+      typeof buildLoopInput
+    >
+    expect(sent.evidence_summary.days_span).toBe(21)
+  })
+
+  it('records the posture source that fed the call', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    try {
+      const client = new FakeAssessmentClient()
+      client.scriptGetLoopDecision(loopDecision())
+      const { result } = renderHook(() =>
+        useLoopDecision(client, {
+          ...argsFor('updated'),
+          postureSource: 'real',
+          observedDates: ['2026-09-19', '2026-10-10'],
+        }),
+      )
+
+      await waitFor(() => expect(result.current?.verdict).toBe('reprioritize'))
+      expect(info).toHaveBeenCalledWith(expect.stringContaining('posture=real days_span=21'))
+    } finally {
+      info.mockRestore()
+    }
+  })
+
   it('resolves null when the call fails, never throwing', async () => {
     const client = new FakeAssessmentClient()
     client.scriptGetLoopDecision(new Error('offline'))
@@ -232,6 +364,7 @@ describe('useLoopDecision', () => {
         projections,
         evidence: buildEvidence(projections, 0.7),
         posture: POSTURE,
+        observedDates: NO_DATES,
       }),
     )
 
@@ -244,15 +377,23 @@ describe('useLoopDecision', () => {
   })
 
   it('dedupes the same input across remounts (session memo)', async () => {
-    const client = new FakeAssessmentClient()
-    client.scriptGetLoopDecision(loopDecision())
-    const first = renderHook(() => useLoopDecision(client, argsFor('updated')))
-    await waitFor(() => expect(first.result.current?.verdict).toBe('reprioritize'))
-    first.unmount()
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    try {
+      const client = new FakeAssessmentClient()
+      client.scriptGetLoopDecision(loopDecision())
+      const first = renderHook(() => useLoopDecision(client, argsFor('updated')))
+      await waitFor(() => expect(first.result.current?.verdict).toBe('reprioritize'))
+      first.unmount()
 
-    const second = renderHook(() => useLoopDecision(client, argsFor('updated')))
-    await waitFor(() => expect(second.result.current?.verdict).toBe('reprioritize'))
-    expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
+      const second = renderHook(() => useLoopDecision(client, argsFor('updated')))
+      await waitFor(() => expect(second.result.current?.verdict).toBe('reprioritize'))
+      expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
+      // Memo hits fire no POST, so the posture-source line records exactly
+      // the one real call (D-03).
+      expect(info).toHaveBeenCalledTimes(1)
+    } finally {
+      info.mockRestore()
+    }
   })
 
   it('refires when the input hash changes', async () => {

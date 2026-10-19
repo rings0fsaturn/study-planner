@@ -12,10 +12,11 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useLiveQuery } from 'dexie-react-hooks'
 import { useEventStore } from '../../events/useEventStore'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import type { LoopPosture } from '../../assessments/types'
-import { useLoopDecision } from './useLoopDecision'
+import { observedGradeDates, useLoopDecision } from './useLoopDecision'
 import { useRoadmapFeedback } from './useRoadmapFeedback'
 import { makeLlmFeedbackProvider } from './llmFeedbackProvider'
 import type {
@@ -52,6 +53,12 @@ interface RoadmapFeedbackSectionProps {
   copyProvider?: FeedbackCopyProvider
   /** Schedule posture from the roadmap page; neutral when the page has none. */
   posture?: LoopPosture
+  /**
+   * Which posture `posture` carries: `real` from the roadmap page's values, or
+   * `neutral` because the projection is genuinely unknown. Defaults to
+   * `neutral`, matching the `NEUTRAL_POSTURE` default beside it.
+   */
+  postureSource?: 'real' | 'neutral'
 }
 
 /** Neutral posture: the verdict degrades to mastery-only, never to noise. */
@@ -236,6 +243,7 @@ export function RoadmapFeedbackSection({
   pinnedDetail,
   copyProvider,
   posture = NEUTRAL_POSTURE,
+  postureSource = 'neutral',
 }: RoadmapFeedbackSectionProps) {
   const eventStore = useEventStore()
   const client = useAssessmentClient()
@@ -246,13 +254,30 @@ export function RoadmapFeedbackSection({
   // A stable key so a fresh array identity each render does not rebuild the
   // provider and refire the copy effect (mirrors useRoadmapFeedback).
   const materialKey = useMemo(() => [...materialIds].sort().join('|'), [materialIds])
+  const materialIdList = useMemo(
+    () => (materialKey ? materialKey.split('|') : []),
+    [materialKey],
+  )
   const llmProvider = useMemo(
-    () => makeLlmFeedbackProvider(client, materialKey ? materialKey.split('|') : []),
-    [client, materialKey],
+    () => makeLlmFeedbackProvider(client, materialIdList),
+    [client, materialIdList],
   )
   const provider = copyProvider ?? llmProvider
 
   const { state, projections, recommendation, evidence, headline, rebuild, settled } = feedback
+
+  // Durable grade dates behind the observed signals: the local graded attempt
+  // rows, scoped to this roadmap's materials, feed `days_span` (D-02). The
+  // hook holds the call while this is undefined (rows not loaded); no rows
+  // degrade to an empty list and a 0 span, never a fabricated spread.
+  const observedDates = useLiveQuery(
+    async () =>
+      observedGradeDates(
+        await eventStore.table('assessmentAttempts').toArray(),
+        materialIdList,
+      ),
+    [eventStore, materialIdList],
+  )
 
   // Sequence guard for the verdict refire below: only the latest provider
   // call may paint, so a slow pre-verdict response never overwrites the
@@ -270,6 +295,8 @@ export function RoadmapFeedbackSection({
     projections,
     evidence,
     posture,
+    postureSource,
+    observedDates,
   })
   const orderedEvidence = useMemo(() => {
     if (loopVerdict?.verdict !== 'reprioritize') return evidence
