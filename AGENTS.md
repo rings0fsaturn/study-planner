@@ -62,6 +62,7 @@ Rules and skills for work in this checkout:
 
     <phase order="4" name="code_review" recurring="after_each_phase">
       <action>Run code review checks.</action>
+      <action>Put the returned fix list in the todo tool before editing.</action>
       <uses_skills>
         <skill>open-code-review-delegate</skill>
         <skill>thermo-nuclear-code-quality-review</skill>
@@ -94,6 +95,12 @@ Rules and skills for work in this checkout:
 When a <skill> is named or triggered, read `<skill>/SKILL.md` and follow that.
 Do not use `.codex/`, `.claude/`, plugin-cache, user-home, or sibling-checkout copies unless the user explicitly requests an external fallback.
 Use `$add-project-rule` for any addition, update, rename, split, or reorganization under `.agents/rules/`.
+
+## Agent Turn Recovery
+
+A turn can degenerate into a repetition loop and emit no tool call; work already committed is unaffected.
+To recover: check `git status --short` and the active [`SCRATCHPAD.md`](.work/active/), then resume from the next concrete edit; the last phase commit is the floor.
+To prevent: follow the phase-4 review-fix todo discipline, make the first tool call early instead of narrating the whole batch, and keep subagent review output terse (`file:line - issue - fix`).
 
 ## Repository Map
 
