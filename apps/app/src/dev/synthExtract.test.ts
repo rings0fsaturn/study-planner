@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { computeProgress, type CalibrationState } from '@study-tracker/progress'
 import { adherenceTable, assertTraceable, collectTraceIds, masteryTable, verdictTable } from './synthExtract'
 import { buildSynthHistory } from './synthSeed'
+import type { Event } from '../events/EventStore'
 import { findRoadmap, mapSessions } from '../progress/mapEvents'
 
 const now = new Date('2026-09-14T12:00:00Z')
@@ -187,6 +188,36 @@ describe('verdictTable', () => {
     steady: buildSynthHistory('steady', ['m1', 'm2', 'm3'], '2026-08-10', now),
     struggling: buildSynthHistory('struggling', ['m1', 'm2', 'm3'], '2026-08-10', now),
   }
+
+  function event(kind: string, payload: unknown, createdAt: string): Event {
+    return { kind, payload: payload as Record<string, unknown>, createdAt }
+  }
+
+  const ROADMAP_CREATED_AT = '2026-08-01T09:00:00.000Z'
+  const DECIDED_AT = '2026-08-19T10:00:00.000Z'
+  const REPLANNED_AT = '2026-08-20T10:00:00.000Z'
+
+  function linkedHistory(options: { replannedAt?: string; verdictId?: string } = {}): Event[] {
+    const { replannedAt = REPLANNED_AT, verdictId = 'verdict-1' } = options
+    return [
+      event(
+        'RoadmapCreated',
+        { startDate: '2026-08-01', materialIds: ['m1'], slots: undefined },
+        ROADMAP_CREATED_AT,
+      ),
+      event(
+        'RoadmapReplanned',
+        {
+          roadmapCreatedAt: ROADMAP_CREATED_AT,
+          option: 'trim-scope',
+          verdictId,
+          verdictDecidedAt: DECIDED_AT,
+        },
+        replannedAt,
+      ),
+    ]
+  }
+
   it('hold verdicts never convert, with or without a replan', () => {
     const rows = verdictTable(
       [
@@ -196,17 +227,6 @@ describe('verdictTable', () => {
       histories,
     )
     expect(rows.map((r) => r.converted)).toEqual([false, false])
-  })
-  it('suggest_replan converts only where a RoadmapReplanned exists', () => {
-    const rows = verdictTable(
-      [
-        { user: 'steady', verdict: 'suggest_replan' },
-        { user: 'struggling', verdict: 'suggest_replan' },
-      ],
-      histories,
-    )
-    expect(rows.find((r) => r.user === 'steady')?.converted).toBe(false)
-    expect(rows.find((r) => r.user === 'struggling')?.converted).toBe(true)
   })
   it('reprioritize never converts: the D-02 proof covers suggest_replan only', () => {
     const rows = verdictTable(
@@ -218,12 +238,106 @@ describe('verdictTable', () => {
     )
     expect(rows.map((r) => r.converted)).toEqual([false, false])
   })
+  it('converts suggest_replan only through a keyed replan created after the verdict', () => {
+    const rows = verdictTable(
+      [
+        {
+          user: 'linked',
+          verdict: 'suggest_replan',
+          decidedAt: DECIDED_AT,
+          verdictId: 'verdict-1',
+        },
+      ],
+      { linked: linkedHistory() },
+    )
+    expect(rows[0]?.converted).toBe(true)
+    expect(rows[0]?.decidedAt).toBe(DECIDED_AT)
+  })
+  it('never converts when the keyed replan predates the verdict', () => {
+    const rows = verdictTable(
+      [
+        {
+          user: 'linked',
+          verdict: 'suggest_replan',
+          decidedAt: DECIDED_AT,
+          verdictId: 'verdict-1',
+        },
+      ],
+      { linked: linkedHistory({ replannedAt: '2026-08-18T10:00:00.000Z' }) },
+    )
+    expect(rows[0]?.converted).toBe(false)
+  })
+  it('never converts when only the decision time differs (same input hash resettled)', () => {
+    const rows = verdictTable(
+      [
+        {
+          user: 'linked',
+          verdict: 'suggest_replan',
+          decidedAt: '2026-08-19T11:00:00.000Z',
+          verdictId: 'verdict-1',
+        },
+      ],
+      { linked: linkedHistory() },
+    )
+    expect(rows[0]?.converted).toBe(false)
+  })
+  it('never converts on a mismatched join key', () => {
+    const rows = verdictTable(
+      [
+        {
+          user: 'linked',
+          verdict: 'suggest_replan',
+          decidedAt: DECIDED_AT,
+          verdictId: 'verdict-other',
+        },
+      ],
+      { linked: linkedHistory() },
+    )
+    expect(rows[0]?.converted).toBe(false)
+  })
+  it('legacy entries still read but never claim an unprovable conversion', () => {
+    const rows = verdictTable(
+      [
+        { user: 'steady', verdict: 'suggest_replan' },
+        { user: 'struggling', verdict: 'suggest_replan' },
+      ],
+      histories,
+    )
+    expect(rows.map((r) => r.converted)).toEqual([false, false])
+    expect(rows.every((r) => r.decidedAt === undefined)).toBe(true)
+  })
+  it('orders rows by decidedAt, leaving legacy rows last in input order', () => {
+    const rows = verdictTable(
+      [
+        { user: 'steady', verdict: 'hold' },
+        { user: 'struggling', verdict: 'hold', decidedAt: '2026-10-12T12:00:00.000Z' },
+        { user: 'steady', verdict: 'hold' },
+        { user: 'struggling', verdict: 'hold', decidedAt: '2026-10-10T12:00:00.000Z' },
+      ],
+      histories,
+    )
+    expect(rows.map((r) => r.decidedAt ?? 'legacy')).toEqual([
+      '2026-10-10T12:00:00.000Z',
+      '2026-10-12T12:00:00.000Z',
+      'legacy',
+      'legacy',
+    ])
+  })
   it('a converted row traces to both the plan and the replan evidence', () => {
-    const rows = verdictTable([{ user: 'struggling', verdict: 'suggest_replan' }], histories)
-    const replannedAt = histories.struggling.find((e) => e.kind === 'RoadmapReplanned')?.createdAt
-    expect(replannedAt).toBeDefined()
-    expect(rows[0]?.traceIds).toContain(replannedAt)
-    expect(() => assertTraceable(rows, histories.struggling)).not.toThrow()
+    const events = linkedHistory()
+    const rows = verdictTable(
+      [
+        {
+          user: 'linked',
+          verdict: 'suggest_replan',
+          decidedAt: DECIDED_AT,
+          verdictId: 'verdict-1',
+        },
+      ],
+      { linked: events },
+    )
+    expect(rows[0]?.traceIds).toEqual([ROADMAP_CREATED_AT, REPLANNED_AT])
+    expect(() => assertTraceable(rows, events)).not.toThrow()
   })
   it('every verdict row traces to its roadmap identity in the same events', () => {
     const rows = verdictTable([{ user: 'struggling', verdict: 'hold' }], histories)

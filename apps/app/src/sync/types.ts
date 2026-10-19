@@ -227,6 +227,10 @@ export interface RoadmapReplannedPayload extends RoadmapCreatedPayload {
   roadmapCreatedAt: string
   // which entry path produced this replan, for analytics/history (optional)
   option?: 'extend-deadline' | 'increase-hours' | 'trim-scope' | 'edit'
+  // loop verdict that triggered this replan (D-04 join); both fields are
+  // absent on manual and legacy replans, which can never prove the join
+  verdictId?: string
+  verdictDecidedAt?: string
 }
 
 export interface RoadmapEditedPayload {

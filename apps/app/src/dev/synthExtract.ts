@@ -162,28 +162,77 @@ export function masteryTable(
 
 export type LoopVerdict = 'hold' | 'reprioritize' | 'suggest_replan'
 
+/**
+ * One captured loop verdict handed to the report extractor. `decidedAt` and
+ * `verdictId` are the D-04 ordering/join keys; legacy captures omit them and
+ * still read, but can never prove a conversion.
+ */
+export interface VerdictEntry {
+  user: string
+  verdict: LoopVerdict
+  /** When the verdict settled (ISO 8601). */
+  decidedAt?: string
+  /** Join key mirrored onto the RoadmapReplanned that answered this verdict. */
+  verdictId?: string
+}
+
 export interface VerdictRow extends TraceableRow {
   user: string
   verdict: LoopVerdict
+  /** Copied from the entry; absent on legacy captures. */
+  decidedAt?: string
   converted: boolean
 }
 
 export function verdictTable(
-  entries: Array<{ user: string; verdict: LoopVerdict }>,
+  entries: VerdictEntry[],
   eventsByUser: Record<string, Event[]>,
 ): VerdictRow[] {
-  // One verdict per user; order between verdict and replan is assumed, not checked.
-  return entries.map(({ user, verdict }) => {
-    const events = eventsByUser[user] ?? []
+  // Order by the verdict's own timestamp, never by input position (B4).
+  // Legacy captures (no decidedAt) sort last in input order: their recency is
+  // unknown, so they must not interleave with provable rows. The plain string
+  // comparison matches the join's `>=` (same ISO shape), unlike localeCompare.
+  const ordered = entries
+    .map((entry, index) => ({ entry, index }))
+    .sort((a, b) => {
+      if (a.entry.decidedAt && b.entry.decidedAt) {
+        return (
+          (a.entry.decidedAt < b.entry.decidedAt ? -1 : a.entry.decidedAt > b.entry.decidedAt ? 1 : 0) ||
+          a.index - b.index
+        )
+      }
+      if (a.entry.decidedAt) return -1
+      if (b.entry.decidedAt) return 1
+      return a.index - b.index
+    })
+    .map(({ entry }) => entry)
+
+  return ordered.map((entry) => {
+    const events = eventsByUser[entry.user] ?? []
     const roadmapCreatedAt = events.find((e) => e.kind === 'RoadmapCreated')?.createdAt
     if (!roadmapCreatedAt) {
-      throw new Error(`[synthExtract] no roadmap for verdict user: ${user}`)
+      throw new Error(`[synthExtract] no roadmap for verdict user: ${entry.user}`)
     }
-    const replannedAt = events.find((e) => e.kind === 'RoadmapReplanned')?.createdAt
-    const converted = verdict === 'suggest_replan' && replannedAt !== undefined
+    const { decidedAt, verdictId } = entry
+    // A conversion needs the keyed replan that answered this verdict, ordered
+    // verdict-first. The mirror pair is matched exactly (id plus decision
+    // time), so a second settlement of the same input hash cannot borrow the
+    // first one's replan; a replan merely existing is not proof (B4/B5).
+    const replannedAt =
+      decidedAt === undefined || verdictId === undefined
+        ? undefined
+        : events.find(
+            (e) =>
+              e.kind === 'RoadmapReplanned' &&
+              e.payload.verdictId === verdictId &&
+              e.payload.verdictDecidedAt === decidedAt &&
+              e.createdAt >= decidedAt,
+          )?.createdAt
+    const converted = entry.verdict === 'suggest_replan' && replannedAt !== undefined
     return {
-      user,
-      verdict,
+      user: entry.user,
+      verdict: entry.verdict,
+      ...(decidedAt === undefined ? {} : { decidedAt }),
       converted,
       traceIds: replannedAt && converted ? [roadmapCreatedAt, replannedAt] : [roadmapCreatedAt],
     }

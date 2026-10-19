@@ -449,7 +449,21 @@ export function RoadmapFeedbackSection({
           initialChoice={loopVerdict?.verdict === 'suggest_replan' ? 'replan' : 'keep'}
           onConfirm={(choice) => {
             setReviewing(false)
-            if (choice === 'replan') navigate('/replan')
+            if (choice !== 'replan') return
+            // Hand the settled verdict's identity to /replan only when it
+            // suggested the replan, so the committed RoadmapReplanned mirrors
+            // the suggestion it answers (D-04 join). Otherwise manual.
+            navigate('/replan', {
+              state:
+                loopVerdict?.verdict === 'suggest_replan'
+                  ? {
+                      loopVerdict: {
+                        verdictId: loopVerdict.verdictId,
+                        decidedAt: loopVerdict.decidedAt,
+                      },
+                    }
+                  : null,
+            })
           }}
           onClose={() => setReviewing(false)}
         />

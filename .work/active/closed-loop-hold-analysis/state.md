@@ -1,13 +1,17 @@
 # State - closed-loop-hold-analysis
-_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`) · Updated: 2026-10-19_
+_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 implemented + reviewed, commit pending) · Updated: 2026-10-19_
 
 ## Current state & next
 - Phase 1 COMPLETE 2026-10-19, committed `493e1be`: `LOOP_APPROVE_AT = 0.7` shipped, live-verified; review APPROVE-WITH-FIXES, 3 low all applied.
 - Phase 2 COMPLETE 2026-10-19, committed `2a15115`: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified.
-- Next: Phase 3 (verdict timestamp + verdict-to-replan join key, B4/B5) not started, depends on Phase 2; start only on a fresh instruction.
-- Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 2 needed no JEV spend. Ask before further spend.
+- Phase 3 IMPLEMENTED + REVIEWED 2026-10-19, commit pending user go-ahead: verdict identity (hash + settle time) -> `/replan` nav handoff -> `RoadmapReplanned` mirror -> extraction exact-pair join with verdict-before-replan, real `option`, legacy rows read as not-converted. Suites green (full app 1278/1278 forks), review APPROVE-WITH-FIXES fully applied (2 high + 2 med + 5 low) and re-verified.
+- Next: commit Phase 3 (plan step 7) after user go-ahead, record the SHA in a docs follow-up, then Phase 4 (coverage pins) needs a fresh instruction; it depends on Phases 1-3.
+- Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 3 needed no JEV spend. Ask before further spend.
 
 ## Done so far
+- Phase 3 implemented 2026-10-19 via TDD (4 slices), reviewed twice, verified. `sync/types.ts` `RoadmapReplannedPayload` + optional `verdictId`/`verdictDecidedAt`; `commitReplan` real `option` (trim-scope > extend-deadline > increase-hours > edit; decreases/restores -> edit) + verdict mirror written only when supplied (stale mirror from the payload spread deleted); `synthExtract` `verdictTable` sorts by `decidedAt` (legacy last) and converts only on the exact mirror pair + `createdAt >= decidedAt`, legacy reads `converted: false`; `useLoopDecision` returns `DecidedLoopVerdict` (verdictId = input hash, decidedAt = settle time, stable across memo hits) and logs one settled line with both keys; section hands the verdict to `/replan` only on `suggest_replan`; Replan validates nav state and forwards it.
+- Phase 3 verification 2026-10-19: synthExtract 27/27, commitReplan 15/15, hook 32/32, section 16/16, Replan 16/16, `src/dev/ + src/roadmap/` 244/244 (`--pool=forks`; 2 known `seedTestData` TZ flakes on the default pool), full app 1278/1278 forks, typecheck + lint clean, no direct `console.*`, no em dashes added. Flake chase: the late-verdict section test resolved its manual promise before the hook called (fixed by waiting for the call), stable 6/6 file runs.
+- Phase 3 review 2026-10-19 (OCR delegate preview/rules + code-reviewer rounds; one subagent turn degenerated, re-run fresh): round 1 REQUEST_CHANGES (2 high: stale verdict link inherited by a later manual replan; `option` compared the stored onboarding `weeklyHours` chip total against the recalculated schedule; 2 med: unchanged overrides read as trim-scope, `verdictDecidedAt` write-only; 5 low). All applied test-first; fix-verification round confirmed all resolved with no new issues.
 - Phase 2 implemented 2026-10-19 via TDD: `buildLoopInput` grew a 5th `observedDates` arg; `observedSpanDays` (strict `YYYY-MM-DD` round-trip parse, date-only diff, <2 days -> 0); `observedGradeDates(rows, materialIds)` reads server-authored `grade.gradedAt` from local `assessmentAttempts` scoped by `grade.materialId`; `postureSource` threads `RoadmapCalendar` -> section -> hook and logs one info line per fired POST (`[roadmap-feedback] loop decision firing posture=<src> days_span=<n>`). No Dexie change, no server change.
 - Phase 2 review 2026-10-19 (OCR delegate preview/rules + two code-reviewer subagents: correctness/spec and thermo-nuclear): APPROVE-WITH-FIXES. Applied: strict date parse (M1: lenient `Date.parse` rolled `2026`/`2026-02-30` and could fabricate a span), tri-state hold (section passes `undefined` until the live query resolves; the hook fires no POST until dates are loaded), memo-hit log suppression pin, two waitFor-safe section tests, log/doc/comment trims, `materialIdList` memo dedupe. Not applied: restoring the `toEqual` `days_span: 0` pins (plan step 3 asks their removal; dedicated span tests cover it).
 - Phase 2 verification 2026-10-19: hook 30/30, `src/roadmap/feedback/` 68/68, `src/roadmap` 161/161, full app 1254/1256 (2 known WSL TZ flakes in `seedTestData.test.ts`, green with `--pool=forks`; STATUS gotcha), typecheck + lint clean, no direct console.* in touched source.
@@ -21,7 +25,7 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 
 ## Flow trace
 - Entry: STATUS row closed-loop-hold-analysis -> state.md (this file) -> plan/LEDGER.md (findings) -> plan/PLAN.md (fix runbook).
-- Loop path: buildLoopInput + buildLoopPosture (client) -> POST /v1/loop/decision (owner-scoped, fail-closed) -> `route_loop_action` (questions.py:387, `LOOP_APPROVE_AT`) -> verdict folded into feedback copy -> commitReplan.
+- Loop path: buildLoopInput + buildLoopPosture (client) -> POST /v1/loop/decision (owner-scoped, fail-closed) -> `route_loop_action` (questions.py:387, `LOOP_APPROVE_AT`) -> verdict stamped with `verdictId`/`decidedAt` (hook) -> feedback copy + preselect -> section hands the pair to `/replan` only on `suggest_replan` -> `commitReplan` mirrors it onto `RoadmapReplanned` with the real `option` -> `verdictTable` orders by `decidedAt` and converts only on the exact mirror pair before the replan.
 - Loop input path after Phase 2: local `assessmentAttempts` rows (graded) -> `observedGradeDates` (scope by `grade.materialId` in the roadmap's materials) -> `buildLoopInput` `days_span` (strict date-only span); the hook holds the call while the live query is unresolved (`observedDates === undefined`). `postureSource` is derived in `RoadmapCalendar` (`'real'` iff `projectedFinish`) and logged per fired POST in `useLoopDecision`.
 - Gate history: `APPROVE_AT = 0.9` (questions.py:15) was locked for slice-1 suitability and reused by the loop; live loop confidences are 0.18-0.94 with real dips at 0.79-0.85.
 - Four synth verdict request_ids (pilot-verdict-6b688c99, p3-crammer-verdict-14055d40, p3-struggling-verdict-a14e0e8f, p3-returning-verdict-067f06ee) captured at the week-5 rebound; they stay `hold` under any gate (confidence 0.18-0.34) - the Phase 2/3 input fixes own those.
@@ -31,14 +35,23 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - .work/active/closed-loop-hold-analysis/state.md (new, maintained) - task state.
 - .work/active/closed-loop-hold-analysis/SCRATCHPAD.md (new, maintained) - session ledger.
 - .work/active/closed-loop-hold-analysis/plan/LEDGER.md (new) - bug ledger, unbiased-reviewed.
-- .work/active/closed-loop-hold-analysis/plan/PLAN.md (Phase 1 + Phase 2 Status/Notes updated) - fix plan.
+- .work/active/closed-loop-hold-analysis/plan/PLAN.md (Phase 1-3 Status/Notes updated) - fix plan.
 - .work/STATUS.md (row updated per phase).
-- apps/app/src/roadmap/feedback/useLoopDecision.ts - `observedDates` arg + `observedGradeDates` + strict `observedSpanDays`; `postureSource` log per fired POST (Phase 2).
-- apps/app/src/roadmap/feedback/RoadmapFeedbackSection.tsx - read-only live query over `assessmentAttempts`, tri-state `observedDates`, `postureSource` prop, `materialIdList` memo (Phase 2).
+- apps/app/src/sync/types.ts - `RoadmapReplannedPayload` optional `verdictId`/`verdictDecidedAt` mirrors (Phase 3).
+- apps/app/src/roadmap/replan/commitReplan.ts - real `option` derivation + verdict mirror write with stale-mirror delete (`ReplanVerdictLink`) (Phase 3).
+- apps/app/src/roadmap/replan/commitReplan.test.ts - option/mirror/stale-link/override tests (Phase 3).
+- apps/app/src/dev/synthExtract.ts - `VerdictEntry`/`VerdictRow` `decidedAt`, sort + exact-pair join (Phase 3).
+- apps/app/src/dev/synthExtract.test.ts - ordering/join/legacy pins (Phase 3).
+- apps/app/src/roadmap/feedback/useLoopDecision.ts - `DecidedLoopVerdict` identity (hash + settle time) + settled log (Phase 3); `observedDates` + `postureSource` (Phase 2).
+- apps/app/src/roadmap/feedback/useLoopDecision.test.ts - identity/log/recency pins (Phase 3) + span/posture tests (Phase 2).
+- apps/app/src/roadmap/feedback/RoadmapFeedbackSection.tsx - verdict nav handoff on `suggest_replan` (Phase 3); live grade-date query + posture wiring (Phase 2).
+- apps/app/src/roadmap/feedback/RoadmapFeedbackSection.test.tsx - handoff/manual/Keep tests + deflakes (Phase 2/3).
+- apps/app/src/pages/Replan.tsx - `readVerdictLink` nav-state reader + `verdict` pass-through (Phase 3).
+- apps/app/src/roadmap/replan/Replan.test.tsx - handoff + malformed/manual cases (Phase 3).
 - apps/app/src/roadmap/RoadmapCalendar.tsx - `loopPostureSource` from `projectedFinish`, passed to the section (Phase 2).
-- apps/app/src/roadmap/feedback/useLoopDecision.test.ts + RoadmapFeedbackSection.test.tsx + RoadmapCalendar.test.tsx - span/posture/race tests and waitFor fixes (Phase 2).
-- services/intelligence/app/jev/questions.py - `LOOP_APPROVE_AT = 0.7` + evidence comment; `route_loop_action` uses it (uncommitted).
-- services/intelligence/tests/test_loop_decision.py - 5 new tests: dip pass-through 0.79/0.82/0.85, crammer 0.83, low-confidence holds, boundary inclusive, suitability isolation (uncommitted).
+- apps/app/src/roadmap/RoadmapCalendar.test.tsx - posture source tests (Phase 2).
+- services/intelligence/app/jev/questions.py - `LOOP_APPROVE_AT = 0.7` + evidence comment; `route_loop_action` uses it (Phase 1).
+- services/intelligence/tests/test_loop_decision.py - dip pass-through, crammer, low-confidence holds, boundary inclusive, suitability isolation (Phase 1).
 - /tmp/opencode/loop_phase1_probes.py + loop_phase1_sweep.py + results JSONs (outside repo, print no secrets).
 
 ## Pitfalls & rules
@@ -54,6 +67,10 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - `Date.parse` is lenient: `2026` parses as Jan 1 and `2026-02-30` rolls to Mar 2. Any date taken from rows/events must pass the strict `YYYY-MM-DD` round-trip before it may shape `days_span`.
 - The `observedDates` tri-state is load-bearing: `undefined` = local rows not loaded, so the hook must not fire; `[]` = loaded with nothing graded (span 0). Do not coerce `undefined` to `[]` in the section.
 - The section's new live query resolves after the mastery fetch can settle; section tests that read a verdict must `waitFor`, not read once.
+- `commitReplan` spreads `entry.payload`, which can carry a prior replan's verdict mirror; the else branch deletes `verdictId`/`verdictDecidedAt` so a manual replan never re-emits a stale link.
+- The stored onboarding `weeklyHours` is the chip total, not per-day times days; option derivation must recompute current weekly hours via `computeWeeklyHours`.
+- The verdict join is an exact pair (`verdictId` + `verdictDecidedAt`) plus `createdAt >= decidedAt`; a verdict merely sharing the input hash with an earlier settlement must not borrow its replan. Legacy entries read with `converted: false`.
+- The late-verdict section test must wait for `client.getLoopDecision` to have been called before resolving its manual promise, or the resolution is lost (flake).
 - Full app suite on this host has 2 known WSL TZ flakes in `src/dev/seedTestData.test.ts`; rerun that file with `--pool=forks` before calling a red run real (STATUS gotcha).
 
 ## Decisions in force
@@ -62,9 +79,11 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - D-05 (PLAN): BUG-pin tests first, suite stays green throughout.
 - Floor `LOOP_EVIDENCE_SUFFICIENT_MIN = 0.5` stays (H1 re-confirmed, perfect band 0.4-0.6).
 - D-02 source (user, 2026-10-19): `days_span` comes from local `assessmentAttempts` grade rows scoped by `grade.materialId` to the roadmap's materials, using server-authored `grade.gradedAt`; no Dexie/schema/server change.
-- D-03 interpretation (user, 2026-10-19): capture stays on `updated`-entry with the page's real posture; `postureSource` is `'real'` iff a projected finish exists, else `'neutral'`, and is logged per fired POST. No dip-detection heuristic; dip capture timing stays operational and the timestamp/join work is Phase 3.
-- User selected Phase 1 (2026-10-19) and then Phase 2 (2026-10-19); do not start Phases 3-4 without a fresh instruction.
+- D-03 interpretation (user, 2026-10-19): capture stays on `updated`-entry with the page's real posture; `postureSource` is `'real'` iff a projected finish exists, else `'neutral'`, and is logged per fired POST. No dip-detection heuristic; dip capture timing stays operational.
+- D-04 implementation (Phase 3): `verdictId` = canonical loop-input hash, `decidedAt` = settle time, stamped once per memoized promise; the handoff is gated on `suggest_replan`; `option` precedence trim-scope > extend-deadline > increase-hours > edit; conversion requires the exact mirror pair and verdict-before-replan. The runtime chain (hook -> section -> Replan -> commitReplan) is a documented deviation from the plan's Files index (the key must travel at runtime).
+- User selected Phase 1 (2026-10-19), Phase 2 (2026-10-19), and Phase 3 (2026-10-19); do not start Phase 4 without a fresh instruction.
 
 ## Open
-- Phases 3-4 not started (Phase 3 depends on Phase 2, now complete).
+- Phase 3 commit pending user go-ahead (implementation + review done); record the SHA afterwards.
+- Phase 4 (coverage pins) not started; depends on Phases 1-3.
 - Live probe budget exhausted; ask before more JEV spend.

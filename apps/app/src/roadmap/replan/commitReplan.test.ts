@@ -71,6 +71,234 @@ describe('commitReplan', () => {
     expect(payload.materialIds).toEqual(['mat-1', 'mat-2'])
     expect(payload.slots).toBeUndefined()
     expect(payload.weeks).toBe(6)
+    expect(payload.option).toBe('extend-deadline')
+  })
+
+  it('records an unchanged replan as edit', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+
+    await commitReplan({
+      events: baseEvents(),
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('edit')
+  })
+
+  it('records the capacity lever as increase-hours', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+
+    await commitReplan({
+      events: baseEvents(),
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1.5,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('increase-hours')
+  })
+
+  it('records a dropped material as trim-scope and prefers it when levers combine', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+
+    await commitReplan({
+      events: baseEvents(),
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: '2026-07-07',
+      weekdayHours: 1.5,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1'],
+      materials: [{ materialId: 'mat-1', title: 'Algo Book', role: 'anchor', remainingMinutes: 60 }],
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('trim-scope')
+  })
+
+  it('mirrors the triggering verdict identity onto the payload', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+
+    await commitReplan({
+      events: baseEvents(),
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+      verdict: { verdictId: 'verdict-1', decidedAt: '2026-06-10T09:00:00.000Z' },
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.verdictId).toBe('verdict-1')
+    expect(payload.verdictDecidedAt).toBe('2026-06-10T09:00:00.000Z')
+  })
+
+  it('omits the verdict mirror when no verdict triggered the replan', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+
+    await commitReplan({
+      events: baseEvents(),
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.verdictId).toBeUndefined()
+    expect(payload.verdictDecidedAt).toBeUndefined()
+  })
+
+  it('drops a stale verdict link when a later replan carries none', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+    const events = [
+      ...baseEvents(),
+      event(
+        'RoadmapReplanned',
+        {
+          ...roadmapPayload(),
+          roadmapCreatedAt: ROADMAP_CREATED_AT,
+          option: 'trim-scope',
+          verdictId: 'verdict-1',
+          verdictDecidedAt: '2026-06-05T09:00:00.000Z',
+        },
+        '2026-06-05T09:00:00.000Z',
+      ),
+    ]
+
+    await commitReplan({
+      events,
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.verdictId).toBeUndefined()
+    expect(payload.verdictDecidedAt).toBeUndefined()
+  })
+
+  it('treats an unchanged schedule as edit when the stored weeklyHours is the onboarding chip total', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+    const events = baseEvents()
+    // Onboarding stores weeklyHours as the chip total (2+1=3) while the real
+    // schedule is Mon+Wed at 2h/day = 4h; an unchanged apply must not read as
+    // an hours increase.
+    events[2] = event(
+      'RoadmapCreated',
+      {
+        ...roadmapPayload(),
+        weekdayHours: 2,
+        weekendHours: 1,
+        weeklyHours: 3,
+        selectedStudyDays: ['Mon', 'Wed'],
+      },
+      ROADMAP_CREATED_AT,
+    )
+
+    await commitReplan({
+      events,
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 2,
+      weekendHours: 1,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materials,
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('edit')
+  })
+
+  it('treats carried-over identical overrides as edit, not trim-scope', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+    const events = baseEvents()
+    events[2] = event(
+      'RoadmapCreated',
+      { ...roadmapPayload(), materialDurationOverrides: { 'mat-1': 30 } },
+      ROADMAP_CREATED_AT,
+    )
+
+    await commitReplan({
+      events,
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 1,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materialDurationOverrides: { 'mat-1': 30 },
+      materials: [{ materialId: 'mat-1', title: 'Algo Book', role: 'anchor', remainingMinutes: 30 }, materials[1]],
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('edit')
+  })
+
+  it('records an hours decrease and a lengthened override as edit, not a lever', async () => {
+    const logEvent = vi.fn().mockResolvedValue(1)
+    const events = baseEvents()
+    events[2] = event(
+      'RoadmapCreated',
+      { ...roadmapPayload(), materialDurationOverrides: { 'mat-1': 30 } },
+      ROADMAP_CREATED_AT,
+    )
+
+    await commitReplan({
+      events,
+      roadmapCreatedAt: ROADMAP_CREATED_AT,
+      logEvent,
+      today: TODAY,
+      deadline: DEADLINE,
+      weekdayHours: 0.5,
+      weekendHours: 0,
+      selectedStudyDays: ['Mon', 'Wed'],
+      materialIds: ['mat-1', 'mat-2'],
+      materialDurationOverrides: { 'mat-1': 60 },
+      materials: [{ materialId: 'mat-1', title: 'Algo Book', role: 'anchor', remainingMinutes: 60 }, materials[1]],
+    })
+
+    const payload = logEvent.mock.calls.find((c) => c[0] === 'RoadmapReplanned')![1]
+    expect(payload.option).toBe('edit')
   })
 
   it('clears all future bookings before emitting new ones', async () => {

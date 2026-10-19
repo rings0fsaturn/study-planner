@@ -89,9 +89,9 @@ function baseEvents(): Event[] {
   ]
 }
 
-function renderReplanTree(search = '') {
+function renderReplanTree(search = '', state: unknown = null) {
   return (
-    <MemoryRouter initialEntries={[`/replan${search}`]}>
+    <MemoryRouter initialEntries={[{ pathname: '/replan', search, state }]}>
       <Replan />
     </MemoryRouter>
   )
@@ -114,8 +114,8 @@ describe('Replan', () => {
     vi.useRealTimers()
   })
 
-  function renderReplan(search = '') {
-    return render(renderReplanTree(search))
+  function renderReplan(search = '', state: unknown = null) {
+    return render(renderReplanTree(search, state))
   }
 
   it('renders the levers layout — no SchedulePreview', () => {
@@ -289,5 +289,43 @@ describe('Replan', () => {
 
     const opts = mockState.commitReplan.mock.calls[0][0]
     expect((opts.materialDurationOverrides as Record<string, number>)['mat-1']).toBe(75)
+  })
+
+  it('forwards the verdict handoff from the feedback section into commitReplan', async () => {
+    renderReplan('', {
+      loopVerdict: { verdictId: 'verdict-1', decidedAt: '2026-06-10T09:00:00.000Z' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+    await waitFor(() => expect(mockState.commitReplan).toHaveBeenCalled())
+
+    const opts = mockState.commitReplan.mock.calls[0][0]
+    expect(opts.verdict).toEqual({
+      verdictId: 'verdict-1',
+      decidedAt: '2026-06-10T09:00:00.000Z',
+    })
+  })
+
+  it('omits the verdict link for a manual visit', async () => {
+    renderReplan()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+    await waitFor(() => expect(mockState.commitReplan).toHaveBeenCalled())
+
+    const opts = mockState.commitReplan.mock.calls[0][0]
+    expect(opts.verdict).toBeUndefined()
+  })
+
+  it.each([
+    ['a non-string verdictId', { verdictId: 42, decidedAt: '2026-06-10T09:00:00.000Z' }],
+    ['a malformed decidedAt', { verdictId: 'verdict-1', decidedAt: 42 }],
+  ])('omits the verdict link for %s', async (_label, loopVerdict) => {
+    renderReplan('', { loopVerdict })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Apply changes' }))
+    await waitFor(() => expect(mockState.commitReplan).toHaveBeenCalled())
+
+    const opts = mockState.commitReplan.mock.calls[0][0]
+    expect(opts.verdict).toBeUndefined()
   })
 })

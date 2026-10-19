@@ -19,7 +19,7 @@ import {
   mapMaterialProgressMarks,
 } from '../progress/mapEvents'
 import type { MaterialKind } from '../session/types'
-import { commitReplan } from '../roadmap/replan/commitReplan'
+import { commitReplan, type ReplanVerdictLink } from '../roadmap/replan/commitReplan'
 import {
   computeCapacityScenario,
   parsePaceDeltaMinutes,
@@ -90,6 +90,21 @@ function computeFinish(
     gpCurve: [],
     totalPlanned: consumedActualMin + remainingActualMin,
   }).finishDate
+}
+
+/**
+ * The verdict handoff the feedback section passes through navigation state
+ * (D-04). Widened reader: anything missing or malformed yields no link, so a
+ * manual /replan visit stays a manual replan.
+ */
+function readVerdictLink(state: unknown): ReplanVerdictLink | undefined {
+  if (typeof state !== 'object' || state === null) return undefined
+  const handoff = (state as { loopVerdict?: unknown }).loopVerdict
+  if (typeof handoff !== 'object' || handoff === null) return undefined
+  const { verdictId, decidedAt } = handoff as { verdictId?: unknown; decidedAt?: unknown }
+  if (typeof verdictId !== 'string' || verdictId.length === 0) return undefined
+  if (typeof decidedAt !== 'string' || decidedAt.length === 0) return undefined
+  return { verdictId, decidedAt }
 }
 
 // ---------------------------------------------------------------------------
@@ -292,6 +307,7 @@ export function Replan() {
           role: m.role,
           remainingMinutes: materialOverrides[m.materialId] ?? m.fullRemainingMinutes,
         })),
+        verdict: readVerdictLink(location.state),
       })
       navigate('/roadmap')
     } catch (err) {

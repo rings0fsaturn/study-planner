@@ -1,6 +1,6 @@
 import { describe, expect, it, afterEach, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import Dexie from 'dexie'
 import { RoadmapFeedbackSection } from './RoadmapFeedbackSection'
 import { AssessmentProvider } from '../../assessments/AssessmentProvider'
@@ -32,6 +32,12 @@ const TWO_TITLES = new Map([
   ['mat-1', 'Operating Systems'],
   ['mat-2', 'Calculus'],
 ])
+
+/** Probe for the verdict handoff the section passes through navigation state. */
+function ReplanProbe() {
+  const location = useLocation()
+  return <div data-testid="replan-page" data-state={JSON.stringify(location.state ?? null)} />
+}
 
 afterEach(async () => {
   cleanup()
@@ -67,7 +73,7 @@ function renderSection(
                   />
                 }
               />
-              <Route path="/replan" element={<div data-testid="replan-page" />} />
+              <Route path="/replan" element={<ReplanProbe />} />
             </Routes>
           </ReadyGate>
         </AssessmentProvider>
@@ -272,7 +278,55 @@ describe('RoadmapFeedbackSection', () => {
     fireEvent.click(screen.getByRole('radio', { name: /Open replan/ }))
     fireEvent.click(screen.getByRole('button', { name: 'Review replan' }))
 
-    expect(await screen.findByTestId('replan-page')).toBeInTheDocument()
+    const probe = await screen.findByTestId('replan-page')
+    expect(probe).toBeInTheDocument()
+    // No verdict settled -> no handoff; /replan reads the absence and stays manual.
+    expect(JSON.parse(probe.getAttribute('data-state') ?? 'null')).toBeNull()
+  })
+
+  it('hands the settled verdict identity to the replan flow on confirm', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetLoopDecision(loopDecision({ verdict: 'suggest_replan', choice: 'suggest_replan' }))
+    renderSection(client)
+
+    await screen.findByText('Feedback refreshed')
+    fireEvent.click(screen.getByRole('button', { name: 'Review before applying' }))
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: /Open replan/ })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      )
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'Review replan' }))
+
+    const probe = await screen.findByTestId('replan-page')
+    const state = JSON.parse(probe.getAttribute('data-state') ?? 'null') as {
+      loopVerdict?: { verdictId?: string; decidedAt?: string }
+    }
+    expect(state.loopVerdict?.verdictId).toMatch(/^[0-9a-f]+$/)
+    expect(state.loopVerdict?.decidedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(Date.parse(state.loopVerdict?.decidedAt ?? '')).toBeGreaterThan(Date.now() - 10_000)
+  })
+
+  it('keeps the replan manual when the settled verdict did not suggest it', async () => {
+    await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
+    const client = new FakeAssessmentClient()
+    client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
+    client.scriptGetLoopDecision(loopDecision({ verdict: 'hold', choice: 'hold' }))
+    renderSection(client)
+
+    await screen.findByText('Feedback refreshed')
+    // Wait for the hold verdict to settle before confirming: the copy refire
+    // is the observable signal, so this test cannot pass on a null verdict.
+    await waitFor(() => expect(client.getFeedbackCopy).toHaveBeenCalledTimes(2))
+    fireEvent.click(screen.getByRole('button', { name: 'Review before applying' }))
+    fireEvent.click(screen.getByRole('radio', { name: /Open replan/ }))
+    fireEvent.click(screen.getByRole('button', { name: 'Review replan' }))
+
+    const probe = await screen.findByTestId('replan-page')
+    expect(JSON.parse(probe.getAttribute('data-state') ?? 'null')).toBeNull()
   })
 
   it('preselects Open replan when the loop verdict suggests it', async () => {
@@ -313,13 +367,18 @@ describe('RoadmapFeedbackSection', () => {
       'true',
     )
 
+    // Resolve only after the hook actually called: resolving the pending
+    // promise before the call exists loses the verdict and times out.
+    await waitFor(() => expect(client.getLoopDecision).toHaveBeenCalled())
     await act(async () => {
       resolveLoop(loopDecision({ verdict: 'suggest_replan', choice: 'suggest_replan' }))
     })
-    expect(screen.getByRole('radio', { name: /Open replan/ })).toHaveAttribute(
-      'aria-checked',
-      'true',
-    )
+    await waitFor(() => {
+      expect(screen.getByRole('radio', { name: /Open replan/ })).toHaveAttribute(
+        'aria-checked',
+        'true',
+      )
+    })
   })
 
   it('lists the weakest skill first when the loop verdict reprioritizes', async () => {

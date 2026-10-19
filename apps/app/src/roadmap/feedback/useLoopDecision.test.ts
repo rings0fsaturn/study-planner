@@ -309,6 +309,42 @@ describe('useLoopDecision', () => {
     }
   })
 
+  it('stamps the settled verdict with a join id and decision timestamp', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {})
+    try {
+      const client = new FakeAssessmentClient()
+      client.scriptGetLoopDecision(loopDecision({ verdict: 'suggest_replan' }))
+      const { result } = renderHook(() => useLoopDecision(client, argsFor('updated')))
+
+      await waitFor(() => expect(result.current?.verdict).toBe('suggest_replan'))
+      expect(result.current?.verdictId).toMatch(/^[0-9a-f]+$/)
+      expect(result.current?.decidedAt).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+      expect(Date.parse(result.current?.decidedAt ?? '')).toBeGreaterThan(Date.now() - 10_000)
+      expect(info).toHaveBeenCalledWith(
+        expect.stringContaining(
+          `loop decision settled verdict=suggest_replan id=${result.current?.verdictId} decided_at=${result.current?.decidedAt}`,
+        ),
+      )
+    } finally {
+      info.mockRestore()
+    }
+  })
+
+  it('keeps the verdict id and decision time stable across remounts', async () => {
+    const client = new FakeAssessmentClient()
+    client.scriptGetLoopDecision(loopDecision({ verdict: 'suggest_replan' }))
+    const first = renderHook(() => useLoopDecision(client, argsFor('updated')))
+    await waitFor(() => expect(first.result.current?.verdict).toBe('suggest_replan'))
+    const firstVerdict = first.result.current
+    first.unmount()
+
+    const second = renderHook(() => useLoopDecision(client, argsFor('updated')))
+    await waitFor(() => expect(second.result.current?.verdict).toBe('suggest_replan'))
+    expect(second.result.current?.verdictId).toBe(firstVerdict?.verdictId)
+    expect(second.result.current?.decidedAt).toBe(firstVerdict?.decidedAt)
+    expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
+  })
+
   it('resolves null when the call fails, never throwing', async () => {
     const client = new FakeAssessmentClient()
     client.scriptGetLoopDecision(new Error('offline'))
@@ -388,9 +424,12 @@ describe('useLoopDecision', () => {
       const second = renderHook(() => useLoopDecision(client, argsFor('updated')))
       await waitFor(() => expect(second.result.current?.verdict).toBe('reprioritize'))
       expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
-      // Memo hits fire no POST, so the posture-source line records exactly
-      // the one real call (D-03).
-      expect(info).toHaveBeenCalledTimes(1)
+      // Memo hits fire no POST, so exactly one firing line records the one
+      // real call (D-03); the settled line is not a second call.
+      const firingLines = info.mock.calls.filter((call) =>
+        String(call[0]).includes('loop decision firing'),
+      )
+      expect(firingLines).toHaveLength(1)
     } finally {
       info.mockRestore()
     }

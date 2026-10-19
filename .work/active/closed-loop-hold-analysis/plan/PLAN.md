@@ -329,7 +329,7 @@ Revert the two source files plus the test (`git checkout --` if uncommitted). Se
 
 ### Phase 3: Verdict timestamp plus verdict-to-replan join key
 
-**Status:** `☐ Not started`
+**Status:** ✅ Complete - uncommitted (2026-10-19; review APPROVE-WITH-FIXES applied; full app 1278/1278 forks, typecheck + lint clean; SHA recorded in a docs follow-up)
 **Depends on:** Phase 2 (inputs real, so joined verdicts are worth joining)
 **Estimated scope:** ~4 files, additive optional fields only
 
@@ -375,7 +375,13 @@ Revert the four files (`git checkout --` if uncommitted). Additive fields alread
 
 #### Notes (filled in during implementation)
 
-- Empty. Fill in per the preamble protocol.
+- Implemented 2026-10-19 via TDD (4 red-then-green slices + two review rounds): synthExtract 27/27, commitReplan 15/15, hook 32/32, section 16/16, Replan 16/16, `src/dev/ + src/roadmap/` 244/244 with `--pool=forks` (the 2 `seedTestData` TZ flakes are the known WSL ones), full app 1278/1278 forks, typecheck + lint clean, no direct `console.*` in touched source, no em dashes added.
+- Slice 1 (extraction, B4/B5): `VerdictEntry` gains optional `decidedAt`/`verdictId`, `VerdictRow` carries `decidedAt`, rows sort by `decidedAt` (legacy captures last, stable), and `converted` requires the exact mirror pair on a `RoadmapReplanned` event (`payload.verdictId === verdictId && payload.verdictDecidedAt === decidedAt`) with `createdAt >= decidedAt`. Legacy entries still read with `converted: false`; the old "any replan converts" rule was the bug (it counted scripted replans as verdict conversions).
+- Slice 2 (payload): `RoadmapReplannedPayload` gains optional `verdictId`/`verdictDecidedAt`; `commitReplan` derives the real `option` from the changed levers (precedence trim-scope > extend-deadline > increase-hours > edit; decreases, restores, and no-ops stay `edit`) and writes the verdict mirror only when a verdict is passed, explicitly deleting any stale mirror carried by the `entry.payload` spread. `Keep` still writes nothing (section Keep test green).
+- Slice 3 (hook identity): `useLoopDecision` returns `DecidedLoopVerdict` = server `LoopDecision` + `verdictId` (canonical-input hash, the memo key) + `decidedAt` (settle time), stamped inside the memoized promise so memo hits keep both stable; one `logger.info` settled line names both keys so the report capture can build an exact-pair entry.
+- Slice 4 (runtime handoff, index deviation): `RoadmapFeedbackSection` navigates to `/replan` with `state.loopVerdict` only when the settled verdict is `suggest_replan`; `Replan.tsx` validates that state through `readVerdictLink` and forwards `verdict` to `commitReplan`; absent or malformed state stays a manual replan.
+- Deviations from the plan index: `RoadmapFeedbackSection.tsx`, `Replan.tsx`, and `useLoopDecision.ts` (+ their tests) were touched beyond the listed files because the join key must travel from the verdict to the replan at runtime or it is never written; same documented-deviation pattern as Phase 2.
+- Review 2026-10-19 (OCR delegate preview/rules + two review rounds: correctness/spec and thermo-nuclear maintainability; one subagent turn degenerated and was re-run fresh): first round REQUEST_CHANGES with 2 high (a later manual replan inherited the prior verdict link through the payload spread; `option` compared the stored onboarding `weeklyHours` chip total against the recalculated schedule), 2 medium (unchanged carried-over overrides read as trim-scope; `verdictDecidedAt` was write-only), and 5 low. Applied test-first: explicit stale-mirror delete, computed current weekly hours, override value diff, exact-pair join, `suggest_replan`-gated handoff, direction-aware option, destructured join without `!`, one ISO comparison in sort and join, split/deflaked Replan and section tests, `decided_at` added to the settled log. Fix-verification round: all findings resolved, no new issues; non-blocking residuals only (none blocks the commit).
 
 ---
 

@@ -36,7 +36,17 @@ const MEMO_MAX_ENTRIES = 50
 const VERDICTS = ['hold', 'reprioritize', 'suggest_replan'] as const
 
 /** Session memo: canonical-input hash to the in-flight or settled verdict. */
-const memo = new Map<string, Promise<LoopDecision | null>>()
+const memo = new Map<string, Promise<DecidedLoopVerdict | null>>()
+
+/**
+ * A settled loop verdict: the server decision plus client-side identity.
+ * `verdictId` is the canonical-input hash and `decidedAt` the settle time;
+ * together they are the D-04 join/ordering keys a replan mirrors.
+ */
+export interface DecidedLoopVerdict extends LoopDecision {
+  verdictId: string
+  decidedAt: string
+}
 
 /** Test-only reset for the session memo (each test owns its materials). */
 export function __clearLoopDecisionMemo(): void {
@@ -249,7 +259,7 @@ export function useLoopDecision(
      */
     postureSource?: 'real' | 'neutral'
   },
-): LoopDecision | null {
+): DecidedLoopVerdict | null {
   const {
     state,
     projections,
@@ -290,7 +300,7 @@ export function useLoopDecision(
     return hashLoopInput(input, versions)
   }, [input, projections])
 
-  const [verdict, setVerdict] = useState<LoopDecision | null>(null)
+  const [verdict, setVerdict] = useState<DecidedLoopVerdict | null>(null)
   // Latest input for the keyed effect; the effect depends on the stable key
   // so a fresh array identity with identical content does not refire it.
   const inputRef = useRef(input)
@@ -311,7 +321,16 @@ export function useLoopDecision(
         `[roadmap-feedback] loop decision firing posture=${postureSource} days_span=${fired.evidence_summary.days_span}`,
       )
       pending = client.getLoopDecision(fired).then(
-        (decision) => (isLoopDecision(decision) ? decision : null),
+        (decision) => {
+          if (!isLoopDecision(decision)) return null
+          const decidedAt = new Date().toISOString()
+          // The settled line names the join id and decision time a replan
+          // mirrors, so the report capture can build an exact-pair entry (D-04).
+          logger.info(
+            `[roadmap-feedback] loop decision settled verdict=${decision.verdict} id=${key} decided_at=${decidedAt}`,
+          )
+          return { ...decision, verdictId: key, decidedAt }
+        },
         (error) => {
           // Advisory: a failed verdict keeps the static copy and is never
           // cached, so the next updated entry retries.
