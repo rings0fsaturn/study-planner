@@ -1,9 +1,9 @@
 # State - closed-loop-hold-analysis
-_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`; Phase 2 complete 2026-10-19, SHA recorded in docs follow-up) · Updated: 2026-10-19_
+_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`) · Updated: 2026-10-19_
 
 ## Current state & next
 - Phase 1 COMPLETE 2026-10-19, committed `493e1be`: `LOOP_APPROVE_AT = 0.7` shipped, live-verified; review APPROVE-WITH-FIXES, 3 low all applied.
-- Phase 2 COMPLETE 2026-10-19: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified, committed together with PLAN/state/STATUS/scratchpad (SHA in docs follow-up).
+- Phase 2 COMPLETE 2026-10-19, committed `2a15115`: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified.
 - Next: Phase 3 (verdict timestamp + verdict-to-replan join key, B4/B5) not started, depends on Phase 2; start only on a fresh instruction.
 - Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 2 needed no JEV spend. Ask before further spend.
 
@@ -66,6 +66,5 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - User selected Phase 1 (2026-10-19) and then Phase 2 (2026-10-19); do not start Phases 3-4 without a fresh instruction.
 
 ## Open
-- Phase 2 commit SHA pending the docs follow-up commit (this session).
 - Phases 3-4 not started (Phase 3 depends on Phase 2, now complete).
 - Live probe budget exhausted; ask before more JEV spend.

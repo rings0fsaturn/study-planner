@@ -20,3 +20,4 @@ _state.md: .work/active/closed-loop-hold-analysis/state.md · Updated: 2026-10-1
 - 2026-10-19 TDD fixes: RED strict-day test (282!=0), RED tri-state (fired while undefined) -> GREEN. Strict `YYYY-MM-DD` round-trip `parseDay`; `observedDates` undefined holds the call; section passes the live-query tri-state; log trimmed to posture+days_span; two section tests made waitFor-safe.
 - 2026-10-19 VERIFIED post-review: src/roadmap 161/161, typecheck + lint clean, no dashes, no console.* in touched source.
 - 2026-10-19 DONE PLAN Phase 2 Notes filled (incl. deviations + review record); commit pending user go-ahead.
+- 2026-10-19 DONE Phase 2 COMMITTED `2a15115` (10 files: 4 code/test app files + PLAN Notes/Status + state + STATUS row + scratchpad); SHA recorded in docs follow-up `3d84101`-style commit. Full app 1254/1256 with only the 2 known TZ flakes (forks rerun green).

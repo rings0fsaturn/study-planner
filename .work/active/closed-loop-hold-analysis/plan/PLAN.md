@@ -271,7 +271,7 @@ Revert the constant and the test pins (`git checkout -- services/intelligence/ap
 
 ### Phase 2: Real `days_span` and dip-timed real posture
 
-**Status:** ✅ Complete — 2026-10-19 (review APPROVE-WITH-FIXES applied; hook 30/30, `src/roadmap` 161/161, typecheck + lint clean)
+**Status:** ✅ Complete — `2a15115` (2026-10-19; review APPROVE-WITH-FIXES applied; hook 30/30, `src/roadmap` 161/161, typecheck + lint clean)
 **Depends on:** Phase 1 (gate values settled, so input changes are measured against the real router)
 **Estimated scope:** ~2 files, ~100 lines
 
