@@ -1,11 +1,11 @@
 # State - closed-loop-hold-analysis
-_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 implemented + reviewed, commit pending) · Updated: 2026-10-19_
+_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 committed `249f6fa`, Phase 4 in progress) · Updated: 2026-10-19_
 
 ## Current state & next
 - Phase 1 COMPLETE 2026-10-19, committed `493e1be`: `LOOP_APPROVE_AT = 0.7` shipped, live-verified; review APPROVE-WITH-FIXES, 3 low all applied.
 - Phase 2 COMPLETE 2026-10-19, committed `2a15115`: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified.
-- Phase 3 IMPLEMENTED + REVIEWED 2026-10-19, commit pending user go-ahead: verdict identity (hash + settle time) -> `/replan` nav handoff -> `RoadmapReplanned` mirror -> extraction exact-pair join with verdict-before-replan, real `option`, legacy rows read as not-converted. Suites green (full app 1278/1278 forks), review APPROVE-WITH-FIXES fully applied (2 high + 2 med + 5 low) and re-verified.
-- Next: commit Phase 3 (plan step 7) after user go-ahead, record the SHA in a docs follow-up, then Phase 4 (coverage pins) needs a fresh instruction; it depends on Phases 1-3.
+- Phase 3 COMPLETE 2026-10-19, committed `249f6fa`: verdict identity (hash + settle time) -> `/replan` nav handoff -> `RoadmapReplanned` mirror -> extraction exact-pair join with verdict-before-replan, real `option`, legacy rows read as not-converted. Suites green (full app 1278/1278 forks), review APPROVE-WITH-FIXES fully applied (2 high + 2 med + 5 low) and re-verified.
+- Next: Phase 4 (coverage pins) in progress per fresh user instruction 2026-10-19; three steps: backend dip-shape pins, frontend dip-shaped input fixture, full-suite confirmation.
 - Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 3 needed no JEV spend. Ask before further spend.
 
 ## Done so far
@@ -81,9 +81,8 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - D-02 source (user, 2026-10-19): `days_span` comes from local `assessmentAttempts` grade rows scoped by `grade.materialId` to the roadmap's materials, using server-authored `grade.gradedAt`; no Dexie/schema/server change.
 - D-03 interpretation (user, 2026-10-19): capture stays on `updated`-entry with the page's real posture; `postureSource` is `'real'` iff a projected finish exists, else `'neutral'`, and is logged per fired POST. No dip-detection heuristic; dip capture timing stays operational.
 - D-04 implementation (Phase 3): `verdictId` = canonical loop-input hash, `decidedAt` = settle time, stamped once per memoized promise; the handoff is gated on `suggest_replan`; `option` precedence trim-scope > extend-deadline > increase-hours > edit; conversion requires the exact mirror pair and verdict-before-replan. The runtime chain (hook -> section -> Replan -> commitReplan) is a documented deviation from the plan's Files index (the key must travel at runtime).
-- User selected Phase 1 (2026-10-19), Phase 2 (2026-10-19), and Phase 3 (2026-10-19); do not start Phase 4 without a fresh instruction.
+- User selected Phase 1, 2, and 3 (2026-10-19), then Phase 4 on a fresh instruction (2026-10-19, this session).
 
 ## Open
-- Phase 3 commit pending user go-ahead (implementation + review done); record the SHA afterwards.
-- Phase 4 (coverage pins) not started; depends on Phases 1-3.
+- Phase 4 (coverage pins) in progress; test files only, no production change.
 - Live probe budget exhausted; ask before more JEV spend.

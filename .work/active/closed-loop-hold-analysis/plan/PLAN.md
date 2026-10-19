@@ -329,7 +329,7 @@ Revert the two source files plus the test (`git checkout --` if uncommitted). Se
 
 ### Phase 3: Verdict timestamp plus verdict-to-replan join key
 
-**Status:** ✅ Complete - uncommitted (2026-10-19; review APPROVE-WITH-FIXES applied; full app 1278/1278 forks, typecheck + lint clean; SHA recorded in a docs follow-up)
+**Status:** ✅ Complete - `249f6fa` (2026-10-19; review APPROVE-WITH-FIXES applied; full app 1278/1278 forks, typecheck + lint clean)
 **Depends on:** Phase 2 (inputs real, so joined verdicts are worth joining)
 **Estimated scope:** ~4 files, additive optional fields only
 
