@@ -270,6 +270,66 @@ describe('useLoopDecision', () => {
     expect(sent.evidence_summary.days_span).toBe(21)
   })
 
+  it('carries the dip-shaped input through to the call (live B-dip regression pin)', async () => {
+    // T1 coverage pin (Phase 4): the live dip shape used to reach the
+    // endpoint as span-0 neutral input; analysis probes C/D scored identical
+    // signals at sufficiency 0.78 (span 21) vs 0.37 (span 0). This hook-level
+    // pin fails loudly if the input build regresses the span, the posture, or
+    // the per-skill signal mapping.
+    const client = new FakeAssessmentClient()
+    client.scriptGetLoopDecision(loopDecision({ verdict: 'suggest_replan' }))
+    const projections = [
+      masteryProjection({ materialId: 'mat-1', skillTag: 'Alpha', n: 2, mastery: 0.35, recentTrend: -0.2 }),
+      masteryProjection({ materialId: 'mat-1', skillTag: 'Beta', n: 3, mastery: 0.42, recentTrend: -0.05 }),
+      masteryProjection({ materialId: 'mat-1', skillTag: 'Delta', n: 2, mastery: 0.48, recentTrend: -0.08 }),
+      masteryProjection({ materialId: 'mat-1', skillTag: 'Gamma', n: 3, mastery: 0.51, recentTrend: -0.12 }),
+    ]
+    const dipPosture: LoopPosture = {
+      behind_days: 3,
+      days_left: 20,
+      pace_vs_plan: 0.5,
+      capacity_hours_per_week: 6,
+    }
+    const { result } = renderHook(() =>
+      useLoopDecision(client, {
+        ...IDS,
+        state: 'updated',
+        projections,
+        evidence: buildEvidence(projections, 0.7),
+        posture: dipPosture,
+        observedDates: ['2026-09-19', '2026-10-02T10:00:00Z', '2026-10-10'],
+        postureSource: 'real',
+      }),
+    )
+
+    await waitFor(() => expect(result.current?.verdict).toBe('suggest_replan'))
+    expect(client.getLoopDecision).toHaveBeenCalledTimes(1)
+    const sent = (client.getLoopDecision.mock.calls[0] as unknown[])[0] as ReturnType<
+      typeof buildLoopInput
+    >
+    expect(sent.evidence_summary).toEqual({
+      total_attempts: 10,
+      skills_observed: 4,
+      min_obs_per_skill: 2,
+      max_obs_per_skill: 3,
+      days_span: 21,
+    })
+    expect(
+      sent.signals.map((signal) => [
+        signal.skill,
+        signal.mastery,
+        signal.observations,
+        signal.trend,
+      ]),
+    ).toEqual([
+      ['Alpha', 0.35, 2, -0.2],
+      ['Beta', 0.42, 3, -0.05],
+      ['Delta', 0.48, 2, -0.08],
+      ['Gamma', 0.51, 3, -0.12],
+    ])
+    expect(sent.posture).toEqual(dipPosture)
+  })
+
   it('waits for the observed dates before firing', async () => {
     const client = new FakeAssessmentClient()
     client.scriptGetLoopDecision(loopDecision())

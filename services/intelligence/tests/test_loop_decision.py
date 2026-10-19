@@ -201,14 +201,25 @@ def test_live_crammer_confidence_routes_reprioritize():
 
 def test_low_live_confidences_still_hold():
     # Synth and real-app verdicts at 0.18-0.37 (and rebound noise 0.35-0.37)
-    # stay hold under the recalibrated gate.
+    # stay hold under the recalibrated gate; the reprioritize 0.30 entry is a
+    # live synth sample from that band (0.18-0.31).
     for choice, confidence in (
         ("hold", 0.30),
+        ("reprioritize", 0.30),
         ("suggest_replan", 0.35),
         ("reprioritize", 0.37),
     ):
         _use_jev(_answers(choice, confidence, 0.9))
         assert _post(_body()).json()["verdict"] == "hold"
+
+
+def test_gate_floor_bracket_holds_below_the_picked_value():
+    # Phase 4 calibration brace: the boundary test follows LOOP_APPROVE_AT
+    # itself, so a silent re-pick passes it. This 0.6 choice plus the 0.79
+    # dip pin bracket the gate to (0.6, 0.79]: drift to 0.6 or below routes
+    # here and fails loudly instead of passing unseen.
+    _use_jev(_answers("reprioritize", 0.6, 0.9))
+    assert _post(_body()).json()["verdict"] == "hold"
 
 
 def test_loop_gate_boundary_is_inclusive_at_picked_value():

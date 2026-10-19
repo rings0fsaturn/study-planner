@@ -1,14 +1,17 @@
 # State - closed-loop-hold-analysis
-_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 committed `249f6fa`, Phase 4 in progress) · Updated: 2026-10-19_
+_Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix) · Status: active (Phase 1 committed `493e1be`, Phase 2 committed `2a15115`, Phase 3 committed `249f6fa`, Phase 4 implemented + reviewed + verified, commit pending) · Updated: 2026-10-19_
 
 ## Current state & next
 - Phase 1 COMPLETE 2026-10-19, committed `493e1be`: `LOOP_APPROVE_AT = 0.7` shipped, live-verified; review APPROVE-WITH-FIXES, 3 low all applied.
 - Phase 2 COMPLETE 2026-10-19, committed `2a15115`: real `days_span` from local graded-attempt dates + explicit postureSource logged per loop call; TDD, reviewed, verified.
 - Phase 3 COMPLETE 2026-10-19, committed `249f6fa`: verdict identity (hash + settle time) -> `/replan` nav handoff -> `RoadmapReplanned` mirror -> extraction exact-pair join with verdict-before-replan, real `option`, legacy rows read as not-converted. Suites green (full app 1278/1278 forks), review APPROVE-WITH-FIXES fully applied (2 high + 2 med + 5 low) and re-verified.
-- Next: Phase 4 (coverage pins) in progress per fresh user instruction 2026-10-19; three steps: backend dip-shape pins, frontend dip-shaped input fixture, full-suite confirmation.
+- Phase 4 COMPLETE (test files only) 2026-10-19, commit pending user go-ahead: backend gate brace + live-band pins in `test_loop_decision.py` (18/18), frontend live B-dip input pin in `useLoopDecision.test.ts` (33/33), full app 1279/1279 forks, typecheck + lint + ruff clean. Review APPROVE-WITH-FIXES (2 medium + 4 low) all applied + re-verified.
+- Next: commit Phase 4 (plan step 7) after user go-ahead, then record the SHA in a docs follow-up.
 - Probe budget: 1 dry-run + 10 confirmation JEV calls used (cap reached); Phase 3 needed no JEV spend. Ask before further spend.
 
 ## Done so far
+- Phase 4 implemented 2026-10-19 (test files only, no production change) with mutation-proven pins: `test_loop_decision.py` `test_low_live_confidences_still_hold` gained the live synth sample `("reprioritize", 0.30)` and new `test_gate_floor_bracket_holds_below_the_picked_value` pins `reprioritize 0.6 -> hold` (fails if the gate drops to 0.6); `useLoopDecision.test.ts` gained the live B-dip input pin (4 skills n=2/3/2/3 thin density, three grade dates spanning 21 days, real posture behind_days 3 / pace 0.5) asserting the exact `evidence_summary`, per-signal skill/mastery/observations/trend mapping, posture object, and a single call (fails when span is zeroed, posture is neutered, or trend is dropped).
+- Phase 4 review 2026-10-19 (OCR delegate preview/rules scoped to the two files + code-reviewer subagent): APPROVE-WITH-FIXES, 2 medium + 4 low, all applied. The gate-floor brace exists because the boundary test follows `LOOP_APPROVE_AT` itself and cannot catch a silent re-pick.
 - Phase 3 implemented 2026-10-19 via TDD (4 slices), reviewed twice, verified. `sync/types.ts` `RoadmapReplannedPayload` + optional `verdictId`/`verdictDecidedAt`; `commitReplan` real `option` (trim-scope > extend-deadline > increase-hours > edit; decreases/restores -> edit) + verdict mirror written only when supplied (stale mirror from the payload spread deleted); `synthExtract` `verdictTable` sorts by `decidedAt` (legacy last) and converts only on the exact mirror pair + `createdAt >= decidedAt`, legacy reads `converted: false`; `useLoopDecision` returns `DecidedLoopVerdict` (verdictId = input hash, decidedAt = settle time, stable across memo hits) and logs one settled line with both keys; section hands the verdict to `/replan` only on `suggest_replan`; Replan validates nav state and forwards it.
 - Phase 3 verification 2026-10-19: synthExtract 27/27, commitReplan 15/15, hook 32/32, section 16/16, Replan 16/16, `src/dev/ + src/roadmap/` 244/244 (`--pool=forks`; 2 known `seedTestData` TZ flakes on the default pool), full app 1278/1278 forks, typecheck + lint clean, no direct `console.*`, no em dashes added. Flake chase: the late-verdict section test resolved its manual promise before the hook called (fixed by waiting for the call), stable 6/6 file runs.
 - Phase 3 review 2026-10-19 (OCR delegate preview/rules + code-reviewer rounds; one subagent turn degenerated, re-run fresh): round 1 REQUEST_CHANGES (2 high: stale verdict link inherited by a later manual replan; `option` compared the stored onboarding `weeklyHours` chip total against the recalculated schedule; 2 med: unchanged overrides read as trim-scope, `verdictDecidedAt` write-only; 5 low). All applied test-first; fix-verification round confirmed all resolved with no new issues.
@@ -35,7 +38,7 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - .work/active/closed-loop-hold-analysis/state.md (new, maintained) - task state.
 - .work/active/closed-loop-hold-analysis/SCRATCHPAD.md (new, maintained) - session ledger.
 - .work/active/closed-loop-hold-analysis/plan/LEDGER.md (new) - bug ledger, unbiased-reviewed.
-- .work/active/closed-loop-hold-analysis/plan/PLAN.md (Phase 1-3 Status/Notes updated) - fix plan.
+- .work/active/closed-loop-hold-analysis/plan/PLAN.md (Phase 1-4 Status/Notes updated) - fix plan.
 - .work/STATUS.md (row updated per phase).
 - apps/app/src/sync/types.ts - `RoadmapReplannedPayload` optional `verdictId`/`verdictDecidedAt` mirrors (Phase 3).
 - apps/app/src/roadmap/replan/commitReplan.ts - real `option` derivation + verdict mirror write with stale-mirror delete (`ReplanVerdictLink`) (Phase 3).
@@ -43,7 +46,7 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - apps/app/src/dev/synthExtract.ts - `VerdictEntry`/`VerdictRow` `decidedAt`, sort + exact-pair join (Phase 3).
 - apps/app/src/dev/synthExtract.test.ts - ordering/join/legacy pins (Phase 3).
 - apps/app/src/roadmap/feedback/useLoopDecision.ts - `DecidedLoopVerdict` identity (hash + settle time) + settled log (Phase 3); `observedDates` + `postureSource` (Phase 2).
-- apps/app/src/roadmap/feedback/useLoopDecision.test.ts - identity/log/recency pins (Phase 3) + span/posture tests (Phase 2).
+- apps/app/src/roadmap/feedback/useLoopDecision.test.ts - identity/log/recency pins (Phase 3) + span/posture tests (Phase 2) + live B-dip input pin (Phase 4).
 - apps/app/src/roadmap/feedback/RoadmapFeedbackSection.tsx - verdict nav handoff on `suggest_replan` (Phase 3); live grade-date query + posture wiring (Phase 2).
 - apps/app/src/roadmap/feedback/RoadmapFeedbackSection.test.tsx - handoff/manual/Keep tests + deflakes (Phase 2/3).
 - apps/app/src/pages/Replan.tsx - `readVerdictLink` nav-state reader + `verdict` pass-through (Phase 3).
@@ -51,7 +54,7 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - apps/app/src/roadmap/RoadmapCalendar.tsx - `loopPostureSource` from `projectedFinish`, passed to the section (Phase 2).
 - apps/app/src/roadmap/RoadmapCalendar.test.tsx - posture source tests (Phase 2).
 - services/intelligence/app/jev/questions.py - `LOOP_APPROVE_AT = 0.7` + evidence comment; `route_loop_action` uses it (Phase 1).
-- services/intelligence/tests/test_loop_decision.py - dip pass-through, crammer, low-confidence holds, boundary inclusive, suitability isolation (Phase 1).
+- services/intelligence/tests/test_loop_decision.py - dip pass-through, crammer, low-confidence holds, boundary inclusive, suitability isolation (Phase 1) + live-band 0.30 sample and 0.6 gate-floor brace (Phase 4).
 - /tmp/opencode/loop_phase1_probes.py + loop_phase1_sweep.py + results JSONs (outside repo, print no secrets).
 
 ## Pitfalls & rules
@@ -72,6 +75,8 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - The verdict join is an exact pair (`verdictId` + `verdictDecidedAt`) plus `createdAt >= decidedAt`; a verdict merely sharing the input hash with an earlier settlement must not borrow its replan. Legacy entries read with `converted: false`.
 - The late-verdict section test must wait for `client.getLoopDecision` to have been called before resolving its manual promise, or the resolution is lost (flake).
 - Full app suite on this host has 2 known WSL TZ flakes in `src/dev/seedTestData.test.ts`; rerun that file with `--pool=forks` before calling a red run real (STATUS gotcha).
+- The backend boundary test follows `LOOP_APPROVE_AT` itself, so it cannot catch a silent re-pick; the 0.6 hold brace plus the 0.79 dip pin bracket the gate to (0.6, 0.79] and are the drift guard (Phase 4).
+- OCR `delegate preview` default-excludes test files (`exclude_reason: default_path`) and includes unrelated dirty files; for test-only phases resolve rules with `ocr delegate rule <paths>` and scope the diff manually (AGENTS.md gotcha).
 
 ## Decisions in force
 - D-01 (PLAN): loop gets its own confidence constant; suitability keeps `APPROVE_AT = 0.9`. Shipped as `LOOP_APPROVE_AT = 0.7`.
@@ -84,5 +89,5 @@ _Plan: .work/active/closed-loop-hold-analysis/plan/PLAN.md (closed-loop-hold-fix
 - User selected Phase 1, 2, and 3 (2026-10-19), then Phase 4 on a fresh instruction (2026-10-19, this session).
 
 ## Open
-- Phase 4 (coverage pins) in progress; test files only, no production change.
+- Phase 4 commit pending user go-ahead (implementation + review + verification done); record the SHA in a docs follow-up afterwards.
 - Live probe budget exhausted; ask before more JEV spend.

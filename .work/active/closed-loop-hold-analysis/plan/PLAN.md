@@ -387,7 +387,7 @@ Revert the four files (`git checkout --` if uncommitted). Additive fields alread
 
 ### Phase 4: Coverage that would have caught the hold
 
-**Status:** `☐ Not started`
+**Status:** ✅ Complete - uncommitted (2026-10-19; review APPROVE-WITH-FIXES applied; backend loop 18/18, full app 1279/1279 forks, typecheck + lint clean; commit pending user go-ahead)
 **Depends on:** Phases 1-3 (pins the fixed behavior end to end)
 **Estimated scope:** test files only, no production change
 
@@ -430,7 +430,13 @@ Delete or revert the added test blocks only. Production code untouched in this p
 
 #### Notes (filled in during implementation)
 
-- Empty. Fill in per the preamble protocol.
+- Implemented 2026-10-19 (test files only, no production change), TDD-proven by mutation: the backend gate brace fails when `LOOP_APPROVE_AT` is temporarily lowered to 0.6; the frontend dip pin fails when `days_span` is zeroed, when posture is swapped to neutral, and when signal `trend` is forced to 0.
+- Step 1 (backend): the live synth sample `("reprioritize", 0.30)` joined `test_low_live_confidences_still_hold`; new `test_gate_floor_bracket_holds_below_the_picked_value` pins `reprioritize 0.6 -> hold`. The boundary test follows `LOOP_APPROVE_AT` itself, so a silent re-pick passes it; the 0.6 brace plus the 0.79 dip pin bracket the gate to (0.6, 0.79] and any drift outside that fails loudly. Loop suite 18/18, ruff clean.
+- Step 2 (frontend): new hook pin "carries the dip-shaped input through to the call (live B-dip regression pin)": 4 skills n=2/3/2/3 (thin density), grade dates spanning 21 days, real posture (behind_days 3, pace 0.5). It asserts the exact `evidence_summary`, the per-signal mapping (skill/mastery/observations/trend) that reached `getLoopDecision`, the posture object, and a single call so a bad first fire cannot hide behind a later refire. Hook suite 33/33.
+- Step 3 (full-suite): full app 107 files / 1279 tests with `--pool=forks`, backend loop 18/18, `pnpm typecheck` + `pnpm lint` + ruff check/format clean.
+- BUG-pin note: no CURRENT-behavior pins were needed because Phases 1-3 shipped the fixed behavior; the BUG-pin convention stays demonstrated by the backend dip test's Phase 1 comment for a future recalibration that must assert current-but-wrong behavior temporarily.
+- Review 2026-10-19 (OCR delegate preview/rules + code-reviewer subagent): APPROVE-WITH-FIXES, 2 medium + 4 low, all applied. M1: the 0.30 entry alone was subsumed by existing hold pins, so the 0.6 gate-floor brace was added. M2: the frontend pin now asserts the full signal mapping, not just the summary and posture. L1: comment accuracy (crammer sample wording, probe C/D citation). L2: call count pinned to 1. L3: the neutral-posture claim narrowed to the hook layer. Post-fix re-verify: backend 18/18, hook 33/33, full app 1279/1279 forks, typecheck + lint clean.
+- OCR note: the workspace preview default-excludes test files (`exclude_reason: default_path`, the AGENTS.md gotcha) and includes unrelated dirty files, so the review was scoped to this phase's two changed files and their rule groups were resolved with `ocr delegate rule` on those paths directly.
 
 ---
 
