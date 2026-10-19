@@ -15,6 +15,22 @@ AUTO_ACCEPT = 0.8
 APPROVE_AT = 0.9
 BLOCK_AT = 0.1
 
+#: Loop-owned confidence gate (closed-loop-hold-fix Phase 1, 2026-10-19).
+#: Never reuse the slice-1 suitability APPROVE_AT here: it was locked for the
+#: suitability judgment and discards every observed B-dip sample (0.79-0.85),
+#: keeping only 10/21 labeled loop states. Sweep
+#: over 21 labeled loop states (11 fresh endpoint samples incl. 6 B-dip, 6
+#: analysis probes, 4 synth verdicts; full table in the closed-loop-hold-fix
+#: plan Notes): live dip samples span 0.79-0.94 and must route, rebound noise
+#: 0.35-0.37 must hold. Gates 0.5-0.7 separate them perfectly (agreement
+#: 0.857); 0.8 drops to 0.810 because the observed minimum dip sample is
+#: 0.79, and 0.9 drops to 0.476. The strictest perfect separator wins the
+#: fail-closed tie-break, so 0.7, clearing the observed dip minimum by 0.09
+#: instead of sitting inside the 0.79-0.85 variance band.
+#: Retune only with fresh outcome-labeled verdicts via the sweep, never
+#: intuition.
+LOOP_APPROVE_AT = 0.7
+
 # #75: families whose `not_derivable` verdict terminal-blocks generation. The
 # suitability builder is coding-calibrated (sweep v1 + final v1: coding 9/9,
 # objective/written derivable rows read `not_derivable` at 0.64-0.96), so every
@@ -363,14 +379,15 @@ def loop_questions() -> dict[str, Any]:
 
 
 def route_loop_action(choice: str, confidence: float, evidence_sufficient: float) -> str:
-    """Loop v1 locked router: ``hold`` / ``reprioritize`` / ``suggest_replan``.
+    """Loop v1.1 router: ``hold`` / ``reprioritize`` / ``suggest_replan``.
 
-    Fail-closed advisory: a thin evidence base, a low-confidence verdict, the
-    middle band, or an unknown choice all land on ``hold`` (no review queue
-    for the loop; the static copy renders instead).
+    Fail-closed advisory: a thin evidence base, a confidence under the
+    loop-owned gate (``LOOP_APPROVE_AT``), an unknown choice, or the middle
+    band all land on ``hold`` (no review queue for the loop; the static copy
+    renders instead).
     """
     if evidence_sufficient < LOOP_EVIDENCE_SUFFICIENT_MIN:
         return "hold"
-    if confidence >= APPROVE_AT:
+    if confidence >= LOOP_APPROVE_AT:
         return choice if choice in LOOP_ACTION_CHOICES else "hold"
     return "hold"

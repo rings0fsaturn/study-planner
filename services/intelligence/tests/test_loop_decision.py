@@ -183,6 +183,50 @@ def test_mid_confidence_holds():
     assert _post(_body()).json()["verdict"] == "hold"
 
 
+def test_live_dip_confidence_routes_replan():
+    # BUG-pin (closed-loop-hold-fix Phase 1): the loop router reused the
+    # slice-1 suitability APPROVE_AT = 0.9, and every observed B-dip sample
+    # (0.79-0.85) routed hold under it; only the deep-dip top of the range
+    # passed. The loop-owned gate must clear the observed minimum (0.79),
+    # not sit inside the variance band.
+    for confidence in (0.79, 0.82, 0.85):
+        _use_jev(_answers("suggest_replan", confidence, 0.9))
+        assert _post(_body()).json()["verdict"] == "suggest_replan"
+
+
+def test_live_crammer_confidence_routes_reprioritize():
+    _use_jev(_answers("reprioritize", 0.83, 0.9))
+    assert _post(_body()).json()["verdict"] == "reprioritize"
+
+
+def test_low_live_confidences_still_hold():
+    # Synth and real-app verdicts at 0.18-0.37 (and rebound noise 0.35-0.37)
+    # stay hold under the recalibrated gate.
+    for choice, confidence in (
+        ("hold", 0.30),
+        ("suggest_replan", 0.35),
+        ("reprioritize", 0.37),
+    ):
+        _use_jev(_answers(choice, confidence, 0.9))
+        assert _post(_body()).json()["verdict"] == "hold"
+
+
+def test_loop_gate_boundary_is_inclusive_at_picked_value():
+    from app.jev.questions import LOOP_APPROVE_AT
+
+    _use_jev(_answers("suggest_replan", LOOP_APPROVE_AT, 0.9))
+    assert _post(_body()).json()["verdict"] == "suggest_replan"
+    _use_jev(_answers("suggest_replan", LOOP_APPROVE_AT - 0.01, 0.9))
+    assert _post(_body()).json()["verdict"] == "hold"
+
+
+def test_suitability_gate_is_untouched():
+    from app.jev.questions import APPROVE_AT, route_suitability
+
+    assert APPROVE_AT == 0.9
+    assert route_suitability("derivable", 0.85) == "review"
+
+
 def test_unknown_choice_holds():
     _use_jev(_answers("unknown", 0.95, 0.9))
     assert _post(_body()).json()["verdict"] == "hold"
