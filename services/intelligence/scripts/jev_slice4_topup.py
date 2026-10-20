@@ -32,18 +32,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
-import urllib.error
-import urllib.request
 import uuid
 from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).parent))
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from retrieval_probe import load_env_file  # noqa: E402
+from live_client import (  # noqa: E402
+    as_dict,
+    call,
+    headers_for,
+    load_kv,
+    read_credentials,
+    sign_in,
+)
 
 ENV_PATH = Path(__file__).resolve().parents[1] / ".env"
 QUESTIONS_TABLE = "questions"
@@ -53,32 +56,24 @@ ATTEMPTS_TABLE = "question_attempts"
 WRITTEN_TEXT_MAX_LENGTH = 20000
 
 
-def _request(method: str, url: str, *, headers: dict[str, str], payload: Any = None) -> Any:
-    data = json.dumps(payload).encode() if payload is not None else None
-    request = urllib.request.Request(url, data=data, headers=headers, method=method)
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            body = response.read().decode()
-    except urllib.error.HTTPError as exc:
-        raise SystemExit(f"{method} {url} -> {exc.code}: {exc.read().decode()[:400]}") from exc
-    return json.loads(body) if body.strip() else None
-
-
 def _service_get(base: str, key: str, path: str) -> Any:
-    return _request(
+    status, body = call(
         "GET",
         f"{base}/rest/v1/{path}",
-        headers={"apikey": key, "Authorization": f"Bearer {key}", "Accept": "application/json"},
+        headers={"apikey": key, "Authorization": f"Bearer {key}"},
     )
+    if status != 200:
+        raise SystemExit(f"GET {path} -> {status}: {body}")
+    return body
 
 
 def load_env_file_once() -> dict[str, str]:
     """Service-role credentials from the gitignored env (never echoed)."""
-    load_env_file(ENV_PATH)
+    env = load_kv(ENV_PATH)
     return {
-        "url": os.environ["SUPABASE_URL"].rstrip("/"),
-        "service_key": os.environ["SUPABASE_SERVICE_ROLE_KEY"],
-        "apikey": os.getenv("SUPABASE_PUBLISHABLE_KEY") or os.environ["SUPABASE_SERVICE_ROLE_KEY"],
+        "url": env["SUPABASE_URL"].rstrip("/"),
+        "service_key": env["SUPABASE_SERVICE_ROLE_KEY"],
+        "apikey": env.get("SUPABASE_PUBLISHABLE_KEY") or env["SUPABASE_SERVICE_ROLE_KEY"],
     }
 
 
@@ -89,8 +84,7 @@ def load_questions(base: str, key: str, ids: list[str]) -> dict[str, dict[str, A
     rows = _service_get(
         base,
         key,
-        f"{QUESTIONS_TABLE}?select=id,assessment_id,format,answer_block"
-        f"&id=in.({','.join(ids)})",
+        f"{QUESTIONS_TABLE}?select=id,assessment_id,format,answer_block&id=in.({','.join(ids)})",
     )
     out: dict[str, dict[str, Any]] = {}
     for row in rows:
@@ -109,73 +103,31 @@ def load_questions(base: str, key: str, ids: list[str]) -> dict[str, dict[str, A
     return out
 
 
-def read_credentials(path: Path) -> tuple[str, str]:
-    """Shared dev account from the gitignored creds file.
-
-    Values are unwrapped from their ``key=value`` lines: sending the raw wrapped
-    string answers ``invalid_credentials`` for a valid account (rule 16).
-    """
-    email = password = ""
-    for line in path.read_text(encoding="utf-8").splitlines():
-        if line.startswith("email="):
-            email = line.partition("=")[2].strip()
-        elif line.startswith("password="):
-            password = line.partition("=")[2].strip()
-    if not email or not password:
-        raise SystemExit("credentials file must carry email= and password= lines")
-    return email, password
-
-
-def sign_in(env: dict[str, str], email: str, password: str) -> str:
-    """Supabase password grant; returns the access token."""
-    request = urllib.request.Request(
-        f"{env['url']}/auth/v1/token?grant_type=password",
-        data=json.dumps({"email": email, "password": password}).encode(),
-        headers={"apikey": env["apikey"], "Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            body = json.loads(response.read().decode())
-    except urllib.error.HTTPError as exc:
-        # Never echo the body: a failed grant can name the account.
-        raise SystemExit(f"sign-in failed: HTTP {exc.code}") from exc
-    token = str(body.get("access_token") or "")
-    if not token:
-        raise SystemExit("sign-in returned no access token")
-    return token
-
-
 def submit_attempt(
     service_url: str, token: str, question: dict[str, Any], text: str
 ) -> dict[str, Any]:
     """One production-path submission through the intelligence service."""
     attempt_id = str(uuid.uuid4())
+    rid = f"jev-slice4-topup-{uuid.uuid4().hex[:8]}"
     payload = {
         "questionId": question["id"],
         "clientAttemptId": f"jev-slice4-topup-{attempt_id}",
-        "correlationId": f"jev-slice4-topup-{uuid.uuid4().hex[:8]}",
+        "correlationId": rid,
         "answer": {"text": text},
         "submittedAt": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    request = urllib.request.Request(
+    headers = headers_for(token, rid)
+    headers["Idempotency-Key"] = f"jev-slice4-topup-{attempt_id}"
+    status, body = call(
+        "POST",
         f"{service_url}/v1/assessments/{question['assessment_id']}"
         f"/questions/{question['id']}/attempts",
-        data=json.dumps(payload).encode(),
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-            "Idempotency-Key": f"jev-slice4-topup-{attempt_id}",
-        },
-        method="POST",
+        headers=headers,
+        payload=payload,
     )
-    try:
-        with urllib.request.urlopen(request, timeout=60) as response:
-            return json.loads(response.read().decode())
-    except urllib.error.HTTPError as exc:
-        raise SystemExit(
-            f"submit {question['id'][:8]} -> HTTP {exc.code}: {exc.read().decode()[:300]}"
-        ) from exc
+    if status not in (200, 201):
+        raise SystemExit(f"submit {question['id'][:8]} -> HTTP {status}: {body}")
+    return as_dict(body)
 
 
 def wait_for_grade(base: str, key: str, attempt_id: str, *, timeout_s: float = 150.0) -> dict:
@@ -234,7 +186,7 @@ def main() -> int:
         raise SystemExit(f"not usable written questions: {missing}")
 
     email, password = read_credentials(Path(args.cred))
-    token = sign_in(env, email, password)
+    token, _ = sign_in(env["url"], env["apikey"], email, password)
 
     rows: list[dict[str, Any]] = []
     summary: list[dict[str, Any]] = []
