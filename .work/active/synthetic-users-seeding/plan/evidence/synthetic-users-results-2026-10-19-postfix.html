@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthetic users - post-fix replay 2026-10-19 (supersedes pre-fix snapshot)</title>
+<style>
+:root{--paper:#fff;--wash:#f4f1ea;--ink:#1c1a16;--muted:#57534a;--line:#e3ddd0;--accent:#0f766e;--good:#15803d;--good-wash:#ecfdf3;--warn:#b45309;--warn-wash:#fef3e2;--radius:14px;--max:72ch}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;font-size:17px;line-height:1.65}main{max-width:1060px;margin:0 auto;padding:28px 22px 60px}h1{font-family:Georgia,serif;letter-spacing:-.02em;font-size:clamp(1.8rem,4vw,2.6rem);line-height:1.12;margin:0 0 10px}p{max-width:var(--max)}.note{border:1px solid var(--line);border-radius:10px;padding:14px 18px;max-width:var(--max);background:#fff}.note.good{background:var(--good-wash)}.note.warn{background:var(--warn-wash);border-color:#e8c88a}code{background:var(--wash);padding:1px 6px;border-radius:6px}table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font-size:.94rem}th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}th{background:var(--wash);font-size:.8rem;text-transform:uppercase;letter-spacing:.02em;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+<h1>Post-fix replay 2026-10-19: 4/4 suggest_replan, 4 verdict-linked replans</h1>
+<p>Supersedes <code>synthetic-users-results.html</code> (pre-fix 4x hold, 0 conversions). Machine facts: <a href="./synthetic-users-results-2026-10-19-postfix.json">postfix JSON</a>.</p>
+<div class="note good"><p><strong>D-02 proof now exists.</strong> <code>days_span 32</code> from durable <code>SessionLogged.payload.date</code> plus real posture opened all four states. Pre-fix they were 4x <code>hold</code> at 0.18-0.34 under span0/neutral. Confidence 1.0 would also clear the old 0.9 gate.</p></div>
+<h2>Verdicts</h2>
+<table><tr><th>User</th><th>Verdict</th><th>Conf / suff</th><th>Request id</th></tr>
+<tr><td>steady</td><td>suggest_replan</td><td>1.0 / 0.66-0.77</td><td><code>b6499e4b-...</code></td></tr>
+<tr><td>crammer</td><td>suggest_replan</td><td>1.0 / 0.66-0.77</td><td><code>c345c8ad-...</code></td></tr>
+<tr><td>struggling</td><td>suggest_replan</td><td>1.0 / 0.66-0.77</td><td><code>23674e1b-...</code></td></tr>
+<tr><td>returning</td><td>suggest_replan</td><td>1.0 / 0.66-0.77</td><td><code>74a0d053-...</code></td></tr>
+</table>
+<p>Full request ids, model <code>jev-1.13</code>, posture (behind 13-95 days, pace 0.28-0.43, 16-26 signals) in the JSON. Each id joins to <code>intelligence.log</code> loop-decision lines.</p>
+<h2>Replans</h2>
+<p>4 verdict-triggered <code>RoadmapReplanned</code> via real UI (<code>/replan</code>, +1 week). Each carries <code>option: extend-deadline</code> plus the exact <code>verdictId</code>/<code>verdictDecidedAt</code> mirror with <code>createdAt &gt;= decidedAt</code>, so <code>verdictTable</code> converts 4/4. Cloud counts: steady 1, crammer 1, struggling 2 (1 scripted + 1 verdict), returning 2 (1 scripted + 1 verdict).</p>
+<div class="note warn"><p><strong>Caveats (cloud-only extraction).</strong> Clock pinned to 2026-10-14, deadline 2026-10-15; local-only <code>OnboardingCompleted</code> passed the route gate; capture is rebound-era, not a week-3 dip. Cold restore duplicated local events (struggling 132 local vs 51 cloud) while cloud stayed clean: read cloud or dedupe by event identity.</p></div>
+<p>Code: loop follow-up <code>7863aec</code>, phases <code>493e1be 2a15115 249f6fa 5b1f61a</code>, seeding <code>9f7d08e</code>. Full package-based table emission still runs at report assembly against post-2026-10-19 cloud reads.</p>
+</main>
+</body>
+</html>

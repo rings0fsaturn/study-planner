@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Synthetic users seeding - results in plain words</title>
+<style>
+  :root{
+    --paper:#ffffff;
+    --wash:#f4f1ea;
+    --ink:#1c1a16;
+    --muted:#57534a;
+    --faint:#8a857a;
+    --line:#e3ddd0;
+    --accent:#0f766e;
+    --accent-ink:#0b5954;
+    --warn:#b45309;
+    --warn-wash:#fef3e2;
+    --good:#15803d;
+    --good-wash:#ecfdf3;
+    --radius:14px;
+    --max:72ch;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    font-size:17px;line-height:1.65;
+    font-variant-numeric:tabular-nums;
+  }
+  ::selection{background:#0f766e;color:#fff}
+  a{color:var(--accent-ink);text-underline-offset:3px}
+  a:focus-visible,button:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 22px}
+  header.top{border-bottom:1px solid var(--line);background:var(--wash)}
+  header.top .wrap{padding-top:44px;padding-bottom:36px}
+  h1{
+    font-family:Georgia,"Times New Roman",serif;
+    font-weight:700;letter-spacing:-0.02em;
+    font-size:clamp(2rem,4.5vw,3.4rem);line-height:1.08;
+    margin:0 0 14px;max-width:18ch;text-wrap:balance;
+  }
+  .lede{font-size:1.12rem;color:var(--muted);max-width:var(--max);margin:0}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:18px;color:var(--muted);font-size:0.92rem}
+  .meta strong{color:var(--ink);font-weight:650}
+  .pill{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);
+    border-radius:999px;padding:6px 14px;font-size:0.88rem;font-weight:650}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--good);flex:none}
+  nav.toc{border-bottom:1px solid var(--line);background:#fff;position:sticky;top:0;z-index:5}
+  nav.toc .wrap{display:flex;gap:4px;overflow-x:auto;padding:10px 22px}
+  nav.toc a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:0.9rem;font-weight:600;padding:8px 12px;border-radius:999px}
+  nav.toc a:hover{background:var(--wash);color:var(--ink)}
+  main section{padding:52px 0 8px}
+  main section + section{border-top:1px solid var(--line)}
+  h2{
+    font-family:Georgia,serif;letter-spacing:-0.02em;
+    font-size:clamp(1.5rem,2.6vw,2rem);line-height:1.2;margin:36px 0 8px;text-wrap:balance;
+  }
+  h2:first-child{margin-top:0}
+  .sub{color:var(--muted);max-width:var(--max);margin:0 0 24px}
+  p{max-width:var(--max)}
+  /* archetype rows: varied editorial rows, not a card grid */
+  .people{border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}
+  .person{display:grid;grid-template-columns:130px 1fr;gap:0;border-bottom:1px solid var(--line)}
+  .person:last-child{border-bottom:0}
+  .person .who{padding:20px;background:var(--wash)}
+  .person .who b{display:block;font-size:1.02rem}
+  .person .who span{font-size:0.86rem;color:var(--muted)}
+  .person .what{padding:18px 20px}
+  .person .what p{margin:0 0 12px;font-size:0.97rem}
+  .weeks{display:flex;gap:6px;align-items:end;margin:6px 0 4px}
+  .weeks i{display:block;width:100%;border-radius:5px 5px 3px 3px;background:var(--accent);min-height:6px}
+  .weeks i.low{background:#c9c3b4}
+  .weeks i.mid{background:#5fb3ac}
+  .weeks i.gap{background:transparent;border:1.5px dashed #c9c3b4}
+  .weeks-label{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--faint);margin-top:4px}
+  /* story timeline */
+  .story{list-style:none;margin:0;padding:0;max-width:var(--max)}
+  .story li{display:grid;grid-template-columns:34px 1fr;gap:14px;padding:14px 0;border-bottom:1px dashed var(--line)}
+  .story li:last-child{border-bottom:0}
+  .n{width:30px;height:30px;border-radius:50%;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:0.85rem;font-weight:700}
+  .story b{display:block;margin-bottom:2px}
+  .story p{margin:0;color:var(--muted);font-size:0.96rem}
+  /* result bars */
+  .bars{border:1px solid var(--line);border-radius:var(--radius);background:#fff;overflow:hidden}
+  .bar-row{display:grid;grid-template-columns:150px 1fr 120px;gap:14px;align-items:center;padding:14px 20px;border-bottom:1px solid var(--line)}
+  .bar-row:last-child{border-bottom:0}
+  .bar-row .name{font-weight:650;font-size:0.95rem}
+  .bar-row .name small{display:block;font-weight:400;color:var(--muted);font-size:0.82rem}
+  .track{background:var(--wash);border-radius:999px;height:14px;position:relative;overflow:hidden}
+  .fill{background:var(--accent);height:100%;border-radius:999px;width:var(--w,50%);transform:scaleX(0);transform-origin:left center;transition:transform 900ms cubic-bezier(.16,1,.3,1)}
+  .in .fill,.will-reveal.in .fill{transform:scaleX(1)}
+  .bar-row.dim .fill{background:#a8a29a}
+  .bar-row .num{font-size:0.9rem;color:var(--muted);text-align:right}
+  .bar-row .num strong{color:var(--ink)}
+  .controls{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+  .controls button{
+    appearance:none;border:1px solid var(--line);background:#fff;border-radius:999px;
+    padding:9px 16px;font:inherit;font-size:0.9rem;font-weight:650;color:var(--muted);cursor:pointer;
+  }
+  .controls button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:#fff}
+  .controls button:hover{border-color:var(--ink);color:var(--ink)}
+  .controls button[aria-pressed="true"]:hover{color:#fff}
+  /* verdict strip */
+  .verdict{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#fff}
+  .verdict div{padding:22px}
+  .verdict div:first-child{background:var(--good-wash)}
+  .verdict div:last-child{background:var(--warn-wash)}
+  .verdict b{font-size:1.05rem}
+  .verdict p{margin:6px 0 0;font-size:0.94rem;color:#3f3a30}
+  /* checks table */
+  table{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;font-size:0.94rem}
+  th,td{text-align:left;padding:12px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--wash);font-size:0.82rem;letter-spacing:0.02em;text-transform:uppercase;color:var(--muted)}
+  tr:last-child th,tr:last-child td{border-bottom:0}
+  td.ok{color:var(--good);font-weight:700;white-space:nowrap}
+  .note{border:1px solid var(--line);border-radius:10px;background:#fff;padding:14px 18px;max-width:var(--max)}
+  .note .tag{display:inline-block;font-size:0.76rem;font-weight:750;letter-spacing:0.06em;text-transform:uppercase;color:var(--accent-ink);margin-bottom:6px}
+  .note.warn .tag{color:var(--warn)}
+  .note.warn{background:var(--warn-wash)}
+  .note p{margin:0;font-size:0.95rem}
+  footer{margin-top:56px;border-top:1px solid var(--line);background:var(--wash)}
+  footer .wrap{padding-top:28px;padding-bottom:44px;color:var(--muted);font-size:0.9rem}
+  .reveal{opacity:1;transform:none}
+  @media (prefers-reduced-motion:no-preference){
+    .will-reveal{opacity:0;transform:translateY(14px);transition:opacity 700ms cubic-bezier(.16,1,.3,1),transform 700ms cubic-bezier(.16,1,.3,1)}
+    .will-reveal.in{opacity:1;transform:none}
+  }
+  @media (max-width:720px){
+    .person{grid-template-columns:1fr}
+    .person .who{padding:14px 18px}
+    .bar-row{grid-template-columns:1fr;gap:8px}
+    .bar-row .num{text-align:left}
+    .verdict{grid-template-columns:1fr}
+    nav.toc{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap" style="margin-top:16px"><div class="note warn" style="border-color:#b45309"><p><span class="tag">Superseded pre-fix snapshot</span><br><strong>Pre-fix data only (4x hold, 0 conversions).</strong> Post-fix replay 2026-10-19 returned 4/4 <code>suggest_replan</code> with 4 verdict-linked <code>RoadmapReplanned</code> conversions. Use <a href="./synthetic-users-results-2026-10-19-postfix.html">synthetic-users-results-2026-10-19-postfix.html</a> / <a href="./synthetic-users-results-2026-10-19-postfix.json">.json</a> for report claims; do not cite the verdict counts below.</p></div></div>
+<header class="top">
+  <div class="wrap">
+    <h1>Did the study app really track learning? Here is what 4 pretend students showed.</h1>
+    <p class="lede">We created four fake learners, let them study for five weeks inside the real app, and checked whether the app could measure what happened. No jargon below without a plain translation.</p>
+    <div class="meta">
+      <span class="pill"><span class="dot" aria-hidden="true"></span> All 4 phases done - 16 Oct 2026</span>
+      <span>Code: <strong>9f7d08e</strong> (phase 1: <strong>913b527</strong>)</span>
+      <span>Real accounts, real grading, no invented marks</span>
+    </div>
+  </div>
+</header>
+<nav class="toc" aria-label="On this page">
+  <div class="wrap">
+    <a href="#trying">What we tried to prove</a>
+    <a href="#who">The 4 students</a>
+    <a href="#happened">What happened</a>
+    <a href="#measured">What the app measured</a>
+    <a href="#checks">Automated checks</a>
+    <a href="#gaps">Honest gaps</a>
+  </div>
+</nav>
+<main class="wrap">
+  <section id="trying" class="will-reveal">
+    <h2>What we tried to prove, in one sentence each</h2>
+    <p class="sub">The report needs three claims a reviewer can audit back to data. Descriptive only - 4 users can never support a significance test, so we never ran one.</p>
+    <div class="note">
+      <p><span class="tag">The 3 claims</span><br><strong>1. Attendance can be measured.</strong> Planned study time vs actually logged time, per week. &nbsp; <strong>2. Practice moves knowledge.</strong> The app's mastery estimate (called BKT bkt-v1) should rise after real graded practice. &nbsp; <strong>3. The loop closes.</strong> When the app suggests a new plan, the learner replans and next week recovers - not just shows advice on screen.</p>
+    </div>
+  </section>
+  <section id="who" class="will-reveal">
+    <h2>The four pretend students</h2>
+    <p class="sub">One shared set of React materials for all four, so behaviour - not content - is the variable. Bars show study effort per week, 1 to 5.</p>
+    <div class="controls" role="group" aria-label="Highlight a student">
+      <button type="button" data-hl="all" aria-pressed="true">Show all</button>
+      <button type="button" data-hl="steady" aria-pressed="false">Steady</button>
+      <button type="button" data-hl="crammer" aria-pressed="false">Crammer</button>
+      <button type="button" data-hl="struggling" aria-pressed="false">Struggling</button>
+      <button type="button" data-hl="returning" aria-pressed="false">Returning</button>
+    </div>
+    <div class="people" id="people">
+      <div class="person" data-who="steady">
+        <div class="who"><b>Steady</b><span>Shows up, ~95% attendance</span></div>
+        <div class="what">
+          <p>Studies a little every week. Mostly correct answers. The baseline everything else is compared against.</p>
+          <div class="weeks" aria-hidden="true"><i style="height:38px"></i><i style="height:40px"></i><i style="height:36px"></i><i style="height:42px"></i><i style="height:40px"></i></div>
+          <div class="weeks-label"><span>Week 1</span><span>19 sessions logged - 12 server grades</span><span>Week 5</span></div>
+        </div>
+      </div>
+      <div class="person" data-who="crammer">
+        <div class="who"><b>Crammer</b><span>Skips early, sprints late</span></div>
+        <div class="what">
+          <p>Quiet for three weeks, then a big finish. Early answers thin, late answers full effort. Ended strongest on grades: 15.</p>
+          <div class="weeks" aria-hidden="true"><i class="low" style="height:16px"></i><i class="low" style="height:18px"></i><i class="mid" style="height:22px"></i><i style="height:44px"></i><i style="height:48px"></i></div>
+          <div class="weeks-label"><span>Week 1</span><span>10 sessions logged - 15 server grades</span><span>Week 5</span></div>
+        </div>
+      </div>
+      <div class="person" data-who="struggling">
+        <div class="who"><b>Struggling</b><span>Tries, ~70%, answers mostly wrong</span></div>
+        <div class="what">
+          <p>Keeps attending but answers stay wrong. Got a scripted replan after week 3 (study more hours) to test the rebound story.</p>
+          <div class="weeks" aria-hidden="true"><i class="mid" style="height:24px"></i><i class="mid" style="height:22px"></i><i class="mid" style="height:20px"></i><i class="mid" style="height:26px"></i><i class="mid" style="height:32px"></i></div>
+          <div class="weeks-label"><span>Week 1</span><span>10 sessions logged - 11 server grades - 1 replan</span><span>Week 5</span></div>
+        </div>
+      </div>
+      <div class="person" data-who="returning">
+        <div class="who"><b>Returning</b><span>Vanishes weeks 2-3, comes back</span></div>
+        <div class="what">
+          <p>No study at all in the middle gap, then a replan (move the deadline) and a comeback. Fewest grades because gap weeks had no runs.</p>
+          <div class="weeks" aria-hidden="true"><i style="height:34px"></i><i class="gap" style="height:34px"></i><i class="gap" style="height:34px"></i><i class="mid" style="height:28px"></i><i style="height:36px"></i></div>
+          <div class="weeks-label"><span>Week 1</span><span>11 sessions logged - 7 server grades - 1 replan</span><span>Week 5</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section id="happened" class="will-reveal">
+    <h2>What actually happened</h2>
+    <p class="sub">Everything ran through the real app and real servers. Nothing was hand-typed into the database.</p>
+    <ol class="story">
+      <li><span class="n">1</span><div><b>Built the study histories offline</b><p>A small script wrote 20 booked sessions per student across 5 weeks, then kept or skipped each one per that student's attendance pattern. 50 sessions kept in total. Zero grades at this stage - grades can only come from the server.</p></div></li>
+      <li><span class="n">2</span><div><b>Cheap safety check first</b><p>One article, one generated question, one scripted answer. This caught a real bug: the server needs a difficulty 1-5 on every question, which the script was not sending. Fixed before spending more.</p></div></li>
+      <li><span class="n">3</span><div><b>Steady pilot, full cost</b><p>Ingested the 3 shared materials (textbook 422 chunks, talk 167, article 15), appended Steady's history, ran 5 weekly graded runs (12 graded), captured a loop verdict. Fixed a sync gap found here: histories were staying on the device and never reaching the cloud.</p></div></li>
+      <li><span class="n">4</span><div><b>Scaled to the other three</b><p>Same driver, different answer scripts. Crammer 14 graded, struggling 11, returning 6 (3 gap weeks had nothing to grade). Retried every honest failure; 2 of 8 recovered. Cleaned up all junk materials afterwards.</p></div></li>
+      <li><span class="n">5</span><div><b>Extracted report numbers through the real engines only</b><p>Adherence, mastery and verdict tables read through the same roadmap and progress packages the app uses. Every row carries the IDs it came from; a row without a source is rejected by a test.</p></div></li>
+    </ol>
+  </section>
+  <section id="measured" class="will-reveal">
+    <h2>What the app measured</h2>
+    <p class="sub">Server grades are the observations. Local total: 50 sessions + 18 practice runs + 45 server grades = 113 analyzable observations.</p>
+    <div class="bars" id="bars">
+      <div class="bar-row" data-who="steady"><div class="name">Steady<small>19 sessions - 5 runs</small></div><div class="track"><div class="fill" style="--w:80%"></div></div><div class="num"><strong>12</strong> grades</div></div>
+      <div class="bar-row" data-who="crammer"><div class="name">Crammer<small>10 sessions - 5 runs</small></div><div class="track"><div class="fill" style="--w:100%"></div></div><div class="num"><strong>15</strong> grades</div></div>
+      <div class="bar-row dim" data-who="struggling"><div class="name">Struggling<small>10 sessions - 5 runs</small></div><div class="track"><div class="fill" style="--w:73%"></div></div><div class="num"><strong>11</strong> grades</div></div>
+      <div class="bar-row dim" data-who="returning"><div class="name">Returning<small>11 sessions - 3 runs</small></div><div class="track"><div class="fill" style="--w:47%"></div></div><div class="num"><strong>7</strong> grades</div></div>
+    </div>
+    <br>
+    <div class="verdict">
+      <div><b>Loop verdicts: 4 x hold</b><p>All four students got hold - keep going - from the loop judge (jev-1.13). Honest, low-drama, and logged end to end.</p></div>
+      <div><b>Replans: 2 scripted, 0 triggered</b><p>Struggling and Returning replanned on script, not because the judge said so. So the suggest-replan to replan proof is absent in this data - reported as is.</p></div>
+    </div>
+  </section>
+  <section id="checks" class="will-reveal">
+    <h2>Automated checks, translated</h2>
+    <p class="sub">Think of these as spell-checkers for the seeding code. They run without touching any live server.</p>
+    <table>
+      <thead><tr><th>Check</th><th>What it guards</th><th>Result</th></tr></thead>
+      <tbody>
+        <tr><td>History builder (11 tests)</td><td>20 bookings each, correct order, gap weeks stay empty, replan points at the right roadmap</td><td class="ok">11 / 11 pass</td></tr>
+        <tr><td>Live driver (23 tests)</td><td>One question per call, scripted answers route to the right format, failures surface instead of inventing grades</td><td class="ok">23 / 23 pass</td></tr>
+        <tr><td>Extraction + traceability (22 tests)</td><td>Tables read through the real engines; any row without a source event ID throws</td><td class="ok">22 / 22 pass</td></tr>
+        <tr><td>Dev seam (61 tests)</td><td>All seeding helpers together, sync path plus offline fallback, wipe drains the queue</td><td class="ok">61 / 61 pass</td></tr>
+        <tr><td>Whole app suite</td><td>Nothing else broke</td><td class="ok">1238 / 1240 pass*</td></tr>
+        <tr><td>Type + lint</td><td>No type errors, no stray console logs in app code</td><td class="ok">Clean</td></tr>
+      </tbody>
+    </table>
+    <p class="sub" style="margin-top:12px">* 2 failures are pre-existing timezone flakes that pass with <span style="font-family:ui-monospace,Menlo,Consolas,monospace">--pool=forks</span>. Backend suite has separate order-dependent flakes in files this change never touches.</p>
+  </section>
+  <section id="gaps" class="will-reveal">
+    <h2>Honest gaps and bugs found</h2>
+    <p class="sub">A seeding run that finds nothing is a seeding run that checked nothing. These are the load-bearing caveats for the report.</p>
+    <div class="note warn">
+      <p><span class="tag">Amended target</span><br><strong>Original target 160 was unreachable.</strong> Locked attendance settings cap sessions at 50, and gap weeks remove runs. Amended with approval: count server grades as observations, N = 113 (50 + 18 + 45). No silent edit.</p>
+    </div>
+    <br>
+    <div class="note warn">
+      <p><span class="tag">Missing proof</span><br><strong>Closed-loop proof missing.</strong> 4 hold verdicts, 0 conversions. Struggling and Returning replans exist but were scripted, not judge-triggered. The extraction pins this honestly instead of masking it.</p>
+    </div>
+    <br>
+    <div class="note">
+      <p><span class="tag">Found in the run</span><br><strong>Bugs the run surfaced:</strong> missing difficulty 1-5 on generation calls (fixed test-first) - histories bypassing the sync queue and staying local-only (fixed: route through logEvent, moved seeder inside sync boundary) - loop endpoint needs an Idempotency-Key header (422 without it) - coding self-check fails honestly on hard items (8 terminals, 2 recovered on retry) - <span style="font-family:ui-monospace,Menlo,Consolas,monospace">EventStore.wipe()</span> clears events but not the queue (left as follow-up, not changed here).</p>
+    </div>
+    <p style="margin-top:22px">Next: emit the 3 tables + 3 figures at report assembly against live reads, then draft prose. Cleanup procedure is defined (per-user wipe + material delete) but runs only after drafting, as a separate instruction.</p>
+  </section>
+</main>
+<footer>
+  <div class="wrap">
+    Sources: <span style="font-family:ui-monospace,Menlo,Consolas,monospace">plan/PLAN.md</span>, <span style="font-family:ui-monospace,Menlo,Consolas,monospace">state.md</span>, <span style="font-family:ui-monospace,Menlo,Consolas,monospace">SCRATCHPAD.md</span> in <span style="font-family:ui-monospace,Menlo,Consolas,monospace">.work/active/synthetic-users-seeding/</span> - Code: <span style="font-family:ui-monospace,Menlo,Consolas,monospace">apps/app/src/dev/synthSeed.ts</span>, <span style="font-family:ui-monospace,Menlo,Consolas,monospace">synthDriver.ts</span>, <span style="font-family:ui-monospace,Menlo,Consolas,monospace">synthExtract.ts</span> (+ tests). Single file, no tracking, works offline.
+  </div>
+</footer>
+<script>
+(function(){
+  var btns = document.querySelectorAll('.controls button');
+  var rows = document.querySelectorAll('#people .person, #bars .bar-row');
+  btns.forEach(function(b){
+    b.addEventListener('click', function(){
+      btns.forEach(function(x){x.setAttribute('aria-pressed','false')});
+      b.setAttribute('aria-pressed','true');
+      var k = b.getAttribute('data-hl');
+      rows.forEach(function(r){
+        var show = (k === 'all' || r.getAttribute('data-who') === k);
+        r.style.display = show ? '' : 'none';
+      });
+    });
+  });
+  function reveal(){
+    document.querySelectorAll('.will-reveal').forEach(function(el){
+      var t = el.getBoundingClientRect().top;
+      if(t < window.innerHeight * 0.92) el.classList.add('in');
+    });
+  }
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduced){ document.querySelectorAll('.will-reveal').forEach(function(e){e.classList.add('in')}); return; }
+  window.addEventListener('scroll', reveal, {passive:true});
+  reveal();
+  setTimeout(reveal, 300);
+})();
+</script>
+</body>
+</html>
