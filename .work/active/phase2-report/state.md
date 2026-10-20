@@ -9,7 +9,7 @@ _Spec: college/mydeliverables/Phase-2-report/ (guideline + sample + phase1-repor
 - OPEN 2026-10-20: created `active/phase2-report/{plan,prompts,research}` + STATUS Active row.
 - 2026-10-20: pinned 7-chapter split in `plan/CHAPTERS.md` (1.1-1.5 through 7.1-7.2 + References + Appendix).
 - 2026-10-20: vendored humanizer skill v3.1.0 (MIT) into `.agents/skills/humanizer/SKILL.md` for direct reference, source line appended.
-- 2026-10-20: scaffolded `college/.../phase2-report/` (main.tex + 8 chapter files + logo); drafted 01-introduction per Q1-Q7; /tmp smoke green (20 pages, Letter, Times/Helvetica, 0 errors, empty-bib warning only).
+- 2026-10-20: scaffolded `college/.../phase2-report/` (main.tex + 8 chapter files + logo); drafted 01-introduction per Q1-Q7; /tmp smoke green (20 pages, Letter, Times/Helvetica, 0 errors, empty-bib warning only); committed as `a910270`.
 
 ## Flow trace
 1. Entry: `STATUS.md` row `phase2-report` -> `state.md` (this file) -> `plan/GRILL.md` -> `plan/CHAPTERS.md` -> `SCRATCHPAD.md`.
