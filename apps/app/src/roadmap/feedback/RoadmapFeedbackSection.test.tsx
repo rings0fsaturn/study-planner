@@ -88,28 +88,22 @@ async function seedCache(projection: ReturnType<typeof masteryProjection>) {
   store.close()
 }
 
-async function seedGradedAttempts(
-  rows: Array<{ clientAttemptId: string; materialId: string; gradedAt: string }>,
+async function seedSessions(
+  rows: Array<{ materialId: string; date: string }>,
 ) {
   const store = createEventStore(USER)
   for (const row of rows) {
-    await store.table('assessmentAttempts').put({
-      clientAttemptId: row.clientAttemptId,
-      attemptId: `att-${row.clientAttemptId}`,
-      questionId: 'q1',
-      assessmentId: 'assessment-1',
-      status: 'graded',
-      submittedAt: row.gradedAt,
-      grade: {
-        attemptId: `att-${row.clientAttemptId}`,
-        questionId: 'q1',
+    await store.append(
+      'SessionLogged',
+      {
         materialId: row.materialId,
-        score: 1,
-        correct: true,
-        grader: 'objective',
-        gradedAt: row.gradedAt,
+        date: row.date,
+        source: 'active',
+        duration: 60,
+        description: 'Study session',
       },
-    })
+      `${row.date}T10:00:00.000Z`,
+    )
   }
   store.close()
 }
@@ -171,20 +165,20 @@ describe('RoadmapFeedbackSection', () => {
     })
   })
 
-  it('sends the real days_span from the local graded attempts', async () => {
+  it('sends the real days_span from the durable session dates', async () => {
     await seedCache(masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 }))
     const client = new FakeAssessmentClient()
     client.scriptGetMastery([masteryProjection({ materialId: 'mat-1', n: 4, mastery: 0.8 })])
     client.scriptGetLoopDecision(loopDecision())
-    await seedGradedAttempts([
-      { clientAttemptId: 'ca-1', materialId: 'mat-1', gradedAt: '2026-09-19T10:00:00Z' },
-      { clientAttemptId: 'ca-2', materialId: 'mat-1', gradedAt: '2026-10-10T10:00:00Z' },
-      // Out-of-scope material: other roadmaps' grades must not widen the span.
-      { clientAttemptId: 'ca-3', materialId: 'mat-9', gradedAt: '2026-01-01T10:00:00Z' },
+    await seedSessions([
+      { materialId: 'mat-1', date: '2026-09-19' },
+      { materialId: 'mat-1', date: '2026-10-10' },
+      // Out-of-scope material: other roadmaps' sessions must not widen the span.
+      { materialId: 'mat-9', date: '2026-01-01' },
     ])
     renderSection(client)
 
-    // The hook holds the call until the grade rows load, so the first POST
+    // The hook holds the call until the events load, so the first POST
     // already carries the real span (no span-0 then refire).
     await waitFor(() => expect(client.getLoopDecision).toHaveBeenCalledTimes(1))
     const sent = (client.getLoopDecision.mock.calls[0] as unknown[])[0] as {

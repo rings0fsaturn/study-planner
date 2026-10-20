@@ -14,6 +14,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react'
+import type { Event } from '../../events/EventStore'
 import type { AssessmentClientLike } from '../../assessments/assessmentClient'
 import type {
   LoopDecision,
@@ -53,40 +54,51 @@ export function __clearLoopDecisionMemo(): void {
   memo.clear()
 }
 
-/** Structural subset of a local graded attempt row (attemptFlow owns the real shape). */
-interface GradedAttemptRowLike {
-  grade?: { materialId?: unknown; gradedAt?: unknown } | null
+/**
+ * The durable study dates behind the observed signals: `SessionLogged` events
+ * scoped to the roadmap's materials by `payload.materialId`, using the
+ * always-present `payload.date` (the learner's calendar day). Grade timestamps
+ * are capture times, not engagement dates, so a run that grades a multi-week
+ * history in one sitting must not read as a single sitting. Unlinked manual
+ * logs carry no material-scoped evidence and are dropped; a missing source
+ * degrades to an empty list, and `days_span` then stays 0 (fail-closed,
+ * never fabricated).
+ */
+export function observedSessionDates(events: Event[], materialIds: string[]): string[] {
+  const ids = new Set(materialIds)
+  const dates: string[] = []
+  for (const event of events) {
+    if (event.kind !== 'SessionLogged') continue
+    const materialId = event.payload.materialId
+    if (typeof materialId !== 'string' || !ids.has(materialId)) continue
+    const date = event.payload.date
+    if (typeof date !== 'string' || date.length === 0) continue
+    dates.push(date)
+  }
+  return dates
 }
 
 /**
- * The server-authored grade dates behind the observed signals: local graded
- * attempt rows scoped to the roadmap's materials by `grade.materialId`.
- * Malformed rows are dropped; a missing source degrades to an empty list,
- * and `days_span` then stays 0 (fail-closed, never fabricated).
+ * Keep the live query's previous result from leaking into a new roadmap:
+ * `useLiveQuery` can serve the old value while the next query is in flight,
+ * so a date list tagged with a different material key is treated as not yet
+ * loaded (the hook holds instead of posting a stale span).
  */
-export function observedGradeDates(
-  rows: GradedAttemptRowLike[],
-  materialIds: string[],
-): string[] {
-  const ids = new Set(materialIds)
-  const dates: string[] = []
-  for (const row of rows) {
-    const grade = row.grade
-    if (!grade) continue
-    if (typeof grade.materialId !== 'string' || !ids.has(grade.materialId)) continue
-    if (typeof grade.gradedAt !== 'string' || grade.gradedAt.length === 0) continue
-    dates.push(grade.gradedAt)
-  }
-  return dates
+export function currentSessionDates(
+  result: { key: string; dates: string[] } | undefined,
+  materialKey: string,
+): string[] | undefined {
+  return result?.key === materialKey ? result.dates : undefined
 }
 
 /**
  * Build the canonical loop-decision input. Signals cover the observed
  * (material, skill) pairs the evidence trail shows, sorted for a stable
  * hash; the evidence summary is code-computed totals over those rows.
- * `observedDates` are the durable dates behind the material-scoped grades
- * (see `observedGradeDates`); `days_span` is their calendar-day spread, so
- * a multi-week history reads as spread across days, a single sitting as 0.
+ * `observedDates` are the durable session dates behind the material-scoped
+ * signals (see `observedSessionDates`); `days_span` is their calendar-day
+ * spread, so a multi-week history reads as spread across days, a single
+ * sitting as 0.
  */
 export function buildLoopInput(
   projections: MasteryProjection[],
@@ -155,9 +167,9 @@ function parseDay(value: string): string | null {
 }
 
 /**
- * Calendar-day spread of the observed grade dates (date-only discipline, the
- * same as `buildLoopPosture`'s `daysBetween`). Malformed dates are dropped; a
- * single sitting (fewer than two days) yields 0.
+ * Calendar-day spread of the observed session dates (date-only discipline,
+ * the same as `buildLoopPosture`'s `daysBetween`). Malformed dates are
+ * dropped; a single sitting (fewer than two days) yields 0.
  */
 function observedSpanDays(dates: string[]): number {
   const days = dates
@@ -246,10 +258,11 @@ export function useLoopDecision(
     evidence: FeedbackEvidence[]
     posture: LoopPosture
     /**
-     * Durable grade dates behind the observed signals (see
-     * `observedGradeDates`). `undefined` means the local rows are not loaded
-     * yet, so the hook holds the call instead of firing a span-0 verdict;
-     * an empty list is a loaded source with nothing graded.
+     * Durable session dates behind the observed signals (see
+     * `observedSessionDates`). `undefined` means the local events are not
+     * loaded yet, so the hook holds the call instead of firing a span-0
+     * verdict; an empty list is a loaded source with no material-scoped
+     * sessions.
      */
     observedDates?: string[]
     /**

@@ -2,12 +2,14 @@
 _Status: active (Phases 2-4 committed as 9f7d08e 2026-10-16; report assembly next) · Updated: 2026-10-16_
 
 ## Current state & next
+- Post-fix replay 2026-10-19 (after closed-loop-hold-analysis follow-up): **4/4 `suggest_replan` and 4/4 verdict-triggered `RoadmapReplanned` conversions** (was 4/4 `hold`, 0 conversions). Live inputs: `days_span 32`, real posture (behind 13-95 days, pace 0.28-0.43), 16-26 signals; confidence 1.0, sufficiency 0.66-0.77 (jev-1.13). All four replans carry `option: extend-deadline` plus the exact `verdictId`/`verdictDecidedAt` mirror and are synced to cloud (steady 1, crammer 1, struggling 2 incl. 1 scripted, returning 2 incl. 1 scripted). The D-02 proof now exists in the data.
+- Replay harness caveats: Playwright clock pinned to 2026-10-14 so the 2026-10-15 deadline roadmap is active; a local-only `OnboardingCompleted` event passed the route gate; no cloud history was rewritten. Capture is one day before deadline with all 5 weeks of evidence, not a week-3 dip window.
 - Phase 1 complete + reviewed 2026-10-16 (builder + 5 contract tests + DevSeeder hooks, review APPROVE-WITH-FIXES with 6 fixes applied, post-fix verification green; committed as `913b527`).
 - Phase 2 code half done + reviewed 2026-10-16, committed as `9f7d08e` (synthDriver.ts + 23 tests after second review: APPROVE-WITH-FIXES, 4 med + 4 low applied test-first, post-fix 23/23 + src/dev/ 30/30 + typecheck green).
 - Dry-run PASS 2026-10-16 (approved spend): all 4 TEST USERs exist (no provisioning); steady sign-in/insert/ingest-ready-1-chunk/generate/submit/grade all green, request-id join verified; caught + fixed missing recipe difficulty (GradeScript.difficulty default 3, 15/15 green).
 - Retro follow-ups done 2026-10-16: contract-drift ticket filed as rings0fsaturn/study-planner#82; rule 42 + PLAN.md step-2 sketch now point at `_validate_recipe` as the recipe-shape ground truth.
-- Phase 4 DONE 2026-10-16, committed as `9f7d08e`: synthExtract.ts + 22 tests via packages only + traceability gate, review APPROVE-WITH-FIXES (3 med + 8 low applied test-first), post-fix green (synthExtract 22/22, src/dev/ 61/61, typecheck + lint clean); honest holds (4x hold verdicts, 0 conversions, D-02 proof absent); live artifact emission deferred to report assembly (runtime stopped).
-- Next: report assembly (live artifact emission against server reads, then prose drafting as a later task). Pilot scripts + Phase 3 scripts kept at /tmp/opencode/synth_{pilot,phase3}_*.py + logs + results JSONs (outside repo, print no secrets); runtime stays stopped unless report work needs it (user FYI 2026-10-16).
+- Phase 4 DONE 2026-10-16, committed as `9f7d08e`: synthExtract.ts + 22 tests via packages only + traceability gate, review APPROVE-WITH-FIXES (3 med + 8 low applied test-first), post-fix green (synthExtract 22/22, src/dev/ 61/61, typecheck + lint clean); at the time the data was honest holds (4x hold verdicts, 0 conversions, D-02 proof absent) - superseded by the 2026-10-19 post-fix replay above; live artifact emission deferred to report assembly.
+- Next: report assembly (live artifact emission against server reads, then prose drafting as a later task). The pre-fix `plan/evidence/synthetic-users-results.html` still says 4x hold and must be regenerated or annotated from the post-fix cloud reads before the report uses it. Runtime stopped after the replay.
 
 ## Done so far
 - Grill 2026-10-16 locked 8 decisions (claims, loop + proof, 4 archetypes, 5x4 matrix N>=160, live-USER boundary, shared React set, accounts, hygiene); see plan/DECISIONS.md.
@@ -64,7 +66,8 @@ _Status: active (Phases 2-4 committed as 9f7d08e 2026-10-16; report assembly nex
 - Pilot-first sequencing: steady live pilot (Phase 2) gates the other three archetypes (2026-10-16).
 
 ## Open
-- Report assembly follow-up: emit plan/evidence/ artifacts via Phase 4 functions against live reads (needs runtime + server attempt records); report prose drafting is a later task.
+- Report assembly follow-up: emit plan/evidence/ artifacts via Phase 4 functions against live reads (needs runtime + server attempt records); report prose drafting is a later task. The replay added new cloud `RoadmapReplanned` events and `SessionBooked` rows (25 per user after replan), so the extraction snapshot must be taken after 2026-10-19.
+- Observed during replay (pre-existing, not this task): a cold browser restore duplicated local events (struggling local 132 vs 51 cloud) while cloud counts stayed clean. Use cloud reads or dedupe by event identity for extraction.
 - Pre-existing backend failure (observed 2026-10-16, not this task): tests/test_v1_integration.py golden mismatch on compute-calibration globalMultiplier (0.9030 vs golden 0.8993); fails deterministically at file level with varying counts under full-suite load. Frontend-only task diff cannot influence it; needs a backend owner (possible parallel-lane drift).
 - Follow-up (found, not changed): EventStore.wipe() clears events but not sync_queue - decide if production wipe should drain the queue or DEV-only drain stands.
 - Rotate the first-two account passwords when convenient (bytes once sat in a tracked file).

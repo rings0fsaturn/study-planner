@@ -12,7 +12,8 @@ import {
   __clearLoopDecisionMemo,
   buildLoopInput,
   buildLoopPosture,
-  observedGradeDates,
+  currentSessionDates,
+  observedSessionDates,
   useLoopDecision,
 } from './useLoopDecision'
 
@@ -100,7 +101,7 @@ describe('buildLoopInput', () => {
 describe('buildLoopInput days_span', () => {
   const projections = [masteryProjection({ materialId: 'mat-1', n: 4 })]
 
-  it('computes the calendar-day span from the observed grade dates', () => {
+  it('computes the calendar-day span from the observed session dates', () => {
     const input = buildLoopInput(projections, buildEvidence(projections, 0.7), POSTURE, IDS, [
       '2026-09-19',
       '2026-10-02T10:00:00Z',
@@ -156,18 +157,56 @@ describe('buildLoopInput days_span', () => {
   })
 })
 
-describe('observedGradeDates', () => {
-  it('keeps server-authored grade dates scoped to the roadmap materials', () => {
-    const rows = [
-      { grade: { materialId: 'mat-1', gradedAt: '2026-09-19T10:00:00Z' } },
-      { grade: { materialId: 'mat-2', gradedAt: '2026-10-10T10:00:00Z' } },
-      { grade: null },
-      {},
-      { grade: { materialId: 'mat-1', gradedAt: 42 } },
-      { grade: { materialId: 'mat-1', gradedAt: '' } },
+describe('observedSessionDates', () => {
+  const session = (
+    materialId: unknown,
+    date: unknown,
+    kind = 'SessionLogged',
+  ): { kind: string; payload: Record<string, unknown>; createdAt: string } => ({
+    kind,
+    payload: { materialId, date },
+    createdAt: '2026-10-16T10:00:00Z',
+  })
+
+  it('keeps durable session dates scoped to the roadmap materials', () => {
+    const events = [
+      session('mat-1', '2026-09-19'),
+      session('mat-2', '2026-10-10'),
+      session('mat-1', '2026-10-12'),
+      // Other kinds and unlinked manual logs carry no material-scoped evidence.
+      session('mat-1', '2026-01-01', 'PracticeRunFinished'),
+      session(undefined, '2026-01-02'),
+      session('mat-1', undefined),
     ]
 
-    expect(observedGradeDates(rows, ['mat-1'])).toEqual(['2026-09-19T10:00:00Z'])
+    expect(observedSessionDates(events, ['mat-1'])).toEqual([
+      '2026-09-19',
+      '2026-10-12',
+    ])
+  })
+
+  it('returns an empty list when nothing material-scoped was logged', () => {
+    expect(
+      observedSessionDates([session('mat-9', '2026-09-19')], ['mat-1']),
+    ).toEqual([])
+  })
+})
+
+describe('currentSessionDates', () => {
+  it('holds a live result that belongs to the previous roadmap', () => {
+    expect(
+      currentSessionDates({ key: 'mat-1', dates: ['2026-09-19'] }, 'mat-2'),
+    ).toBeUndefined()
+  })
+
+  it('returns the dates once the live result matches the current roadmap', () => {
+    expect(
+      currentSessionDates({ key: 'mat-2', dates: ['2026-10-10'] }, 'mat-2'),
+    ).toEqual(['2026-10-10'])
+  })
+
+  it('stays undefined before the first query resolves', () => {
+    expect(currentSessionDates(undefined, 'mat-1')).toBeUndefined()
   })
 })
 
@@ -253,7 +292,7 @@ describe('useLoopDecision', () => {
     expect(sent.posture).toEqual(POSTURE)
   })
 
-  it('sends the real days_span from the observed grade dates', async () => {
+  it('sends the real days_span from the observed session dates', async () => {
     const client = new FakeAssessmentClient()
     client.scriptGetLoopDecision(loopDecision())
     const { result } = renderHook(() =>

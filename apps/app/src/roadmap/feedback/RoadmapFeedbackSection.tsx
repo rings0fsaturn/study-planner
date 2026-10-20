@@ -16,7 +16,11 @@ import { useLiveQuery } from 'dexie-react-hooks'
 import { useEventStore } from '../../events/useEventStore'
 import { useAssessmentClient } from '../../assessments/AssessmentProvider'
 import type { LoopPosture } from '../../assessments/types'
-import { observedGradeDates, useLoopDecision } from './useLoopDecision'
+import {
+  currentSessionDates,
+  observedSessionDates,
+  useLoopDecision,
+} from './useLoopDecision'
 import { useRoadmapFeedback } from './useRoadmapFeedback'
 import { makeLlmFeedbackProvider } from './llmFeedbackProvider'
 import type {
@@ -266,18 +270,21 @@ export function RoadmapFeedbackSection({
 
   const { state, projections, recommendation, evidence, headline, rebuild, settled } = feedback
 
-  // Durable grade dates behind the observed signals: the local graded attempt
-  // rows, scoped to this roadmap's materials, feed `days_span` (D-02). The
-  // hook holds the call while this is undefined (rows not loaded); no rows
-  // degrade to an empty list and a 0 span, never a fabricated spread.
-  const observedDates = useLiveQuery(
-    async () =>
-      observedGradeDates(
-        await eventStore.table('assessmentAttempts').toArray(),
+  // Durable study dates behind the observed signals: material-scoped
+  // `SessionLogged` events feed `days_span` (D-02). The hook holds the call
+  // while this is undefined (events not loaded); no sessions degrade to an
+  // empty list and a 0 span, never a fabricated spread.
+  const observedSessions = useLiveQuery(
+    async () => ({
+      key: materialKey,
+      dates: observedSessionDates(
+        await eventStore.table('events').where('kind').equals('SessionLogged').toArray(),
         materialIdList,
       ),
-    [eventStore, materialIdList],
+    }),
+    [eventStore, materialKey, materialIdList],
   )
+  const observedDates = currentSessionDates(observedSessions, materialKey)
 
   // Sequence guard for the verdict refire below: only the latest provider
   // call may paint, so a slow pre-verdict response never overwrites the
