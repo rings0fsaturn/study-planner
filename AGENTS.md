@@ -13,7 +13,7 @@ Before planning, editing, reviewing, or running project workflows:
 2. Read [`.agents/rules/README.agents.md`](.agents/rules/README.agents.md), then read every rule selected by its index for the task.
 3. Read the relevant contract under [`.work/specs/`](.work/specs/) and the active task's `state.md` and `SCRATCHPAD.md` under [`.work/active/<task-id>/`](.work/active/).
 4. Inspect the live implementation and tests before relying on architecture summaries or prior-session notes.
-5. Check `git status --short` and preserve unrelated worktree changes.
+5. Check `git status --short`; parallel sessions share this checkout, so preserve unrelated changes and stage only the files this task changed.
 
 The live checkout is the source of truth.
 If a rule or planning document conflicts with the code, verify the behavior and record the discrepancy instead of guessing.
@@ -53,6 +53,7 @@ Rules and skills for work in this checkout:
 
     <phase order="3" name="implement">
       <action>Follow test-first development.</action>
+      <action>For a test-only phase, prove each added pin by temporarily mutating the guarded behavior and confirming the test fails; restore and re-run to green.</action>
       <action>Apply coding practices.</action>
       <uses_skills>
         <skill>tdd</skill>
@@ -62,6 +63,7 @@ Rules and skills for work in this checkout:
 
     <phase order="4" name="code_review" recurring="after_each_phase">
       <action>Run code review checks.</action>
+      <action>Scope the review to the phase's changed files; OCR preview includes unrelated dirty files and excludes test files by default. For a test-only phase, resolve rule groups with `ocr delegate rule` on those paths and review the manual diff.</action>
       <action>Put the returned fix list in the todo tool before editing.</action>
       <uses_skills>
         <skill>open-code-review-delegate</skill>
@@ -101,6 +103,7 @@ Use `$add-project-rule` for any addition, update, rename, split, or reorganizati
 A turn can degenerate into a repetition loop and emit no tool call; work already committed is unaffected.
 To recover: check `git status --short` and the active [`SCRATCHPAD.md`](.work/active/), then resume from the next concrete edit; the last phase commit is the floor.
 To prevent: follow the phase-4 review-fix todo discipline, make the first tool call early instead of narrating the whole batch, and keep subagent review output terse (`file:line - issue - fix`).
+A review subagent that returns no findings list is degenerate: re-run it fresh, never resume the degenerate session.
 
 ## Repository Map
 
@@ -166,8 +169,8 @@ pnpm dev:app
 pnpm dev:intelligence
 
 # Verification
-pnpm --filter app test
-uv run pytest # from services/intelligence/ (root collection collides across packages)
+pnpm --filter app test --pool=forks  # full app suite; default pool flakes on 2 known WSL TZ tests
+uv run pytest # run from services/intelligence/; from the repo root it silently collects no tests
 pnpm typecheck
 pnpm lint
 pnpm test:e2e
@@ -176,6 +179,7 @@ pnpm build
 
 Use the applicable runtime, Playwright, registry, Docker, and document rules before running sensitive workflows.
 Run the smallest relevant check first, then broaden verification in proportion to the change.
+No CI or git hook runs these checks yet: the agent is the guardrail, so run the scoped tests, `pnpm typecheck`, and `pnpm lint` before declaring a code change done.
 For UI changes, verify the real browser flow at relevant desktop and mobile viewports and inspect the rendered result, console, and layout behavior.
 
 ## Stable Architecture Boundaries
@@ -183,6 +187,7 @@ For UI changes, verify the real browser flow at relevant desktop and mobile view
 - Keep Supabase access behind the existing dependency-injected auth and sync boundaries.
 - Keep browser persistence local-first and isolated per signed-in user.
 - Treat the event log as the durable product history and preserve backward compatibility for existing events.
+- When a writer spreads a stored payload, write every derived optional field explicitly from the current call and delete it in the branch where it does not apply; a spread keeps stale values.
 - Keep roadmap and progress algorithms in their packages instead of duplicating them in page components.
 - Keep the React Router basename as a deployment concern and write application routes without the `/study` prefix.
 - Keep shared visual primitives in `packages/design-tokens/` and preserve the Marginalia design language.
@@ -199,6 +204,7 @@ Never run `git clean -fdx` at the repository root.
 Follow [`.work/README.md`](.work/README.md) for the planner, developer, verifier, and archive workflow.
 When work changes state, update the affected status row and the active plan's `VERIFICATION.md` in the same task.
 Keep durable specifications separate from volatile execution state.
+Plan phases commit in two steps: the phase commit carries the code, tests, and the phase's plan status plus task journal updates; a follow-up `docs(work): record ... SHA` commit then records the phase commit's SHA.
 
 ## Deployment
 
