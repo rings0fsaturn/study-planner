@@ -4,6 +4,8 @@
 \usepackage{mathptmx} % Times body (Phase-2 Letter/Times switch, G-Q6)
 \usepackage[scaled=0.92]{helvet} % Arial-like sans for headings
 \usepackage{graphicx}
+\usepackage{xcolor}
+\definecolor{frontpagebg}{RGB}{246,232,177} % sampled from frontpage-color.png
 \usepackage{booktabs}
 \usepackage{array}
 \usepackage{enumitem}
@@ -40,43 +42,76 @@
 
 \begin{document}
 
+\pagecolor{frontpagebg}
+\thispagestyle{empty}
+\begin{tikzpicture}[remember picture, overlay]
+\draw[line width=3pt] ($(current page.north west)+(0.5in,-0.5in)$) rectangle ($(current page.south east)+(-0.5in,0.5in)$);
+\end{tikzpicture}
+\vspace*{\fill}
 \begin{center}
-\includegraphics[width=5cm]{PESU-new-logo.png} \\[0.5cm]
-\textbf{\Large Dissertation on}\\[1cm]
-\textbf{\Huge ``Adaptive Study Planning for\\ Self-Directed Learners''}\\[1cm]
-
-Submitted in partial fulfilment of the requirements for the award of degree of\\[1cm]
-\textbf{\Large Master of Technology in}\\[1cm]
-\textbf{\Large Data Science and Artificial Intelligence}\\[1cm]
-\textbf{UE20CS972 Project Phase - 2}\\[1cm]
-
+\includegraphics[width=3.5cm]{PESU-new-logo.png} \\[0.3cm]
+\textbf{\large Dissertation on}\\[0.3cm]
+\textbf{\LARGE ``Adaptive Study Planning for\\ Self-Directed Learners''}\\[0.4cm]
+{\small Submitted in partial fulfilment of the requirements for the award of degree of}\\[0.4cm]
+\textbf{\large Master of Technology in}\\[0.2cm]
+\textbf{\large Data Science and Artificial Intelligence}\\[0.3cm]
+\textbf{UE20CS972 Project Phase - 2}\\[0.5cm]
 \textbf{Submitted by:}\\
 \textbf{Rohit Saji}\\
-\textbf{PES2PGE24DS201}\\[1cm]
-
+\textbf{PES2PGE24DS201}\\[0.4cm]
 Under the guidance of\\
 Prof. Ramesh Prakash Guledgudd\\
-PES University\\[1cm]
-
-May -- October 2026\\[1cm]
-
-M.TECH IN DATA SCIENCE AND ARTIFICIAL INTELLIGENCE\\
+PES University\\[0.4cm]
+May -- October 2026\\[0.4cm]
+{\small M.TECH IN DATA SCIENCE AND ARTIFICIAL INTELLIGENCE\\
 FACULTY OF ENGINEERING\\
-PES UNIVERSITY\\[1cm]
+PES UNIVERSITY\\[0.2cm]
 (Established under Karnataka Act No. 16 of 2013)\\
-Electronic City, Hosur Road, Bengaluru -- 560 100, Karnataka, India
+Electronic City, Hosur Road, Bengaluru -- 560 100, Karnataka, India}
 \end{center}
+\vfill
+\null
 
 \newpage
+\nopagecolor
 
-\section*{Certificate}
-This is to certify that the dissertation entitled ``Adaptive Study Planning for Self-Directed Learners'' is a bonafide work carried out by \textbf{Rohit Saji (PES2PGE24DS201)} in partial fulfilment for the completion of Project Phase - 2 in the Program of Study -- Master of Technology in Data Science and Artificial Intelligence under the rules and regulations of PES University, Bengaluru.
+% ---- Certificate (sample-styled: black border, white page) ----
+\begin{tikzpicture}[remember picture, overlay]
+\draw[line width=3pt] ($(current page.north west)+(0.5in,-0.5in)$) rectangle ($(current page.south east)+(-0.5in,0.5in)$);
+\end{tikzpicture}
+\vspace*{\fill}
+\begin{center}
+\includegraphics[width=3.5cm]{PESU-new-logo.png}\\[0.3cm]
+PES UNIVERSITY\\
+(Established under Karnataka Act No. 16 of 2013)\\
+Electronic City, Hosur Road, Bengaluru -- 560 100, Karnataka, India\\[0.3cm]
+FACULTY OF ENGINEERING\\[0.3cm]
+\textbf{\Large CERTIFICATE}
+\end{center}
 
-\vspace{2cm}
-\begin{flushright}
-Prof. Ramesh Prakash Guledgudd\\
-PES University
-\end{flushright}
+\vfill
+This is to certify that the dissertation entitled ``Adaptive Study Planning for Self-Directed Learners'' is a bonafide work carried out by \textbf{Rohit Saji (PES2PGE24DS201)} in partial fulfilment for the completion of Project Phase - 2 (UE20CS972) in the Program of Study -- Master of Technology in Data Science and Artificial Intelligence under the rules and regulations of PES University, Bengaluru during the period May 2026 -- October 2026. It is certified that all corrections/suggestions indicated for internal assessment have been incorporated in the report. The dissertation has been approved as it satisfies the academic requirements in respect of project work.
+
+\vfill
+\textbf{External Viva}
+
+\vspace{0.2cm}
+\noindent
+\begin{tabular}{ll}
+Name of the Examiners & Signature with Date \\
+1. \rule{5cm}{0.4pt} & \rule{5cm}{0.4pt} \\[0.4cm]
+2. \rule{5cm}{0.4pt} & \rule{5cm}{0.4pt} \\
+\end{tabular}
+
+\vfill
+\noindent
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}ccc}
+Signature & Signature & Signature \\
+Prof. Ramesh Prakash Guledgudd & Dr. Sandesh B J & Dr. Keshavan B K \\
+PES University & Chairperson & Dean of Faculty \\
+\end{tabular*}
+\vfill
+\null
 
 \newpage
 
@@ -117,8 +152,31 @@ Self-directed learners routinely commit to a fixed study plan and fall behind or
 \newpage
 % ---- Bibliography (kept in main; Pillar-A then Pillar-B) ----
 \begin{thebibliography}{99}
-% Entries accumulate here as chapters cite them, in first-citation order.
-% Pillar-A entries first, then Pillar-B entries under a separator comment.
+% Entries in first-citation order (Ch2). Pillar-B entries under the separator.
+% Text copied verbatim from phase1-report/main.tex; bibliography stays verbatim (G1).
+
+\bibitem{chen2024} Chen, et al., ``A Hierarchical Bayesian Model of Adaptive Teaching,'' \textit{Cognitive Science}, 2024.
+
+\bibitem{zanellati2024} Zanellati, A., et al., ``Hybrid Models for Knowledge Tracing: A Systematic Review,'' \textit{IEEE Transactions on Learning Technologies}, 2024.
+
+\bibitem{mai2025} Mai, N.~T., Cao, W., Liu, W., ``Interpretable Knowledge Tracing via Transformer--Bayesian Hybrid Networks,'' \textit{Applied Sciences}, doi:10.3390/app15179605, 2025.
+
+% --- Pillar-B references (Phase II) ---
+\bibitem{itemgen2024} ``Automatic Item Generation in Various STEM Subjects Using Large Language Model Prompting,'' \textit{Computers and Education: Artificial Intelligence}, doi:10.1016/j.caeai.2024.100344, 2024.
+
+\bibitem{lecturequiz2026} ``Self-hosted Lecture-to-Quiz: Local LLM MCQ Generation with Deterministic Quality Control,'' arXiv:2603.08729, 2026.
+
+\bibitem{kctag2024} ``Automated Generation and Tagging of Knowledge Components from Multiple-Choice Questions,'' doi:10.1145/3657604.3662030, 2024.
+
+\bibitem{llmgrade2024} ``Automatic Grading of Short Answers Using Large Language Models in Software Engineering Courses,'' \textit{Proc. EDUCON}, IEEE, doi:10.1109/educon60312.2024.10578839, 2024.
+
+\bibitem{islam2024} Islam, M., et al., ``Predicting Student Performance and Optimizing Study Schedule using Deep Learning and Dynamic Programming,'' \textit{Proc. International Conference on Computer and Information Technology (ICCIT)}, IEEE, 2024.
+
+\bibitem{alhazbi2024} Alhazbi, S., et al., ``Using Learning Analytics to Measure Self-Regulated Learning: A Systematic Review,'' \textit{Journal of Computer Assisted Learning}, 2024.
+
+\bibitem{uzun2025} Uzun, Y., Suraworachet, W., Zhou, Q., ``Engagement with Analytics Feedback and Its Relationship to Self-Regulated Learning Competence and Course Performance,'' \textit{International Journal of Educational Technology in Higher Education}, doi:10.1186/s41239-025-00515-3, 2025.
+
+\bibitem{gaming2026} ``Understanding Gaming the System by Analysing Self-Regulated Learning in Think-Aloud Protocols,'' doi:10.1145/3785022.3785025, 2026.
 
 \end{thebibliography}
 \end{document}

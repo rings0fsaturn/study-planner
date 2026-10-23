@@ -2,8 +2,8 @@
 _Spec: college/mydeliverables/Phase-2-report/ (guideline + sample + phase1-report/) · Plan: .work/active/phase2-report/plan/ · STATUS row: phase2-report · Status: active · Updated: 2026-10-20_
 
 ## Current state & next
-- Session wrapped 2026-10-20: Chapter 1 grill COMPLETE (Q1-Q7 + G1), 01-introduction drafted, /tmp smoke green (20 pages, Letter, 0 errors), review main.pdf beside main.tex.
-- Next: start Chapter 2 grill (Literature Survey sections and sources) in a new session; use the handoff prompt from this wrap.
+- Appendix A drafted 2026-10-23 per Q54-Q57 (47pp green, 0 errors, 0 undefined, pp43-46 raster-checked; review main.pdf refreshed); only appendix.tex plus main.pdf touched.
+- Next: Wrap the appendix session per work-journal (all chapters plus appendix drafted, builds green).
 
 ## Done so far
 - OPEN 2026-10-20: created `active/phase2-report/{plan,prompts,research}` + STATUS Active row.
@@ -27,6 +27,7 @@ _Spec: college/mydeliverables/Phase-2-report/ (guideline + sample + phase1-repor
 
 ## Pitfalls & rules
 - Must follow rule 60: build in `/tmp` only; refresh the beside-`main.tex` review PDF from each green build (copy `main.pdf` only, never aux/log), check `git status -- college/`.
+- Host TinyTeX needed `tlmgr install rsfs` 2026-10-20: mathptmx requests rsfs10 for math minus (fatal without it); full TeX Live already ships it.
 - Must follow REPORT_WRITING_GUIDE.md: roadmap paragraph per chapter, 4-beat lit entries, Ch2-only Summary, numeric refs.
 - Must not mix IEEE journal format into the dissertation.
 - Must not write secrets into `.work/` or report sources.
@@ -42,4 +43,5 @@ _Spec: college/mydeliverables/Phase-2-report/ (guideline + sample + phase1-repor
 - Carried from prep: May-Oct 2026, `Artificial Intelligence`, Letter + Times/Arial + titlesec, keep subcaption, Ch2-only Summary, appendix shell, INFO.txt roster (2026-10-14).
 
 ## Open
-- Chapter 2 grill not started (Q + source decisions for 2.1-2.6 live in the new session).
+- Chapter 2 grill COMPLETE 2026-10-20 (Q8-Q16 resolved); 02 drafted + Fig 2.1 arrow fixed, bibliography populated in main.tex (11 entries, first-citation order, verbatim), /tmp smoke green (23 pages, Letter, 0 errors, 0 undefined), review main.pdf refreshed.
+- Chapter 3 grill COMPLETE 2026-10-20 (Q17-Q21 all resolved); 03-requirements drafted + /tmp smoke green (26 pages, Letter, 0 errors, 0 undefined), review main.pdf refreshed; no new bibliography keys (Ch3 cites none).

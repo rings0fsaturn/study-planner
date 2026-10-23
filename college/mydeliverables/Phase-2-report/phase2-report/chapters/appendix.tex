@@ -1,4 +1,108 @@
 \chapter{Supplementary Tables and Figures}
 \label{ch:appendix}
 This appendix collects the supplementary tables and figures referenced from Chapter~6. Each item repeats its in-text number so the reader can move between the discussion and the full table without searching.
-% Supplementary Ch6 tables and figures land here during drafting (Q7a shell).
+
+\section{Adherence Emission}
+Table~\ref{tab:app-adherence} lists the full 24-row adherence emission from Section~6.4. Rates show actual over planned minutes for each user and week. Planned time reads 390 minutes for weeks 0 to 4 and 360 minutes for week 5. Week 5 reads 0.000 for all four users with the rebound-era caveat of Section~6.4.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Adherence emission: actual over planned minutes by user and week. Week 5 is the post-replan extension week.}
+\label{tab:app-adherence}
+\begin{tabular}{l r r r r r r}
+\toprule
+\textbf{User} & \textbf{w0} & \textbf{w1} & \textbf{w2} & \textbf{w3} & \textbf{w4} & \textbf{w5} \\
+\midrule
+steady & 0.692 & 0.921 & 0.879 & 0.954 & 0.933 & 0.000 \\
+crammer & 0.215 & 0.138 & 0.385 & 0.254 & 0.923 & 0.000 \\
+struggling & 0.323 & 0.169 & 0.385 & 0.144 & 0.554 & 0.000 \\
+returning & 0.656 & 0.000 & 0.000 & 0.700 & 0.900 & 0.000 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Verdict Instants}
+Table~\ref{tab:app-decided} gives the per-user verdict instants from Section~6.4. Each row joins its RoadmapReplanned by the exact verdict pair. All four converted. The 12 mastery rows are excluded here by design. They measure the seeded scripts at about 0.1067 throughout. The versioned JSON beside the replay evidence holds them.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Loop verdict instants: per-user decidedAt values.}
+\label{tab:app-decided}
+\begin{tabular}{l l l l}
+\toprule
+\textbf{User} & \textbf{Verdict} & \textbf{decidedAt} & \textbf{Converted} \\
+\midrule
+steady & suggest\_replan & \texttt{2026-10-14T12:00:11.235Z} & yes \\
+crammer & suggest\_replan & \texttt{2026-10-14T12:00:07.156Z} & yes \\
+struggling & suggest\_replan & \texttt{2026-10-14T12:00:07.606Z} & yes \\
+returning & suggest\_replan & \texttt{2026-10-14T12:00:07.515Z} & yes \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Second-Corpus Questions and Endpoint Pointers}
+Table~\ref{tab:app-ddia} lists the 30 DDIA gold questions from Section~6.1. The driver verified each snippet in at least one chunk before the run. Per-question ranks for the endpoint and harness arms stay in their versioned files:
+\begin{itemize}[nosep,leftmargin=*]
+\item \texttt{research/doc/2026-10-22-endpoint-retrieval.json}
+\item \texttt{research/doc/2026-10-22-reranked-754.json}
+\item \texttt{research/doc/2026-10-22-second-corpus-ddia.json}
+\end{itemize}
+The DDIA gold stems sit in \texttt{research/doc/2026-10-22-ddia-questions.json} beside the run files.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{DDIA second-corpus gold set, questions 1 to 15. Snippets are verbatim from the evidence file.}
+\label{tab:app-ddia}
+\begin{tabular}{r p{2.4cm} p{4.4cm} p{6.0cm}}
+\toprule
+\textbf{Q} & \textbf{Label} & \textbf{Question} & \textbf{Answer snippet} \\
+\midrule
+1 & reliability meaning & What does it mean for a data system to be reliable? & The system should continue to work correctly (performing the correct function at the desired level of performance) even in the face of adversity \\
+2 & fault vs failure & What is the difference between a fault and a failure? & Note that a fault is not the same as a failure \\
+3 & scalability meaning & How does the book define scalability? & Scalability is the term we use to describe a system's ability to cope with increased load \\
+4 & maintainability operability & What does operability mean as an aspect of maintainability? & Make it easy for operations teams to keep the system running smoothly \\
+5 & document schema flexibility & What does schema flexibility mean in the document model? & Most document databases, and the JSON support in relational databases, do not enforce any schema on the data in documents \\
+6 & relational roots & What are the roots of the relational model? & proposed by Edgar Codd in 1970 \\
+7 & NoSQL drivers & What drove the adoption of NoSQL databases? & need for greater scalability than relational databases can easily achieve \\
+8 & declarative queries & Why are declarative query languages preferred over imperative APIs? & declarative query languages like SQL turned out to be much better than imperative query APIs \\
+9 & SSTable merge & What is an advantage of SSTables over log segments with hash indexes? & Merging segments is simple and efficient, even if the files are bigger than the available memory \\
+10 & B-tree vs LSM reads & How do B-trees and LSM-trees compare on read performance? & LSM-trees are typically faster for writes, whereas B-trees are \\
+11 & secondary indexes & How common are secondary indexes in relational databases? & It is also very common to have secondary indexes \\
+12 & replication leaders & How does leader-based replication work? & One of the replicas is designated the leader \\
+13 & read-your-writes & What guarantee prevents reading stale data after your own write? & read-after-write consistency, also known as read-your-writes consistency \\
+14 & multi-leader conflicts & What is the biggest problem with multi-leader replication? & The biggest problem with multi-leader replication is that write conflicts can occur \\
+15 & quorum reads & When can quorum reads generally expect the most recent value? & If you have n replicas, and you choose w and r such that w + r > n \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[htbp]
+\ContinuedFloat
+\centering
+\footnotesize
+\caption{DDIA second-corpus gold set, questions 16 to 30.}
+\begin{tabular}{r p{2.4cm} p{4.4cm} p{6.0cm}}
+\toprule
+\textbf{Q} & \textbf{Label} & \textbf{Question} & \textbf{Answer snippet} \\
+\midrule
+16 & skew batch & How does skew affect batch jobs? & due to skew (data not being spread evenly across worker processes) and needing to wait for the slowest task to complete \\
+17 & consistent hashing & What is consistent hashing? & Consistent hashing, as defined by Karger et al. [7], is a way of evenly distributing load \\
+18 & ACID coined & Where does the acronym ACID come from? & It was coined in 1983 by Theo H\"arder and Andreas Reuter \\
+19 & read committed & What is the most basic transaction isolation level? & The most basic level of transaction isolation is \\
+20 & snapshot isolation term & Which isolation level is named in the chapter on weak isolation? & snapshot isolation \\
+21 & serializable strongest & How strong is serializable isolation? & Serializable isolation is usually regarded as the strongest isolation level \\
+22 & 2PC coordinator & What extra element appears in distributed transactions compared to single-node ones? & a coordinator (also known as transaction manager ) \\
+23 & FLP result & What does the FLP result prove about consensus? & You may have heard about the FLP result \\
+24 & CAP consistency meaning & What does consistency mean in the CAP theorem? & the word consistency is used to mean \\
+25 & linearizability illusion & What illusion does linearizability give? & could give the illusion that there is only one replica \\
+26 & version vectors & What technique orders events across leaders? & a technique called version vectors can be used \\
+27 & batch definition & What is a batch processing system? & A batch processing system takes a large amount of input data, runs a job to \\
+28 & event vs processing time & What is the difference between event time and processing time? & Event time versus processing time \\
+29 & Kreps lambda & Who questioned the lambda architecture? & Jay Kreps: ``Questioning the Lambda Architecture \\
+30 & exactly-once meaning & What does exactly-once mean for stream processing? & the final effect is the same as if no faults had occurred \\
+\bottomrule
+\end{tabular}
+\end{table}

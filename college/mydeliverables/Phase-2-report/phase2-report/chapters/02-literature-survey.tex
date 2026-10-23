@@ -1,3 +1,100 @@
 \chapter{Literature Survey}
-This chapter surveys the techniques this phase draws on. Section~2.1 covers knowledge tracing and mastery models. Section~2.2 reviews automatic item generation and knowledge-component tagging. Section~2.3 describes grading methods for written and coded answers. Section~2.4 surveys Socratic guidance and learner feedback. Section~2.5 notes the method used to source the surveyed models. Section~2.6 summarizes the approaches and states the gaps this project addresses.
-% Drafting starts here (grill pending).
+This chapter surveys the techniques this phase uses. Section~2.1 covers knowledge tracing and mastery models. Section~2.2 reviews automatic item generation and knowledge-component tagging. Section~2.3 describes grading methods for written and coded answers. Section~2.4 surveys Socratic guidance and learner feedback.
+
+Section~2.5 notes the method used to source the surveyed work. Section~2.6 summarizes the approaches and states the gaps this project addresses.
+
+\section{Knowledge Tracing and Mastery}
+Tracing mastery from a short response history is the basis of the closed loop. Chen et al.~\cite{chen2024} present a hierarchical Bayesian model of adaptive teaching and validate it through two online behavioral experiments with 312 adults. Hierarchical priors capture learner-to-learner variation without overfitting sparse data. This supports estimation of a single learner's state from few observations. The model targets a teacher's choice of examples rather than mastery of a tested skill. It supplies the prior structure but not the updater this project needs.
+
+The updater is Bayesian Knowledge Tracing. It tracks a per-skill mastery probability through four fitted parameters: prior knowledge $P(L_0)$, learning rate $T$, guess $G$, and slip $S$. After a correct response the posterior follows
+\begin{equation}
+P_{\text{correct}}(L_n) = \frac{P(L_{n-1})(1-S)}{P(L_{n-1})(1-S) + (1-P(L_{n-1}))G}, \qquad P(L_n) = P_{\text{obs}}(L_n) + (1-P_{\text{obs}}(L_n))T.
+\label{eq:bkt-update}
+\end{equation}
+The subscript names the observation just seen. The first term revises the estimate from the observed response. The second term moves the learner toward mastery by the fitted rate.
+
+Zanellati et al.~\cite{zanellati2024} review hybrid knowledge-tracing models in a taxonomy of approaches that combine Bayesian posteriors with machine learning. They conclude that hybrid models consistently outperform either pure Bayesian Knowledge Tracing or pure deep learning. Against this, the project's own bake-off pins its Bayesian variant, called bkt-v1, at an AUC of 0.888 against 0.889 for the baseline. That is parity rather than a win. The surveyed hybrids address correctness prediction on large logs. They do not steer the difficulty of what the learner sees next, which is the step this project adds with its adaptive chip.
+
+Mai et al.~\cite{mai2025} couple deep temporal modeling with a probabilistic layer in a Transformer-Bayesian hybrid that recovers interpretable, calibrated knowledge estimates. This keeps transparency without giving up predictive accuracy. The limitation for this project is cold start. A single self-directed learner arrives with almost no graded history. The calibrated pace work in Phase~I already showed the pattern: a Bayesian estimate beats a fixed-rate baseline only after enough sessions accumulate.
+
+The project therefore keeps the Bayesian updater with an informative stance from onboarding data. The mastery estimate then drives difficulty instead of a fixed sequence.
+
+\section{Automatic Item Generation and KC Tagging}
+The loop needs fresh questions on the learner's own material, each traceable to the passage it tests. The work on automatic item generation reports fluency first and traceability second. The large-language-model prompting study across STEM subjects~\cite{itemgen2024} generates items in several subjects from prompts and checks them per subject. Against this, the project's own generation harness reports a groundedness of 0.867 with a near-duplicate rate of 0.004. The paper shows that generation covers subjects. It does not record which chunk each question came from, so a wrong question cannot be traced back to its source.
+
+The self-hosted lecture-to-quiz study~\cite{lecturequiz2026} generates multiple-choice questions with a local model and checks them with deterministic quality control. The control step rejects malformed items before they reach the learner. The project's retrieval baseline behind generation reports a recall at 3 of 0.7333 with a mean reciprocal rank of 0.7033 on the 754-chunk corpus. Deterministic checks catch shape defects. They cannot catch a well-formed question grounded in the wrong passage. Each generation call in this project therefore produces one question in a single family and records its chunk citations.
+
+Tagging items to knowledge components faces the same split. The automated tagging study~\cite{kctag2024} generates knowledge-component tags from multiple-choice questions and attaches each item to the component it tests. The tag makes per-skill histories possible. The study stops at the tag. It does not use the tag to steer practice.
+
+The project's mastery model needs exactly that signal, and its bake-off holds at the parity noted in Section~2.1. This project therefore carries a per-problem family label from generation into the run. Practice runs resolve their questions lazily from the loaded assessments instead of copying a fixed list.
+
+\section{LLM and Sandbox Grading}
+A grade that steers the plan must come from an authority the learner cannot sway. The EDUCON study on short-answer grading~\cite{llmgrade2024} applies a large language model with a rubric to answers in software engineering courses and grades them automatically. The rubric makes the judgment repeatable across answers.
+
+Against this, the project's live matrix grades written runs 4 out of 4 with real rubric grades. A rubric grade alone cannot carry code. An answer there is right only if it runs. The project therefore keeps the model-judged arm for written answers and a separate execution arm for code.
+
+Deterministic grading covers the objective family. The answer is authored at generation time and the grader compares it exactly, with no model call. The adjacent prediction-then-optimize study~\cite{islam2024} predicts grades at an accuracy of about 0.73 before scheduling, which shows that grade-adjacent signals can drive a plan. Prediction is not grading. The project's live matrix takes objective runs 2 out of 2 and reviews 4 out of 4. The server grade stays authoritative, while any client-side check stays advisory and never reaches the record.
+
+Code answers execute in a sandboxed runner with hidden tests. The runner is the self-hosted Piston service. The project grades coding runs 3 out of 3 live. The hidden pass rate decides the grade, and the reference solution never reaches the browser. The client runs visible tests only as advice.
+
+The limitation this answers is single-signal grading treated as final. One arm cannot judge three families, so each family gets its own authoritative arm and hidden material stays server-side.
+
+\section{Socratic Guidance and Feedback}
+Guidance that gives the answer destroys the evidence the loop needs. The measurement side is well covered. Alhazbi et al.~\cite{alhazbi2024} review 25 empirical studies on measuring self-regulated learning from trace data and find that most validated indicators relate to time-management skills. This grounds schedule adherence and regularity as behavioral metrics. The review measures behavior. It does not guide the learner through a hard problem, which is where the Socratic ladder in this project starts.
+
+Uzun et al.~\cite{uzun2025} show that a learner's engagement with analytics feedback is associated with both self-regulated-learning competence and course performance. That link motivates feedback that the learner actually reads. The project's guide runs 2 out of 2 live with real streamed steps. Feedback without a gate drifts into answer-giving. Each extra hint moves closer to the answer.
+
+The project therefore answers through a ladder of Nudge, Hint, Targeted explanation, and Reveal. The last step stays locked until the learner confirms, so guidance never gives the answer before the learner works.
+
+Help-seeking itself can be gamed. The think-aloud study of gaming the system~\cite{gaming2026} analyses self-regulated learning protocols and separates genuine attempts from moves that extract answers from the tutor. This matches the project's own replay result. After the fix the synthetic histories convert 4 out of 4 verdict-triggered replans with a material-scoped span of 32 days. Before the fix every case held.
+
+The feedback copy in this project stays advisory for the same reason. A server endpoint drafts learner-facing text for updated entries with a static fallback, and the copy never alters the grade.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=6mm and 11mm, box/.style={draw, rounded corners, minimum height=9mm, minimum width=21mm, align=center, font=\small}, >=Latex]
+\node[box] (mat) {Material\\chunks};
+\node[box, right=of mat] (gen) {Generate\\(one family)};
+\node[box, right=of gen] (grade) {Grade\\(per family)};
+\node[box, below=of grade] (mast) {Mastery\\(bkt-v1)};
+\node[box, left=of mast] (verd) {Verdict\\(hold/replan)};
+\node[box, left=of verd] (plan) {Study\\plan};
+\draw[->] (mat) -- (gen);
+\draw[->] (gen) -- (grade);
+\draw[->] (grade) -- (mast);
+\draw[->] (mast) -- (verd);
+\draw[->] (verd) -- (plan);
+\draw[->] (plan.north) -- (mat.south);
+\end{tikzpicture}
+\caption{The assessment-verified closed loop this chapter motivates: generated items are graded per family, grades update mastery, the verdict steers the plan, and the plan points back at the material. Each stage is surveyed in Sections~2.1 to~2.4.}
+\label{fig:closed-loop}
+\end{figure}
+
+\section{Methodology for Sourcing the Surveyed Work}
+The work above was assembled by advisor-guided curation with citation chaining, not by a fresh database sweep. The starting points were the Phase~I knowledge-tracing trio and the implementation anchors of Phase~II. These are single-family generation, per-family grading arms, the Socratic ladder, and advisory feedback. Each candidate was checked against four clusters matching Sections~2.1 to~2.4. Coverage across the four clusters mattered more than raw count. One representative work was kept per sub-theme, and redundant near-duplicates were dropped.
+
+No new hundred-scale screening ran for this chapter, and none is claimed. Paper-side metrics appear where the source gives them verbatim, as in Sections~2.1 and~2.4. Where the Pillar-B sources state scope without a reusable number, the chapter states the scope. The project's own harness or live number appears beside it, labeled as the project's. This keeps every metric in the chapter traceable to the Phase~I report or to live code reality, with no invented numbers.
+
+\section{Summary of Approaches}
+Table~\ref{tab:litphase2} summarizes the four families with their strengths and the limitations that motivate this work. Each technique is strong in isolation. None forms a closed loop from graded evidence back to the plan.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Summary of Phase~II approach families, with strengths and limitations for this project.}
+\label{tab:litphase2}
+\begin{tabular}{p{3.0cm} p{4.2cm} p{4.2cm}}
+\toprule
+\textbf{Approach family} & \textbf{Strengths} & \textbf{Limitations for this project} \\
+\midrule
+Knowledge tracing~\cite{chen2024,zanellati2024,mai2025} & Per-skill mastery from short histories, interpretable, calibrated & Predicts correctness, does not steer difficulty \\
+Item generation and KC tagging~\cite{itemgen2024,lecturequiz2026,kctag2024} & Fluent items at scale, deterministic checks, component tags & Untraceable to source chunks, tags unused for steering \\
+Grading~\cite{llmgrade2024,islam2024} and sandbox execution & Rubric repeatability, deterministic match, hidden-test authority & Single-signal grades treated as final, client checks leak answers \\
+Guidance and feedback~\cite{alhazbi2024,uzun2025,gaming2026} & Validated indicators, feedback the learner reads & Answer-giving tutors, grade-altering feedback \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The gaps follow from the table. First, generation is fluent but untraceable, and tags exist without steering, so questions cannot yet drive per-skill practice. Second, grades come from one signal or from the client, so they cannot yet carry plan decisions. Third, guidance either measures without helping or helps by giving away the answer, so attempts stop being evidence.
+
+This project answers all three with the loop in Figure~\ref{fig:closed-loop}. Generation is grounded and cited, and each family carries its own authoritative grade. Difficulty follows mastery, the ladder stays gated, and feedback stays advisory. The verdict feeds schedule regeneration in Chapter~4.

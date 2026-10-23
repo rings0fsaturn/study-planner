@@ -1,3 +1,128 @@
 \chapter{Proposed Methodology}
 This chapter describes how the closed loop works and why it takes this shape. Section~4.1 presents the closed learning loop. Section~4.2 states the candidate models and the selected approach. Section~4.3 describes the comparison methodology. Section~4.4 traces the design evolution. Section~4.5 presents the system architecture.
-% Drafting starts here (grill pending).
+
+\section{The Closed Learning Loop}
+The loop runs over five stages. The learner plans through roadmap-engine bookings and studies through logged sessions. Practice and assessment produce server-graded evidence. Mastery and the loop verdict recalibrate the plan state. The verdict then drives the replan. Figure~\ref{fig:closed-loop} shows the same loop at concept level.
+
+The verdict is advisory and gated. \texttt{POST /v1/loop/decision} asks the hosted judge for one choice over the week's signals, the evidence summary, and the schedule posture. The code router keeps thin evidence, low confidence, and the middle band on \texttt{hold}. Only \texttt{suggest\_replan} carries the verdict pair forward to the replan screen, and the committed \texttt{RoadmapReplanned} mirrors it. \texttt{Keep} writes no event.
+
+Phase~I ran this loop open. It recalibrated pace from logged sessions and raised a prompt, and the learner decided whether to replan. Nothing checked that study produced understanding. Phase~II verifies first: grades steer mastery through Equation~\ref{eq:bkt-update}, mastery and posture steer the verdict, and the verdict steers the plan.
+
+\section{Candidate Models and Selected Approach}
+The project fixed each stage by comparing candidates against evidence instead of by default. This section states the candidates and the selected approach per stage. Section~4.3 describes how the comparison ran. Table~\ref{tab:method-candidates} summarises the selections.
+
+\subsection{Item Generation}
+The generator had to produce questions the project can trace. The project rejected multi-family single-call generation without recorded provenance. The selected shape is one family and one question per call, grounded in retrieved chunks with recorded citations. The server gate enforces it: \texttt{formats} must be one of \texttt{objective}, \texttt{written}, or \texttt{coding}, and \texttt{questionCount} must be \texttt{1}. A mixed run alternates families across calls instead of mixing them in one call.
+
+\subsection{Grading}
+One signal cannot judge three families, so each family carries its own authoritative arm. Objective answers are authored at generation time and compared exactly. Written answers go to a rubric-judged model arm. Code answers execute in the Piston sandbox against hidden tests, and the reference solution never reaches the browser. Every client-side check stays advisory and never enters the grade record.
+
+\subsection{Mastery and Difficulty}
+The mastery candidates were the deep and hybrid variants surveyed in Section~2.1. The bake-off held the Bayesian variant at parity with the baseline, so the project kept it and named it bkt-v1. The estimate updates per skill through Equation~\ref{eq:bkt-update}. The adaptive chip then maps the estimate to a difficulty recommendation.
+
+\subsection{Guidance and Feedback}
+Guidance that gives the answer destroys the evidence the loop reads. The project rejected an open tutor that reveals on demand. The selected shape is the ladder of Nudge, Hint, Targeted explanation, and Reveal, with the last step locked until the learner confirms. Feedback copy stays advisory in the same way: a server endpoint drafts learner-facing text for updated entries through the \texttt{feedback-v2} template with a static fallback, and the copy never alters the grade.
+
+\subsection{Loop Verdict}
+The project weighed a raw model choice against a gated router over it. The project kept the gated pair: the Jev judge (\texttt{jev-1.13} through a hosted API) proposes, and the code router disposes. Thin evidence, low confidence, and the middle band all land on \texttt{hold}. The gate constant \texttt{LOOP\_APPROVE\_AT} is \texttt{0.7}. Only a confident call with sufficient evidence passes it.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Candidate approaches per loop stage and the approach selected for the delivered system.}
+\label{tab:method-candidates}
+\begin{tabular}{p{2.6cm} p{6.2cm} p{3.4cm}}
+\toprule
+\textbf{Stage} & \textbf{Candidates compared} & \textbf{Selected (delivered)} \\
+\midrule
+Item generation & Multi-family single call, ungrounded prompting, single-family grounded & Single family and single question per call, chunk citations recorded \\
+Grading & Advisory client-side check, single-signal grade & Server-authoritative arm per family; hidden tests never reach the browser \\
+Mastery and difficulty & Deep variants, hybrid models, fixed sequence & bkt-v1 with the adaptive difficulty chip \\
+Guidance and feedback & Open tutor, grade-altering feedback & Gated ladder with locked reveal; advisory-only \texttt{feedback-v1} copy \\
+Loop verdict & Raw model choice & Jev \texttt{jev-1.13} with the fail-closed router (\texttt{LOOP\_APPROVE\_AT} 0.7) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Two honest limits stay on record. The coding arm refuses material it cannot ground a question in, and reports \texttt{code\_not\_derivable} instead of inventing a question. The Phase~I estimators carry over unchanged: the single-arm CUSUM still prompts recalibration, and the split-conformal interval correction stays a validated refinement that is not shipped.
+
+\section{Comparison Methodology}
+The comparison rests on two legs. The offline leg scores components against fixed golds. The longitudinal leg scores the whole loop on synthetic histories with known posture. Both legs ran before selection, and the live browser matrix only checks deployment afterward.
+
+The offline leg is the generation-quality harness. It holds golds in \texttt{eval\_golds.json} with three fold hashes at $K=5$, and its gate stays fail-closed by default. It reports groundedness at 0.867 with a near-duplicate rate of 0.004. Retrieval recall at 3 is 0.733. The bkt-v1 AUC is 0.888 against 0.889 for the baseline. Coding derivability reads 0.0 on the golds.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[node distance=5mm and 9mm, font=\small, >=Latex,
+  b/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.6cm, fill=black!3}]
+\node[b] (G) {Fixed golds\\\scriptsize (known answers)};
+\node[b, right=of G] (M) {Candidate arms\\\scriptsize (run per stage)};
+\node[b, right=of M] (E) {Per-stage metrics\\\scriptsize (fail-closed gate)};
+\node[b, right=of E] (H) {Synthetic replay\\\scriptsize (4 archetypes)};
+\node[b, right=of H] (W) {Selected approach};
+\draw[->] (G) -- (M); \draw[->] (M) -- (E); \draw[->] (E) -- (H); \draw[->] (H) -- (W);
+\end{tikzpicture}%
+}
+\caption{The two-leg comparison. Fixed golds score each candidate arm behind a fail-closed gate; the synthetic replay then scores the whole loop before the approach is selected.}
+\label{fig:comparison-pipeline}
+\end{figure}
+
+The longitudinal leg replays four synthetic archetypes: steady, crammer, struggling, and returning. Development histories stay separate from evaluation histories, so a win reflects behaviour instead of fitting. Each run ends in a loop verdict joined to its replan, and the project scores conversion with next-week adherence. The post-fix replay converts 4 out of 4 \texttt{suggest\_replan} verdicts into verdict-linked replans over a material-scoped span of 32 days. Confidence reads 1.0 with sufficiency from 0.66 to 0.77. Every replan extends the deadline.
+
+The live matrix confirms deployment. It never promotes a candidate. Objective runs take 2 out of 2, written runs grade 4 out of 4 with real rubric grades, and coding runs grade 3 out of 3.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Evaluation metrics by loop stage.}
+\label{tab:phase2-metrics}
+\begin{tabular}{p{3.0cm} p{9.0cm}}
+\toprule
+\textbf{Stage} & \textbf{Metrics} \\
+\midrule
+Item generation & Groundedness in the cited chunks, near-duplicate rate \\
+Grading & Live pass counts per family (objective 2 of 2, written 4 of 4, coding 3 of 3) \\
+Mastery and difficulty & Area under the curve against the baseline \\
+Guidance and feedback & Live pass counts (guide 2 of 2, feedback loop 3 of 3); copy never alters the grade \\
+Loop verdict & Verdict-to-replan conversion (4 of 4 post-fix), next-week adherence rebound \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{System Design and Evolution}
+The system reached this shape in three moves. The starting point is the delivered Phase~I design: capacity-based bookings with an open loop, where the closed-loop feedback from verified mastery stayed a dashed extension. The base scheduling study~\cite{islam2024} still supplies the predict-then-optimize contrast that design answered.
+
+The second move inserted assessment without touching the booking model. Generation, grading, mastery, guidance, and feedback landed in the intelligence service beside the Phase~I calibration routes. Bookings, session logging, and the local-first store did not change. The third move closed the loop: the verdict gate, the verdict pair mirrored onto \texttt{RoadmapReplanned}, and the synthetic replay proving \texttt{suggest\_replan} converts to a replan.
+
+This section states the path once. The problem it answers sits in Section~1.2, and the capability list it delivers sits in Sections~3.3 and~3.4. Nothing here restates either.
+
+\section{System Architecture}
+The deployed system keeps the Phase~I split. Computation that fits a model to history runs in the Python service. Computation that derives a view from the local event log runs in the client. Supabase sits between them as the data hub with row-level isolation per learner. Figure~\ref{fig:architecture} shows the tiers with the Phase~II additions solid.
+
+The browser client owns bookings, projection, mastery readers, and the verdict handoff. The intelligence service with its worker owns generation, grading, mastery, guidance, feedback, and the loop verdict. The Jev judge sits folded inside as a hosted-API client instead of a separate tier. The graphics sidecar serves embeddings and rerank scores from its own compose project, and the sandbox runs learner code on demand. Table~\ref{tab:software} lists the full tier inventory.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[node distance=6mm and 12mm, font=\small, >=Latex,
+  t/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.8cm, fill=blue!4},
+  d/.style={draw, rounded corners=10pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.8cm, fill=black!4}]
+\node[t] (C) {Browser client\\\scriptsize (bookings, mastery readers)};
+\node[t, right=of C] (I) {Intelligence service\\\scriptsize (generation, grading, verdict)};
+\node[d, right=of I] (S) {Supabase\\\scriptsize (auth, events, storage)};
+\node[t, below=of I] (W) {Worker\\\scriptsize (ingestion, generation jobs)};
+\node[d, below=of S] (X) {Sidecars\\\scriptsize (embedder, sandbox)};
+\draw[<->] (C) -- (I);
+\draw[<->] (C) -- (S);
+\draw[<->] (I) -- (S);
+\draw[->] (I) -- (W);
+\draw[->] (W) -- (S);
+\draw[->, dashed, draw=black!45] (I) -- (X);
+\end{tikzpicture}%
+}
+\caption{The deployment that realises Figure~\ref{fig:closed-loop}. The client derives views from the local log, the service fits models to history with the judge folded inside, Supabase hubs the data, and the sidecars serve on demand.}
+\label{fig:architecture}
+\end{figure}
+
+Figure~\ref{fig:closed-loop} states the concept the literature motivates, and this figure states where each stage runs and which wire joins them. The loop that stayed dashed in Phase~I runs solid here.

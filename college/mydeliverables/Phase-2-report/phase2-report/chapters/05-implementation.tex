@@ -1,3 +1,236 @@
 \chapter{Implementation Details}
-This chapter gives the implementation behind the methodology. Section~5.1 records the development environment. Section~5.2 describes the datasets and their sources. Section~5.3 describes the model and service implementation. Section~5.4 states the evaluation metrics and reproducibility measures. Section~5.5 presents the Phase-2 application.
-% Drafting starts here (grill pending).
+This chapter describes how the Phase-II system is built. Section~5.1 records the development environment. Section~5.2 describes the datasets and their sources. Section~5.3 describes the model and service implementation. Section~5.4 states the metrics and the steps taken for reproducibility. Section~5.5 presents the delivered Phase-2 application.
+
+\section{Development Environment}
+The project keeps the Phase-I repository shape. A pnpm workspace holds the TypeScript client with its shared engines. A uv workspace holds the Python packages, the service, and the research code. The two coexist so that the research code imports the same Python engines the service runs. That keeps the evaluated code and the shipped code identical. Table~\ref{tab:tools} lists the environment. The first eleven rows carry the Phase-I stack unchanged. The last six rows add the Phase-II generation, judgment, grading, embedding, and editor dependencies.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Development environment: tools and libraries. The first eleven rows carry the Phase-I stack; the last six add the Phase-II loop.}
+\label{tab:tools}
+\begin{tabular}{p{4.0cm} p{8.4cm}}
+\toprule
+\textbf{Concern} & \textbf{Technology} \\
+\midrule
+Client language and build & TypeScript, Vite, pnpm workspace \\
+Client UI & React~19 \\
+Local-first storage & Dexie over IndexedDB \\
+Intelligence service & Python~3.12, FastAPI, Uvicorn \\
+Scientific stack & NumPy, SciPy \\
+Service authentication & PyJWT, verifying Supabase-issued tokens \\
+Containerisation & Docker via Colima \\
+Python workspace & uv \\
+JavaScript testing & Vitest, fast-check (property tests), Playwright (end-to-end) \\
+Python testing and linting & pytest, ruff \\
+Backend and hosting & Supabase (auth, database, storage), Vercel \\
+Generation provider & OpenRouter; \texttt{deepseek/deepseek-v4-flash-0731}, temperature 0.3, reasoning off, 30~s timeout \\
+Feedback-copy model & \texttt{meta/muse-spark-1.3-contributor} through \texttt{FEEDBACK\_MODEL}, reasoning effort low \\
+Judgment client & Jev-1.13 hosted System One API through \texttt{OPENROUTER\_JEV\_API\_KEY}; in-process client \\
+Code-execution sandbox & Piston sandbox profile on port~2000 for hidden-test grading \\
+Embedding sidecar & Qwen3-Embedding-0.6B and Qwen3-Reranker-0.6B on port~8200; separate compose project \\
+Client code editor & CodeMirror with an advisory Pyodide check that never grades \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Datasets and Their Sources}
+A single learner's real log cannot supply a known ground truth. The Chapter~6 comparison therefore runs on fixed artefacts with planted and known properties. Table~\ref{tab:datasets} lists the datasets and the role each plays.
+
+The frozen corpus is a single textbook at 754 chunks with 768-dimensional sidecar vectors. Three gold files score the offline leg against it: the objective probe set, the written gold set, and the coding gold set. The fixed folds and the attempt gate sit beside them in \texttt{eval\_golds.json}. The longitudinal leg replays four synthetic archetypes with known posture: steady, crammer, struggling, and returning. Their generator plants weekly pace, skip behaviour, gap weeks, and replan back-pointers explicitly. The Open University dataset calibrates the Phase-I generator only and does not enter the Phase-II comparison. Real single-learner logs stay reserved for future validation and are not used here.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\caption{Datasets used in Phase~II and their sources.}
+\label{tab:datasets}
+\begin{tabular}{p{3.6cm} p{3.8cm} p{5.0cm}}
+\toprule
+\textbf{Dataset} & \textbf{Source} & \textbf{Role} \\
+\midrule
+Frozen corpus and harness golds & In-repository gold files: \texttt{eval\_golds.json} with probe, written, and coding sets; ACCA text at 754 chunks with 768-dimensional sidecar vectors & Primary ground truth for the offline leg: generation, retrieval, mastery, and coding checks \\
+Synthetic longitudinal histories & In-repository generator with four archetypes: steady, crammer, struggling, and returning & Whole-loop replay with known posture; post-fix replay evidence versioned \\
+OULAD and real logs & Public Open University dataset and the candidate's own sessions & Calibration source for the Phase-I generator and reserved validation; neither enters the Phase-II comparison \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Model and Service Implementation}
+The algorithms stay implemented once in behaviour and twice in code where the client must render them. The client-side engines are written in TypeScript, and a Python mirror of each engine runs behind the intelligence service. A golden-fixture parity harness keeps the two implementations aligned. The TypeScript engines emit reference inputs and outputs. A Python test replays each input and asserts numeric equality to a tight tolerance. The shared numeric constants, such as the BKT parameters, stay identical on both sides.
+
+The split between client and service follows the architecture of Figure~\ref{fig:architecture}. Service-side code owns grounded generation, per-family grading arms, and the mastery endpoint. It also owns the guide stream with its gated reveal. It further owns the feedback-copy endpoint and the loop verdict with the Jev judge folded inside as a hosted-API client. The client keeps the engines it must read locally. Those are the roadmap bookings, the Gaussian-process projection, the mastery readers with the difficulty chip, and the verdict handoff. The offline research harness imports the production Python engines as candidates. It never re-implements them, so a result measured offline is a result about the shipped code. Listing~\ref{lst:bktforward} shows the shipped BKT forward filter, which realises Equation~\ref{eq:bkt-update}, and Table~\ref{tab:packages} lists the main packages.
+
+\noindent\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=Python, caption={The shipped BKT forward filter, which realises Equation~\eqref{eq:bkt-update}.}, label={lst:bktforward}]
+def bkt_forward(
+    observations: list[MasteryObservation],
+    params: BktParams = DEFAULT_PARAMS,
+) -> tuple[list[float], list[float]]:
+    """Run the forward filter over one skill's observation sequence.
+
+    Returns ``(mastery_after, p_correct_before)`` parallel lists:
+    ``p_correct_before[i]`` is the predicted probability of correctness for
+    observation ``i`` computed from the belief before it, and
+    ``mastery_after[i]`` is P(mastery) after processing observation ``i``.
+    """
+
+    mastery: list[float] = []
+    p_correct: list[float] = []
+    belief = params.p_init
+    for obs in observations:
+        p_correct.append((1.0 - params.p_slip) * belief + params.p_guess * (1.0 - belief))
+        if obs.correct:
+            numerator = (1.0 - params.p_slip) * belief
+            denominator = numerator + params.p_guess * (1.0 - belief)
+        else:
+            numerator = params.p_slip * belief
+            denominator = numerator + (1.0 - params.p_guess) * (1.0 - belief)
+        belief = numerator / denominator if denominator > 0 else belief
+        belief += (1.0 - belief) * params.p_learn
+        mastery.append(float(np.clip(belief, 0.0, 1.0)))
+    return mastery, p_correct
+\end{lstlisting}
+\end{minipage}
+
+\begin{table}[H]
+\centering
+\footnotesize
+\caption{Main packages and their roles.}
+\label{tab:packages}
+\begin{tabular}{p{4.8cm} p{7.6cm}}
+\toprule
+\textbf{Package / module} & \textbf{Role} \\
+\midrule
+\texttt{packages/progress} (TS) & Client mastery engine with bkt-v1: projection and the difficulty chip \\
+\texttt{packages/roadmap-engine} (TS) & Client booking and roadmap generation; the booking model is unchanged \\
+\texttt{packages/py-progress} (Py) & Python mirror: Bayesian and enriched-shrinkage calibration, CUSUM, Gaussian process, bkt-v1 \\
+\texttt{packages/py-roadmap-engine} (Py) & Python mirror of the roadmap engine \\
+\texttt{services/intelligence} (Py) & FastAPI service with a portless worker: generation, grading, mastery, guide, feedback, and the loop verdict \\
+\texttt{services/embedder} & Qwen3 embedding and rerank sidecar in a separate compose project \\
+Piston sandbox & External image for hidden-test code execution, started on demand \\
+Research scripts & Offline harness and probes importing the production engines as candidates \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Evaluation Metrics and Reproducibility}
+The metrics used to score each loop stage are defined in Table~\ref{tab:phase2-metrics} of Chapter~4. This section records how the project keeps them reproducible instead of redefining them.
+
+Three facts carry the reproducibility claim. First, every gate fails closed by default. The evaluation harness stays inert unless the caller passes \texttt{--activate}. The loop router maps a judge failure onto \texttt{hold} through a typed service error. The grading arms return a deterministic fail-closed outcome for unusable input and never fabricate a score. Second, every call carries one request identifier from the browser to the service logs. The client sends \texttt{X-Request-ID} on each intelligence call. The service echoes it on each response, and every error log line carries it. One identifier therefore joins the frontend, the backend, and the end-to-end evidence. Third, a reader can re-run both legs from versioned files. The offline leg needs \texttt{eval\_golds.json} with \texttt{eval\_harness.py}. The longitudinal leg needs the synthetic generator with the four archetypes and the versioned post-fix replay evidence.
+
+\section{The Phase-2 Application}
+The working application realises the selected models. This section presents that application in full. Phase-I delivered the planner with its session runtime, progress views, and roadmap lifecycle, and that substrate is unchanged. This section follows the five Phase-II capabilities in order. The requirements behind them sit in Sections~3.3 and~3.4, and nothing here restates them. A flow diagram builds up across the subsections, adding one stage at a time.
+
+\subsection{Materials and Ingestion}
+A material enters through the create page. The source grid offers plain text, PDF upload, and web article side by side. The pipeline turns the upload into embedded chunks. The library card reports each state honestly until the material reads ready. A ready card offers practice instead of a status badge. A failed card keeps its badge with a retry action. The detail page owns the rest of the lifecycle. It shows provenance and the outline, and it links onward to assessment and practice. Figure~\ref{fig:appflow1} shows the flow at this first stage.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 8mm, font=\small, >=Latex,
+  a/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.1cm, fill=blue!4}]
+\node[a] (M) {Materials\\\scriptsize (ingest, library)};
+\end{tikzpicture}
+\caption{Application flow after Section~5.5.1: materials reach readiness in the library.}
+\label{fig:appflow1}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_materials_library.png}
+\caption{The material library: ready cards offer practice while the failed card keeps its badge with a retry action.}
+\label{fig:appshot1}
+\end{figure}
+
+\subsection{Assessment Generation}
+A generation run starts from the config page. The page binds one material, one family, and one scoped chapter before it requests a single question. The server gate admits exactly one family and one question per call. A mixed run alternates families across calls. The assessment library lists every attempt with its family and status. Cache-first rows paint before revalidation completes. Generation runs as a tracked job. Only a run still marked generating retries in place, and a failed run ends there. Generation extends the flow in Figure~\ref{fig:appflow2}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 8mm, font=\small, >=Latex,
+  a/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.1cm, fill=blue!4}]
+\node[a] (M) {Materials\\\scriptsize (ingest, library)};
+\node[a, right=of M] (G) {Generation\\\scriptsize (one family, one call)};
+\draw[->] (M) -- (G);
+\end{tikzpicture}
+\caption{Application flow after Section~5.5.2: generation binds one material, one family, and one chapter per question.}
+\label{fig:appflow2}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_assessment_config.png}
+\caption{Assessment generation: one material, one family, and one scoped chapter per question.}
+\label{fig:appshot2}
+\end{figure}
+
+\subsection{Taking and Review}
+The taking screens collect one answer per question. They never touch hidden tests, reference solutions, or authored accepted values. Objective answers compare exactly against values authored at generation time. Written answers go to the rubric arm, and coding answers execute against hidden tests. Coding runs in an embedded editor with an advisory client check. The server grade stays final, and no client result enters the record. The review module shows each attempt beside its grade with per-question detail. Figure~\ref{fig:appflow3} then covers taking and review.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 8mm, font=\small, >=Latex,
+  a/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.1cm, fill=blue!4}]
+\node[a] (M) {Materials\\\scriptsize (ingest, library)};
+\node[a, right=of M] (G) {Generation\\\scriptsize (one family, one call)};
+\node[a, right=of G] (T) {Taking, review\\\scriptsize (server grading)};
+\draw[->] (M) -- (G); \draw[->] (G) -- (T);
+\end{tikzpicture}
+\caption{Application flow after Section~5.5.3: taking collects answers and review shows the server grade.}
+\label{fig:appflow3}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_assessment_review.png}
+\caption{Taking and review: the server grade with per-criterion rubric feedback.}
+\label{fig:appshot3}
+\end{figure}
+
+\subsection{Practice and Guidance}
+The practice hub gathers runs across materials. Each run resolves its questions lazily from the loaded assessments and stores no copies. Pause means leave and return. Neither finish nor abandon invents an observation. The Socratic coach stays anchored to the page. It streams Nudge, Hint, and Targeted guidance against retrieved chunks and locks Reveal behind an explicit confirmation. The mastery reader beside it shows the current estimate with its difficulty recommendation. Practice and guidance join the flow in Figure~\ref{fig:appflow4}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 8mm, font=\small, >=Latex,
+  a/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.1cm, fill=blue!4}]
+\node[a] (M) {Materials\\\scriptsize (ingest, library)};
+\node[a, right=of M] (G) {Generation\\\scriptsize (one family, one call)};
+\node[a, right=of G] (T) {Taking, review\\\scriptsize (server grading)};
+\node[a, right=of T] (P) {Practice, guide\\\scriptsize (runs, coach)};
+\draw[->] (M) -- (G); \draw[->] (G) -- (T); \draw[->] (T) -- (P);
+\end{tikzpicture}
+\caption{Application flow after Section~5.5.4: practice runs resolve lazily and the coach guides per attempt.}
+\label{fig:appflow4}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_practice_run.png}
+\caption{Practice run: the lazily resolved question with the Socratic coach anchored to the attempt.}
+\label{fig:appshot4}
+\end{figure}
+
+\subsection{Feedback and the Closed Loop}
+The roadmap detail page carries an evidence ledger. The ledger reads cold, updated, stale, or rebuilding from the cached mastery and the latest copy. The feedback-copy endpoint drafts text for updated entries only. The static fallback covers every other state, and the copy never alters a grade. The loop verdict proposes one choice over the week. Only \texttt{suggest\_replan} hands its verdict pair to the replan screen. Confirming a replan mirrors the pair onto \texttt{RoadmapReplanned} and keeps the plan identity. \texttt{Keep} writes nothing. Figure~\ref{fig:appflow5} completes the chain with feedback and the loop verdict.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[node distance=4mm and 8mm, font=\small, >=Latex,
+  a/.style={draw, rounded corners=3pt, line width=0.8pt, align=center, inner sep=5pt, text width=2.1cm, fill=blue!4}]
+\node[a] (M) {Materials\\\scriptsize (ingest, library)};
+\node[a, right=of M] (G) {Generation\\\scriptsize (one family, one call)};
+\node[a, right=of G] (T) {Taking, review\\\scriptsize (server grading)};
+\node[a, right=of T] (P) {Practice, guide\\\scriptsize (runs, coach)};
+\node[a, right=of P] (F) {Feedback, loop\\\scriptsize (verdict, replan)};
+\draw[->] (M) -- (G); \draw[->] (G) -- (T); \draw[->] (T) -- (P); \draw[->] (P) -- (F);
+\end{tikzpicture}
+\caption{Application flow after Section~5.5.5: the verdict closes the loop onto the replan.}
+\label{fig:appflow5}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\linewidth, height=0.42\textheight, keepaspectratio]{screenshots/app_roadmap_evidence.png}
+\caption{Feedback and the loop: the inspectable evidence trail with the advisory recommendation.}
+\label{fig:appshot5}
+\end{figure}

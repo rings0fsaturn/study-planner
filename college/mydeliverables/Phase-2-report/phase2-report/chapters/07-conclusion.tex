@@ -1,3 +1,30 @@
 \chapter{Conclusion and Future Work}
 This chapter closes the report. Section~7.1 concludes what the two phases delivered. Section~7.2 sets out future work.
-% Drafting starts here (grill pending).
+
+\section{Conclusion}
+Phase~I built an open-loop adaptive planner for a single self-directed learner. It estimated pace with Bayesian calibration and enriched shrinkage, and it flagged shifts with CUSUM. It projected completion with a Gaussian process and a cold-start composite, and it regenerated the plan with capacity bookings. Evaluation reported honest nulls with the wins, and the conformal correction and the single-arm CUSUM posture stayed validated but unshipped.
+
+Phase~II closed the loop with assessment-based verification of genuine learning. The principal novelty is the verified-learning closed loop, which extends the predict-then-optimize architecture~\cite{islam2024} from logged time to graded evidence. Logged time stays gameable~\cite{gaming2026}, so the plan responds to graded evidence.
+
+Table~\ref{tab:res-retrieval} shows retrieval gains on both corpora with ranking parity on the dense baseline. Reranking lifts hybrid recall at 1 from 0.60 to 0.67 on the 754-chunk ACCA split and from 0.47 to 0.63 on the DDIA corpus. MRR rises by 0.077 on ACCA and by 0.139 on DDIA, while the live endpoint reads 0.813 reranked. Title-prefix indexing shows no gain, and int8 quantisation collapses to 0.10. The retired 788-split headline stays as frozen-split precedent only.
+
+Grounded generation reads 0.8667 on the judge against 0.7803 gold support, with schema validity at 0.9611 and citation validity at 0.9133. The judge scores whether the cited chunk supports the answer, while gold support scores whether the citation contains the gold string. The coding arm refuses material it cannot ground, so derivability on the golds reads 0.0 as the honest terminal. A fresh live pull derives at 0.5349 and passes the 0.5 gate.
+
+Tracing holds at parity on ranking while calibration nearly halves on live attempts. Bkt-v1 reads 0.7397 against 0.7368 for the running proportion over 282 observations, with ECE at 0.1401 against 0.2679. The shipped parameters hold mean AUC at 0.785 with ECE at 0.057, and the external anchor reads 0.602 to 0.611. Difficulty calibration stays unmeasured, with 23 observations on a single question in one band. The update stays as Equation~\ref{eq:bkt-update} with the shipped filter in Listing~\ref{lst:bktforward}.
+
+Live verification confirms deployment only, with objective runs at 2 of 2, written grades at 4 of 4, and coding grades at 3 of 3. The full-book path reaches ready in about 88~s for the 572-page fixture, with zero console errors.
+
+The loop verdict converts 4 of 4 \texttt{suggest\_replan} verdicts into verdict-linked replans, as Table~\ref{tab:res-verdict} records. Confidence reads 1.0 with sufficiency from 0.66 to 0.77, and every replan extends the deadline over a 32-day span. The pre-fix contrast is 4 of 4 hold at 0.18 to 0.34, and the gate moved from 0.9 to 0.7. Hook checks pass 37 of 37 and feedback checks pass 77 of 77.
+
+Synthetic longitudinal replay reports next-week adherence at 0.000 with its rebound-era caveat, and the full 24-row emission sits in Appendix~\ref{ch:appendix}. Capture ran one day before the deadline, so the zero reflects timing. The dip-window replay holds 4 of 4 at 0.28 to 0.35 in the trough and converts on the rebound eve at 1.0. Validated but unshipped are the split-conformal correction and the single-arm CUSUM posture.
+
+\section{Future Work}
+Table rows in Appendix~\ref{ch:appendix} remain the reproducibility base for the work below. Four lines of work follow.
+
+The first is to ship the validated refinements, in particular the split-conformal correction of the projection interval. The single-arm CUSUM posture ships with it, since detection feeds a human-confirmed prompt.
+
+The second is longitudinal validation on real data, comparing closed-loop planning against the static baseline on adherence and on measured learning gain. A single learner over one term gives the honest next step beyond synthetic histories.
+
+The third is difficulty calibration with two or more bands, so the adaptive chip moves from advisory to measured. It needs more eligible questions than the single band available here.
+
+The fourth is classroom scope, extending the single-learner loop to groups without losing per-learner mastery.

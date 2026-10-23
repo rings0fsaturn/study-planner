@@ -1,3 +1,79 @@
 \chapter{System Requirements Specification}
-This chapter specifies what the system must do and what it runs on. Sections~3.1 and~3.2 list the hardware and software requirements. Sections~3.3 and~3.4 state the functional and non-functional requirements.
-% Drafting starts here (grill pending).
+This chapter specifies the requirements of the full system. Section~3.1 states the hardware environment. Section~3.2 states the software environment. Section~3.3 lists the functional requirements as numbered items, and Section~3.4 lists the non-functional requirements.
+The chapter assumes a single self-directed learner, a workstation with a graphics processor, and access to the hosted model APIs. It also assumes that synthetic longitudinal histories replace a classroom study, as stated in Section~1.4.
+
+\section{Hardware Requirements}
+The system runs on a single workstation. A single learner produces a small volume of data, and every statistical model trains and runs on a CPU. The embedding sidecar needs a graphics processor, so the workstation carries one. Table~\ref{tab:hardware} lists the hardware environment. The graphics card named there is the project machine, not a minimum model.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware environment.}
+\label{tab:hardware}
+\begin{tabular}{p{4.2cm} p{8.0cm}}
+\toprule
+\textbf{Component} & \textbf{Requirement} \\
+\midrule
+Processor & Any modern x86-64 CPU with a discrete GPU, project runs an AMD Radeon RX~9070~XT \\
+Memory & 8~GB RAM or higher \\
+Storage & A few gigabytes for the container images and local data \\
+Container runtime & Docker to run the intelligence service, the worker, the sidecar, and the sandbox \\
+Client device & Any device with a modern web browser \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Software Requirements}
+The system keeps the three Phase-I tiers and adds two containers. The browser client stays local-first. The Python intelligence service plus its worker now hosts generation, grading, mastery, guidance, and feedback. Supabase still provides authentication, the event database, and object storage. The graphics sidecar serves embeddings and rerank scores, and the sandbox runs learner code. Table~\ref{tab:software} lists the software environment by tier.
+
+\begin{table}[htbp]
+\centering
+\caption{Software environment by tier.}
+\label{tab:software}
+\begin{tabular}{p{3.6cm} p{8.6cm}}
+\toprule
+\textbf{Tier} & \textbf{Technologies} \\
+\midrule
+Client (single-page app) & React~19, Vite~5, TypeScript, Dexie over IndexedDB for local-first storage, date-fns \\
+Intelligence service and worker & Python~3.12, FastAPI, Uvicorn, NumPy, PyJWT, generation, grading, mastery, guide, and feedback endpoints, OpenRouter generation provider plus Jev-1.13 judgment client, packaged with Docker \\
+Backend services & Supabase: authentication, a PostgreSQL event database including \texttt{jev\_review\_flags}, and object storage \\
+GPU inference sidecar & Qwen3-Embedding-0.6B plus Qwen3-Reranker-0.6B behind \texttt{/embed} and \texttt{/rerank}, separate compose project \\
+Code-execution sandbox & Piston (\texttt{ghcr.io/engineer-man/piston}) on port~2000 for hidden-test grading \\
+Offline research pipeline & Python (uv workspace), NumPy, with pytest and ruff for testing and linting \\
+Tooling and deployment & pnpm workspace, Vitest and Playwright for testing, Vercel for hosting \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Functional Requirements}
+The functional requirements state what the system does. Items FR-1 to FR-8 carry the Phase-I planner. Items FR-9 to FR-15 add the assessment-verified loop.
+\begin{enumerate}[label=\textbf{FR-\arabic*},noitemsep,leftmargin=*]
+    \item The system shall let a learner define a study plan from a set of materials, a deadline, and a weekly study capacity.
+    \item The system shall log study sessions, both from an in-application timer and from manual entry of a past session.
+    \item The system shall estimate the learner's pace from the logged sessions using hierarchical Bayesian calibration.
+    \item The system shall detect a shift in the learner's pace and surface a recalibration prompt for the learner to act on.
+    \item The system shall project the completion date with a calibrated uncertainty band rather than a single date.
+    \item The system shall regenerate the schedule from the learner's realized capacity when the learner chooses to replan.
+    \item The system shall present the learner's progress, including the burn-up curve, streak, and schedule adherence.
+    \item The system shall persist all data on the device and synchronize it to the cloud when a connection is available.
+    \item The system shall generate one grounded question per call in a single family, with each question carrying its recorded chunk citations.
+    \item The system shall grade each family with its authoritative arm. Deterministic marking applies to objective items, rubric grading to written items, and hidden-test pass rate to coding items.
+    \item The system shall estimate mastery per skill with the \texttt{bkt-v1} model and recommend the next difficulty from that estimate.
+    \item The system shall guide the learner through a Nudge, Hint, Targeted, and Reveal ladder and keep the full answer gated behind an explicit reveal.
+    \item The system shall supply advisory feedback copy on updated results only, and that copy shall never alter a grade.
+    \item The system shall run mixed practice sessions through the assessment library and the practice hub, with pause as leave-and-return.
+    \item The system shall replan from the loop verdict once assessment evidence, not only logged hours, shows the plan is off track.
+\end{enumerate}
+
+\section{Non-Functional Requirements}
+The non-functional requirements state the qualities the system must exhibit. Items NFR-1 to NFR-6 carry the Phase-I qualities, with NFR-2 restated for the graphics processor. Items NFR-7 to NFR-9 add the measurable Phase-II qualities.
+\begin{enumerate}[label=\textbf{NFR-\arabic*},noitemsep,leftmargin=*]
+    \item \textbf{Offline-first operation.} The core logging loop shall function without network connectivity, and analytical results shall be cached locally for reuse.
+    \item \textbf{Single-GPU scale.} The system shall serve the individual-learner workload on one workstation graphics processor, with no cluster and no multi-GPU setup.
+    \item \textbf{Per-learner isolation.} Each learner's data shall be isolated, using a per-user local database and row-level security in the cloud database.
+    \item \textbf{Authenticated services.} Requests to the intelligence service shall carry a signed token that is verified against the identity provider before any model runs.
+    \item \textbf{Responsiveness.} Calibration and projection results shall return within a few seconds, with a fallback to the last cached result when the service is unreachable.
+    \item \textbf{Behavioral alignment.} Where an algorithm exists in both the client and the service, the two implementations shall stay behaviorally aligned. Results shall not depend on which implementation runs.
+    \item \textbf{Grounded generation.} Every generated question shall carry its recorded chunk citations, and the harness measured groundedness at 0.867 on its gold set.
+    \item \textbf{Grade authoritativeness.} Hidden tests, reference solutions, and authored accepted values shall never reach the browser, and the server grade shall be final while client results stay advisory.
+    \item \textbf{Retrieval quality floor.} Retrieval shall hold recall at 1 of 0.67, recall at 3 of 0.90, and a mean reciprocal rank of 0.797 on the frozen 754-chunk corpus.
+\end{enumerate}

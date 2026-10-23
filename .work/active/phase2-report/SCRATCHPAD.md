@@ -2,8 +2,76 @@
 _state.md: .work/active/phase2-report/state.md · Updated: 2026-10-20_
 
 ## Now / Next
-- Doing: none - session wrapped, scratchpad reset after distill
-- Next: Chapter 2 grill in a new session (see state.md Open)
+- Doing: Ch5 drafted 2026-10-20 (/tmp smoke green 35pp, 0 errors, 0 undefined; review main.pdf refreshed)
+- Next: Ch6 grill (awaiting go-ahead)
 - Blocked: none
 
 ## Session log
+- 2026-10-20: resumed phase2-report for Ch2 grill; read STATUS row, state.md, GRILL.md (Q1-Q7+G1 RESOLVED), CHAPTERS.md (2.1-2.6 pinned), Phase-1 Ch2 shape; asked Q8.
+- 2026-10-20: Q8 resolved (classic + one recent per sub-theme); asked Q9.
+- 2026-10-20: Q9 resolved (3 entries per section after 4-beat clarification); asked Q10.
+- 2026-10-20: Q10 resolved (BKT + DKT + hybrid toward bkt-v1); asked Q11.
+- 2026-10-20: Q11 resolved (template + neural QG + grounded with citations); asked Q12.
+- 2026-10-20: Q12 resolved (deterministic + LLM rubric + sandbox hidden tests); asked Q13.
+- 2026-10-20: Q13 resolved (Socratic + hint ladder + formative feedback); asked Q14.
+- 2026-10-20: Q14 resolved (one loop figure + summary table, BKT equation only); asked Q15.
+- 2026-10-20: Q15 resolved (narrow curation, no rerun claim); asked Q16.
+- 2026-10-20: Q16 resolved (4-row table + 3 gaps toward closed loop); grill COMPLETE.
+- 2026-10-20: draft go-ahead received; loaded ste-writing (STE-flavored) + humanizer file-mode; grounded numbers in phase1-report prose + STATUS/archive rows, no invented metrics.
+- 2026-10-20: 02 drafted (12 four-beat entries, BKT equation, closed-loop TikZ figure, 2.5 honest sourcing note, 2.6 table + gaps); STE checklist 2 passes (split 15+ long sentences, kept code/identifiers/captions verbatim).
+- 2026-10-20: Fig 2.1 bad-arrow fix (user screenshot): return edge was plan.north to[out=90,in=90] mat.north which overshot the Material box; replaced with straight plan.north -- mat.south; /tmp rebuild green 23pp; rasterized p15 to verify the arrow lands in the box; review main.pdf refreshed.
+- 2026-10-20: bibliography approval received; populated main.tex thebibliography (11 entries in first-citation order, verbatim from phase1-report); /tmp rebuild green 23pp, 0 errors, 0 undefined; citations render [1]-[3] on p13; review main.pdf refreshed.
+- 2026-10-20: resumed for Ch3 grill; read STATUS row, state.md, GRILL.md (Q1-Q16+G1 RESOLVED), CHAPTERS.md (3.1-3.4 pinned), Phase-1 Ch3 shape; asked Q17.
+- 2026-10-20: Q17 resolved (FR-1 to FR-15, 8 Phase-I carried + 7 Phase-II new); asked Q18.
+- 2026-10-20: Q18 resolved (recommendation rejected - GPU stated as required, per user); asked Q19.
+- 2026-10-20: Q19 paused for JEV check: explored live code - JEV is an in-process client (services/intelligence/app/jev/client.py, Jev-1.13 via hosted OpenRouter System One API, OPENROUTER_JEV_API_KEY) inside intelligence + worker, not a container; compose holds web/intelligence/ingestion-worker/piston, sidecar is a separate compose project; re-asked Q19 revised.
+- 2026-10-20: Q19 resolved (7-row software table, JEV folded into intelligence row); asked Q20.
+- 2026-10-20: Q20 resolved (NFR-1 to NFR-9, NFR-2 reworded for GPU, 3 measurable Phase-II NFRs); asked Q21.
+- 2026-10-20: Q21 resolved (assumptions folded in, no new section); grill COMPLETE.
+- 2026-10-20: draft go-ahead received (Cool start); loaded ste-writing (STE-flavored) + humanizer file-mode; grounded versions/models in live code (React 19, py 3.12, Qwen3 pair, Jev-1.13, Piston, RX 9070 XT project card).
+- 2026-10-20: 03 drafted (FR-1 to FR-15, NFR-1 to NFR-9, 7-row software table, GPU-required hardware table, assumptions in intro); STE checklist 1 pass (all sentences under 25 words, identifiers/tables verbatim); /tmp smoke green 26pp, 0 errors, 0 undefined; review main.pdf refreshed; no new bib keys.
+- 2026-10-20: retro on Ch3 session (4 findings) applied to AGENTS.md (same-file edit ban + glob-first + deployment-reality check; single-Next state.md hygiene) and state.md header refreshed with bottom Next removed.
+- 2026-10-20: prompt-optimizer pipeline run; wrote prompts/ch4-grill.md (Ch4 grill + draft handoff, Q22 onward).
+- 2026-10-20: resumed for Ch4 grill; read STATUS row, state.md, GRILL.md (Q1-Q21+G1 RESOLVED), CHAPTERS.md (4.1-4.5 pinned), Phase-1 Ch4 shape; asked Q22.
+- 2026-10-20: Q22 resolved (full 5-stage verdict-gated loop for 4.1; draft from live code, not memory).
+- 2026-10-20: Q23 resolved (4.2 five-row candidate-vs-selected table with honest nulls).
+- 2026-10-20: Q24 resolved (4.3 two-leg comparison: #48 harness plus 4-archetype longitudinal).
+- 2026-10-20: Q25 resolved (4.4 three-move evolution arc with cross-references only).
+- 2026-10-20: Q26 resolved (4.5 new deployment figure, JEV-inside-intelligence, sidecars per compose reality); grill COMPLETE.
+- 2026-10-20: 04 drafted from live code (loop, 5-row candidates table, two-leg comparison, 3-move evolution, deployment figure; STE checklist 1 pass, humanizer file-mode); /tmp smoke green 31pp, 0 errors, 0 undefined; review main.pdf refreshed; no new bib keys.
+- 2026-10-20: retro run (stale header, anchor-derivation miss, code-first-drafting win); AGENTS.md updated to reality plus all three; wrote prompts/ch5-grill.md via prompt-optimizer (Q27 onward, Phase-1 Ch5 shape mirrored).
+- 2026-10-20: Q27 resolved (5.1 delta rows incl. muse-spark feedback-copy default per live feedback.py:44); asked Q28.
+- 2026-10-20: Q28 resolved (5.2 3-row datasets mirror, no new human data); asked Q29.
+- 2026-10-20: Q29 resolved (5.3 parity stays on 2 engines, rest service-only, bkt_forward listing); asked Q30.
+- 2026-10-20: Q30 resolved (5.4 pointer + 3 reproducibility facts, no new metrics); asked Q31.
+- 2026-10-20: Q31 resolved (5.5 five-subsection app walk, one surface each); grill COMPLETE - awaiting draft go-ahead.
+- 2026-10-20: 05 flow figs added per user (fig:appflow1-5, one growing TikZ chain per 5.5.x, inline to match Ch2/Ch4 figures; deviation from rule-61 standalone recipe recorded); /tmp rebuild green 36pp, 0 errors, 0 undefined, pages rasterized and inspected; review main.pdf refreshed. CLOSES the screenshot discrepancy: figures replace screenshots.
+- 2026-10-20: 05 drafted per Q27-Q31 from live code (17-row tools table incl. muse-spark, 3-row datasets, bkt_forward listing verbatim, packages table, 5.4 pointer + 3 facts, five subsections; STE checklist 1 pass, humanizer file-mode); /tmp smoke green 35pp, 0 errors, 0 undefined; review main.pdf refreshed; no new bib keys. DISCREPANCY: Q31 prescribed one screenshot per 5.5 subsection but phase2-report/ holds no Phase-2 screenshots, so 5.5 ships figure-free; needs a browser-capture session before submission.
+- 2026-10-20: retro run on the Ch5 session (6 findings: workdir trap, short GRILL anchors, memo-led grep miss, Linux preview gap, inline-TikZ precedent, keep re-read discipline); AGENTS.md updated to match (header, Q1-Q31 read order, full-block anchors + no-batch restored, env/factory enumeration, workdir + log-gate recipe, pdftoppm gotcha, inline-chain precedent).
+- 2026-10-20: prompt-optimizer pipeline run; wrote prompts/ch5-screenshots.md (capture + wiring handoff, grill from Q32: keep-vs-replace figs, viewports, exact screens per 5.5.x).
+- 2026-10-22: Q32 resolved (keep both: flow figs stay, screenshots beside them per Phase-1 include shape); asking Q33 viewports.
+- 2026-10-22: Q33 resolved (desktop 1280 only); asking Q34 exact screens.
+- 2026-10-22: Q34 resolved (five-shot slate confirmed); grill COMPLETE, ready to capture.
+- 2026-10-22: Q35 resolved (5.5.4 hub shot unrealizable - coach lives on run page, hub has 0 runs; substitute run page); asking Q36 caption scheme.
+- 2026-10-22: Q36 resolved (captions plus one pointer sentence per subsection); grill COMPLETE, capturing.
+- 2026-10-22: captured 5 shots at 1280 (library, CSAPP config, written review 0.50, run page with coach popover, roadmap ledger); run generated 1 written Q on CSAPP then abandoned (0 answers, 0 observations; library still 9 assessments, hub holds 1 abandoned history row, 0 materials created); wired as fig:appshot1-5 with pointer sentences; /tmp green 39pp, 0 errors, 0 undefined, pp31-35 raster-checked; review main.pdf refreshed; runtime stopped.
+- 2026-10-22: Q37 resolved (user render review: pointer sentences read as doubled Figure 5.X lines; all five removed, figs captions-only); /tmp rebuild green 39pp, 0 errors, 0 undefined, p34 raster-checked; review main.pdf refreshed.
+- 2026-10-22: Q38 resolved (journal-brief scope adopted - 754 coherent plus endpoint/DDIA, 788 precedent-only, 3-population BKT, groundedness/gold_support split, fresh coding 0.5349, dip-replay plus 0.000 adherence with caveat); asking Q39 retrieval-table shape.
+- 2026-10-22: Q39 resolved (single 754 retrieval table plus endpoint/DDIA rows, 788 precedent sentence, rejected arms one-liner); asking Q40 generation-table shape.
+- 2026-10-22: Q40 resolved (one generation table with groundedness/gold_support split plus dual coding 0.0/0.5349); asking Q41 BKT-table shape.
+- 2026-10-22: Q41 resolved (three-row BKT parity table plus unmeasured difficulty note, blanket go-ahead); asking Q42 verdict-table shape.
+- 2026-10-22: stop-grill accepted; Q42-Q47 recorded RESOLVED per blanket accept (verdict Table 1, live matrix plus 88 s, synthExtract plus dip-window, 4-table float budget, Discussion nulls/wins/transfer, appendix shell); grill COMPLETE, awaiting draft go-ahead.
+- 2026-10-22: draft go-ahead received; 06 drafted per Q38-Q47 (retrieval/generation/BKT/verdict tables, no new figure); STE-flavored plus humanizer file-mode 1 pass (sentence splits, varied Table opens, local-only fix, no AI tells); /tmp green 42pp, 0 errors, 0 undefined, 2 Ch6 overfulls fixed, pp35-39 raster-checked; review main.pdf refreshed; only 06-results.tex plus main.pdf touched.
+- 2026-10-22: retro run (4 findings: workdir-slip repeat, Overfull past the gate, STE checklist unwritten, blanket-accept precedent); AGENTS.md updated (recipe hardening, Overfull gate, checklist line, one-edit precedent); prompts/ch7-grill.md written via prompt-optimizer (Q48 onward, Phase-1 Ch7 mirror); awaiting Ch7 go-ahead.
+- 2026-10-23: Q48 resolved (7.1 two-phase recap); asking Q49.
+- 2026-10-23: Q49 resolved (verdict null-plus-win compressed); asking Q50.
+- 2026-10-23: Q50 resolved (verified-loop contribution); asking Q51.
+- 2026-10-23: stop-grill accepted; Q51-Q53 recorded RESOLVED per blanket accept (future-work order, citation-closed, appendix pointer only); grill COMPLETE, ready to draft.
+- 2026-10-23: 07 drafted per Q48-Q53 (STE-flavored plus humanizer 2 passes, sentence splits, varied openings, no AI tells); /tmp green 44pp, 0 errors, 0 undefined, pp41-42 raster-checked; review main.pdf refreshed; only 07-conclusion.tex plus main.pdf touched.
+- 2026-10-23: retro run (export-PATH env-split burn, ref-strip false long lines, same-turn parallel recording, stale header); AGENTS.md updated (export gotcha, placeholder count, header plus read-order); prompts/appendix-grill.md written (Q54 onward, Ch6/Ch7 pointers plus evidence files); awaiting Appendix go-ahead.
+- 2026-10-23: Q54 resolved (appendix roster: full adherence plus decidedAt plus DDIA, endpoint/harness as pointers); asking Q55 (mastery-12 disposition).
+- 2026-10-23: Q55 resolved (mastery-12 excluded with one-sentence note); asking Q56 (numbering and cross-reference shape).
+- 2026-10-23: Q56 resolved (A.1 adherence, A.2 decidedAt, A.3 DDIA, verbatim, back-pointers to 6.4/6.1); asking Q57 (float budget and page guard).
+- 2026-10-23: Q57 resolved (tables only, about 2-3 pages); grill COMPLETE, awaiting draft go-ahead.
+- 2026-10-23: appendix drafted per Q54-Q57 (STE 1 pass all sentences under 20 words, humanizer file-mode 1 pass; /tmp green 47pp, 0 errors, 0 undefined, 2 appendix Overfulls fixed, pp43-46 raster-checked; review main.pdf refreshed; only appendix.tex plus main.pdf touched).
+- 2026-10-23: retro run (6 findings: -g forced rebuild, ;-separated gate greps, period-preserving STE placeholders, one-sentence captions for the lot, one path per itemize item, ContinuedFloat split); AGENTS.md updated (recipe hardening, checklist line, 2 gotchas).
