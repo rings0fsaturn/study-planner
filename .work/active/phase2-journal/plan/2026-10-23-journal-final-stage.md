@@ -664,7 +664,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 5: Triple prose gate and final wrap
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete — befa605
 **Depends on:** Phase 4
 **Estimated scope:** ~1 file (edits), plus `.work/` record updates
 
