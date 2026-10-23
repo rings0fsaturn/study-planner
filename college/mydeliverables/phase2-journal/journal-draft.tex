@@ -22,6 +22,8 @@
 \usepackage{listings}%
 \usepackage{tikz}%
 \usetikzlibrary{arrows.meta,positioning,shapes.geometric}%
+\usepackage{pgfplots}%
+\pgfplotsset{compat=1.18}%
 
 \theoremstyle{thmstyleone}%
 \newtheorem{theorem}{Theorem}%
@@ -203,7 +205,7 @@ Three facts allow reruns. Gates fail closed by default. Each logical call has on
 
 \subsection{Retrieval and ranking}\label{subsec41}
 
-Table~\ref{tab:retrieval} shows the coherent 754 set. Hybrid plus rerank increases r@1 from 0.60 to 0.67 and r@3 from 0.80 to 0.90. MRR increases from 0.720 to 0.797. Dense and hybrid arms reproduce baselines exactly, which confirms the rerank arm. The retired 788 split remains a precedent note below the table and never changes the headline results.
+Table~\ref{tab:retrieval} and Figure~\ref{fig:retacc} show the coherent 754 set. Hybrid plus rerank increases r@1 from 0.60 to 0.67 and r@3 from 0.80 to 0.90. MRR increases from 0.720 to 0.797. Dense and hybrid arms reproduce baselines exactly, which confirms the rerank arm. The retired 788 split remains a precedent note below the table and never changes the headline results.
 
 \begin{table}[htbp]
 \caption{Retrieval on the frozen 754-chunk corpus (30Q coherent headline)}\label{tab:retrieval}%
@@ -218,6 +220,21 @@ Hybrid plus rerank & 0.67 & 0.90 & 0.93 & 0.797 \\
 \end{tabular*}
 \footnotetext{Note: frozen 788-split precedent is 0.70/0.83/0.90/0.788 dense, 0.73/0.90/0.93/0.816 hybrid, and 0.77/0.97/0.97/0.858 reranked. It is superseded for the headline.}
 \end{table}
+
+\begin{figure}[htbp]%
+\centering
+\begin{tikzpicture}
+\begin{axis}[ybar, bar width=6pt, width=\columnwidth, height=5.2cm, ymin=0, ymax=1,
+  ylabel={Score}, symbolic x coords={r@1,r@3,MRR}, xtick=data,
+  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=3, font=\footnotesize}]
+\addplot coordinates {(r@1,0.60) (r@3,0.77) (MRR,0.706)};
+\addplot coordinates {(r@1,0.60) (r@3,0.80) (MRR,0.720)};
+\addplot coordinates {(r@1,0.67) (r@3,0.90) (MRR,0.797)};
+\legend{Dense, Hybrid, Hybrid plus rerank}
+\end{axis}
+\end{tikzpicture}
+\caption{Retrieval on the frozen 754-chunk corpus (30Q): hybrid plus rerank lifts r@1 from 0.60 to 0.67 and r@3 from 0.80 to 0.90. DDIA second corpus (1094 chunks) confirms the direction with gains of +16 at r@1, +17 at r@3, and +0.139 MRR.}\label{fig:retacc}
+\end{figure}
 
 Endpoint numbers match the offline results. Plain search shows 0.60/0.73/0.87/0.703 on the live route. Reranked endpoint shows 0.70/0.90/0.93/0.813. The second DDIA corpus shows the same trend with gains of +16 at r@1, +17 at r@3, and +0.139 MRR.
 

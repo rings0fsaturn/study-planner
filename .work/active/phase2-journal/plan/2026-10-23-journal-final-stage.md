@@ -381,7 +381,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex, .bib, .p
 
 ### Phase 2: Retrieval data figure (ACCA headline + DDIA multiple)
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~60 lines
 
@@ -467,7 +467,10 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 #### Notes (filled in during implementation)
 
-*(empty — implementing agent records blockers, surprises, learnings here)*
+- `pgfplots` and `compat=1.18` added after the TikZ libraries; tl_package was already installed in TinyTeX, so no `tlmgr` run was needed.
+- Single-panel ACCA figure built as planned; DDIA confirmation stays in the caption. Values match `tab:retrieval` rounding exactly.
+- Dropped `nodes near coords`: rotated labels collided inside every group at single-column width. Bars widened to 6pt instead, so exact values remain in the table and the figure shows the lift cleanly. An `enlarge x limits={abs=...}` attempt fails on symbolic axes and was removed.
+- Green `/tmp` build: 12pp, 0 errors, 0 undefined, 0 overfull. Beside-source PDF refreshed.
 
 ---
 
