@@ -476,7 +476,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 3: BKT panel, verdict/dip figure, and back matter
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete — 760cc91
 **Depends on:** Phase 2
 **Estimated scope:** ~1 file, ~90 lines
 
