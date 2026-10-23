@@ -2,7 +2,7 @@
 _Spec: college/mydeliverables/Phase-2-report/ (guideline + sample + phase1-report/) · Plan: .work/active/phase2-report/plan/ · STATUS row: phase2-report · Status: active · Updated: 2026-10-20_
 
 ## Current state & next
-- Appendix A drafted 2026-10-23 per Q54-Q57 (47pp green, 0 errors, 0 undefined, pp43-46 raster-checked; review main.pdf refreshed); only appendix.tex plus main.pdf touched.
+- Appendix A drafted 2026-10-23 per Q54-Q57 (47pp green, 0 errors, 0 undefined, pp43-46 raster-checked; review main.pdf refreshed); Ch2-Ch7 plus appendix committed as 1a89d44 (docs(dissertation): draft Chapters 2-7 and Appendix A).
 - Next: Wrap the appendix session per work-journal (all chapters plus appendix drafted, builds green).
 
 ## Done so far
