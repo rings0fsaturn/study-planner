@@ -381,7 +381,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex, .bib, .p
 
 ### Phase 2: Retrieval data figure (ACCA headline + DDIA multiple)
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete — 715bbca
 **Depends on:** Phase 1
 **Estimated scope:** ~1 file, ~60 lines
 
