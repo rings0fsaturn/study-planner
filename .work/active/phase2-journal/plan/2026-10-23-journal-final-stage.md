@@ -288,7 +288,7 @@ flowchart LR
 
 ### Phase 1: Verify bibliography and delete editorial residue
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete — b8a4e66
 **Depends on:** none — can start immediately
 **Estimated scope:** ~2 files, ~40 lines
 
