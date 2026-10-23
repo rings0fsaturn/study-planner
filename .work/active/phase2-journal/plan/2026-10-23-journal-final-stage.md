@@ -594,7 +594,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 4: Prose growth to 11pp on frozen evidence
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 3
 **Estimated scope:** ~1 file, ~150 lines
 
@@ -653,7 +653,12 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 #### Notes (filled in during implementation)
 
-*(empty — implementing agent records blockers, surprises, learnings here)*
+- Page-target conflict surfaced before writing: verified baseline is 13pp (body plus Appendix ends at p10.5; References fill p11-13), not the plan's 7pp assumption. The house samples are 11pp including 1.2pp of short references; this draft's body already matches the house body length and its 24 full-author references (D-03) add 2.5pp. The human chose to execute the growth as written and accept the overrun rather than trim frozen evidence.
+- Growth applied as planned, about 1,350 added words: four Lit Review synthesis paragraphs (tracing layers/updater choice, generation provenance, grading authority, gated-reveal rationale); Results discussions after the retrieval, generation, BKT, and verdict evidence plus one caveated adherence sentence; one fixed-budget paragraph and two reproducibility/scope paragraphs in Methods.
+- Green `/tmp` build: 15pp (13pp baseline + 2), 0 errors, 0 undefined, 0 overfull, abstract 188 words, no em/en dash characters. Beside-source PDF refreshed from that build.
+- Warning profile is identical to a HEAD control build in a second `/tmp` directory: 12 pre-existing duplicate-destination warnings plus the class font, `thmstyle`, `breakurl`, and bookmark warnings. No new warning class.
+- Grounding pass caught two derived claims and softened them: the schema/citation difference is now reported as two rates rather than an asserted failure subset, and the live route is described as preserving the plain-vs-reranked ordering on every reported metric rather than reproducing all three offline arms.
+- Rasterized all 15 pages and inspected them. Float-driven whitespace at page bottoms is pre-existing `[htbp]` plus `\raggedbottom` behaviour, unchanged in kind from the 13pp baseline; no clipped text, no overfull box, no legend collision.
 
 ---
 
