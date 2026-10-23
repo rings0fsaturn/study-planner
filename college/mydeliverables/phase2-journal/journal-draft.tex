@@ -226,7 +226,7 @@ Hybrid plus rerank & 0.67 & 0.90 & 0.93 & 0.797 \\
 \begin{tikzpicture}
 \begin{axis}[ybar, bar width=6pt, width=\columnwidth, height=5.2cm, ymin=0, ymax=1,
   ylabel={Score}, symbolic x coords={r@1,r@3,MRR}, xtick=data,
-  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=3, font=\footnotesize}]
+  legend style={at={(0.5,-0.22)}, anchor=north, legend columns=2, font=\footnotesize}]
 \addplot coordinates {(r@1,0.60) (r@3,0.77) (MRR,0.706)};
 \addplot coordinates {(r@1,0.60) (r@3,0.80) (MRR,0.720)};
 \addplot coordinates {(r@1,0.67) (r@3,0.90) (MRR,0.797)};
@@ -265,7 +265,7 @@ Coding derivable & 0.5349 passes 0.5 \\
 
 \subsection{Knowledge tracing}\label{subsec43}
 
-Table~\ref{tab:bkt} shows three populations with their scope. The released comparison establishes the prior. Live harness measures real attempts. External anchor establishes the 0.6 baseline. Thesis-safe result shows parity. We leave difficulty calibration unmeasured and the module remains advisory.
+Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} show three populations with their scope. The released comparison establishes the prior. Live harness measures real attempts. External anchor establishes the 0.6 baseline. Thesis-safe result shows parity. We leave difficulty calibration unmeasured and the module remains advisory.
 
 \begin{table}[htbp]
 \caption{BKT tracing by population (cite scope with each use)}\label{tab:bkt}%
@@ -281,9 +281,21 @@ External anchor & 0.60--0.61 & -- \\
 \end{tabular*}
 \end{table}
 
+\begin{figure}[htbp]%
+\centering
+\begin{tikzpicture}
+\begin{axis}[ybar, bar width=9pt, width=\columnwidth, height=4.6cm, ymin=0.5, ymax=0.9,
+  ylabel={AUC}, symbolic x coords={Bake-off,Live,Run-prop}, xtick=data,
+  nodes near coords, nodes near coords style={font=\footnotesize}]
+\addplot coordinates {(Bake-off,0.785) (Live,0.7397) (Run-prop,0.7368)};
+\end{axis}
+\end{tikzpicture}
+\caption{BKT AUC by population with the external 0.60--0.61 anchor as the parity baseline (dashed line at 0.605 omitted for scale; see Table~\ref{tab:bkt}). Live ECE is 0.1401 against 0.057 bake-off and 0.2679 running-proportion. Difficulty calibration stays unmeasured, so the Adaptive module remains advisory.}\label{fig:bktauc}
+\end{figure}
+
 \subsection{Closed loop verdicts}\label{subsec44}
 
-Table~\ref{tab:verdict} shows the verdict table. The post-fix replay changes 4 of 4 'suggest replan' verdicts to roadmaps. All four use extend-deadline with an exact verdict copy. Pre-fix showed 4 of 4 at low confidence on span-zero inputs. The dip replay shows 4 of 4 at the September setting and blocks the struggling case at the September-12 setting. The change from low to high shows the intended trend.
+Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} show the verdict table. The post-fix replay changes 4 of 4 'suggest replan' verdicts to roadmaps. All four use extend-deadline with an exact verdict copy. Pre-fix showed 4 of 4 at low confidence on span-zero inputs. The dip replay shows 4 of 4 at the September setting and blocks the struggling case at the September-12 setting. The change from low to high shows the intended trend.
 
 \begin{table}[htbp]
 \caption{Verdict-gated replans across four archetypes (all extend-deadline)}\label{tab:verdict}%
@@ -298,6 +310,21 @@ Returning & suggest replan & 1.00 & 0.66--0.77 & Yes \\
 \botrule
 \end{tabular*}
 \end{table}
+
+\begin{figure}[htbp]%
+\centering
+\begin{tikzpicture}
+\begin{axis}[width=\columnwidth, height=4.6cm, ymin=0, ymax=1.1, xmin=0, xmax=3,
+  xlabel={Stage}, ylabel={Confidence}, xtick={0,1,2}, xticklabels={Trough (Sep-5),Week-4 (Sep-12),Rebound (Oct-14)},
+  x tick label style={font=\footnotesize}]
+\addplot[only marks, mark=*, mark size=2pt] coordinates {(0,0.28) (0,0.30) (0,0.33) (0,0.35)};
+\addplot[only marks, mark=square*, mark size=2pt] coordinates {(1,0.61) (1,0.69)};
+\addplot[only marks, mark=triangle*, mark size=2.5pt] coordinates {(2,1.0)};
+\addplot[dashed] coordinates {(0,0.7) (2,0.7)};
+\end{axis}
+\end{tikzpicture}
+\caption{Verdict confidence across the dip window with the 0.7 approve gate (dashed). Trough holds 4 of 4 at 0.28--0.35; week-4 struggling reaches 0.61--0.69 but stays gate-held; rebound converts 4 of 4 at 1.0. All conversions use extend-deadline with an exact verdict copy.}\label{fig:verdictdip}
+\end{figure}
 
 We select the verdict-gated loop as the reported system. It connects grounded generation, server grading, BKT tracing, and reranked retrieval to a measured replan decision. The live test set allows deployment only. It shows zero console errors across objectives, written rubrics, coding grades, guides, practice runs, feedback copy, mastery reads, and ingestion.
 
@@ -384,7 +411,7 @@ Numbered next steps are (1) a real-learner study, (2) real-log validation, (3) r
 
 \bmhead{Supplementary information}
 
-Supplementary files contain versioned evidence for reranked-754, endpoint retrieval, and the second DDIA corpus. They also cover synthetic data generation, the fresh generation arms, the difficulty baseline, dip replay, and full-book timing.
+Supplementary files contain the eight versioned evidence records behind Appendix~A: reranked-754, endpoint retrieval, the second DDIA corpus with questions, synthetic data generation emission, the fresh generation harness (summary, report, live), the difficulty baseline, dip replay, and full-book timing.
 
 \bmhead{Acknowledgments}
 
@@ -407,7 +434,7 @@ Prof.\ Ramesh Prakash Guledgudd guides this work.
 
 \section{Evidence index}\label{secA1}
 
-Appendix A lists frozen evidence by table. Retrieval maps to reranked-754 and endpoint maps to live routes. The second corpus maps to DDIA. Generation maps to the harness plus live runs. The loop maps to synthetic data generation plus dip replay.
+Table~\ref{tab:retrieval} and Figure~\ref{fig:retacc} map to \texttt{research/doc/2026-10-22-reranked-754.md} plus its JSON (30Q, 0 skipped, dense and hybrid arms reproduce baselines exactly). Endpoint Table values map to \texttt{research/doc/2026-10-22-endpoint-retrieval.md} plus its JSON (plain 0.60/0.73/0.87/0.703, reranked 0.70/0.90/0.93/0.813). The DDIA confirmation maps to \texttt{research/doc/2026-10-22-second-corpus-ddia.md} plus questions and JSON (1094 chunks, 0 NULL, 30 verified golds). Table~\ref{tab:generation} maps to \texttt{research/doc/generation-quality-harness/summary.json} (S-layer n=180) plus \texttt{live.json} (fresh 30-item judge, \texttt{liveSource: live}). Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} map to the harness live output (282 obs over 139 skill sequences) with shipped parameters in \texttt{packages/py-progress/src/py\_progress/mastery.py}. Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} map to \texttt{research/doc/2026-10-22-synth-extract-emission.json} (24 adherence rows, 4 of 4 converted) plus \texttt{research/doc/2026-10-22-dip-window-replay.md} (JEV 7 of 15 approved calls used, cloud untouched). Full-book timing maps to \texttt{research/doc/2026-10-22-fullbook-e2e-timing.md} plus its JSON (ready in about 88~s wall, material deleted, card-gone verified).
 
 \end{appendices}
 

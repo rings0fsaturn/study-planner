@@ -476,7 +476,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 3: BKT panel, verdict/dip figure, and back matter
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 2
 **Estimated scope:** ~1 file, ~90 lines
 
@@ -582,7 +582,13 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 #### Notes (filled in during implementation)
 
-*(empty — implementing agent records blockers, surprises, learnings here)*
+- BKT panel (`fig:bktauc`) inserted after `tab:bkt` with the 0.785/0.7397/0.7368 AUC values and ECE context in the caption; the external 0.60--0.61 anchor stays in the caption because `ymin=0.5` cannot show 0.605. In-text pointer added.
+- Verdict/dip figure (`fig:verdictdip`) inserted after `tab:verdict`: trough cluster 0.28--0.35, week-4 0.61/0.69, rebound 1.0, dashed 0.7 gate; in-text pointer added.
+- Appendix A replaced with the per-table evidence map naming the reranked-754, endpoint, DDIA, harness summary/live, BKT shipped parameters, synth emission, dip replay, and full-book timing records; the supplementary paragraph now names the eight versioned records.
+- Fixed a Phase 2 layout defect found while rasterizing: the `fig:retacc` legend at `legend columns=3` below the axis collided into one run ("DenseHybridHybrid plus rerank"). Wrapped to `legend columns=2`; the legend now renders cleanly on two rows below the axis.
+- Green `/tmp` build: 13pp (12pp baseline + 1), 0 errors, 0 undefined, 0 overfull. The new figures rasterized and inspected; both captions carry no literal em/en dash chars (`--` ranges only).
+- Pre-existing class/hyperref `duplicate destination` pdfTeX warnings scale with float count (baseline build: 10; now: 12) and are not new defects. Verified by building the HEAD tex in a second `/tmp` dir and diffing the warning sets.
+- Page-count tension for Phase 4: the plan's v0 baseline was recorded as 7pp, but the actual verified baseline (Phase 1 note) is 12pp and this phase lands at 13pp. Phase 4's "grow ~+3pp then target 11" arithmetic cannot hold from 13pp; it must reconcile the target before writing (surface to the human rather than cut frozen evidence).
 
 ---
 

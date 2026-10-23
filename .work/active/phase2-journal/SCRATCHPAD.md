@@ -2,9 +2,9 @@
 _state.md: .work/active/phase2-journal/state.md · Updated: 2026-10-22_
 
 ## Now / Next
-- Doing: Phase 2 DONE 2026-10-23 - pgfplots added, `fig:retacc` retrieval bars after `tab:retrieval` (DDIA in caption), in-text pointer updated, green `/tmp` build 12pp (0 errors, 0 undefined, 0 overfull), beside-source PDF refreshed
-- Next: Phase 3 (BKT panel + verdict/dip figure + Appendix A evidence map + supplementary set), then 11pp growth, triple prose gate; advisor sign-off stays a separate downstream gate
-- Note: Phase 2 layout deviation - rotated `nodes near coords` labels collided at single-column width, so they were dropped and bars widened to 6pt; exact values stay in the table
+- Doing: Phase 3 DONE 2026-10-23 - BKT AUC panel `fig:bktauc` (values + ECE scope), verdict/dip `fig:verdictdip` (trough/week-4/rebound vs 0.7 gate), Appendix A per-table evidence map, supplementary set named; green `/tmp` build 13pp (0 errors, 0 undefined, 0 overfull), beside-source PDF refreshed; also fixed the Phase 2 `fig:retacc` legend collision (2-column wrap)
+- Next: Phase 4 prose growth - baseline is 13pp, not the plan's 7pp assumption; reconcile the 11pp target before writing (do not cut frozen evidence)
+- Note: Phase 3 layout deviation - BKT anchor line omitted for scale (caption covers it); pre-existing class duplicate-destination warnings scale with float count (10 -> 12), not new defects
 - Blocked: none (front-matter filled; venue pick from 3 candidates pending as OQ-01)
 - 2026-10-22 EMAILS FILLED: iam.rohitsaji@gmail.com (corresponding) + rameshpg1988@gmail.com (guide); green rebuild + p1 visual check + beside-source PDF refreshed
 - 2026-10-22 ITEMS 2-4 DONE: journal-refs.bib (24 keys) + full Lit Review (4-beat entries, BKT eq, sourcing note, 6-row map, 3-gap synthesis) + 3 TikZ figures + Discussion 4.6-4.8 + Intro honesty para; 11pp green (0 errors, 0 overfull, 0 undefined); fixed live-box overlap, BKT eq width, Fig3 width; beside-source PDF refreshed
@@ -14,6 +14,7 @@ _state.md: .work/active/phase2-journal/state.md · Updated: 2026-10-22_
 ## Session log
 - 2026-10-23 Phase 1: bib verified against publishers/model cards (24 keys); wrong `islam2024` title corrected; `itemgen2024` set to 2025 version of record; `@comment` headers removed; editorial residue deleted; stale in-source aux/log deleted; green build 12pp.
 - 2026-10-23 Phase 2: pgfplots preamble + `fig:retacc` (dense/hybrid/reranked r@1,r@3,MRR; values match table rounding); DDIA deltas in caption; figure label referenced from subsection opening; green build 12pp.
+- 2026-10-23 Phase 3: BKT panel + verdict/dip figure inserted with in-text pointers; Appendix A expanded to per-table evidence map; supplementary paragraph names the eight records; Phase 2 figure legend collision fixed; green build 13pp.
 - 2026-10-22 GAP9 memo written; user APPROVED 15-call JEV cap; recorded.
 - 2026-10-22 GAP2 endpoint 30Qx2 flags: stack externally stopped mid-run, restarted intelligence+sidecar, retry-same-rid, full pass (plain exact RPC repro, reranked 0.70/0.90/0.93/0.813).
 - 2026-10-22 GAP6 harness fresh (`liveSource: live`): retrieval/groundedness confirm cache, coding 0.5349 passes gate, BKT 0.7397/0.1401 on 282 obs.
