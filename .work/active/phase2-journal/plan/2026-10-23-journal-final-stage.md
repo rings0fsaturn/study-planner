@@ -664,7 +664,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 5: Triple prose gate and final wrap
 
-**Status:** ☐ Not started
+**Status:** ✅ Complete
 **Depends on:** Phase 4
 **Estimated scope:** ~1 file (edits), plus `.work/` record updates
 
@@ -717,7 +717,13 @@ Per-file `git checkout -- <file>` for any file this phase touched. The audit fil
 
 #### Notes (filled in during implementation)
 
-*(empty — implementing agent records blockers, surprises, learnings here)*
+- Prereq deviation: the beside-source PDF is 15pp, not the plan's 11pp. Phase 4 recorded the human decision to grow as written and accept the overrun, so this phase ran against the accepted 15pp baseline rather than the stale prereq.
+- STE pass: no semicolons, contractions, present perfect, em/en dashes, or marketing verbs in body prose; the only over-25-word line left is the `align` block artifact, not prose. Fixed repeated-root tautologies ("guidance guides", "guide ladder guides"), a fragment ("JEV scores."), missing articles in the BKT scope paragraph, and split eleven sentences over the descriptive cap.
+- Humanizer pass: removed the staged openers "Three readings follow" and "Rejected arms follow", the closers "Each rejection shows the limits of the loop", "Each null limits what the evidence supports", and "The change from low to high shows the intended trend", the not-X-but-Y "dashboard, not a controller", the "even though mixing would look cheaper on paper" argument with no one, and a meta sentence about repeating the scope limit.
+- The two factual defects the passes caught are fixed: the guidance paragraph claimed the pre-fix replay converted 4 of 4 (it produced 4 of 4 holds), and the abstract said "ties the baseline rank" while the live comparator is the running proportion. The undefined "Thesis-safe result" label and the "best system" overclaim are also gone.
+- Audit: the full ai-writing-pattern-audit workflow ran last and its required output is at `.work/active/phase2-journal/research/ai-audit.md` with all eight sections. Zero open `Fix before submission` items remain; the deliberate four-beat Lit Review, the repeated "exact verdict pair" term, and the figure callouts are recorded as accepted with rationale.
+- Green `/tmp` build: 15pp (accepted overrun), 0 errors, 0 undefined, 0 overfull, 0 rerun requests, abstract 188 words, no em/en dash characters. The warning set is the pre-existing class profile (12 duplicate destinations plus font, `amsthm`, `breakurl`, and `hyperref`), unchanged from Phase 4. Beside-source PDF refreshed from this build.
+- Citation integrity re-checked programmatically: 24 cite keys, 24 bibliography entries, zero orphans in either direction.
 
 ---
 

@@ -1,5 +1,5 @@
 # State – phase2-journal
-_Spec: college/mydeliverables/phase2-journal/ (Springer-Sample1.pdf + Springer-Sample2.pdf + sn-article-template/) · Plan: .work/active/phase2-journal/plan/ · STATUS row: phase2-journal · Status: active · Updated: 2026-10-22_
+_Spec: college/mydeliverables/phase2-journal/ (Springer-Sample1.pdf + Springer-Sample2.pdf + sn-article-template/) · Plan: .work/active/phase2-journal/plan/ · STATUS row: phase2-journal · Status: active · Updated: 2026-10-23_
 
 ## Current state & next
 - Content research DONE 2026-10-22: 4-stream read-only sweep (report miner, retrieval, KT+generation, closed-loop+system) synthesized into `research/journal-content-brief.md` (numbers table, claims ledger, section-to-evidence map, figure list, NEEDS-LIVE-RUN gaps).
@@ -9,7 +9,8 @@ _Spec: college/mydeliverables/phase2-journal/ (Springer-Sample1.pdf + Springer-S
 - Grill CLOSED 2026-10-23 (9 locked decisions: hold `sn-mathphys,Numbered`; 11pp by writing only; bib verify before prose; 3 TikZ + 3 pgfplots data plots; delete line-390 editorial residue; Not-applicable ethics + Appendix A evidence map; /tmp green bar; STE/humanizer/ai-audit prose gate; advisor sign-off downstream) into `plan/2026-10-23-journal-final-stage.md` (5 phases); Phase 1 (bib verify + residue) unblocked.
 - Phases 1-3 COMPLETE 2026-10-23 (bib verified and frozen; `fig:retacc`, `fig:bktauc`, `fig:verdictdip` green; Appendix A per-table evidence map; supplementary set named).
 - Phase 4 COMPLETE 2026-10-23: page target reconciled with the human (13pp verified baseline, not the plan's stale 7pp; body already at house-model length and full-author refs add 2.5pp; human chose growth-as-written and accepted the overrun). Lit synthesis, Results discussions, and Methods budget/reproducibility/scope paragraphs added on frozen evidence; green `/tmp` build 15pp, 0 errors, 0 undefined, 0 overfull, abstract 188w; beside-source PDF refreshed.
-- Next: Phase 5 triple prose gate (STE, humanizer, ai-writing-pattern-audit last) then final wrap.
+- Phase 5 COMPLETE 2026-10-23: triple prose gate run (STE, humanizer, ai-writing-pattern-audit last) against the human-accepted 15pp baseline. Fixed the pre-fix conversion contradiction (4 of 4 holds, not conversions), the ambiguous baseline label (running proportion), the undefined "Thesis-safe" jargon, the "best system" overclaim, and the staged openers/closers; split 11 over-cap sentences. Audit output at `research/ai-audit.md` with all 8 required sections and zero open fix-before-submission items. Green `/tmp` build 15pp, 0 errors, 0 undefined, 0 overfull, abstract 188w; beside-source PDF refreshed; 24/24 citations resolve both directions.
+- Next: advisor sign-off (OQ-02) and venue pick (OQ-01), both downstream gates outside this plan.
 
 ## Done so far
 - OPEN 2026-10-20: created `active/phase2-journal/{plan,prompts,research}` + STATUS Active row.
@@ -42,9 +43,10 @@ _Spec: college/mydeliverables/phase2-journal/ (Springer-Sample1.pdf + Springer-S
 - research/doc/generation-quality-harness/summary.json + report.md + live.json - rewritten fresh by live harness run (2026-10-22).
 - .work/active/phase2-journal/plan/GAP2..GAP9-*-PLAN.md - one executable plan per remaining live gap (2026-10-22); suggested order 9, 2, 6, 5, 7, 8, 3, 4.
 - .work/active/phase2-journal/plan/2026-10-23-journal-final-stage.md - final-stage runbook (2026-10-23 grill, 5 phases, preamble + D-01..D-09 + OQ-01/OQ-02); Phases 1-4 status and notes recorded.
-- college/mydeliverables/phase2-journal/journal-draft.tex - Phase 4 prose growth (four Lit synthesis paragraphs, four Results discussions plus adherence caveat, budget/reproducibility/scope paragraphs); 15pp green.
-- college/mydeliverables/phase2-journal/journal-draft.pdf - refreshed from the Phase 4 green `/tmp` build (15pp).
-- .work/active/phase2-journal/SCRATCHPAD.md + state.md + .work/STATUS.md - Phase 4 progress recorded.
+- college/mydeliverables/phase2-journal/journal-draft.tex - Phase 4 prose growth (four Lit synthesis paragraphs, four Results discussions plus adherence caveat, budget/reproducibility/scope paragraphs); Phase 5 prose-gate fixes (STE sentence splits, humanizer opener/closer removals, fact corrections).
+- college/mydeliverables/phase2-journal/journal-draft.pdf - refreshed from the Phase 5 green `/tmp` build (15pp).
+- .work/active/phase2-journal/research/ai-audit.md - ai-writing-pattern-audit record (8 sections, zero open fix-before-submission items) 2026-10-23.
+- .work/active/phase2-journal/SCRATCHPAD.md + state.md + .work/STATUS.md - Phase 5 progress recorded.
 
 ## Pitfalls & rules
 - Must follow rule 60: build LaTeX in /tmp only; never commit aux/log noise; review PDF beside main.tex refreshed from green build only (applies next session when drafting starts).

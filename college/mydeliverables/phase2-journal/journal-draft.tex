@@ -49,7 +49,7 @@
 
 \abstract{Fixed study plans fail within days. Time logs record hours without measuring understanding. This paper closes the loop with assessment-based proof of learning. The system generates grounded practice from learner materials in one family per call. A server grades each family with its own arm. Bayesian Knowledge Tracing tracks mastery.
 
-Reranked retrieval grounds each question in cited chunks. A verdict gate replans only when proof holds. The gate uses JEV with approve at 0.7. Retrieval on the frozen 754-chunk corpus increases from 0.60 to 0.67 at r@1 and from 0.80 to 0.90 at r@3 with rerank. Groundedness reaches 0.867 with near-duplicate rate 0.004. Live BKT reaches AUC 0.74 and ties the baseline rank while it halves calibration error.
+Reranked retrieval grounds each question in cited chunks. A verdict gate replans only when proof holds. The gate uses JEV with approve at 0.7. Retrieval on the frozen 754-chunk corpus increases from 0.60 to 0.67 at r@1 and from 0.80 to 0.90 at r@3 with rerank. Groundedness reaches 0.867 with near-duplicate rate 0.004. Live BKT reaches AUC 0.74 and ties the running-proportion baseline while it halves calibration error.
 
 The gated loop converts 4 of 4 synthetic longitudinal cases to replans. The stack runs Qwen3 embeddings plus rerank on demand with Piston grading. Fixed budgets appear in the Methods section with frozen evidence. Live runs show zero console errors across objectives, rubrics, coding grades, guides, practice runs, feedback copy, mastery reads, and ingestion. The scope stays single-learner with synthetic validation. Split-conformal prediction, change detection, and difficulty calibration stay unshipped.}
 
@@ -63,13 +63,13 @@ Self-directed learners commit to a fixed plan and leave the plan within days. Th
 
 Phase~II closes the loop with assessment-based proof. The system generates grounded practice from learner materials. An authoritative arm grades each answer, Bayesian Knowledge Tracing tracks mastery, and a Socratic ladder guides the learner before the loop verdict replans. This paper reports the deployable loop and its measured proof.
 
-The Methods section shows fixed budgets and frozen evidence. The Results section shows coherent tables on one corpus. The conclusion repeats the best system with its metric and names limits with numbered next steps. One-to-one tutoring sets the standard, and group methods chase it \cite{bloom1984}. Three points set scope.
+Methods states each fixed budget with its frozen evidence, and Results reports coherent tables from one corpus. The conclusion states the selected system with its metric and names the limits with numbered next steps. One-to-one tutoring outperforms group instruction \cite{bloom1984}.
 
-Every number traces to frozen evidence or live code. Synthetics replace a classroom study, and the text says so wherever it matters. Rejected arms and nulls appear beside positive results.
+Three rules set the scope. Every number traces to frozen evidence or live code. Synthetics replace a classroom study, and the text says so wherever it matters. Rejected arms and nulls appear beside positive results.
 
 \section{Literature Review}\label{sec2}
 
-Each entry below names the source, its mechanism, its metric, and the gap it leaves. Table~\ref{tab:litphase2} shows the selected and rejected options per stream. A short note on sourcing and a 3-gap summary ends the section.
+Each entry names the source, its mechanism, its metric, and the gap it leaves. Table~\ref{tab:litphase2} shows the selected and rejected options per stream. The section ends with a sourcing note and a three-gap summary.
 
 \subsection{Tracing and mastery}\label{subsec21}
 
@@ -85,17 +85,17 @@ Chen et al.\ test a hierarchical Bayesian teaching model in two online experimen
 
 Zanellati et al.\ review hybrid tracers that combine Bayesian posteriors with machine learning \cite{zanellati2024}. Their taxonomy finds hybrids give better results than pure BKT and pure deep learning on correctness prediction. The surveyed hybrids predict answers on large logs. They do not guide what the learner sees next.
 
-Our bake-off places bkt-v1 at AUC 0.888 against 0.889 for the baseline. That shows parity. The control module on top is this project's step.
+Our bake-off places bkt-v1 at AUC 0.888 against 0.889 for the baseline, so the two are equal within rounding. This project adds the control module on top.
 
 Mai et al.\ combine deep temporal models with a probabilistic layer for calibrated, readable estimates \cite{mai2025}. The limit here is cold start. One self-directed learner arrives with almost no graded history. We keep the Bayesian updater with an informed setting from onboarding data, and mastery then drives difficulty.
 
 Deep tracing gives less accuracy for less clarity and needs much data \cite{piech2015}. We reject it here. The loop needs few-shot updates a learner can read, and bkt-v1 already matches the baseline.
 
-Taken together, these works split the tracing problem by layer. Chen et al.\ supply prior structure over learners. Zanellati et al.\ supply a taxonomy of updaters. Mai et al.\ supply a temporal encoder with a probabilistic head. None joins the posterior to the next task the learner sees. The planner needs that join, because a mastery estimate that never changes the plan is a dashboard, not a controller. Cold start also binds the choice. A self-directed learner arrives with a few graded answers, so a four-parameter Bayesian updater with priors informed at onboarding is the only arm that can estimate from the first session. We keep BKT as the updater and read the hybrid and deep arms as evidence about accuracy, not as candidates for the shipped loop.
+Taken together, these works split the tracing problem by layer. Chen et al.\ supply prior structure over learners. Zanellati et al.\ supply a taxonomy of updaters. Mai et al.\ supply a temporal encoder with a probabilistic head. None joins the posterior to the next task the learner sees. The planner needs that join, because a mastery estimate that never changes the plan cannot steer it. Cold start also binds the choice. A self-directed learner arrives with a few graded answers. A four-parameter Bayesian updater with priors informed at onboarding is the only arm that can estimate from the first session. We keep BKT as the updater. We read the hybrid and deep arms as evidence about accuracy, not as candidates for the shipped loop.
 
 \subsection{Generation and ranking}\label{subsec22}
 
-The STEM prompting study generates items across subjects and checks them per subject \cite{itemgen2024}. Coverage is the claim. No record ties a question to its chunk, so you cannot trace a wrong item to its source. Our harness shows groundedness 0.867 with near-duplicate rate 0.004 on cited chunks.
+The STEM prompting study generates items across subjects and checks them per subject, so coverage is its claim \cite{itemgen2024}. No record ties a question to its chunk, so you cannot trace a wrong item to its source. Our harness shows groundedness 0.867 with near-duplicate rate 0.004 on cited chunks.
 
 The lecture-to-quiz study generates local multiple-choice items with deterministic shape checks \cite{lecturequiz2026}. Shape checks find malformed items, but miss well-formed questions on wrong passages. Each call here makes one single-family question and records its chunk citations.
 
@@ -105,7 +105,7 @@ Generation uses retrieved passages as its source \cite{lewis2020}. The dense arm
 
 The reranker reorders the top 50 and increases r@1 by 7 and r@3 by 10 \cite{qwen3rerank}.
 
-These works expose a common split between item quality and item provenance. The STEM study measures coverage across subjects, and the lecture-to-quiz study measures shape validity, so both check the item in isolation. The tagging study attaches a knowledge component after the item exists, so the tag inherits whatever provenance the item had. None records which retrieved chunk produced which sentence of the stem or the key. Provenance is what lets a learner contest a bad question and lets us audit groundedness at all. One family per call makes that audit tractable. The request names the family, the response cites its chunks, and the stored citation list is the evidence. The contract therefore admits one family and one question per call and spends calls instead of mixing formats, even though mixing would look cheaper on paper.
+These works expose a common split between item quality and item provenance. The STEM study measures coverage across subjects, and the lecture-to-quiz study measures shape validity, so both check the item in isolation. The tagging study attaches a knowledge component after the item exists, so the tag inherits whatever provenance the item had. None records which retrieved chunk produced which sentence of the stem or the key. Provenance is what lets a learner contest a bad question and lets us audit groundedness at all. One family per call makes that audit tractable. The request names the family, the response cites its chunks, and the stored citation list is the evidence. The contract therefore admits one family and one question per call. It spends calls instead of mixing formats.
 
 \subsection{Grading authority}\label{subsec23}
 
@@ -113,7 +113,7 @@ The EDUCON study grades short answers with a rubric-driven model \cite{llmgrade2
 
 The grade-prediction study shows about 0.73 before scheduling \cite{islam2024}. Prediction guides planning. Grading stays separate. Objective runs here succeed in 2 of 2 cases with exact match on authored answers. The server grade stays approved while client checks stay advisory.
 
-The two grading studies also differ in where authority sits. A rubric model produces a judgment that a learner cannot recompute, so the rubric itself has to be the contract. A code sandbox produces a pass or fail that is reproducible from the hidden tests, so the tests have to be the contract. Neither result transfers authority to the client. We keep that split: the server owns the grade for both families, and the browser renders an advisory check that never leaves the session. The split also explains the refusal path. A coding item with no derivable input-output contract cannot be graded in the sandbox, so the arm refuses the material instead of grading prose in its place.
+The two grading studies also differ in where authority sits. A rubric model produces a judgment that a learner cannot recompute, so the rubric itself has to be the contract. A code sandbox produces a pass or fail that is reproducible from the hidden tests, so the tests have to be the contract. Neither result transfers authority to the client. We keep that split: the server owns the grade for both families, and the browser renders an advisory check that never leaves the session. The split also explains the refusal path. A coding item with no derivable input-output contract cannot be graded in the sandbox. The arm refuses that material instead of grading prose in its place.
 
 \subsection{Guidance without answers}\label{subsec24}
 
@@ -121,9 +121,9 @@ Alhazbi et al.\ review 25 studies and find most valid trace indicators cover tim
 
 Uzun et al.\ connect feedback engagement to self-regulation and course results \cite{uzun2025}. Readable feedback helps learning. Each ungated hint tends to give answers, so the system locks the reveal until the learner confirms.
 
-Think-aloud work separates genuine attempts from answer-extracting moves \cite{gaming2026}. Our replay converts 4 of 4 verdict-triggered replans after the fix and converts 4 of 4 before it. Feedback copy stays advisory for the same reason and never changes a grade.
+Think-aloud work separates genuine attempts from answer-extracting moves \cite{gaming2026}. Our replay converts 4 of 4 verdict-triggered replans after the fix, against 4 of 4 holds before it. Feedback copy stays advisory for the same reason and never changes a grade.
 
-Adherence and engagement are necessary signals, but they measure whether the learner stayed, not whether the learner struggled productively. The think-aloud work shows that some stays are answer extraction, so a help feature can raise engagement while lowering learning. A gated ladder addresses that failure directly. The learner must confirm an attempt before a reveal, so the reveal cannot substitute for the attempt. The same logic keeps feedback copy advisory. A hint that changed a grade would turn the grading arm into a second authority, and the audit trail would no longer say which arm decided. We prefer less help that stays auditable over more help that confounds the evidence.
+Adherence and engagement are necessary signals, but they measure whether the learner stayed, not whether the learner struggled productively. The think-aloud work shows that some stays are answer extraction, so a help feature can raise engagement while lowering learning. A gated ladder addresses that failure directly. The learner must confirm an attempt before a reveal, so the reveal cannot substitute for the attempt. The same logic keeps feedback copy advisory. A hint that changed a grade would make the grading arm a second authority. The audit trail would then not say which arm decided. We prefer less help that stays auditable over more help that confounds the evidence.
 
 \subsection{Sourcing note}\label{subsec25}
 
@@ -153,7 +153,7 @@ This loop addresses all three. The system cites sources for generation, and each
 
 \subsection{Closed loop}\label{subsec31}
 
-The loop runs five stages. Generation makes practice from learner materials. Grading scores each answer with the arm that handles the family. Tracing updates mastery, and guidance guides with a ladder and a gated reveal.
+The loop runs five stages. Generation makes practice from learner materials. Grading scores each answer with the arm that handles the family. Tracing updates mastery, and guidance uses a ladder and a gated reveal.
 
 The verdict gate decides between 'hold' and 'suggest replan'. 'Keep' writes no event. 'Suggest replan' copies an exact verdict pair onto the new roadmap.
 
@@ -165,11 +165,11 @@ Client checks stay advisory and never change the grade. The coding arm refuses m
 
 \subsection{Tracing and guidance}\label{subsec33}
 
-BKT bkt-v1 tracks mastery with released parameters. The Adaptive module uses the BKT band and stays advisory. We leave the module uncalibrated by design in this draft. The guide ladder guides learners from nudge to hint to targeted help to gated reveal. Feedback copy uses updated content only with a static fallback. Advisory text never changes a grade.
+BKT bkt-v1 tracks mastery with released parameters. The Adaptive module uses the BKT band and stays advisory. We leave the module uncalibrated by design in this draft. The guide ladder moves learners from nudge to hint to targeted help to gated reveal. Feedback copy uses updated content only with a static fallback. Advisory text never changes a grade.
 
 \subsection{Verdict gate}\label{subsec34}
 
-JEV scores. The router applies the 0.7 rule. The loop changes JEV failure to 'hold' through a fail-closed path. The gate approves a replan at 0.7.
+JEV scores each decision. The router applies the 0.7 rule. The loop changes JEV failure to 'hold' through a fail-closed path. The gate approves a replan at 0.7.
 
 The sweep across 0.5 to 0.7 shows agreement at 0.857. The 0.8 setting failed during a live 0.79 dip and we reject it. Each decision records an exact verdict pair for audit.
 
@@ -183,13 +183,13 @@ The retrieval corpus is the frozen ACCA set of 754 chunks with 768-d vectors and
 
 \subsection{Tool stack and fixed budgets}\label{subsec37}
 
-Table~\ref{tab:tools} shows the pinned stack. Fixed budgets appear here as the honesty note. Generation and judging use one provider service \cite{openrouter}. A transformer encoder gives dense vectors \cite{vaswani2017}. The Qwen3 pair supplies embeddings and rerank from one container \cite{qwen3emb,qwen3rerank}.
+Table~\ref{tab:tools} shows the pinned stack. We state the fixed budgets here. Generation and judging use one provider service \cite{openrouter}. A transformer encoder gives dense vectors \cite{vaswani2017}. The Qwen3 pair supplies embeddings and rerank from one container \cite{qwen3emb,qwen3rerank}.
 
 We run reranked-754 on 30 questions times 3 arms. We run the endpoint on 30 questions times 2 flags. The second corpus contains 1094 chunks with 30 verified golds.
 
 The probe uses 395 calls at 0.099 dollars. JEV uses at most 15 calls for the dip replay. Generation uses reasoning off with temperature 0.3 and a 30~s timeout.
 
-Every run in this paper has a fixed budget, and the budget is part of the claim. Reranked-754 spends 30 questions times 3 arms. The endpoint check spends the same 30 questions times 2 flags. The DDIA corpus spends 30 verified golds over 1094 chunks. The generation probe spends 395 calls at 0.099 dollars across 13 arms, with the S-layer arm at p50 3973 ms and p95 10547 ms and no call over the 30~s timeout. The dip replay spends at most 15 JEV calls under a stop rule and used 7. A repetition beyond these budgets is a new run and not a rerun, and we label it as such wherever a number appears.
+Every run in this paper has a fixed budget, and the budget is part of the claim. Reranked-754 spends 30 questions times 3 arms. The endpoint check spends the same 30 questions times 2 flags. The DDIA corpus spends 30 verified golds over 1094 chunks. The generation probe spends 395 calls at 0.099 dollars across 13 arms. The S-layer arm runs at p50 3973 ms and p95 10547 ms, and no call exceeds the 30~s timeout. The dip replay spends at most 15 JEV calls under a stop rule and used 7. A repetition beyond these budgets is a new run and not a rerun, and we label it as such wherever a number appears.
 
 \begin{table}[htbp]
 \caption{Pinned tool stack (v0 with versions from live config)}\label{tab:tools}%
@@ -211,9 +211,9 @@ Client & CodeMirror plus Pyodide advisory \\
 
 Three facts allow reruns. Gates fail closed by default. Each logical call has one request id from frontend to backend logs. We version evidence beside the draft with golds, harness scripts, seeds, and replay outputs.
 
-The triple is checkable without our infrastructure. A fail-closed gate blocks a generation or a replan when its threshold is unset, so a misconfigured run cannot fall through to a plausible default and enter the results. The request id joins the frontend call, the backend handler, and the worker line, which is how the live matrix's zero-error claims were checked instead of assumed. Versioned evidence sits beside the draft as golds, harness scripts, seeds, and replay outputs, so a reader can rebuild a table from stored inputs rather than trust a transcript. The result is that a mismatch between paper and code is a defect we can locate and not a dispute about which build produced a number.
+The triple is checkable without our infrastructure. A fail-closed gate blocks a generation or a replan when its threshold is unset. A misconfigured run then cannot fall through to a plausible default and enter the results. The request id joins the frontend call, the backend handler, and the worker line. We used that join to check the live matrix's zero-error claims instead of assuming them. Versioned evidence sits beside the draft as golds, harness scripts, seeds, and replay outputs. A reader can therefore rebuild a table from stored inputs rather than trust a transcript. A mismatch between paper and code is therefore a defect we can locate, not a dispute about which build produced a number.
 
-The scope delimiter belongs to the method and not to a closing caveat. One learner drives the longitudinal replay, and four synthetic archetypes stand in for a classroom cohort. The retrieval and generation corpora are real documents, and the live matrix exercises the deployed stack on real requests, but no live-user dataset enters the results. This design supports claims about the loop's mechanics and its measured behaviour on frozen evidence. It does not support claims about population effects, long-term retention, or classroom deployment. We state the same limit in the Introduction and repeat it here so that no result is read past the design that produced it.
+The scope limit belongs to the method. One learner drives the longitudinal replay, and four synthetic archetypes stand in for a classroom cohort. The retrieval and generation corpora are real documents, and the live matrix exercises the deployed stack on real requests. No live-user dataset enters the results. This design supports claims about the loop's mechanics and its measured behavior on frozen evidence. It does not support claims about population effects, long-term retention, or classroom deployment. No result here is read past the design that produced it.
 
 \section{Results and Discussion}\label{sec4}
 
@@ -254,7 +254,7 @@ Endpoint numbers match the offline results. Plain search shows 0.60/0.73/0.87/0.
 
 Title-prefix gives no improvement. We reject INT8 collapse to 0.10 as an arm.
 
-The two corpora agree on the shape of the result. Fusion alone does not move r@1 on the 754 set, where dense and hybrid both sit at 0.60, so the lexical arm adds recall depth without changing the first hit. Rerank moves both the first hit and the depth, which is what a cross-encoder trained on query-passage pairs should do when the candidate pool already contains the gold. The r@3 gain is larger than the r@1 gain in both corpora, which says the reranker recovers near misses more often than it promotes a single buried gold. The live route preserves the ordering between plain and reranked search on every reported metric, so the HTTP boundary does not add a retrieval defect. We report the 754 table as the headline and keep the 788 split as a precedent, because the 788 numbers came from a retired chunker and are not comparable to the deployed corpus.
+The two corpora agree on the shape of the result. Fusion alone does not move r@1 on the 754 set, where dense and hybrid both sit at 0.60. The lexical arm adds recall depth without changing the first hit. Rerank moves both the first hit and the depth. A cross-encoder trained on query-passage pairs should do that when the candidate pool already contains the gold. The r@3 gain is larger than the r@1 gain in both corpora. The reranker therefore recovers near misses more often than it promotes a single buried gold. The live route preserves the ordering between plain and reranked search on every reported metric, so the HTTP boundary does not add a retrieval defect. We report the 754 table as the headline and keep the 788 split as a precedent. The 788 numbers came from a retired chunker and are not comparable to the deployed corpus.
 
 \subsection{Generation quality}\label{subsec42}
 
@@ -279,11 +279,11 @@ Coding derivable & 0.5349 passes 0.5 \\
 \end{tabular*}
 \end{table}
 
-Three readings follow. Schema validity is 0.9611 and citation validity is 0.9133, so the contract checks pass on most items and citation validity is the weaker of the two rates. Gold support at 0.7803 is lower than the judge's groundedness at 0.8667 because the two ask different questions: support tests whether a cited chunk contains the authored answer, while groundedness asks whether the item is supported by any cited chunk. We report both and never average them. Coding derivability at 0.5349 is the weakest headline number, and it passes the 0.5 gate by a narrow margin, so the coding arm is the first place a fresh corpus would likely fail. Cost at \$0.061289 for the S-layer run keeps the harness cheap enough to repeat on a new corpus, which matters more for a single-learner system than a tighter point estimate on one corpus.
+Schema validity is 0.9611 and citation validity is 0.9133. The contract checks pass on most items, and citation validity is the weaker of the two rates. Gold support at 0.7803 is lower than the judge's groundedness at 0.8667 because the two ask different questions. Support tests whether a cited chunk contains the authored answer. Groundedness asks whether the item is supported by any cited chunk. We report both and never average them. Coding derivability at 0.5349 is the weakest headline number. It passes the 0.5 gate by a narrow margin, so the coding arm is the first place a fresh corpus would likely fail. Cost at \$0.061289 for the S-layer run keeps the harness cheap enough to repeat on a new corpus. That matters more for a single-learner system than a tighter point estimate on one corpus.
 
 \subsection{Knowledge tracing}\label{subsec43}
 
-Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} show three populations with their scope. The released comparison establishes the prior. Live harness measures real attempts. External anchor establishes the 0.6 baseline. Thesis-safe result shows parity. We leave difficulty calibration unmeasured and the module remains advisory.
+Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} show three populations with their scope. The synthetic bake-off establishes the prior, the live harness measures real attempts, and the external anchor sets the 0.6 baseline. The result supports parity. We leave difficulty calibration unmeasured, so the module remains advisory.
 
 \begin{table}[htbp]
 \caption{BKT tracing by population (cite scope with each use)}\label{tab:bkt}%
@@ -311,11 +311,11 @@ External anchor & 0.60--0.61 & -- \\
 \caption{BKT AUC by population with the external 0.60--0.61 anchor as the parity baseline (dashed line at 0.605 omitted for scale; see Table~\ref{tab:bkt}). Live ECE is 0.1401 against 0.057 bake-off and 0.2679 running-proportion. Difficulty calibration stays unmeasured, so the Adaptive module remains advisory.}\label{fig:bktauc}
 \end{figure}
 
-The three populations answer three different questions. The bake-off says the updater recovers a known synthetic mastery process, at AUC 0.785 and ECE 0.057. The live harness says the same updater ranks real attempts about as well as a running proportion, at 0.7397 against 0.7368, while cutting calibration error roughly in half, at 0.1401 against 0.2679. The external anchor places both near the 0.60-0.61 band reported for pyBKT on public logs, which supports parity and not a win. None of these rows measures whether the difficulty band is correct, because the eligible pool held one question. The Adaptive module therefore stays advisory in this draft, and the paper claims no difficulty effect.
+The three populations answer three different questions. The bake-off says the updater recovers a known synthetic mastery process, at AUC 0.785 and ECE 0.057. The live harness says the same updater ranks real attempts about as well as a running proportion, at 0.7397 against 0.7368. It also cuts calibration error roughly in half, at 0.1401 against 0.2679. The external anchor places both near the 0.60-0.61 band reported for pyBKT on public logs, which supports parity and not a win. None of these rows measures whether the difficulty band is correct, because the eligible pool held one question. The Adaptive module therefore stays advisory in this draft, and the paper claims no difficulty effect.
 
 \subsection{Closed loop verdicts}\label{subsec44}
 
-Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} show the verdict table. The post-fix replay changes 4 of 4 'suggest replan' verdicts to roadmaps. All four use extend-deadline with an exact verdict copy. Pre-fix showed 4 of 4 at low confidence on span-zero inputs. The dip replay shows 4 of 4 at the September setting and blocks the struggling case at the September-12 setting. The change from low to high shows the intended trend.
+Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} show the verdict table. The post-fix replay changes 4 of 4 'suggest replan' verdicts to roadmaps. All four use extend-deadline with an exact verdict copy. Pre-fix showed 4 of 4 at low confidence on span-zero inputs. The dip replay holds 4 of 4 at the September setting and blocks the struggling case at the September-12 setting.
 
 \begin{table}[htbp]
 \caption{Verdict-gated replans across four archetypes (all extend-deadline)}\label{tab:verdict}%
@@ -346,13 +346,13 @@ Returning & suggest replan & 1.00 & 0.66--0.77 & Yes \\
 \caption{Verdict confidence across the dip window with the 0.7 approve gate (dashed). Trough holds 4 of 4 at 0.28--0.35; week-4 struggling reaches 0.61--0.69 but stays gate-held; rebound converts 4 of 4 at 1.0. All conversions use extend-deadline with an exact verdict copy.}\label{fig:verdictdip}
 \end{figure}
 
-The verdict table and the dip figure read together. Post-fix, every archetype reaches confidence 1.0 and converts, and every conversion carries the exact verdict pair, so an auditor can replay the decision from the stored payload without reading a transcript. The dip replay shows the gate working at the boundary. At the September trough all four cases hold at 0.28-0.35. At week four the struggling case reaches 0.61-0.69 and still stays below the 0.7 gate. At the rebound it converts at 1.0. That gradient is evidence that the gate tracks the evidence rather than the calendar. The pre-fix 4 of 4 holds at 0.18-0.34 came from span-zero inputs, so we report them as the defect the fix removed and not as a second result. The adherence arm produced 24 rows with next-week adherence at 0.000, but that capture lands in the rebound era and not at a week-three dip, so we keep it in the appendix and claim no adherence effect.
+The verdict table and the dip figure read together. Post-fix, every archetype reaches confidence 1.0 and converts. Every conversion carries the exact verdict pair, so an auditor can replay the decision from the stored payload without reading a transcript. The dip replay shows the gate working at the boundary. At the September trough all four cases hold at 0.28-0.35. At week four the struggling case reaches 0.61-0.69 and still stays below the 0.7 gate. At the rebound it converts at 1.0. That gradient is evidence that the gate tracks the evidence rather than the calendar. The pre-fix 4 of 4 holds at 0.18-0.34 came from span-zero inputs. We report them only as the defect the fix removed, not as a second result. The adherence arm produced 24 rows with next-week adherence at 0.000. That capture lands in the rebound era and not at a week-three dip. We therefore keep it in the appendix and claim no adherence effect.
 
 We select the verdict-gated loop as the reported system. It connects grounded generation, server grading, BKT tracing, and reranked retrieval to a measured replan decision. The live test set allows deployment only. It shows zero console errors across objectives, written rubrics, coding grades, guides, practice runs, feedback copy, mastery reads, and ingestion.
 
 \subsection{Architecture figures}\label{subsec45}
 
-We draw all figures to single-column width. Figure~\ref{fig:architecture} shows the deployment with its sidecars, Figure~\ref{fig:closed-loop} shows the five-stage loop with its gate, and Figure~\ref{fig:comparison-pipeline} shows the two-part comparison and we keep the check outside.
+We draw all figures to single-column width. Figure~\ref{fig:architecture} shows the deployment with its sidecars. Figure~\ref{fig:closed-loop} shows the five-stage loop with its gate. Figure~\ref{fig:comparison-pipeline} shows the two-part comparison, which keeps the deployment check separate.
 
 \begin{figure}[htbp]%
 \centering
@@ -409,13 +409,13 @@ We draw all figures to single-column width. Figure~\ref{fig:architecture} shows 
 \caption{Two-leg comparison pipeline with the deployment check kept separate}\label{fig:comparison-pipeline}
 \end{figure}
 
-\subsection{Ablation honesty}\label{subsec46}
+\subsection{Rejected arms and thresholds}\label{subsec46}
 
-Rejected arms follow. Title-prefix gives no improvement on the frozen split. INT8 quantization reduces retrieval to 0.10 at a 2.45x speedup and we reject it. The 0.8 approve gate fails during a live 0.79 dip and we keep 0.7. We reject deep tracing, multi-family calls, client-side grades, and answer-giving tutors (see Table~\ref{tab:litphase2}). Each rejection shows the limits of the loop.
+Title-prefix gives no improvement on the frozen split. INT8 quantization reduces retrieval to 0.10 for a 2.45x speedup, so we reject it. The 0.8 approve gate fails during a live 0.79 dip and we keep 0.7. We reject deep tracing, multi-family calls, client-side grades, and answer-giving tutors (see Table~\ref{tab:litphase2}).
 
 \subsection{Parity and nulls}\label{subsec47}
 
-BKT matches the baseline on rank order and halves its calibration error. That is an equal result with better calibration, not an improvement. Change detection remains a robust null result from Phase~I. We leave split-conformal intervals unshipped. We leave difficulty calibration unmeasured, so the Adaptive module remains advisory. Each null limits what the evidence supports.
+BKT matches the baseline on rank order and halves its calibration error. That is an equal result with better calibration, not an improvement. Change detection remains a robust null result from Phase~I. We leave split-conformal intervals unshipped. We leave difficulty calibration unmeasured, so the Adaptive module remains advisory.
 
 \subsection{Deployment check}\label{subsec48}
 
@@ -425,7 +425,7 @@ Ingestion completes and the system logs skips. Zero console errors appear across
 
 \section{Conclusion}\label{sec5}
 
-The verdict-gated loop connects grounded generation at 0.867, BKT at parity with AUC 0.74, and reranked retrieval at 0.67/0.90 to 4 of 4 measured replans. The limits are compute budget, single-learner scope, synthetic-only validation, honest refusals for coding items, and unshipped refinements.
+The verdict-gated loop connects grounded generation at 0.867, BKT at parity with AUC 0.74, and reranked retrieval at 0.67/0.90. It yields 4 of 4 measured replans. The limits are compute budget, single-learner scope, synthetic-only validation, honest refusals for coding items, and unshipped refinements.
 
 Numbered next steps are (1) a real-learner study, (2) real-log validation, (3) released conformal intervals, and (4) per-account scale. Code is available at \url{https://github.com/rings0fsaturn/study-planner}.
 
@@ -456,7 +456,7 @@ Prof.\ Ramesh Prakash Guledgudd guides this work.
 
 \section{Evidence index}\label{secA1}
 
-Table~\ref{tab:retrieval} and Figure~\ref{fig:retacc} map to \texttt{research/doc/2026-10-22-reranked-754.md} plus its JSON (30Q, 0 skipped, dense and hybrid arms reproduce baselines exactly). Endpoint Table values map to \texttt{research/doc/2026-10-22-endpoint-retrieval.md} plus its JSON (plain 0.60/0.73/0.87/0.703, reranked 0.70/0.90/0.93/0.813). The DDIA confirmation maps to \texttt{research/doc/2026-10-22-second-corpus-ddia.md} plus questions and JSON (1094 chunks, 0 NULL, 30 verified golds). Table~\ref{tab:generation} maps to \texttt{research/doc/generation-quality-harness/summary.json} (S-layer n=180) plus \texttt{live.json} (fresh 30-item judge, \texttt{liveSource: live}). Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} map to the harness live output (282 obs over 139 skill sequences) with shipped parameters in \texttt{packages/py-progress/src/py\_progress/mastery.py}. Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} map to \texttt{research/doc/2026-10-22-synth-extract-emission.json} (24 adherence rows, 4 of 4 converted) plus \texttt{research/doc/2026-10-22-dip-window-replay.md} (JEV 7 of 15 approved calls used, cloud untouched). Full-book timing maps to \texttt{research/doc/2026-10-22-fullbook-e2e-timing.md} plus its JSON (ready in about 88~s wall, material deleted, card-gone verified).
+Table~\ref{tab:retrieval} and Figure~\ref{fig:retacc} map to \texttt{research/doc/2026-10-22-reranked-754.md} plus its JSON (30Q, 0 skipped, dense and hybrid arms reproduce baselines exactly). The endpoint values map to \texttt{research/doc/2026-10-22-endpoint-retrieval.md} plus its JSON (plain 0.60/0.73/0.87/0.703, reranked 0.70/0.90/0.93/0.813). The DDIA confirmation maps to \texttt{research/doc/2026-10-22-second-corpus-ddia.md} plus questions and JSON (1094 chunks, 0 NULL, 30 verified golds). Table~\ref{tab:generation} maps to \texttt{research/doc/generation-quality-harness/summary.json} (S-layer n=180) plus \texttt{live.json} (fresh 30-item judge, \texttt{liveSource: live}). Table~\ref{tab:bkt} and Figure~\ref{fig:bktauc} map to the harness live output (282 obs over 139 skill sequences) with shipped parameters in \texttt{packages/py-progress/src/py\_progress/mastery.py}. Table~\ref{tab:verdict} and Figure~\ref{fig:verdictdip} map to \texttt{research/doc/2026-10-22-synth-extract-emission.json} (24 adherence rows, 4 of 4 converted). They also map to \texttt{research/doc/2026-10-22-dip-window-replay.md} (JEV 7 of 15 approved calls used, cloud untouched). Full-book timing maps to \texttt{research/doc/2026-10-22-fullbook-e2e-timing.md} plus its JSON (ready in about 88~s wall, material deleted, card-gone verified).
 
 \end{appendices}
 

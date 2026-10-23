@@ -2,16 +2,17 @@
 _state.md: .work/active/phase2-journal/state.md · Updated: 2026-10-22_
 
 ## Now / Next
-- Doing: Phase 4 DONE 2026-10-23 - page-target conflict surfaced (13pp baseline vs plan's stale 7pp; body already house-model length, refs add 2.5pp) and human chose growth-as-written with overrun; lit synthesis, results discussions, budget/reproducibility/scope paragraphs added; green `/tmp` build 15pp, 0 errors, 0 undefined, 0 overfull, abstract 188w; beside-source PDF refreshed
-- Next: Phase 5 triple prose gate (STE, humanizer, ai-writing-pattern-audit last) then final wrap
-- Note: Phase 4 warning profile identical to a HEAD control build (12 duplicate-destination plus pre-existing class warnings); page-bottom whitespace is pre-existing float behaviour
-- Blocked: none (front-matter filled; venue pick from 3 candidates pending as OQ-01)
+- Doing: Phase 5 DONE 2026-10-23 - triple prose gate applied (STE, humanizer, ai-writing-pattern-audit last); 7 fix-before-submission items resolved including two factual defects (pre-fix 4/4 holds not conversions; live comparator is the running proportion) and the "best system" overclaim; audit output at `research/ai-audit.md` with all 8 sections and zero open fixes; green `/tmp` build 15pp (accepted overrun), 0 errors, 0 undefined, 0 overfull, abstract 188w; beside-source PDF refreshed
+- Next: advisor sign-off (OQ-02) and venue pick (OQ-01); both are downstream gates, not in this plan
+- Note: warning profile unchanged from Phase 4 (12 duplicate-destination plus pre-existing class warnings); citation check 24/24 both directions
+- Blocked: none
 - 2026-10-22 EMAILS FILLED: iam.rohitsaji@gmail.com (corresponding) + rameshpg1988@gmail.com (guide); green rebuild + p1 visual check + beside-source PDF refreshed
 - 2026-10-22 ITEMS 2-4 DONE: journal-refs.bib (24 keys) + full Lit Review (4-beat entries, BKT eq, sourcing note, 6-row map, 3-gap synthesis) + 3 TikZ figures + Discussion 4.6-4.8 + Intro honesty para; 11pp green (0 errors, 0 overfull, 0 undefined); fixed live-box overlap, BKT eq width, Fig3 width; beside-source PDF refreshed
 - 2026-10-22 DRAFT V0: shell created + Methods/Results-first per grill; /tmp build green 7pp 0 errors 0 undefined; abstract 184w; 0 over-25 sentences; 0 semicolons; visual check clean (tables centered-normal, placeholders slotted); TinyTeX needed sttools/threeparttable/appendix/breakurl/ncctools/booktabs/algorithms/listings/multirow/wrapfig/footmisc/jknapltx/rsfs/algorithmicx installs
 - 2026-10-22 WIDTH FIX: all 6 tables converted to full-textwidth tabular* (template tab2 pattern); body measure confirmed uniform (per-page maxlen 86-98, no overfull); green rebuild + beside-source PDF refreshed
 
 ## Session log
+- 2026-10-23 Phase 5: triple prose gate run against the accepted 15pp baseline. STE and humanizer fixed 11 over-cap sentences, tautologies, a fragment, unstaged closers/openers, and one argument with no one. Audit caught and resolved the pre-fix conversion contradiction, the ambiguous "baseline" label, the undefined "Thesis-safe" jargon, the "best system" overclaim, and the "honesty note" residue. Audit record written with all 8 required sections; zero open fix-before-submission items. Final green build 15pp, 0 errors, 0 undefined, 0 overfull; abstract 188w; PDF refreshed.
 - 2026-10-23 Phase 1: bib verified against publishers/model cards (24 keys); wrong `islam2024` title corrected; `itemgen2024` set to 2025 version of record; `@comment` headers removed; editorial residue deleted; stale in-source aux/log deleted; green build 12pp.
 - 2026-10-23 Phase 2: pgfplots preamble + `fig:retacc` (dense/hybrid/reranked r@1,r@3,MRR; values match table rounding); DDIA deltas in caption; figure label referenced from subsection opening; green build 12pp.
 - 2026-10-23 Phase 3: BKT panel + verdict/dip figure inserted with in-text pointers; Appendix A expanded to per-table evidence map; supplementary paragraph names the eight records; Phase 2 figure legend collision fixed; green build 13pp.
