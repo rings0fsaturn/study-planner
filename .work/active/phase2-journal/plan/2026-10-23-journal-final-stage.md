@@ -594,7 +594,7 @@ git status --short college/mydeliverables/phase2-journal/  # only .tex + .pdf to
 
 ### Phase 4: Prose growth to 11pp on frozen evidence
 
-**Status:** ✅ Complete
+**Status:** ✅ Complete — 72bfa9a
 **Depends on:** Phase 3
 **Estimated scope:** ~1 file, ~150 lines
 
