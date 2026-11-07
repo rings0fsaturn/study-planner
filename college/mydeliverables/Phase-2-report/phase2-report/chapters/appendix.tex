@@ -1,23 +1,23 @@
-\chapter{Supplementary Tables and Figures}
+\chapter{Supplementary Tables}
 \label{ch:appendix}
 This appendix collects the supplementary tables and figures referenced from Chapter~6. Each item repeats its in-text number so the reader can move between the discussion and the full table without searching.
 
 \section{Adherence Emission}
-Table~\ref{tab:app-adherence} lists the full 24-row adherence emission from Section~6.4. Rates show actual over planned minutes for each user and week. Planned time reads 390 minutes for weeks 0 to 4 and 360 minutes for week 5. Week 5 reads 0.000 for all four users with the rebound-era caveat of Section~6.4.
+Table~\ref{tab:app-adherence} lists the adherence emission from Section~6.4. Twenty weekly values are observed across four users and weeks 0 to 4, plus a week 5 that is not observed for any user. Planned time reads 390 minutes for weeks 0 to 4 and 360 minutes for week 5. Week 5 carries no sessions because capture ended one day before the deadline (Section~6.4).
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Adherence emission: actual over planned minutes by user and week. Week 5 is the post-replan extension week.}
+\caption{Adherence emission: actual over planned minutes by user and week. Week 5 is not observed (n.o.) for any user.}
 \label{tab:app-adherence}
 \begin{tabular}{l r r r r r r}
 \toprule
 \textbf{User} & \textbf{w0} & \textbf{w1} & \textbf{w2} & \textbf{w3} & \textbf{w4} & \textbf{w5} \\
 \midrule
-steady & 0.692 & 0.921 & 0.879 & 0.954 & 0.933 & 0.000 \\
-crammer & 0.215 & 0.138 & 0.385 & 0.254 & 0.923 & 0.000 \\
-struggling & 0.323 & 0.169 & 0.385 & 0.144 & 0.554 & 0.000 \\
-returning & 0.656 & 0.000 & 0.000 & 0.700 & 0.900 & 0.000 \\
+steady & 0.692 & 0.921 & 0.879 & 0.954 & 0.933 & n.o. \\
+crammer & 0.215 & 0.138 & 0.385 & 0.254 & 0.923 & n.o. \\
+struggling & 0.323 & 0.169 & 0.385 & 0.144 & 0.554 & n.o. \\
+returning & 0.656 & 0.000 & 0.000 & 0.700 & 0.900 & n.o. \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -106,3 +106,21 @@ The DDIA gold stems sit in \texttt{research/doc/2026-10-22-ddia-questions.json} 
 \bottomrule
 \end{tabular}
 \end{table}
+
+\section{Prompts and Reproduction}
+The offline groundedness judge runs the prompts below verbatim. The source is the offline harness from Section~5.4.
+
+\begin{lstlisting}[language=bash]
+System: You audit whether a generated exam question is answerable purely from the source chunks it cites. Answer strictly from the chunks; do not use outside knowledge. Respond only with the required JSON object.
+User: Question: {question} Cited chunks: {chunks} Is the question answerable purely from these chunks?
+\end{lstlisting}
+
+The schema requires one boolean \texttt{answerable} with a \texttt{reason} string. Production prompts live beside the code they serve. Generation shapes live in the generation \texttt{prompts.py} module (template version \texttt{v1}, one family per call). The written rubric contract lives in the grading \texttt{rubric\_grader.py} module. The repair gates live in the generation \texttt{validation.py} module.
+
+Both legs rerun from versioned inputs. Offline, from \texttt{services/intelligence/}:
+
+\begin{lstlisting}[language=bash]
+uv run --package intelligence python scripts/eval_harness.py --activate
+\end{lstlisting}
+
+Append \texttt{-{}-groundedness-judge -{}-limit 2} for the dry run and \texttt{-{}-verify-golds} to check the gold registry. The longitudinal leg replays the four synthetic archetypes through the verdict endpoint and extracts the adherence, mastery, and verdict tables with the synth extractor. The seed inputs live in the app dev driver and the post-fix outputs are versioned beside the dated synth-extract evidence files.

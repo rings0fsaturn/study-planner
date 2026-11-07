@@ -1,9 +1,10 @@
 \chapter{System Requirements Specification}
-This chapter specifies the requirements of the full system. Section~3.1 states the hardware environment. Section~3.2 states the software environment. Section~3.3 lists the functional requirements as numbered items, and Section~3.4 lists the non-functional requirements.
+This chapter specifies the requirements of the full system. Sections~3.1 and~3.2 state the hardware and software environment. Section~3.3 lists FR-1 to FR-15, and Section~3.4 lists NFR-1 to NFR-9. FR-9 to FR-15 and NFR-7 to NFR-9 cover the Phase~II additions.
+
 The chapter assumes a single self-directed learner, a workstation with a graphics processor, and access to the hosted model APIs. It also assumes that synthetic longitudinal histories replace a classroom study, as stated in Section~1.4.
 
 \section{Hardware Requirements}
-The system runs on a single workstation. A single learner produces a small volume of data, and every statistical model trains and runs on a CPU. The embedding sidecar needs a graphics processor, so the workstation carries one. Table~\ref{tab:hardware} lists the hardware environment. The graphics card named there is the project machine, not a minimum model.
+The system runs on a single workstation. A single learner produces a small volume of data with tens to hundreds of sessions. Statistical models train and run on the CPU. Embedding and rerank calls run on the graphics processor, so the workstation includes a discrete graphics processor. Table~\ref{tab:hardware} lists the minimum hardware environment. A note under the table records the project machine.
 
 \begin{table}[htbp]
 \centering
@@ -11,19 +12,21 @@ The system runs on a single workstation. A single learner produces a small volum
 \label{tab:hardware}
 \begin{tabular}{p{4.2cm} p{8.0cm}}
 \toprule
-\textbf{Component} & \textbf{Requirement} \\
+\textbf{Component} & \textbf{Minimum requirement} \\
 \midrule
-Processor & Any modern x86-64 CPU with a discrete GPU, project runs an AMD Radeon RX~9070~XT \\
+Processor & x86-64 CPU with a discrete graphics processor \\
 Memory & 8~GB RAM or higher \\
-Storage & A few gigabytes for the container images and local data \\
-Container runtime & Docker to run the intelligence service, the worker, the sidecar, and the sandbox \\
-Client device & Any device with a modern web browser \\
+Storage & At least 60~GB free for the container images, before build cache and volumes \\
+Container runtime & Docker to run the intelligence service, the worker, the GPU inference sidecar, and the sandbox \\
+Client device & Any device with a current browser that supports IndexedDB and ES2022 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
+The project machine uses an AMD Radeon RX~9070~XT and has 19~GB of RAM. Its container images measure about 53~GB: 49.5~GB for the GPU sidecar, 1.42~GB for Piston, and about 1.7~GB for the product images. Build cache and volumes bring the total to about 74~GB, and browser data stays within the browser's per-origin quota.
+
 \section{Software Requirements}
-The system keeps the three Phase-I tiers and adds two containers. The browser client stays local-first. The Python intelligence service plus its worker now hosts generation, grading, mastery, guidance, and feedback. Supabase still provides authentication, the event database, and object storage. The graphics sidecar serves embeddings and rerank scores, and the sandbox runs learner code. Table~\ref{tab:software} lists the software environment by tier.
+The system keeps the Phase~I tiers and adds the GPU inference sidecar plus the code-execution sandbox. The browser client stays local-first. The Python intelligence service and its worker now host generation, grading, mastery, guidance, and feedback. Supabase still provides authentication, the event database, and object storage. The GPU inference sidecar serves embeddings and rerank scores, and the sandbox runs learner code. Table~\ref{tab:software} lists the software environment by tier.
 
 \begin{table}[htbp]
 \centering
@@ -34,8 +37,9 @@ The system keeps the three Phase-I tiers and adds two containers. The browser cl
 \textbf{Tier} & \textbf{Technologies} \\
 \midrule
 Client (single-page app) & React~19, Vite~5, TypeScript, Dexie over IndexedDB for local-first storage, date-fns \\
-Intelligence service and worker & Python~3.12, FastAPI, Uvicorn, NumPy, PyJWT, generation, grading, mastery, guide, and feedback endpoints, OpenRouter generation provider plus Jev-1.13 judgment client, packaged with Docker \\
-Backend services & Supabase: authentication, a PostgreSQL event database including \texttt{jev\_review\_flags}, and object storage \\
+Intelligence service and worker & Python~3.12, FastAPI, Uvicorn, NumPy, PyJWT, generation, grading, mastery, guidance, and feedback endpoints, packaged with Docker \\
+Model providers & OpenRouter generation and rubric-grading provider (\texttt{deepseek/deepseek-v4-flash-0731}), plus the Jev-1.13 advisory judgment client \\
+Backend services & Supabase: authentication, a PostgreSQL event database including \texttt{jev\_review\_flags} for the written-arm review queue, and object storage \\
 GPU inference sidecar & Qwen3-Embedding-0.6B plus Qwen3-Reranker-0.6B behind \texttt{/embed} and \texttt{/rerank}, separate compose project \\
 Code-execution sandbox & Piston (\texttt{ghcr.io/engineer-man/piston}) on port~2000 for hidden-test grading \\
 Offline research pipeline & Python (uv workspace), NumPy, with pytest and ruff for testing and linting \\
@@ -45,35 +49,51 @@ Tooling and deployment & pnpm workspace, Vitest and Playwright for testing, Verc
 \end{table}
 
 \section{Functional Requirements}
-The functional requirements state what the system does. Items FR-1 to FR-8 carry the Phase-I planner. Items FR-9 to FR-15 add the assessment-verified loop.
+The functional requirements state what the system does. Items FR-1 to FR-8 carry the Phase~I planner. Items FR-9 to FR-15 add the assessment-verified loop.
 \begin{enumerate}[label=\textbf{FR-\arabic*},noitemsep,leftmargin=*]
     \item The system shall let a learner define a study plan from a set of materials, a deadline, and a weekly study capacity.
     \item The system shall log study sessions, both from an in-application timer and from manual entry of a past session.
     \item The system shall estimate the learner's pace from the logged sessions using hierarchical Bayesian calibration.
     \item The system shall detect a shift in the learner's pace and surface a recalibration prompt for the learner to act on.
-    \item The system shall project the completion date with a calibrated uncertainty band rather than a single date.
+    \item The system shall project the completion date with an uncertainty band rather than a single date.
     \item The system shall regenerate the schedule from the learner's realized capacity when the learner chooses to replan.
     \item The system shall present the learner's progress, including the burn-up curve, streak, and schedule adherence.
     \item The system shall persist all data on the device and synchronize it to the cloud when a connection is available.
     \item The system shall generate one grounded question per call in a single family, with each question carrying its recorded chunk citations.
-    \item The system shall grade each family with its authoritative arm. Deterministic marking applies to objective items, rubric grading to written items, and hidden-test pass rate to coding items.
-    \item The system shall estimate mastery per skill with the \texttt{bkt-v1} model and recommend the next difficulty from that estimate.
-    \item The system shall guide the learner through a Nudge, Hint, Targeted, and Reveal ladder and keep the full answer gated behind an explicit reveal.
+    \item The system shall grade each family with its authoritative arm. Deterministic grading applies to objective items. Rubric grading with the OpenRouter rubric model applies to written items. Jev-1.13 is an advisory shadow and the loop-verdict judge. Hidden-test pass rate applies to coding items.
+    \item The system shall estimate mastery per skill with the \texttt{bkt-v1} model and provide an advisory difficulty recommendation from that estimate. The recommendation is not calibrated (see Section~6.1).
+    \item The system shall guide the learner through a Nudge, Hint, Targeted explanation, and Reveal ladder and keep the full answer gated behind an explicit reveal.
     \item The system shall supply advisory feedback copy on updated results only, and that copy shall never alter a grade.
     \item The system shall run mixed practice sessions through the assessment library and the practice hub, with pause as leave-and-return.
-    \item The system shall replan from the loop verdict once assessment evidence, not only logged hours, shows the plan is off track.
+    \item The system shall replan from the loop verdict once assessment evidence shows the plan is off track. Logged hours alone do not trigger a replan (see Section~4.1 for the hold rule and Section~6.3 for the replay evidence).
 \end{enumerate}
 
 \section{Non-Functional Requirements}
-The non-functional requirements state the qualities the system must exhibit. Items NFR-1 to NFR-6 carry the Phase-I qualities, with NFR-2 restated for the graphics processor. Items NFR-7 to NFR-9 add the measurable Phase-II qualities.
+The non-functional requirements state the qualities the system must exhibit. Items NFR-1 to NFR-6 carry the Phase~I qualities, with NFR-2 restated from the Phase~I CPU-only form to cover the single-GPU sidecar. Items NFR-7 to NFR-9 add the measurable Phase~II qualities.
 \begin{enumerate}[label=\textbf{NFR-\arabic*},noitemsep,leftmargin=*]
     \item \textbf{Offline-first operation.} The core logging loop shall function without network connectivity, and analytical results shall be cached locally for reuse.
     \item \textbf{Single-GPU scale.} The system shall serve the individual-learner workload on one workstation graphics processor, with no cluster and no multi-GPU setup.
     \item \textbf{Per-learner isolation.} Each learner's data shall be isolated, using a per-user local database and row-level security in the cloud database.
     \item \textbf{Authenticated services.} Requests to the intelligence service shall carry a signed token that is verified against the identity provider before any model runs.
-    \item \textbf{Responsiveness.} Calibration and projection results shall return within a few seconds, with a fallback to the last cached result when the service is unreachable.
-    \item \textbf{Behavioral alignment.} Where an algorithm exists in both the client and the service, the two implementations shall stay behaviorally aligned. Results shall not depend on which implementation runs.
-    \item \textbf{Grounded generation.} Every generated question shall carry its recorded chunk citations, and the harness measured groundedness at 0.867 on its gold set.
+    \item \textbf{Responsiveness.} Calibration results shall return within 8~s per attempt, with at most two retries, so the worst case is three attempts. Projection runs locally without a network call. The client keeps the last cached result with a stale flag when the service is unreachable.
+    \item \textbf{Behavioral alignment.} Where an algorithm exists in both the client and the service, the two implementations shall stay behaviorally aligned on versioned golden fixtures. Calibration and roadmap engines replay the same fixtures in TypeScript and Python with numeric equality to a tight tolerance.
+    \item \textbf{Grounded generation.} The judged groundedness of generated questions shall be at least 0.80 on a 30-question sample (the Section~6.1 arm reads 0.8667).
     \item \textbf{Grade authoritativeness.} Hidden tests, reference solutions, and authored accepted values shall never reach the browser, and the server grade shall be final while client results stay advisory.
-    \item \textbf{Retrieval quality floor.} Retrieval shall hold recall at 1 of 0.67, recall at 3 of 0.90, and a mean reciprocal rank of 0.797 on the frozen 754-chunk corpus.
+    \item \textbf{Retrieval quality floor.} Retrieval shall hold recall at 1 of 0.60 and recall at 3 of 0.85. It shall hold a mean reciprocal rank of 0.75 on the frozen ACCA 754-chunk corpus. The floor sits below the \texttt{hybrid\_rerank} arm (0.67, 0.90, 0.797 on n=30, see Section~6.1).
 \end{enumerate}
+NFR-7 and NFR-9 are prospective floors with headroom below the measured arms, not the measured values themselves.
+
+\section{Product Perspective}
+The product is a local-first web application. A TypeScript client with a per-user browser store talks to a Python intelligence service with a portless worker. Supabase is the auth, database, and storage hub. Phase~I delivered the planner substrate of session runtime, progress views, and roadmap lifecycle, and that substrate is unchanged. Phase~II adds assessment generation, per-family grading, mastery tracing, Socratic guidance, advisory feedback, mixed practice, and the loop verdict on top of it.
+
+The only actor is the single self-directed learner. Multi-user, institutional, and instructor-mediated settings are out of scope. External interfaces are the browser, the Supabase project, the OpenRouter API for generation, grading, and judging, and the two sidecars for embeddings and code execution.
+
+\section{Assumptions, Dependencies and Constraints}
+The work assumes one learner with their own materials in text, PDF, or web-article form. The learner runs a modern browser with local storage on a steady network for service calls. It depends on a Supabase project for auth, database, and storage. It also needs an OpenRouter key for the generation, grading, and judge models, the Qwen3 sidecar models, and the Piston image for code execution.
+
+Generation and grading call a third party, so learner material leaves the device. The report states no retention contract. The build constrains deployment to a single workstation graphics processor with no cluster. The loop verdict constrains replans to evidence the grades support.. The build constrains deployment to a single workstation graphics processor with no cluster, and the loop verdict constrains replans to evidence the grades support.
+
+\section{Operating Environment}
+The stack runs containerized. Web, intelligence, ingestion worker, and Piston form the product compose project. The Qwen3 embedding and rerank sidecar has its own compose project on port~8200. Local development runs the Python 3.12 service on port~8000 and the React client on port~5173. The sandbox profile on port~2000 runs under Docker Desktop on WSL2.
+
+The client needs only a modern browser with IndexedDB. All heavy compute stays server-side or in the sidecars.

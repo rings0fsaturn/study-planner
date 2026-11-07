@@ -1,0 +1,23 @@
+# Prompt - Ch04 methodology STE + humanizer review
+
+Target: `college/mydeliverables/Phase-2-report/phase2-report/chapters/04-methodology.tex` (128 lines, Sections 4.1 to 4.5 plus Table `tab:method-candidates` plus Table `tab:phase2-metrics` plus Figures `fig:comparison-pipeline` and `fig:architecture`, both TikZ, plus refs to `fig:closed-loop`, `eq:bkt-update`, `tab:software`, one citation `islam2024`).
+
+## Read first (in order)
+
+1. `.work/active/phase2-prose-review/AGENTS.md` for the lint-first protocol, reviewer rule, and Ch03 retro (stale ground truth, term grep, byte-check findings, narrowed second judge).
+2. `.work/specs/phase2-prose-review-ste-humanizer.md` for the contract.
+3. Target chapter in full with Read. Never judge from previews.
+4. `.agents/skills/ste-writing/SKILL.md` (flavored), `.agents/skills/humanizer/SKILL.md`, `college/mydeliverables/REPORT_WRITING_GUIDE.md` (roadmap shape, honest numbers, guide voice).
+5. Live files only where the chapter names a version, number, constant, or endpoint: `services/intelligence/app/jev/questions.py` for the `LOOP_APPROVE_AT` gate constant, `services/intelligence/app/generation/prompts.py` plus `services/intelligence/app/routers/feedback.py` for the feedback template version, the assessment and loop routers for one-question-per-call plus the reveal gate, `research/doc/2026-10-22-*` plus the Ch06 verdict table for the newest metric values with their corpus-split labels. Grep the file before calling a number invented.
+6. Newest dated evidence beats older ground truth: `research/doc/2026-10-22-reranked-754.md` supersedes the 788-split headline, and Ch06 (`tab:res-retrieval`) is the consuming chapter for every metric repeated here. `.work/STATUS.md` archive rows are secondary.
+
+## Do
+
+1. Lint first with the script: run `python3 .work/active/phase2-prose-review/ste_check.py <target>` from the repo root and attach its rows to the judgment pass; do not hand-count. It already strips LaTeX commands, replaces `~` with space, drops `\texttt` wrappers, counts words per sentence (fail past 25) and sentences per paragraph (fail past 6), and flags British spellings, present or past perfect, semicolons, contractions, the 7 Ch01 phrasals, `quietly` plus bare `robust`, body en dashes, and `\textbf` emphasis. Chapter-specific notes: `behaviour` in the longitudinal leg and `realises` in the architecture caption are British spellings, not flavor; Ch04 carries two TikZ figures so every `--` inside `tikzpicture` is code and stays excluded while any `--` in body prose is real; table cells take commas per Ch02 retro; the roadmap paragraph runs to 6 sentences which is at cap, note as info.
+2. Judge second, one pass: apply flavored bar from AGENTS.md. Guide passive-leaning body is allowed. `using` stays. `gated` in the verdict line stays only with the `LOOP_APPROVE_AT` 0.7 lock plus the hold router beside it. At-cap sentences pass, never hand-flag them.
+3. Ch04 extras: roadmap paragraph names Sections 4.1 to 4.5 with topics. Loop paragraph carries five stages plus the `fig:closed-loop` pointer. Candidate subsections state each rejection before its selection (multi-family single call, open tutor, raw model choice) with the server gate facts beside them. Every float is referenced by number in prose: confirm `\ref` rows for `tab:phase2-metrics` and `fig:comparison-pipeline`, which currently show none, and flag any unreferenced float. Cross-chapter labels must resolve (`eq:bkt-update` in Ch02, `fig:closed-loop` in Ch02, `tab:software` in Ch03). Metrics carry corpus-split labels (754 harness vs live endpoint vs DDIA second corpus; retired 788 headline only as precedent per Ch06). Check `islam2024` sits in first-citation order in `main.tex`. Check naming stays stable across chapters (`authoritative arm` per the Ch01 plus Ch02 plus Ch04 grep; `feedback-v1` copy vs `feedback-v2` template against live code; ladder `Targeted` vs `Targeted explanation` against Ch03 FR-12). Check project terms stay stable (`schedule regeneration`, `feedback copy`, `self-directed learner`).
+4. Scope the second judge to the linter's blind spots (terms, grounding, unreferenced floats) once STE and humanizer both read clean; full re-review only while fail-tier hits remain. Verify each new finding against file bytes before planning it. Never edit the chapter in this pass. Output findings only.
+
+## Return
+
+Table rows as `file:line - rule - excerpt - minimal fix`, grouped under STE, humanizer, guide. Close with two verdict lines: `STE: PASS or FAIL (counts)` and `Humanizer: PASS or FAIL (counts)`. List anything left alone and why in one line.

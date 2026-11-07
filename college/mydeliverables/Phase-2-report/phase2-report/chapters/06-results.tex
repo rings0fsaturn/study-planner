@@ -1,15 +1,25 @@
 \chapter{Results and Discussion}
-This chapter reports the offline comparison for each Phase-II loop stage and discusses what the numbers mean for the delivered system. All offline numbers run on the fixed artefacts described in Section~5.2, under the comparison design of Section~4.3. The metrics are those of Table~\ref{tab:phase2-metrics}; this chapter reports against them without redefining them. Section~6.1 reports generation quality with the retrieval, generation, and tracing tables. Section~6.2 reports live verification as a deployment check. Section~6.3 reports the closed-loop verdict. Section~6.4 reports synthetic longitudinal validation. Section~6.5 discusses the results together.
+This chapter reports the offline comparison for each Phase~II loop stage and discusses what the numbers mean for the delivered system. All offline numbers run on the fixed artifacts described in Section~5.2, under the comparison design of Section~4.3. The metrics are those of Table~\ref{tab:phase2-metrics}. This chapter reports against them without redefining them.
+
+Section~6.1 reports generation quality with the retrieval, generation, and tracing tables. Section~6.2 reports live verification as a deployment check. Section~6.3 reports the closed-loop verdict. Section~6.4 reports synthetic longitudinal validation. Section~6.5 discusses the results together.
 
 \section{Generation Quality}
 The offline leg scores components against fixed golds behind the fail-closed gate of Figure~\ref{fig:comparison-pipeline}. Three tables carry the leg: retrieval with ranking, generation with its grading signals, and tracing with calibration. Reproducibility for both legs rests on Section~5.4. The harness stays inert unless activated, every call carries one request identifier, and both legs re-run from versioned files.
 
-Table~\ref{tab:res-retrieval} reports recall and MRR on the coherent 754-chunk ACCA split, the live endpoint row, and the DDIA second corpus. The harness dense and hybrid arms reproduce the recorded in-process baselines exactly, which validates the rerank arm beside them. Reranking lifts hybrid recall at 1 by 7 points (0.60 to 0.67) and recall at 3 by 10 points (0.80 to 0.90). MRR rises by 0.077 (0.720 to 0.797). The live endpoint reproduces the plain RPC arm exactly (0.60/0.73/0.87/0.703) and its reranked row reads 0.70/0.90/0.93/0.813. It is to be noted that the endpoint reranked row sits above the harness arm because the RPC candidate set differs from the in-process copy. The DDIA corpus moves the same direction with larger magnitude. Reranking lifts recall at 1 by 16 points (0.47 to 0.63) and recall at 3 by 17 points (0.73 to 0.90). MRR rises by 0.139 (0.660 to 0.799). Cross-corpus absolutes are not comparable because the two gold sets were authored independently; only the arm deltas transfer. The retired 788-split headline (recall at 1 of 0.77, recall at 3 of 0.97, MRR of 0.858) is the frozen-split precedent only. Two rejected arms stay on record: title-prefix indexing shows no gain, and int8 quantisation collapses to 0.10 across recalls at 2.45 times speedup.
+The harness report and the dated evidence files named in Section~5.4 name the exact inputs. The harness gate verdict for this run is FAIL. The breached gate, \texttt{difficultyMeanAbsBandError}, fires because difficulty calibration is unmeasured (Section~6.1).
+
+Table~\ref{tab:res-retrieval} reports recall and MRR on the coherent 754-chunk ACCA split, the live endpoint row, and the DDIA second corpus. The harness dense and hybrid arms reproduce the recorded in-process baselines exactly, which validates the rerank arm beside them. Reranking lifts hybrid recall at 1 by 7 points (0.60 to 0.67) and recall at 3 by 10 points (0.80 to 0.90). MRR rises by 0.077 (0.720 to 0.797).
+
+The live endpoint reproduces the plain RPC arm exactly (0.60/0.73/0.87/0.703) and its reranked row measures 0.70/0.90/0.93/0.813. The endpoint reranked row sits above the harness arm. The RPC candidate set differs slightly from the in-process copy, so per-question ranks move. The DDIA corpus moves the same direction with larger magnitude. Reranking lifts recall at 1 by 16 points (0.47 to 0.63) and recall at 3 by 17 points (0.73 to 0.90). MRR rises by 0.139 (0.660 to 0.799).
+
+Wilson 95\% intervals on n=30 span about 15 points: harness recall at 1 reads 0.42-0.75 and recall at 3 reads 0.56-0.86. Arm gaps inside that band are descriptive. On the paired endpoint rows the rerank gain is also descriptive. McNemar gives p=0.546 at rank 1 and p=0.131 at rank 3, so neither clears 0.05. No multiplicity correction is applied anywhere in this chapter.
+
+Cross-corpus absolutes are not comparable because the two gold sets were authored independently. Only the arm deltas transfer. The retired 788-split headline (recall at 1 of 0.77, recall at 3 of 0.97, MRR of 0.858) is the frozen-split precedent only. Two rejected arms stay on record: title-prefix indexing shows no gain, and int8 quantization collapses to 0.10 across recalls at 2.45 times speedup.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Retrieval: recall and MRR by arm. ACCA panels share the 30-question harness; the endpoint row is the live deployed path; DDIA is the second corpus.}
+\caption{Retrieval: recall and MRR by arm. ACCA panels share the 30-question harness; the two endpoint rows are the live deployed path (plain RPC plus reranked); DDIA is the second corpus.}
 \label{tab:res-retrieval}
 \begin{tabular}{l r r r r}
 \toprule
@@ -21,6 +31,7 @@ hybrid & 0.60 & 0.80 & 0.87 & 0.720 \\
 hybrid\_rerank & 0.67 & 0.90 & 0.93 & 0.797 \\
 \midrule
 \multicolumn{5}{l}{\textit{Live endpoint, same corpus}} \\
+plain (RPC) & 0.60 & 0.73 & 0.87 & 0.703 \\
 reranked & 0.70 & 0.90 & 0.93 & 0.813 \\
 \midrule
 \multicolumn{5}{l}{\textit{DDIA 1094-chunk second corpus}} \\
@@ -31,35 +42,55 @@ hybrid\_rerank & 0.63 & 0.90 & 0.97 & 0.799 \\
 \end{tabular}
 \end{table}
 
-Generation runs on the S-layer aggregate (n=180); Table~\ref{tab:res-generation} carries the judge and the coding pair. Groundedness reads 0.8667 (26 of 30 judged answerable) against a gold support of 0.7803. The judge is \texttt{deepseek/deepseek-v4-flash-0731} with reasoning off. The two numbers measure different things. The judge scores whether the cited chunk supports the answer, while gold support scores whether the citation contains the gold string. Schema validity reads 0.9611 and citation validity 0.9133, with a near-duplicate rate of 0.0044 at a cost of \$0.061289. The coding arm refuses material it cannot ground, so derivability on the golds reads 0.0 as the honest terminal. The fresh live pull derives at 0.5349 over 43 judged attempts and passes the 0.5 gate. Gold agreement reads 3 of 3. The gold counts are 30 objective, 6 written, and 4 coding (3 derivable plus 1 not), with attempt gate K=5 over 3 fold hashes.
+Generation headlines the delivered reasoning-off arm (S:off, n=30). Schema validity reads 0.9667 (29 of 30) and gold support reads 0.7241 (21 of 29 valid citations). Latency p95 is 10.5~s at cost \$0.00561. Table~\ref{tab:res-generation} carries the six-tier sweep aggregate beside it. The sweep (S-layer, n=180) reads schema validity 0.9611, citation validity 0.9133, gold support 0.7803, near-duplicate rate 0.0044, cost \$0.061289. The generation telemetry behind the sweep counts 361 requests: 281 ok, 37 partial, 35 malformed output, 8 provider errors.
+
+Groundedness measures 0.8667 (26 of 30 judged answerable, Wilson 95\% 0.70-0.95). The 30 judgments cover six distinct questions (S:1 to S:6 with three to six repeats each). The rate describes six clusters rather than 30 independent items. Both the generator and the judge run \texttt{deepseek-v4-flash-0731} with reasoning off. The score is self-judged, and no independent-judge rerun or human audit exists.
+
+The two numbers measure different things. The judge scores whether the cited chunk supports the answer, while gold support scores whether the citation contains the gold string. Schema validity is 0.9611 and citation validity 0.9133, with a near-duplicate rate of 0.0044 at a cost of \$0.061289.
+
+The coding arm refuses material it cannot ground, so derivability on the golds is 0.0 on the pre-top-up run. The fresh live pull derives at 0.5349 over 43 judged attempts (Wilson 95\% 0.39-0.68). Over the full 62 attempts the rate is 0.371 (23 derivable, 20 refusals, 19 failed for other reasons). The rate does not clear the 0.5 gate. The 0.5349 clears it only on the judged pair.
+
+Gold agreement reads 3 of 3. The gold counts are 30 objective, 6 written, and 4 coding (3 derivable plus 1 not), with attempt gate K=5 over 3 fold hashes. The written arm kept its rubric cutoff 0.6 and margin 0.10. The train split favored 0.7, but test agreement fell to 0.5 on a met class of two pairs, so the 0.6 prior shipped.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Generation: S-layer aggregate, groundedness judge, and coding pair. Judge and citation metrics are distinct by construction.}
+\caption{Generation: delivered S:off arm, S-layer sweep aggregate, groundedness judge, and coding pair. Judge and citation metrics are distinct by construction.}
 \label{tab:res-generation}
 \begin{tabular}{p{6.4cm} r}
 \toprule
 \textbf{Metric} & \textbf{Value} \\
 \midrule
-Schema valid (n=180) & 0.9611 \\
+\multicolumn{2}{l}{\textit{Delivered arm S:off (n=30)}} \\
+Schema valid (S:off, 29 of 30) & 0.9667 \\
+Gold support (S:off, 21 of 29) & 0.7241 \\
+Cost and p95 latency (S:off) & \$0.00561, 10.5~s \\
+\midrule
+\multicolumn{2}{l}{\textit{Six-tier sweep aggregate (n=180)}} \\
+Schema valid & 0.9611 \\
 Citation valid & 0.9133 \\
 Gold support (citation-contains-gold) & 0.7803 \\
 Near-duplicate rate & 0.0044 \\
 Cost (USD) & 0.061289 \\
-Groundedness, LLM-judged (26 of 30) & 0.8667 \\
-Coding derivable on golds (honest terminal) & 0.0 \\
-Coding derivable live (43 judged, gate 0.5) & 0.5349 \\
+Telemetry (ok, partial, malformed, provider error) & 281, 37, 35, 8 \\
+Groundedness, LLM-judged (26 of 30 over six questions) & 0.8667 \\
+ Coding derivable on golds (pre-top-up run) & 0.0 \\
+Coding derivable live (23 of 43 judged) & 0.5349 \\
+Coding derivable live (23 of 62 attempted) & 0.371 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Tracing accuracy across three populations sits in Table~\ref{tab:res-bkt}. The bake-off fixed the shipped parameters (p\_init 0.15, p\_learn 0.1, p\_slip 0.05, p\_guess 0.2) at mean AUC 0.785 with ECE 0.057. The live harness over 282 observations across 139 skill sequences gives bkt-v1 AUC 0.7397 with ECE 0.1401 against running-proportion 0.7368 with 0.2679. The external pyBKT accoding anchor reads 0.602 to 0.611 under gate \texttt{masteryMinAuc} 0.6. The reading is parity, not a win. Bkt-v1 matches its baseline on ranking while the calibration error nearly halves on live attempts. The Chapter~4 bake-off pair (0.888 against 0.889) says the same on its cut. Difficulty calibration is recorded as unmeasured. The current pool holds 23 observations on a single question in one band, so the band error is null by construction. The adaptive chip stays uncalibrated-advisory. The update itself is Equation~\ref{eq:bkt-update} with the shipped filter in Listing~\ref{lst:bktforward}.
+Tracing accuracy across three populations sits in Table~\ref{tab:res-bkt}. The bake-off fixed the shipped parameters (p\_init 0.15, p\_learn 0.1, p\_slip 0.05, p\_guess 0.2) at mean AUC 0.785 with ECE 0.057. The live harness over 282 observations across 139 skill sequences gives bkt-v1 AUC 0.7397 with ECE 0.1401 against running-proportion 0.7368 with 0.2679. The external pyBKT accoding anchor reads 0.602 to 0.611 under gate \texttt{masteryMinAuc} 0.6, with ECE 0.272 marked not reportable.
+
+The reading is parity on ranking and a gain on calibration. bkt-v1 matches its baseline on ranking while the calibration error nearly halves on live attempts. The Chapter~4 bake-off pair (0.888 against 0.889) says the same on its cut. The evidence files carry point estimates only, so no interval accompanies AUC or ECE and the parity reading stays descriptive.
+
+Difficulty calibration is recorded as unmeasured. The current pool holds 23 observations on a single question in one band, so the band error is null by construction. The adaptive chip stays uncalibrated-advisory. The update itself is Equation~\ref{eq:bkt-update} with the shipped filter in Listing~\ref{lst:bktforward}.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Knowledge tracing: AUC and calibration across three populations. Framed as parity, not a win.}
+\caption{Knowledge tracing: AUC and calibration across three populations. Parity on ranking; calibration nearly halves on live attempts.}
 \label{tab:res-bkt}
 \begin{tabular}{l r r}
 \toprule
@@ -68,44 +99,74 @@ Tracing accuracy across three populations sits in Table~\ref{tab:res-bkt}. The b
 Synthetic bake-off (shipped params) & 0.785 & 0.057 \\
 Live harness bkt-v1 (282 obs, 139 seqs) & 0.7397 & 0.1401 \\
 Live harness running-proportion & 0.7368 & 0.2679 \\
-External pyBKT accoding anchor & 0.602--0.611 & gate 0.6 \\
+ External pyBKT accoding anchor & 0.602-0.611 & gate 0.6, ECE 0.272 not reportable \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Live Verification}
-The live matrix confirms deployment and never promotes a candidate, per Section~4.3. Objective runs take 2 of 2, written runs grade 4 of 4 with real rubric grades, and coding runs grade 3 of 3. Guide runs pass 2 of 2, practice runs pass 2 of 2, and feedback copy passes 3 of 3. Mastery passes 2 of 2 and review passes 4 of 4. Ingestion passes 5 with 2 skipped. Every run reports zero console and page errors. AC1, AC3, and AC4 pass with AC2 passing with skips. Each call joins frontend to service logs on one request identifier per Section~5.4.
+The live matrix confirms deployment and never promotes a candidate, per Section~4.3. Objective runs take 2 of 2, written runs grade 4 of 4 with real rubric grades, and coding runs grade 3 of 3. Guide runs pass 2 of 2, practice runs pass 2 of 2, and feedback copy passes 3 of 3. Mastery passes 2 of 2 and review passes 4 of 4. Ingestion passes 5 with 2 skipped.
 
-At scale, the full-book E2E runs through the sidecar. The 572-page fixture (about 23 MB) moves from upload to created at 13.5 s and extracting at 15 s. Embedding reads 48 s and ready reads 101 s. The start-to-ready wall is about 88 s at 10 s poll granularity. The same fixture yields the durable 754-chunk baseline with 0 NULL embeddings. The material was deleted after the run with the card-gone state verified, so the shared account sits as found.
+Every run reports zero console and page errors. AC1, AC3, and AC4 pass with AC2 passing with skips. Each call joins frontend to service logs on one request identifier per Section~5.4.
+
+At scale, the full-book E2E runs through the sidecar. The 572-page fixture (about 23 MB) moves from upload to created at 13.5 s and extracting at 15 s. Embedding takes 48 s and ready takes 101 s. The start-to-ready wall is about 88 s at 10 s poll granularity. The same fixture yields the durable 754-chunk baseline with 0 NULL embeddings. The material was deleted after the run with the card-gone state verified, so the shared account sits as found.
 
 \section{Closed-Loop Decision}
-Table~\ref{tab:res-verdict} is the paper's verdict evidence: the post-fix replay converts 4 of 4 \texttt{suggest\_replan} verdicts into verdict-linked replans. Confidence reads 1.0 with sufficiency from 0.66 to 0.77 across the four archetypes. Every replan extends the deadline and mirrors the exact verdict pair onto \texttt{RoadmapReplanned}. The span reads 32 days for all four from the durable material-scoped \texttt{SessionLogged.payload.date}. The pre-fix contrast is 4 of 4 \texttt{hold} at confidence 0.18 to 0.34 on spanless neutral inputs. The gate moved from 0.9 to 0.7. The sweep over 21 cases agreed at 0.857 across 0.5 to 0.7. The 0.8 setting was falsified by the live 0.79 dip. The JEV cutoff and margin prior of 0.6 and 0.10 holds. The 0.7 training favourite contradicts the test pair, and the test met-class stays thin at 2 pairs. Hook checks pass 37 of 37 and feedback checks pass 77 of 77 with typecheck and lint clean.
+Table~\ref{tab:res-verdict} is this chapter's verdict evidence: the post-fix replay converts 4 of 4 \texttt{suggest\_replan} verdicts into verdict-linked replans. Confidence measures 1.0 with sufficiency from 0.66 to 0.77 across the four archetypes. Every replan extends the deadline and mirrors the exact verdict pair onto \texttt{RoadmapReplanned}. The span runs 32 days for all four from the durable material-scoped \texttt{SessionLogged.payload.date}. The pre-fix contrast is 4 of 4 \texttt{hold} at confidence 0.18 to 0.34 on spanless neutral inputs.
+
+The input fix opened these states: confidence 1.0 would also clear the old 0.9 gate. The gate moved from 0.9 to 0.7. The 0.8 candidate was rejected after a live suggest\_replan sample at 0.79 fell inside the 0.79-0.85 band.
 
 \begin{table}[htbp]
 \centering
 \footnotesize
-\caption{Loop verdict: post-fix replay across four archetypes. Per-user sufficiency and decidedAt values sit in the versioned JSON beside the replay evidence.}
+\caption{Loop verdict: post-fix replay across four archetypes. Sufficiency 0.66 to 0.77 is the cross-user range; per-archetype decidedAt values sit in the versioned JSON beside the replay evidence.}
 \label{tab:res-verdict}
 \begin{tabular}{l l r r l l}
 \toprule
 \textbf{Archetype} & \textbf{Verdict} & \textbf{Conf} & \textbf{Suff} & \textbf{Option} & \textbf{Converted} \\
 \midrule
-steady & suggest\_replan & 1.0 & 0.66--0.77 & extend-deadline & yes \\
-crammer & suggest\_replan & 1.0 & 0.66--0.77 & extend-deadline & yes \\
-struggling & suggest\_replan & 1.0 & 0.66--0.77 & extend-deadline & yes \\
-returning & suggest\_replan & 1.0 & 0.66--0.77 & extend-deadline & yes \\
+steady & suggest\_replan & 1.0 & 0.66-0.77 & extend-deadline & yes \\
+crammer & suggest\_replan & 1.0 & 0.66-0.77 & extend-deadline & yes \\
+struggling & suggest\_replan & 1.0 & 0.66-0.77 & extend-deadline & yes \\
+returning & suggest\_replan & 1.0 & 0.66-0.77 & extend-deadline & yes \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Synthetic Longitudinal Validation}
-The longitudinal leg replays four synthetic archetypes with known posture: steady, crammer, struggling, and returning. Development histories stay separate from evaluation histories, so a conversion reflects behaviour instead of fitting. The full 24-row adherence emission and the per-user decidedAt values sit in Appendix~\ref{ch:appendix}; this section reports the headline with its caveat.
+The longitudinal leg replays four synthetic archetypes with known posture: steady, crammer, struggling, and returning. Development histories stay separate from evaluation histories, so a conversion reflects behavior instead of fitting. The 24-cell adherence emission and the per-archetype decidedAt values sit in Appendix~\ref{ch:appendix}. Twenty weekly values are observed. Week 5 is not observed for any user. This section reports the headline with its caveat.
 
-Next-week adherence measures 0.000 for all four in the post-replan extension week. Capture ran one day before the deadline. No sessions were logged after the replan, so the zero is a measured zero with that rebound-era caveat, not a learning result. The 12 mastery rows read after at about 0.1067 throughout, below the prior of 0.15 by construction. The seeded scripts answer about 90 percent wrong because they prioritise grading-path coverage over learner success. Those rows measure the scripts and are never cited as tracing validation; the tracing evidence lives in Table~\ref{tab:res-bkt}. Each of the 4 verdicts joins its \texttt{RoadmapReplanned} by the exact verdict pair with createdAt at or after decidedAt. A seed-shape finding is recorded with the evidence. The seed writes one timestamp with a zone offset while the booking reference uses milliseconds. The strict-equality join silently mistraces until emission canonicalises the instant. The product is untouched.
+Next-week adherence is not observed for any of the four in the post-replan extension week. Capture ran one day before the deadline, so no post-replan sessions could be logged. The 0.000 in Table~\ref{tab:app-adherence} marks an unobserved week, not a measured zero and not a learning result.
 
-The dip-window replay pins the browser clock to the week-3 trough for every archetype. All four hold at confidence 0.28 to 0.35 with sufficiency 0.66 to 0.77 and convert nothing, because \texttt{Keep} writes nothing. A September-12 pin for the struggling archetype flips the choice to \texttt{suggest\_replan} at 0.61 to 0.69 but the gate holds it. The gradient reads as intended: trough holds on the merits, week 4 proposes below the gate, and the rebound eve converts at 1.0. The replay drove verdicts only and produced no new graded attempts, so the difficulty pool is unchanged. Cloud counts sit unchanged after all runs with no new writes and no synced markers. Four caveats travel with this leg. The clock pins to 2026-10-14, and capture covers the rebound era rather than the week-3 dip. The onboarding gate is local only, and cold restore duplicates locally while extracting from cloud only.
+The 12 mastery rows sit at about 0.1067 throughout after the replay, below the prior of 0.15 by construction. The seeded scripts answer about 90 percent wrong because they prioritize grading-path coverage over learner success. Those rows measure the scripts and are never cited as tracing validation. The tracing evidence lives in Table~\ref{tab:res-bkt}.
+
+Each of the 4 verdicts joins its \texttt{RoadmapReplanned} by the exact verdict pair with createdAt at or after decidedAt. A seed-shape finding is recorded with the evidence. The seed writes one timestamp with a zone offset while the booking reference uses milliseconds. The strict-equality join silently mistraces until emission canonicalizes the instant. The seed-shape defect was recorded with the evidence. No product code changed.
+
+The dip-window replay pins the browser clock to the week-3 trough for every archetype. All four hold at confidence 0.28 to 0.35 with sufficiency 0.66 to 0.77 and convert nothing, because \texttt{Keep} writes nothing. A September-12 pin for the struggling archetype flips the choice to \texttt{suggest\_replan} at 0.61 to 0.69 but the gate holds it. The gradient matches the design: trough holds on the merits, week 4 proposes below the gate, and the rebound eve converts at 1.0.
+
+The replay drove verdicts only and produced no new graded attempts, so the difficulty pool is unchanged. Cloud replan counts stayed at the recorded per-user values (crammer 1, returning 2, steady 1, struggling 2), with no cloud history rewritten. Four caveats travel with this leg. The clock pins to 2026-10-14, and capture covers the rebound era rather than the week-3 dip. The onboarding gate is local only, and cold restore duplicates locally while extracting from cloud only.
 
 \section{Discussion}
-Read together, the results separate into honest nulls, real wins, and validated refinements not yet shipped. Tracing is a null on ranking and a real improvement on calibration. AUC holds at parity while the calibration error nearly halves on live attempts. Coding on the golds is an honest terminal, not a failure. The arm refuses rather than invents, and the live pull passes its gate. Difficulty calibration and next-week adherence are unmeasured and measured-zero respectively, each with its named cause rather than a softened adjective. The clear wins are four. Retrieval ranking rises on both corpora in the same direction. Grounded generation reads 0.8667 with near-duplicates at 0.0044. The verdict converts 4 of 4 with its pre-fix contrast. The full-book path reaches ready in about 88 s.
+Read together, the results move the loop from logged time to graded evidence. Tracing holds ranking parity while the calibration error nearly halves on live attempts, because the per-skill updater tracks the graded attempts the baseline averages away. Reranking lifts recall on both corpora, with the larger DDIA gain coming from the noisier candidate set. Coding refuses ungroundable material instead of inventing a question, and the live pull clears the 0.5 gate only on the judged pair.
 
-Two refinements stay validated but unshipped, carried from Phase~I: the split-conformal interval correction and the single-arm CUSUM posture. Neither enters the delivered behaviour, and both return in Chapter~7 as numbered future work. Transfer holds in the sense the design needs. Dense and hybrid reproduce their baselines exactly on the rerun, which validates the rerank arm. The DDIA corpus repeats the ACCA direction at larger magnitude. The limits are stated plainly. The scope is a single learner with synthetic histories in place of a classroom study. One difficulty question is eligible, with the four replay caveats of Section~6.4. The loop that stayed dashed in Phase~I runs solid here. Figure~\ref{fig:architecture} shows where each stage from Table~\ref{tab:method-candidates} now runs.
+Difficulty calibration is unmeasured because the pool holds one question in one band. Next-week adherence is unobserved because capture ran one day before the deadline. Two results are comparative gains: retrieval ranking and the 4 of 4 verdict conversion with its pre-fix contrast. Two are descriptive: grounded generation at 0.8667 with near-duplicates at 0.0044, and the full-book path reaching ready in about 88 s.
+
+One refinement stays validated but unshipped from Phase~I: the split-conformal interval correction. It does not enter the delivered behavior and returns in Chapter~7 as future work.
+
+Transfer holds in the sense the design needs. Dense and hybrid reproduce their baselines exactly on the rerun, which validates the rerank arm. The DDIA corpus repeats the ACCA direction at larger magnitude.
+
+The scope is a single learner with synthetic histories in place of a classroom study. No fixed-plan control arm ran, so the 4-of-4 conversion has no efficacy comparison. One difficulty question is eligible, with the four replay caveats of Section~6.4. Figure~\ref{fig:architecture} shows where each stage from Table~\ref{tab:method-candidates} now runs.
+
+\section{Threats to Validity}
+Construct validity is limited on two fronts. The groundedness score is self-judged: the generator and the judge share the same model with reasoning off, and no independent judge or human audit exists. The longitudinal scripts prioritize grading-path coverage over learner success and answer about 90 percent wrong, so the mastery rows measure the scripts rather than tracing.
+
+Internal validity rests on synthetic histories with no fixed-plan control, so the verdict conversion cannot claim efficacy on learning. Week 5 is unobserved rather than measured. The 0.5 coding gate clears only on the judged pair. The full-denominator rate of 0.371 does not clear it. The harness gate verdict for this run is FAIL on the unmeasured difficulty band.
+
+External validity is narrow: one learner, one frozen ACCA textbook split plus the DDIA second corpus, and pinned model versions with no drift monitoring. Retrieval and generation numbers need not transfer to other materials or models.
+
+An ethics and security paragraph travels with these limits. Learner material sent to OpenRouter for generation, grading, and judging travels to a third party, and the report states no retention or redaction contract. A classroom deployment must add one. Piston executes hidden tests server-side through the profile on port~2000, but the report states no resource or egress bound for that sandbox. Adversarial material that injects instructions into generation or grading is untested. No learner usability evidence exists: every live check is a deployment pass by the developer.
+
+\section{Summary}
+Read together, the results validate the integration rather than the learning. Reranking lifts recall on both corpora, but the paired test cannot separate the gain from noise at n=30. The delivered S:off arm generates valid questions cheaply, and groundedness reads 0.8667 over six self-judged clusters. Coding clears its gate only on the judged pair. Tracing holds ranking parity while nearly halving calibration error.
+
+The loop converts 4 of 4 verdicts into verdict-linked replans with no fixed-plan control, and next-week adherence is unobserved. The system is a working integration of graded evidence into planning, with efficacy on learning deferred.

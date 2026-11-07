@@ -1,0 +1,23 @@
+# Lint baseline for the Ch04-Ch07 fix plan (pre-edit, 2026-10-23)
+# Command per chapter: python3 .work/active/phase2-prose-review/ste_check.py <file>
+# Matches plan Section 2: Ch04 FAIL 7/PASS, Ch05 FAIL 14/FAIL 1, Ch06 FAIL 14/FAIL 5, Ch07 PASS/PASS.
+
+## Ch04 Methodology
+STE: FAIL (fail-tier hits: 7) at lines 24, 39, 41, 52, 73, 87, 94, 96
+Humanizer: PASS (fail-tier hits: 0); judge-tier gated notes at 7, 27, 41
+Guide: roadmap paragraph long at line 2
+
+## Ch05 Implementation
+STE: FAIL (fail-tier hits: 14)
+Humanizer: FAIL (fail-tier hits: 1) at line 120 (H-8 `--`)
+Guide: roadmap paragraph long at line 2
+
+## Ch06 Results
+STE: FAIL (fail-tier hits: 14)
+Humanizer: FAIL (fail-tier hits: 5) at lines 71, 93, 94, 95, 96 (H-8 `--`)
+Guide: none fail-tier
+
+## Ch07 Conclusion
+STE: PASS (fail-tier hits: 0)
+Humanizer: PASS (fail-tier hits: 0)
+Guide: xref at line 22 (Table~ with \ref)

@@ -15,7 +15,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta, positioning, calc}
+\usetikzlibrary{arrows.meta, positioning, calc, shapes.geometric}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.18}
 \usepgfplotslibrary{fillbetween}
@@ -26,7 +26,8 @@
 \titleformat{\chapter}[display]{\normalfont\sffamily\bfseries\huge}{\chaptertitlename\ \thechapter}{20pt}{\Huge}
 \titleformat{\section}{\normalfont\sffamily\bfseries\Large}{\thesection}{1em}{}
 \titleformat{\subsection}{\normalfont\sffamily\bfseries\large}{\thesubsection}{1em}{}
-\usepackage{hyperref}
+\usepackage[hidelinks]{hyperref}
+\usepackage{fancyhdr}
 \usepackage{geometry}
 \geometry{letterpaper, margin=1in}
 \setcounter{secnumdepth}{3} % number sub-subsections (e.g. 2.1.1)
@@ -126,7 +127,9 @@ I would like to express my gratitude to my guide for continuous guidance and sup
 \newpage
 
 \section*{Abstract}
-Self-directed learners routinely commit to a fixed study plan and fall behind or move ahead within days, yet the plan does not adapt and the learner has no reliable signal of how far off-track they are. Phase~I of this work built an open-loop adaptive planner that estimates the learner's true study pace from session history, detects behavioural shifts in that pace, and projects the completion date with a calibrated uncertainty band, regenerating the plan when the projection diverges from the deadline. The open loop adapts to pace but never checks learning: logged hours do not prove that studying produced understanding. Phase~II closes the loop with assessment-based verification of genuine learning. The system generates grounded assessments in three question families from the learner's own materials, grades each family with an authoritative arm, tracks mastery with Bayesian knowledge tracing, guides with a Socratic ladder and a gated reveal, returns advisory feedback copy, runs mixed practice through the library and practice hub, and replans from the loop verdict. Each component is evaluated against baselines and live runs, and the closed loop is validated on synthetic longitudinal histories across four learner archetypes. The selected models are realised in a working local-first web application.
+Self-directed learners routinely commit to a fixed study plan and fall behind or move ahead within days, yet the plan does not adapt and the learner has no reliable signal of how far off-track they are. Phase~I of this work built an open-loop adaptive planner that estimates the learner's true study pace from session history, detects behavioral shifts in that pace, and projects the completion date with an uncertainty band, regenerating the plan when the projection diverges from the deadline. The open loop adapts to pace but never checks learning: logged hours do not prove that studying produced understanding. Phase~II closes the loop with assessment-based verification of graded evidence. The system generates grounded assessments in three question families from the learner's own materials, grades each family with an authoritative arm, tracks mastery with Bayesian knowledge tracing, guides with a Socratic ladder and a gated reveal, returns advisory feedback copy, runs mixed practice through the library and practice hub, and replans from the loop verdict. Each component is evaluated against baselines and live runs, and the closed loop undergoes integration validation on synthetic longitudinal histories across four learner archetypes, with no fixed-plan control. Learning gain is not measured: the replay covers integration behavior on synthetic histories, and efficacy on learning remains future work. The selected models are realized in a working local-first web application.
+
+\textbf{Keywords:} adaptive study planning, knowledge tracing, grounded generation, rubric grading, learning analytics.
 
 \newpage
 \tableofcontents
@@ -134,6 +137,40 @@ Self-directed learners routinely commit to a fixed study plan and fall behind or
 \listoffigures
 \newpage
 \listoftables
+\newpage
+
+% ---- Running header and footer rule (body pages only) ----
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\small\textit{\leftmark}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+% ---- Definitions and Abbreviations (Batch 1, R-09) ----
+\chapter*{Definitions and Abbreviations}
+\addcontentsline{toc}{chapter}{Definitions and Abbreviations}
+{\footnotesize
+\begin{tabular}{p{3.2cm} p{11.2cm}}
+\toprule
+\textbf{Term} & \textbf{Meaning in this report} \\
+\midrule
+AC1--AC4 & Acceptance Criteria 1--4 for the live deployment check (Sec~6.2). \\
+S-layer & Generation sweep aggregate (n=180). S:1--S:6 are the six distinct groundedness question keys; S:off is the delivered reasoning-off arm (Sec~6.1). \\
+ECE & Expected Calibration Error for mastery tracing (Sec~6.1). \\
+ACCA & Frozen ACCA study text: 754 chunks with 768-dimensional sidecar vectors; primary offline corpus (Sec~5.2, 6.1). \\
+DDIA & Second corpus: 1094 chunks; confirms the retrieval direction (Sec~5.2, 6.1). \\
+OULAD & Open University dataset; calibrates the Phase~I generator only, outside the Phase~II comparison (Sec~5.2). \\
+Posture & Planted weekly behavior pattern per synthetic archetype: steady, crammer, struggling, returning (Sec~4.3, 5.2). \\
+Sufficiency & Judge evidence-sufficiency score for the loop verdict; converted replans read 0.66--0.77 (Sec~4.1, 6.3). \\
+Verdict pair & Exact verdict payload mirrored from \texttt{suggest\_replan} onto \texttt{RoadmapReplanned} (Sec~4.1, 6.3). \\
+Dip-window & Week-3 trough replay with the browser clock pinned; trough holds on the merits (Sec~6.4). \\
+Met-class & Agreement-met subset in the Jev train/test split; the shipped cutoff rests on two pairs (Sec~6.1). \\
+Top-up & Fresh live coding pull after the pre-top-up gold run, which reads 0.0 derivable (Sec~6.1). \\
+Gate fix & Loop gate moved from 0.9 to 0.7 (\texttt{LOOP\_APPROVE\_AT} 0.7); confidence 1.0 would also clear the old gate (Sec~4.2.5, 6.3). \\
+\bottomrule
+\end{tabular}
+}
+
 \newpage
 
 % ---- Chapters (modular; one file each under chapters/) ----
@@ -151,32 +188,74 @@ Self-directed learners routinely commit to a fixed study plan and fall behind or
 
 \newpage
 % ---- Bibliography (kept in main; Pillar-A then Pillar-B) ----
+\addcontentsline{toc}{chapter}{Bibliography}
 \begin{thebibliography}{99}
-% Entries in first-citation order (Ch2). Pillar-B entries under the separator.
-% Text copied verbatim from phase1-report/main.tex; bibliography stays verbatim (G1).
+% Entries in first-citation order (Ch1-Ch2). Pillar-B entries under the separator.
+% Metadata verified 2026-10-23 (Batch 2): titles, venues, volumes, pages, DOIs checked against publisher records.
 
-\bibitem{chen2024} Chen, et al., ``A Hierarchical Bayesian Model of Adaptive Teaching,'' \textit{Cognitive Science}, 2024.
+\bibitem{chen2024} Chen, A. M., Palacci, A., V\'elez, N., Hawkins, R. D., Gershman, S. J., ``A Hierarchical Bayesian Model of Adaptive Teaching,'' \textit{Cognitive Science}, vol. 48, no. 7, Art. e13477, 2024, doi:10.1111/cogs.13477.
 
-\bibitem{zanellati2024} Zanellati, A., et al., ``Hybrid Models for Knowledge Tracing: A Systematic Review,'' \textit{IEEE Transactions on Learning Technologies}, 2024.
+\bibitem{alhazbi2024} Alhazbi, S., et al., ``Using Learning Analytics to Measure Self-Regulated Learning: A Systematic Review,'' \textit{Journal of Computer Assisted Learning}, vol. 40, no. 4, pp. 1658--1674, 2024, doi:10.1111/jcal.12982.
 
-\bibitem{mai2025} Mai, N.~T., Cao, W., Liu, W., ``Interpretable Knowledge Tracing via Transformer--Bayesian Hybrid Networks,'' \textit{Applied Sciences}, doi:10.3390/app15179605, 2025.
+\bibitem{islam2024} Islam, M., et al., ``Predict Students' Performance and Optimize Preparatory Leave,'' \textit{Proc. 27th Int. Conf. on Computer and Information Technology (ICCIT)}, IEEE, pp. 728--733, 2024, doi:10.1109/iccit64611.2024.11021881.
+
+\bibitem{zanellati2024} Zanellati, A., Di Mitri, D., Gabbrielli, M., Levrini, O., ``Hybrid Models for Knowledge Tracing: A Systematic Review,'' \textit{IEEE Transactions on Learning Technologies}, vol. 17, pp. 1021--1036, 2024.
+
+\bibitem{mai2025} Mai, N.~T., Cao, W., Liu, W., ``Interpretable Knowledge Tracing via Transformer--Bayesian Hybrid Networks,'' \textit{Applied Sciences}, vol. 15, Art. 9605, 2025, doi:10.3390/app15179605.
 
 % --- Pillar-B references (Phase II) ---
-\bibitem{itemgen2024} ``Automatic Item Generation in Various STEM Subjects Using Large Language Model Prompting,'' \textit{Computers and Education: Artificial Intelligence}, doi:10.1016/j.caeai.2024.100344, 2024.
+\bibitem{itemgen2024} Chan, K. W., et al., ``Automatic Item Generation in Various STEM Subjects Using Large Language Model Prompting,'' \textit{Computers and Education: Artificial Intelligence}, vol. 8, Art. 100344, 2024, doi:10.1016/j.caeai.2024.100344.
 
-\bibitem{lecturequiz2026} ``Self-hosted Lecture-to-Quiz: Local LLM MCQ Generation with Deterministic Quality Control,'' arXiv:2603.08729, 2026.
+\bibitem{lecturequiz2026} Shintani, S. A., ``Self-hosted Lecture-to-Quiz: Local LLM MCQ Generation with Deterministic Quality Control,'' arXiv:2603.08729 [cs.CY], 2026 (unrefereed preprint).
 
-\bibitem{kctag2024} ``Automated Generation and Tagging of Knowledge Components from Multiple-Choice Questions,'' doi:10.1145/3657604.3662030, 2024.
+\bibitem{kctag2024} Moore, S., Schmucker, R., Mitchell, T., Stamper, J., ``Automated Generation and Tagging of Knowledge Components from Multiple-Choice Questions,'' \textit{Proc. 11th ACM Conf. on Learning @ Scale (L@S '24)}, Atlanta, GA, USA, 2024, doi:10.1145/3657604.3662030.
 
-\bibitem{llmgrade2024} ``Automatic Grading of Short Answers Using Large Language Models in Software Engineering Courses,'' \textit{Proc. EDUCON}, IEEE, doi:10.1109/educon60312.2024.10578839, 2024.
+\bibitem{llmgrade2024} Ta, N. B. D., Chai, Y. M., ``Automatic Grading of Short Answers Using Large Language Models in Software Engineering Courses,'' \textit{Proc. 2024 IEEE Global Engineering Education Conf. (EDUCON)}, Kos Island, Greece, pp. 1--10, 2024, doi:10.1109/educon60312.2024.10578839.
 
-\bibitem{islam2024} Islam, M., et al., ``Predicting Student Performance and Optimizing Study Schedule using Deep Learning and Dynamic Programming,'' \textit{Proc. International Conference on Computer and Information Technology (ICCIT)}, IEEE, 2024.
+\bibitem{uzun2025} Uzun, Y., Suraworachet, W., Zhou, Q., Gauthier, A., Cukurova, M., ``Engagement with Analytics Feedback and Its Relationship to Self-Regulated Learning Competence and Course Performance,'' \textit{International Journal of Educational Technology in Higher Education}, vol. 22, Art. 17, 2025, doi:10.1186/s41239-025-00515-3.
 
-\bibitem{alhazbi2024} Alhazbi, S., et al., ``Using Learning Analytics to Measure Self-Regulated Learning: A Systematic Review,'' \textit{Journal of Computer Assisted Learning}, 2024.
+\bibitem{gaming2026} Zhang, J., et al., ``Understanding Gaming the System by Analyzing Self-Regulated Learning in Think-Aloud Protocols,'' \textit{Proc. 16th Int. Learning Analytics and Knowledge Conf. (LAK)}, ACM, 2026, doi:10.1145/3785022.3785025.
 
-\bibitem{uzun2025} Uzun, Y., Suraworachet, W., Zhou, Q., ``Engagement with Analytics Feedback and Its Relationship to Self-Regulated Learning Competence and Course Performance,'' \textit{International Journal of Educational Technology in Higher Education}, doi:10.1186/s41239-025-00515-3, 2025.
+% --- Batch-4 records (verified 2026-10-23 against publisher, ACM, ACL, and Scholar-indexed records) ---
+\bibitem{corbett1995} Corbett, A. T., Anderson, J. R., ``Knowledge Tracing: Modeling the Acquisition of Procedural Knowledge,'' \textit{User Modeling and User-Adapted Interaction}, vol. 4, pp. 253--278, 1995, doi:10.1007/BF01099821.
 
-\bibitem{gaming2026} ``Understanding Gaming the System by Analysing Self-Regulated Learning in Think-Aloud Protocols,'' doi:10.1145/3785022.3785025, 2026.
+\bibitem{page1954} Page, E. S., ``Continuous Inspection Schemes,'' \textit{Biometrika}, vol. 41, no. 1/2, pp. 100--115, 1954, doi:10.1093/biomet/41.1-2.100.
+
+\bibitem{rasmussen2006} Rasmussen, C. E., Williams, C. K. I., \textit{Gaussian Processes for Machine Learning}, MIT Press, 2006.
+
+\bibitem{vovk2005} Vovk, V., Gammerman, A., Shafer, G., \textit{Algorithmic Learning in a Random World}, Springer, 2005.
+
+\bibitem{vanlehn2011} VanLehn, K., ``The Relative Effectiveness of Human Tutoring, Intelligent Tutoring Systems, and Other Tutoring Systems,'' \textit{Educational Psychologist}, vol. 46, no. 4, pp. 197--221, 2011, doi:10.1080/00461520.2011.611369.
+
+\bibitem{koedinger2007} Koedinger, K. R., Aleven, V., ``Exploring the Assistance Dilemma in Experiments with Cognitive Tutors,'' \textit{Educational Psychology Review}, vol. 19, no. 3, pp. 239--264, 2007, doi:10.1007/s10648-007-9049-0.
+
+\bibitem{anderson1995} Anderson, J. R., Corbett, A. T., Koedinger, K. R., Pelletier, R., ``Cognitive Tutors: Lessons Learned,'' \textit{Journal of the Learning Sciences}, vol. 4, no. 2, pp. 167--207, 1995, doi:10.1207/s15327809jls0402\_2.
+
+\bibitem{cepeda2006} Cepeda, N. J., Pashler, H., Vul, E., Wixted, J. T., Rohrer, D., ``Distributed Practice in Verbal Recall Tasks: A Review and Quantitative Synthesis,'' \textit{Psychological Bulletin}, vol. 132, no. 3, pp. 354--380, 2006, doi:10.1037/0033-2909.132.3.354.
+
+\bibitem{settles2016} Settles, B., Meeder, B., ``A Trainable Spaced Repetition Model for Language Learning,'' \textit{Proc. 54th Annual Meeting of the Association for Computational Linguistics (Vol. 1: Long Papers)}, pp. 1848--1858, 2016, doi:10.18653/v1/P16-1174.
+
+\bibitem{zheng2023} Zheng, L., et al., ``Judging LLM-as-a-Judge with MT-Bench and Chatbot Arena,'' \textit{Advances in Neural Information Processing Systems 36 (Datasets and Benchmarks Track)}, pp. 46595--46623, 2023.
+
+\bibitem{embretson2000} Embretson, S. E., Reise, S. P., \textit{Item Response Theory for Psychologists}, Erlbaum, 2000.
+
+\bibitem{hattie2007} Hattie, J., Timperley, H., ``The Power of Feedback,'' \textit{Review of Educational Research}, vol. 77, no. 1, pp. 81--112, 2007, doi:10.3102/003465430298487.
+
+\bibitem{chi2014} Chi, M. T. H., Wylie, R., ``The ICAP Framework: Linking Cognitive Engagement to Active Learning Outcomes,'' \textit{Educational Psychologist}, vol. 49, no. 4, pp. 219--243, 2014, doi:10.1080/00461520.2014.965823.
+
+\bibitem{piech2015} Piech, C., et al., ``Deep Knowledge Tracing,'' \textit{Advances in Neural Information Processing Systems 28}, 2015, arXiv:1506.05908.
+
+\bibitem{niculescu2005} Niculescu-Mizil, A., Caruana, R., ``Predicting Good Probabilities with Supervised Learning,'' \textit{Proc. 22nd Int. Conf. on Machine Learning (ICML)}, pp. 625--632, 2005, doi:10.1145/1102351.1102464.
+
+\bibitem{bloom1984} Bloom, B. S., ``The 2 Sigma Problem: The Search for Methods of Group Instruction as Effective as One-to-One Tutoring,'' \textit{Educational Researcher}, vol. 13, no. 6, pp. 4--16, 1984, doi:10.3102/0013189X013006004.
+
+\bibitem{shute2008} Shute, V. J., ``Focus on Formative Feedback,'' \textit{Review of Educational Research}, vol. 78, no. 1, pp. 153--189, 2008, doi:10.3102/0034654307313407.
+
+\bibitem{roediger2006} Roediger, H. L., Karpicke, J. D., ``Test-Enhanced Learning: Taking Memory Tests Improves Long-Term Retention,'' \textit{Psychological Science}, vol. 17, no. 4, pp. 249--255, 2006, doi:10.1111/j.1467-9280.2006.01693.x.
+
+\bibitem{dunlosky2013} Dunlosky, J., et al., ``Improving Students' Learning with Effective Learning Techniques: Promising Directions from Cognitive and Educational Psychology,'' \textit{Psychological Science in the Public Interest}, vol. 14, no. 1, pp. 4--58, 2013, doi:10.1177/1529100612453266.
+
+\bibitem{kasneci2023} Kasneci, E., et al., ``ChatGPT for Good? On Opportunities and Challenges of Large Language Models for Education,'' \textit{Learning and Individual Differences}, vol. 103, Art. 102274, 2023, doi:10.1016/j.lindif.2023.102274.
 
 \end{thebibliography}
 \end{document}
