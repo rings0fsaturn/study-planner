@@ -1,10 +1,10 @@
-# Scratchpad – phase2-report · session 2026-10-20
-_state.md: .work/active/phase2-report/state.md · Updated: 2026-10-20_
+# Scratchpad – phase2-report · session 2026-10-23
+_state.md: .work/active/phase2-report/state.md · Updated: 2026-10-23_
 
 ## Now / Next
-- Doing: Ch5 drafted 2026-10-20 (/tmp smoke green 35pp, 0 errors, 0 undefined; review main.pdf refreshed)
-- Next: Ch6 grill (awaiting go-ahead)
-- Blocked: none
+- Doing: Examiner review documented 2026-10-23; fresh 47pp build, 6.0/10, plan at `plan/2026-10-23-examiner-review-rating-10-plan.md`.
+- Next: Batch 0 pre-flight, then Batch 1 (signatures, hidelinks, overfull, definitions) and Batch 2 (citation integrity).
+- Blocked: author decisions D-01 (signatures), D-02 (real-learner scope), D-03 (judge rerun), D-04 (literature expansion).
 
 ## Session log
 - 2026-10-20: resumed phase2-report for Ch2 grill; read STATUS row, state.md, GRILL.md (Q1-Q7+G1 RESOLVED), CHAPTERS.md (2.1-2.6 pinned), Phase-1 Ch2 shape; asked Q8.
@@ -75,3 +75,42 @@ _state.md: .work/active/phase2-report/state.md · Updated: 2026-10-20_
 - 2026-10-23: Q57 resolved (tables only, about 2-3 pages); grill COMPLETE, awaiting draft go-ahead.
 - 2026-10-23: appendix drafted per Q54-Q57 (STE 1 pass all sentences under 20 words, humanizer file-mode 1 pass; /tmp green 47pp, 0 errors, 0 undefined, 2 appendix Overfulls fixed, pp43-46 raster-checked; review main.pdf refreshed; only appendix.tex plus main.pdf touched).
 - 2026-10-23: retro run (6 findings: -g forced rebuild, ;-separated gate greps, period-preserving STE placeholders, one-sentence captions for the lot, one path per itemize item, ContinuedFloat split); AGENTS.md updated (recipe hardening, checklist line, 2 gotchas).
+- 2026-10-23: FOUND  checked-in main.pdf is 05:27 and chapter sources are 09:27; abstract and Ch1/Ch6 wording differ (stale review PDF).
+- 2026-10-23: FOUND  fresh build 47pp, 0 errors, 0 undefined, 3 overfull (Ch1 :21-22, Ch2 :26 heading, Ch7 :7-8), 76 underfull.
+- 2026-10-23: FOUND  groundedness 26/30 is 6 distinct question keys (S:1-S:6) repeated; generation and judge are both deepseek-v4-flash-0731.
+- 2026-10-23: FOUND  S-layer n=180 is six reasoning tiers; S:off is 29/30 schema, 0.724 gold support, p95 10.5 s, $0.00561; harness gate FAIL on difficultyMeanAbsBandError.
+- 2026-10-23: FOUND  coding 0.5349 is 23/43 judged; 62 attempts total with 20 refused and 19 failed_other; week 5 adherence is unobserved, not a measured zero.
+- 2026-10-23: FOUND  [10] Uzun et al. did not find a performance effect; [3] actual title is "Predict Students' Performance and Optimize Preparatory Leave" (ICCIT 2024, pp. 728-733).
+- 2026-10-23: FOUND  certificate and declaration are unsigned; guideline lines 299-302 require both signatures.
+- 2026-10-23: DECIDED the examiner review is the submission baseline; P0 compliance and evidence integrity close before prose polish.
+- 2026-10-23: EDIT   .work/active/phase2-report/plan/2026-10-23-examiner-review-rating-10-plan.md - findings ledger, batches 0-7, author decisions D-01-D-10, verification protocol - created.
+- 2026-10-23: EDIT   .work/active/phase2-report/state.md - review state, pitfalls, decisions, open items - updated.
+- 2026-10-23: EDIT   .work/STATUS.md - phase2-report row compressed to the review state - updated.
+- 2026-10-23: NEXT   Batch 0 pre-flight and fresh build; then Batch 1 signatures/hidelinks/overfull.
+- 2026-10-23: FOUND  Batch 0 reproduced: /tmp fresh build 47pp, 0 errors, 0 undefined, 3 overfull (Ch1 :21-22, Ch2 :26 heading, Ch7 :7-8), 76 underfull; stale-PDF diff confirms abstract, Ch1/Ch6 wording, and `last six` vs `last seven` drift.
+- 2026-10-23: EDIT   Batch 1 actionable: hidelinks, Sec 2.2 heading shortened + KC defined, Ch1/Ch7 overfull reworded, Docker Desktop on WSL2 line, R-09 Definitions page; Table 5.1 verified 7 rows so `last seven` stands (companion C5-01 opposite rejected).
+- 2026-10-23: FOUND  Batch 1 rebuild in /tmp: 48pp, 0 errors, 0 undefined, 0 overfull; definitions, Ch1, Ch2 heading, Ch7 pages raster-checked; no em/en dashes in edited files; review `main.pdf` refreshed beside `main.tex`.
+- 2026-10-23: BLOCKED D-01 signatures + declaration originality statement; Figure 5.6 clean re-capture needs a browser session.
+- 2026-10-23: NEXT   Batch 2 citation integrity; needs D-02/D-03/D-04 scope calls before Batch 3/4.
+- 2026-10-23: FOUND  Verified all 11 sources via web (Wiley, IEEE Xplore, ACM DL, ScienceDirect, Springer, IEEE TLT record): [3] is preparatory-leave scheduling pp. 728-733; [10] high-SRL engage more but no performance effect; [4] is a taxonomy not an outperform claim; [8] Moore et al. L@S '24 with 56%/35% match; [9] Ta and Chai EDUCON 2024; [7] Shintani arXiv preprint; 0.73 unverifiable.
+- 2026-10-23: EDIT   Batch 2: bibliography block rewritten with verified metadata; Ch1 chen/islam sentences, Ch2 zanellati/itemgen/kctag-metric/llmgrade/islam-0.73-drop/uzun sentences fixed; citation-claim map added as plan Section 10.
+- 2026-10-23: FOUND  Batch 2 rebuild in /tmp: 49pp, 0 errors, 0 undefined, 0 overfull; bib pp48-49 plus Ch1/Ch2 pp11/16 raster-checked; no em/en dashes; review `main.pdf` refreshed.
+- 2026-10-23: NEXT   Batch 3 evidence integrity; still blocked D-01 signatures plus D-02/D-03/D-04 scope calls.
+- 2026-10-23: FOUND  Verified from code and evidence: judge model equals generation model (self-judging); S:off n=30 reads 0.9667/0.7241/p95 10.5 s/$0.00561; coding 62 = 43 judged + 19 failed_other with 20 refusals; telemetry 361 = 281/37/35/8; groundedness keys S:1-S:6; endpoint McNemar r@1 p=0.546, r@3 p=0.131; Wilson CIs computed locally for all headline rates.
+- 2026-10-23: EDIT   Batch 3: S:off headline plus sweep context; six-cluster groundedness with CI and self-judge disclosure; FAIL verdict plus breached gate; coding 0.371 full denominator; telemetry row; week-5 n.o. in Ch6/Ch7/appendix; RPC row in Table 6.1; Wilson plus McNemar sentences; NFR-7 0.80 and NFR-9 0.60/0.85/0.75 headroom floors; abstract caveat; new 6.6 Threats to Validity plus ethics/security; no-control statements.
+- 2026-10-23: FOUND  Batch 3 rebuild in /tmp: 50pp, 0 errors, 0 undefined, 0 overfull (one new overfull from the gate token fixed by sentence split); Tables 6.1/6.2 plus Ch7 p44 raster-checked; no em/en dashes; review `main.pdf` refreshed. Found Figure 5.6 shows CITATION_UNVERIFIED plus 0/20 score (needs clean re-capture).
+- 2026-10-23: DECIDED D-02 reframe, D-03 honest cluster, D-07 headroom floors, D-10 integration-validation scope.
+- 2026-10-23: NEXT   Batch 4 literature expansion; D-04 scope call still open.
+- 2026-10-23: FOUND  Verified via targeted sweep: VanLehn d=0.79 human / 0.76 ITS; Cepeda 839 assessments / 317 experiments; Settles HLR 45%+ error cut and 12% engagement lift; Zheng judge over 80% agreement; Koedinger assistance dilemma; Corbett 4-parameter model with individualized parameters.
+- 2026-10-23: EDIT   Batch 4: 18 new Ch2 records with verified metadata (bib [12]-[29]); 2.1 BKT/DKT/calibration/IRT/spacing/heritage blocks; 2.2 lecturequiz metric; 2.3 retrieval-practice plus judge-validity blocks; 2.4 ITS plus assistance-dilemma plus ICAP plus Hattie/Shute blocks; 2.5 verification protocol; 2.6 table plus gaps plus closest-prior narrowing; 7.1 narrowed novelty.
+- 2026-10-23: FOUND  Batch 4 rebuild in /tmp: 53pp, 0 errors, 0 undefined, 0 overfull (one underscore-DOI fatal plus one new overfull, both fixed); Ch2 and bib pages raster-checked; no em/en dashes; review `main.pdf` refreshed. Partial: 29 refs not 35-50; Scopus/IEEE screening deferred to author follow-up.
+- 2026-10-23: NEXT   Batch 5 design plus reproducibility depth.
+- 2026-10-23: FOUND  Grounded from code: 8 Phase-II routes with token auth; CONTEXT_TOP_K 5, endpoint topK 50; temp 0.3, timeout 30 s, 4096 tokens, 1 repair, K=5, BKT params, gates 0.5/0.7; Dexie v7 stores; 976 backend tests, 65 app test files, 33 e2e specs, no CI; chunking 400/30; judge prompts verbatim; eval_harness flags.
+- 2026-10-23: EDIT   Batch 5: Ch4 interface contracts plus Figs 4.1/4.2 plus events table; Ch5 API, hyperparameter, testing tables plus Piston paragraph; Ch3 3.5-3.7; appendix A.4 prompts plus reproduction; 7.2 usability gate; 4.x limits week-5 wording aligned.
+- 2026-10-23: FOUND  Batch 5 rebuild in /tmp: 57pp, 0 errors, 0 undefined, 0 overfull (fixed missing shapes.geometric plus 9 overfulls: node widths, table cols, lstlisting command, resizebox, footnotesize token); diagrams plus tables raster-checked; no em/en dashes; review `main.pdf` refreshed.
+- 2026-10-23: NEXT   Batch 6 prose/figures/layout, then Batch 7 verification.
+- 2026-10-23: EDIT   Batch 6: split all long sentences and semicolons flagged by the companion STE checker (all 8 files back to PASS/PASS); moved hook/feedback tallies to the testing table; merged appflow1-4 into the final flow figure; added protocol edge labels to the architecture diagram; Table 2.1 ragged-right; added 6.7 Summary and 7.3 Limitations; running header rule, TOC bibliography entry, keywords, appendix title; kept the title per D-06.
+- 2026-10-23: FOUND  Batch 6 rebuilds in /tmp surfaced and fixed: missing fancyhdr (installed via tlmgr), 2 rerun overfulls, H-§8 double-hyphens in prose and code flags (single hyphens plus `-{}-` forms). Raster-checked headers, merged figure, arch diagram, bib. Partial: Figure 5.6 still shows the CITATION_UNVERIFIED error state (needs a live re-capture); screenshots not cropped.
+- 2026-10-23: FOUND  Batch 7: clean-room /tmp rebuild 57pp, 0 errors, 0 undefined, 0 overfull; full STE+Humanizer PASS on all chapters; review `main.pdf` refreshed. Re-rated 7.5/10 by self-review (not independent): 8/7/8/8/8/7/8/7/7.
+- 2026-10-23: NEXT   Author gates: D-01 signatures; Fig 5.6 live re-capture; literature 29 to 35-50 with DB screening; reliability diagram; AUC/ECE intervals; independent judge; real-learner study.
+- 2026-10-23: ASKED  Q58 (grill to 10): attempt the Figure 5.6 live re-capture in this session, timeboxed, before any other gap work; awaiting answer.
