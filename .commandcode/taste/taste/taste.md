@@ -1,0 +1,14 @@
+# Taste
+- Drives implementation sessions through a fixed loop: TDD (`/ecc:tdd-workflow`), a todo/task list to track session tasks, `/work-journal-orchestrator` for session journalling, and `/ponytail:ponytail` for implementation principles. Confidence: 0.85
+- Wants plan-first work: write/review a plan (`/plan`, `/ecc:plan`, plan-implementor), then have the agent amend the plan into an all-encompassing version before implementation starts. Confidence: 0.7
+- Expects a code review after each phase via designated review tooling (`/open-code-review-delegate`, `ponytail:ponytail-audit`, `/ecc:code-review`) and a report of findings plus how they can be fixed. Confidence: 0.75
+- Ends working sessions with a handoff written through `/work-journal-orchestrator` so the next session can resume, and asks for a short ready-to-paste prompt for that new session. Confidence: 0.8
+- Gives a "do not relitigate" block of locked findings/context at the start of a session and expects them accepted as settled rather than re-decided. Confidence: 0.65
+- Expects verification output (pytest, ruff, latency/spend) reported verbatim, not summarized. Confidence: 0.65
+- Refers to work by GitHub issue/ticket number and expects the agent to use the `gh` CLI to fetch and quote tickets for clear traceability. Confidence: 0.7
+- Keeps cross-agent config aligned with symlinks rather than duplicated files (e.g. `AGENTS.md -> CLAUDE.md`, subdirectories of `.agents` linked into `.claude/`). Confidence: 0.7
+- When adding durable project rules, expects them added under `.agents/rules` and then verified visible/propagated to the other agent harness dirs (`.claude/rules`, `.opencode/rules`, `.hermes/rules`). Confidence: 0.75
+- Prefers pragmatic, minimal implementation (ponytail) — build only what the current slice needs and skip extras until a later phase demands them. Confidence: 0.7
+- Uses subagents for read-only exploration/inventory before acting. Confidence: 0.6
+- Treats logging/tracing as a first-class production requirement: wants end-to-end trace correlation and logging infra that makes debugging/inferencing easy. Confidence: 0.8
+- Mandates that loggers be updated whenever the surrounding code is updated. Confidence: 0.75
