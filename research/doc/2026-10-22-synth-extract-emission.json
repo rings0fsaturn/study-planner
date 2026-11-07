@@ -1,0 +1,672 @@
+{
+  "users": [
+    "steady",
+    "crammer",
+    "struggling",
+    "returning"
+  ],
+  "adherence": [
+    {
+      "user": "steady",
+      "week": 0,
+      "planned": 390,
+      "actual": 270,
+      "rate": 0.6923076923076923,
+      "traceIds": [
+        "8058ddb9-6818-485b-97ef-b3b04640915d",
+        "8ffb2b98-9444-4015-b9d7-f63f7bcdb8b1",
+        "0f662008-37c8-4061-8892-ecdb856f5a98",
+        "90ef2ed3-0778-4d97-bec6-7b624db66354",
+        "c0b317b4-abf2-4346-b6ac-99583c9c7c89",
+        "f29fd7fb-63d5-459c-b236-8f7f8891c7d9",
+        "eeb8d72f-7a39-46d7-a088-a36620122675"
+      ]
+    },
+    {
+      "user": "steady",
+      "week": 1,
+      "planned": 390,
+      "actual": 359,
+      "rate": 0.9205128205128205,
+      "traceIds": [
+        "9ae25c36-6e54-42f4-bb67-e62dd3e477d1",
+        "97f01809-e07e-4001-90e8-6ff522094e3b",
+        "c78d20a7-3745-41ce-92ff-1926e8a34d90",
+        "0d45254c-6ea6-4e13-a002-48c42bc07aee",
+        "db7db306-64a8-4ab2-86ea-ef6a8c9e122e",
+        "00a1215f-fc8c-4c6b-8150-c6328a214d5b",
+        "a28b69db-afcf-4841-9040-3f444ef874bb",
+        "3b544ae2-4acc-45bb-8dba-472d2fbe7285"
+      ]
+    },
+    {
+      "user": "steady",
+      "week": 2,
+      "planned": 390,
+      "actual": 343,
+      "rate": 0.8794871794871795,
+      "traceIds": [
+        "6b176474-becd-4982-83d9-4cb029c58f23",
+        "487a7862-e29a-4fca-9c3a-f0595570c8b8",
+        "e5eb6d43-6291-4441-bfd8-83069dc3c244",
+        "3f1913e7-f4d1-424e-b913-de58e87a5699",
+        "8182f398-dbb4-4d83-9401-f1c200683399",
+        "635a873d-ecc9-4353-9ee1-d804222e5dc6",
+        "cb009473-15a7-4437-96b7-c5935e858646",
+        "26ec03ce-069a-44fa-aa08-a3180e72e9a3"
+      ]
+    },
+    {
+      "user": "steady",
+      "week": 3,
+      "planned": 390,
+      "actual": 372,
+      "rate": 0.9538461538461539,
+      "traceIds": [
+        "7a1323a9-c342-42b1-a3a5-96d3ebc27440",
+        "c3613686-f522-442e-8bfe-d69c289c6b21",
+        "0ce7f7bc-35ae-44df-96e6-201f0ce02d68",
+        "1eecdbab-e11b-44e9-989b-af8c85028bc0",
+        "4d09c35a-f60b-4438-9d6d-86be8988d609",
+        "30f568dc-b6c9-41dc-b0fc-d0d97258ebfb",
+        "a935d825-6ce1-43ed-91c8-4db231e56032",
+        "4bc09c15-7a6b-48ee-b404-197c5e0921bf"
+      ]
+    },
+    {
+      "user": "steady",
+      "week": 4,
+      "planned": 390,
+      "actual": 364,
+      "rate": 0.9333333333333333,
+      "traceIds": [
+        "4e9e7b2f-3eb0-453c-b3fe-4d7ab391a8f2",
+        "9d9e22ea-fefc-4c22-bda9-0e19c6de8442",
+        "e1fafa65-0af6-4060-b0cd-d6b598e18c80",
+        "planned:0:2026-10-14",
+        "55d25c21-c0ed-4f55-8476-3cd3794b3d54",
+        "588884a1-1201-46a8-8cd8-5059ade8cf71",
+        "deae6a8d-73e0-4f3e-8a20-43228b4f091b",
+        "5228d3f7-ac92-4ec7-8b6e-9dd6c54a3041"
+      ]
+    },
+    {
+      "user": "steady",
+      "week": 5,
+      "planned": 360,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "planned:1:2026-10-16",
+        "planned:2:2026-10-17",
+        "planned:3:2026-10-19",
+        "planned:4:2026-10-21"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 0,
+      "planned": 390,
+      "actual": 84,
+      "rate": 0.2153846153846154,
+      "traceIds": [
+        "78265ef0-b596-47de-aae8-9b170afe1b3d",
+        "cdafbe77-7fa4-448b-90ed-ef30d9bc63a5",
+        "8dcb44b3-921e-46ff-a0c7-cf70f47bb56e",
+        "77b0ed3f-654c-4fcf-b804-e30decaf4052",
+        "0553605e-3279-4690-9203-8089b5b51a20",
+        "652c2bea-4a90-49cd-9b97-30f3a7a15a31"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 1,
+      "planned": 390,
+      "actual": 54,
+      "rate": 0.13846153846153847,
+      "traceIds": [
+        "5fddb2a6-6fa5-45b9-8140-f25302a5af4b",
+        "7c079c53-5b13-4921-be62-cb449bafd507",
+        "800c9808-ab91-45a7-830d-599f5b3ec066",
+        "ef712613-0e36-4165-aa2d-511f391a7bdb",
+        "032af280-2721-49f4-843a-a6bf958b5620"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 2,
+      "planned": 390,
+      "actual": 150,
+      "rate": 0.38461538461538464,
+      "traceIds": [
+        "912fa01b-beb4-4f2b-9934-4b3a0d993172",
+        "4f689db5-0823-49f8-84d2-f41a29fc4b38",
+        "98311744-1fb5-4f16-a435-b24e8aacc668",
+        "a858bd96-4ae8-45cc-87cc-87bb443982a5",
+        "413699a0-41c6-4a97-a346-bac7bca764aa",
+        "4fe3e696-187d-473b-a132-72541483030d",
+        "718a34da-91e4-442f-a6ac-7c4baeebbc3f"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 3,
+      "planned": 390,
+      "actual": 99,
+      "rate": 0.25384615384615383,
+      "traceIds": [
+        "291c9904-51ab-4599-a9c1-38f6bbc678cd",
+        "426504de-5c30-4255-a409-fd4c19586beb",
+        "508fe9b0-bb9f-4526-adec-9b4ccbba14aa",
+        "57c06f69-6e04-40ec-a9ea-184ad0a95bd6",
+        "a1986da2-b2fe-4dc0-83bc-75b0c4848c65"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 4,
+      "planned": 390,
+      "actual": 360,
+      "rate": 0.9230769230769231,
+      "traceIds": [
+        "f28487eb-1198-4a81-9e90-d4fe387af56d",
+        "8a2bb181-7f6c-453a-918d-f2d5f30e68d3",
+        "b441e905-c79c-4f2b-85b5-abdcea5c7432",
+        "planned:0:2026-10-14",
+        "43cab1ca-1a3f-4393-8416-e85f1708fcac",
+        "98f161c4-d5ca-4fc8-9e9d-ea778a3a6eae",
+        "7e5d38af-941a-498b-9299-18f852a23a9e"
+      ]
+    },
+    {
+      "user": "crammer",
+      "week": 5,
+      "planned": 360,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "planned:1:2026-10-16",
+        "planned:2:2026-10-17",
+        "planned:3:2026-10-19",
+        "planned:4:2026-10-21"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 0,
+      "planned": 390,
+      "actual": 126,
+      "rate": 0.3230769230769231,
+      "traceIds": [
+        "dcce228d-914c-4a38-b9de-7c66a568c420",
+        "c4a5ac59-6847-4ddd-9220-13301ae6e4f1",
+        "a0ba4c42-187f-496b-94ba-7a28b98381db",
+        "fd6d465f-1a3f-4a25-804f-7cc1c802d44c",
+        "3fbb4187-20b7-4987-b08a-1f336560eeba",
+        "bfda696d-9bbb-4162-abfa-8e8fd1889c99"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 1,
+      "planned": 390,
+      "actual": 66,
+      "rate": 0.16923076923076924,
+      "traceIds": [
+        "69217306-5cc2-4fce-981b-d60d3d17cad3",
+        "77688927-194b-4de0-81ba-acc2c69b2ccc",
+        "9a8570f2-6905-4043-af1c-91323a392a8f",
+        "a5fdc5f2-3879-4437-adf1-2b0aee9e1d45",
+        "096b84c5-8db8-4b56-87bf-224eac74c129"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 2,
+      "planned": 390,
+      "actual": 150,
+      "rate": 0.38461538461538464,
+      "traceIds": [
+        "e9a7d2e1-c26c-46ca-a1f1-c7214ee16fcb",
+        "3f2e02eb-b320-4d37-83fd-930ea76171c5",
+        "638d6064-8078-4438-8f2d-6f9737f71023",
+        "502bc8a4-233d-4f7c-bc57-564e4c55f21e",
+        "9f9d9817-3629-4916-9c91-092454f1d676",
+        "99343e46-1697-4da4-8584-dfe5c61e298e",
+        "2cba236d-9512-4710-97ed-1586c00a772c"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 3,
+      "planned": 390,
+      "actual": 56,
+      "rate": 0.14358974358974358,
+      "traceIds": [
+        "90d653ce-01e2-4f84-a24d-3c003c44ddcc",
+        "87c47924-5342-4195-aee1-9b6eb65c2164",
+        "18e7728b-1ec5-4e4c-95b5-ffe291a5166b",
+        "9ac0d77c-9728-4a84-bd62-ed0bbe1ebe0e",
+        "6e58eac6-7fb8-4fb7-bd7e-18d207092d3e"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 4,
+      "planned": 390,
+      "actual": 216,
+      "rate": 0.5538461538461539,
+      "traceIds": [
+        "27310eeb-5073-467a-b49f-8c77ea51e31d",
+        "c62ed035-3060-4149-904b-0a6be4d524b1",
+        "6201cd4d-6647-4386-b32b-6d867d8b9db3",
+        "planned:0:2026-10-14",
+        "7069389c-30a6-4792-8fdb-8167be543646",
+        "0de9bb29-1977-4d8d-9dfc-39f965f5e868",
+        "c1b9552a-6096-4070-bef8-f99fb55056b2"
+      ]
+    },
+    {
+      "user": "struggling",
+      "week": 5,
+      "planned": 360,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "planned:1:2026-10-16",
+        "planned:2:2026-10-17",
+        "planned:3:2026-10-19",
+        "planned:4:2026-10-21"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 0,
+      "planned": 390,
+      "actual": 256,
+      "rate": 0.6564102564102564,
+      "traceIds": [
+        "addff7ab-709b-49c1-88da-e80f81f74fe7",
+        "b825f48f-a7fc-4ea0-83f1-e0199831f07f",
+        "5ebce7c9-23f1-4a65-9a4f-c9df5ccadb4e",
+        "e0ebb9fc-c0fa-4a92-9d8b-cbb0f3d25084",
+        "33956866-5481-4bca-95ab-3e2bde24f675",
+        "9fcb1a18-6690-4e05-8118-fae7d3e58435",
+        "ee3088be-8a4f-49ba-a350-05b6d9454275"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 1,
+      "planned": 390,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "65b4c89b-5418-4131-9193-4d1f5992ece4",
+        "2931ba3c-c77b-43e0-b14c-b553e577ff91",
+        "57781f20-fd7c-4c8e-8e6b-0e7055fc865e",
+        "96755f52-c4b0-4133-90e2-51be61821372"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 2,
+      "planned": 390,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "0d2f5cb0-cf09-43f8-9d52-0b3345a56117",
+        "7d183b0f-7af6-41ba-9ef5-53fe9fb9513e",
+        "f83cf2a9-dda6-40f4-8843-ab8bc493a67d",
+        "03868f4b-f221-4d6b-935f-9dc7a526d400"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 3,
+      "planned": 390,
+      "actual": 273,
+      "rate": 0.7,
+      "traceIds": [
+        "7d6c0bb1-83e4-41d6-a4fe-4610adaf6cf8",
+        "e8b5b6a0-5b23-4d26-8125-b13d1da5a28f",
+        "04edb4a1-954a-4ae1-9946-6daddf03f303",
+        "e31fa7ed-10ce-442d-aa45-c596d3cd6b62",
+        "36f63062-5b35-462d-8de8-a2becb93cde7",
+        "dd29086a-cd3c-4d45-a0ad-b3e0f13793ab",
+        "063c9f06-e1ad-4ea9-b87b-e2f7367fe3ae",
+        "516c1ab7-e703-4715-9ab7-545826679151"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 4,
+      "planned": 390,
+      "actual": 351,
+      "rate": 0.9,
+      "traceIds": [
+        "01861138-1f7b-452b-b4d1-aaee321cb211",
+        "0bbb6663-c252-499d-8292-799af6aa66c2",
+        "019299d1-c2ef-4abd-95ba-a142880c070a",
+        "planned:0:2026-10-14",
+        "6a07de76-ea17-4022-b824-99efcbea9c49",
+        "2c732d49-1b03-4df1-9e17-6ad8f5282540",
+        "237cfcf6-c352-41e4-a927-e0d07d78da59",
+        "96e96750-8ec3-4769-99b5-7a8fbe1e2224"
+      ]
+    },
+    {
+      "user": "returning",
+      "week": 5,
+      "planned": 360,
+      "actual": 0,
+      "rate": 0,
+      "traceIds": [
+        "planned:1:2026-10-16",
+        "planned:2:2026-10-17",
+        "planned:3:2026-10-19",
+        "planned:4:2026-10-21"
+      ]
+    }
+  ],
+  "mastery": [
+    {
+      "user": "steady",
+      "materialId": "52bb91b7-54da-4872-988c-13609a03ceb6",
+      "before": 0.15,
+      "after": 0.10666856660715515,
+      "delta": -0.04333143339284484,
+      "n": 13,
+      "traceIds": [
+        "52fd19dc-ccfd-4c24-8af3-d8626a759146",
+        "52fd19dc-ccfd-4c24-8af3-d8626a759146",
+        "52fd19dc-ccfd-4c24-8af3-d8626a759146",
+        "52fd19dc-ccfd-4c24-8af3-d8626a759146",
+        "318783cc-3be0-4b17-8802-81b249058e9a",
+        "318783cc-3be0-4b17-8802-81b249058e9a",
+        "318783cc-3be0-4b17-8802-81b249058e9a",
+        "012d6ac9-35d2-4c99-a5cf-e020b8058e8d",
+        "012d6ac9-35d2-4c99-a5cf-e020b8058e8d",
+        "012d6ac9-35d2-4c99-a5cf-e020b8058e8d",
+        "1ae8c2c5-07cd-499d-8aa9-2e98e3ee4d67",
+        "1ae8c2c5-07cd-499d-8aa9-2e98e3ee4d67",
+        "1ae8c2c5-07cd-499d-8aa9-2e98e3ee4d67"
+      ]
+    },
+    {
+      "user": "crammer",
+      "materialId": "ac26b713-a75a-474a-97bd-fb10fc6b05ca",
+      "before": 0.15,
+      "after": 0.1066666666666694,
+      "delta": -0.0433333333333306,
+      "n": 25,
+      "traceIds": [
+        "3eb6b945-53ab-4209-bef7-15ff7a3e703e",
+        "3eb6b945-53ab-4209-bef7-15ff7a3e703e",
+        "3eb6b945-53ab-4209-bef7-15ff7a3e703e",
+        "3eb6b945-53ab-4209-bef7-15ff7a3e703e",
+        "a9007365-c97a-48a2-b8d0-45ff9be25d6c",
+        "a9007365-c97a-48a2-b8d0-45ff9be25d6c",
+        "a9007365-c97a-48a2-b8d0-45ff9be25d6c",
+        "d0504d44-e123-47d1-9b88-20cc2ac7d167",
+        "d0504d44-e123-47d1-9b88-20cc2ac7d167",
+        "d0504d44-e123-47d1-9b88-20cc2ac7d167",
+        "2895e42a-45ca-4169-ad96-0e5b6f9d182d",
+        "2895e42a-45ca-4169-ad96-0e5b6f9d182d",
+        "de344668-28b9-42c8-9263-9623770ca389",
+        "de344668-28b9-42c8-9263-9623770ca389",
+        "de344668-28b9-42c8-9263-9623770ca389",
+        "5e7899e6-5db0-4059-8a12-523f858ff960",
+        "5e7899e6-5db0-4059-8a12-523f858ff960",
+        "5e7899e6-5db0-4059-8a12-523f858ff960",
+        "5e7899e6-5db0-4059-8a12-523f858ff960",
+        "b8474eb6-5594-477b-9ad9-d3a6e5553bb4",
+        "b8474eb6-5594-477b-9ad9-d3a6e5553bb4",
+        "b8474eb6-5594-477b-9ad9-d3a6e5553bb4",
+        "b8474eb6-5594-477b-9ad9-d3a6e5553bb4",
+        "d19216de-6f71-4ae3-b05e-a2c52bca091b",
+        "d19216de-6f71-4ae3-b05e-a2c52bca091b"
+      ]
+    },
+    {
+      "user": "returning",
+      "materialId": "bd05b713-de10-4d1f-ac50-6e5a2f39248a",
+      "before": 0.15,
+      "after": 0.10666666666678545,
+      "delta": -0.04333333333321454,
+      "n": 10,
+      "traceIds": [
+        "5a5cf607-1ffa-4fb3-bfb2-463c57d66f1c",
+        "5a5cf607-1ffa-4fb3-bfb2-463c57d66f1c",
+        "5a5cf607-1ffa-4fb3-bfb2-463c57d66f1c",
+        "d9c7c6af-227f-4893-8f02-507c78c9dcb2",
+        "d9c7c6af-227f-4893-8f02-507c78c9dcb2",
+        "d9c7c6af-227f-4893-8f02-507c78c9dcb2",
+        "d9c7c6af-227f-4893-8f02-507c78c9dcb2",
+        "7e9a08dd-84e2-4e9c-8381-16188ea6aa68",
+        "7e9a08dd-84e2-4e9c-8381-16188ea6aa68",
+        "7e9a08dd-84e2-4e9c-8381-16188ea6aa68"
+      ]
+    },
+    {
+      "user": "returning",
+      "materialId": "ad41eed2-9311-4e0e-bcd5-8d6e1426e804",
+      "before": 0.15,
+      "after": 0.10706051397673161,
+      "delta": -0.042939486023268386,
+      "n": 10,
+      "traceIds": [
+        "93ca2867-95ca-4ad2-bdc4-ecd6a048d4bd",
+        "93ca2867-95ca-4ad2-bdc4-ecd6a048d4bd",
+        "93ca2867-95ca-4ad2-bdc4-ecd6a048d4bd",
+        "942b8983-7f53-47d3-988e-6bbb5bbd3cd9",
+        "942b8983-7f53-47d3-988e-6bbb5bbd3cd9",
+        "942b8983-7f53-47d3-988e-6bbb5bbd3cd9",
+        "de5a8deb-9362-4be1-827f-b1ec3f4473fb",
+        "de5a8deb-9362-4be1-827f-b1ec3f4473fb",
+        "de5a8deb-9362-4be1-827f-b1ec3f4473fb",
+        "de5a8deb-9362-4be1-827f-b1ec3f4473fb"
+      ]
+    },
+    {
+      "user": "struggling",
+      "materialId": "2db731d3-3251-4a57-9bf7-2fe6ae028a18",
+      "before": 0.15,
+      "after": 0.10666666669129964,
+      "delta": -0.04333333330870036,
+      "n": 8,
+      "traceIds": [
+        "036a11a8-2dc1-48d0-a580-e49360267f11",
+        "036a11a8-2dc1-48d0-a580-e49360267f11",
+        "036a11a8-2dc1-48d0-a580-e49360267f11",
+        "4ceddfdc-ecf8-4943-a244-da12ee60d239",
+        "4ceddfdc-ecf8-4943-a244-da12ee60d239",
+        "4066f9c4-5767-4e35-8e10-086ed57fcf11",
+        "4066f9c4-5767-4e35-8e10-086ed57fcf11",
+        "4066f9c4-5767-4e35-8e10-086ed57fcf11"
+      ]
+    },
+    {
+      "user": "struggling",
+      "materialId": "c2d9b522-44a9-463f-a099-43b8af21b43b",
+      "before": 0.15,
+      "after": 0.10666666666666724,
+      "delta": -0.04333333333333275,
+      "n": 12,
+      "traceIds": [
+        "ca63106c-dc20-4925-a59b-2cf368709695",
+        "ca63106c-dc20-4925-a59b-2cf368709695",
+        "ca63106c-dc20-4925-a59b-2cf368709695",
+        "63561d73-ff8f-48df-a550-4a6bb3aa27a5",
+        "63561d73-ff8f-48df-a550-4a6bb3aa27a5",
+        "63561d73-ff8f-48df-a550-4a6bb3aa27a5",
+        "7150bb92-769e-417f-9450-884ea17954cf",
+        "7150bb92-769e-417f-9450-884ea17954cf",
+        "7150bb92-769e-417f-9450-884ea17954cf",
+        "420a03a0-c5a7-4670-8c09-9dfdc38fe83d",
+        "420a03a0-c5a7-4670-8c09-9dfdc38fe83d",
+        "420a03a0-c5a7-4670-8c09-9dfdc38fe83d"
+      ]
+    },
+    {
+      "user": "struggling",
+      "materialId": "9a51d381-d673-4a79-ad78-aefd41b56dc3",
+      "before": 0.15,
+      "after": 0.10666701610935886,
+      "delta": -0.043332983890641136,
+      "n": 12,
+      "traceIds": [
+        "23269f6f-d3c5-44aa-8a04-7be2d9ebfe36",
+        "23269f6f-d3c5-44aa-8a04-7be2d9ebfe36",
+        "23269f6f-d3c5-44aa-8a04-7be2d9ebfe36",
+        "23269f6f-d3c5-44aa-8a04-7be2d9ebfe36",
+        "a390a898-3da6-4795-abe9-2b12d570727b",
+        "a390a898-3da6-4795-abe9-2b12d570727b",
+        "73fdbac4-899d-4aa9-ad7a-1547c856fbe9",
+        "73fdbac4-899d-4aa9-ad7a-1547c856fbe9",
+        "73fdbac4-899d-4aa9-ad7a-1547c856fbe9",
+        "f7be1c18-2450-47f0-bf53-06af3e3bb7fd",
+        "f7be1c18-2450-47f0-bf53-06af3e3bb7fd",
+        "f7be1c18-2450-47f0-bf53-06af3e3bb7fd"
+      ]
+    },
+    {
+      "user": "steady",
+      "materialId": "e571cd03-a2e4-4029-b20a-51c6ea33c58c",
+      "before": 0.15,
+      "after": 0.10666666669129964,
+      "delta": -0.04333333330870036,
+      "n": 8,
+      "traceIds": [
+        "b9eff523-5f73-4924-ab32-5e65fb0c190f",
+        "b9eff523-5f73-4924-ab32-5e65fb0c190f",
+        "b7e3e595-c17d-4a38-9ef6-4ceb90c18ff0",
+        "b7e3e595-c17d-4a38-9ef6-4ceb90c18ff0",
+        "b7e3e595-c17d-4a38-9ef6-4ceb90c18ff0",
+        "6ee7574d-3175-41f1-b221-150a95df9dc0",
+        "6ee7574d-3175-41f1-b221-150a95df9dc0",
+        "6ee7574d-3175-41f1-b221-150a95df9dc0"
+      ]
+    },
+    {
+      "user": "returning",
+      "materialId": "12d15dac-550e-47db-bb71-87f1fec1f68c",
+      "before": 0.15,
+      "after": 0.10688624271598682,
+      "delta": -0.04311375728401318,
+      "n": 2,
+      "traceIds": [
+        "83631206-d7ec-45e7-b0d4-8f199145f54e",
+        "83631206-d7ec-45e7-b0d4-8f199145f54e"
+      ]
+    },
+    {
+      "user": "crammer",
+      "materialId": "d9c3690c-2bc3-4cfe-85f4-d9d68f65ecc2",
+      "before": 0.15,
+      "after": 0.10666931750826525,
+      "delta": -0.043330682491734746,
+      "n": 9,
+      "traceIds": [
+        "feec8fd6-90ca-474b-bd66-879444899b10",
+        "feec8fd6-90ca-474b-bd66-879444899b10",
+        "feec8fd6-90ca-474b-bd66-879444899b10",
+        "efc44206-7364-4310-97ef-c12ce5d25364",
+        "efc44206-7364-4310-97ef-c12ce5d25364",
+        "efc44206-7364-4310-97ef-c12ce5d25364",
+        "3e338de1-fd75-4c37-bd00-1e57b1ebeabf",
+        "3e338de1-fd75-4c37-bd00-1e57b1ebeabf",
+        "3e338de1-fd75-4c37-bd00-1e57b1ebeabf"
+      ]
+    },
+    {
+      "user": "crammer",
+      "materialId": "7bb5ea1c-d682-4710-b4c2-d3aa43c40705",
+      "before": 0.15,
+      "after": 0.10666666666667493,
+      "delta": -0.043333333333325064,
+      "n": 11,
+      "traceIds": [
+        "89807ed1-9f59-4706-bbd3-e3eff674e715",
+        "89807ed1-9f59-4706-bbd3-e3eff674e715",
+        "cf36c5eb-7e2d-4996-8685-f859cac7c0e0",
+        "cf36c5eb-7e2d-4996-8685-f859cac7c0e0",
+        "cf36c5eb-7e2d-4996-8685-f859cac7c0e0",
+        "686669a6-c3d9-4d45-ad46-889290a2bd63",
+        "686669a6-c3d9-4d45-ad46-889290a2bd63",
+        "686669a6-c3d9-4d45-ad46-889290a2bd63",
+        "791cbe37-511d-4525-ab05-c59533648393",
+        "791cbe37-511d-4525-ab05-c59533648393",
+        "791cbe37-511d-4525-ab05-c59533648393"
+      ]
+    },
+    {
+      "user": "steady",
+      "materialId": "2b527d35-bcd3-4f31-998b-b744e88c7f08",
+      "before": 0.15,
+      "after": 0.10666666666666667,
+      "delta": -0.04333333333333332,
+      "n": 15,
+      "traceIds": [
+        "04048a36-7b58-4d4e-aa4e-b73fad0037b5",
+        "04048a36-7b58-4d4e-aa4e-b73fad0037b5",
+        "33712b13-66a1-4474-9686-c5033bf0bff3",
+        "33712b13-66a1-4474-9686-c5033bf0bff3",
+        "cd7a0e89-2850-4a18-a0c1-19ba8353ca85",
+        "cd7a0e89-2850-4a18-a0c1-19ba8353ca85",
+        "cd7a0e89-2850-4a18-a0c1-19ba8353ca85",
+        "5c9061b7-1a52-4e95-a933-576692b0dda7",
+        "5c9061b7-1a52-4e95-a933-576692b0dda7",
+        "5c9061b7-1a52-4e95-a933-576692b0dda7",
+        "a46a0e23-99c9-4a66-92d6-29ac48aff1cf",
+        "a46a0e23-99c9-4a66-92d6-29ac48aff1cf",
+        "a46a0e23-99c9-4a66-92d6-29ac48aff1cf",
+        "a46a0e23-99c9-4a66-92d6-29ac48aff1cf",
+        "a46a0e23-99c9-4a66-92d6-29ac48aff1cf"
+      ]
+    }
+  ],
+  "verdicts": [
+    {
+      "user": "crammer",
+      "verdict": "suggest_replan",
+      "decidedAt": "2026-10-14T12:00:07.156Z",
+      "converted": true,
+      "traceIds": [
+        "2026-09-10T00:00:00.000Z",
+        "2026-10-14T12:00:20.235Z"
+      ]
+    },
+    {
+      "user": "returning",
+      "verdict": "suggest_replan",
+      "decidedAt": "2026-10-14T12:00:07.515Z",
+      "converted": true,
+      "traceIds": [
+        "2026-09-10T00:00:00.000Z",
+        "2026-10-14T12:00:22.587Z"
+      ]
+    },
+    {
+      "user": "struggling",
+      "verdict": "suggest_replan",
+      "decidedAt": "2026-10-14T12:00:07.606Z",
+      "converted": true,
+      "traceIds": [
+        "2026-09-10T00:00:00.000Z",
+        "2026-10-14T12:00:37.813Z"
+      ]
+    },
+    {
+      "user": "steady",
+      "verdict": "suggest_replan",
+      "decidedAt": "2026-10-14T12:00:11.235Z",
+      "converted": true,
+      "traceIds": [
+        "2026-09-10T00:00:00.000Z",
+        "2026-10-14T12:00:23.316Z"
+      ]
+    }
+  ],
+  "entries": 4
+}

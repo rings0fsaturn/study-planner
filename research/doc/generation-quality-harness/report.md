@@ -2,15 +2,14 @@
 
 - Gold version: `1` · Attempt gate K: 5
 - Corpus: `80c8b138-b544-4095-8dc0-1c390ac70da2` (754 chunks, sidecar)
-- Generated: 2026-09-28T02:17:57Z · Activation gate: off
-- Live arms: cache
+- Generated: 2026-10-22T08:58:43Z · Activation gate: off
+- Live arms: live
 
 ## Gate verdict
 
-FAIL - 2 gate(s) breached:
+FAIL - 1 gate(s) breached:
 
 - `difficultyMeanAbsBandError`: difficultyMeanAbsBandError unmeasured (no eligible evidence) - collect data or lower the gate
-- `codingDerivableMin`: codingDerivableMin 0.4545 < 0.5
 
 ## Objective (recorded #56 evidence)
 
@@ -30,11 +29,11 @@ FAIL - 2 gate(s) breached:
 
 ## Retrieval
 
-- n=30 · recall@1=0.6 · recall@3=0.7333 · recall@5=0.8667 · MRR=0.7033
+- n=30 · recall@1=0.6 · recall@3=0.7333 · recall@5=0.8667 · MRR=0.7032
 
 ## Difficulty calibration
 
-- questions with >= K attempts: 1 (observations: 15)
+- questions with >= K attempts: 1 (observations: 23)
 - mean abs band error: None · monotonic: None
 - authored band -> empirical score: {'3': 1.0}
 
@@ -46,14 +45,14 @@ FAIL - 2 gate(s) breached:
 
 | candidate | ECE | AUC |
 |---|---|---|
-| bkt-v1 | 0.1463 | 0.7203 |
-| running-proportion | 0.2913 | 0.7053 |
+| bkt-v1 | 0.1401 | 0.7397 |
+| running-proportion | 0.2679 | 0.7368 |
 
-- observations: 109 over 35 (material, skill) sequences
+- observations: 282 over 139 (material, skill) sequences
 
 ## Coding suitability
 
-- attempts: 22 (judged: 11) · `code_not_derivable`: 6 · derivable rate: 0.4545
+- attempts: 62 (judged: 43) · `code_not_derivable`: 20 · derivable rate: 0.5349
 - gold agreement: 1.0 (3/3 labeled materials)
 
 ## Rubric calibration (slice-4 flag queue)
@@ -64,6 +63,6 @@ FAIL - 2 gate(s) breached:
 
 ## Telemetry (redacted)
 
-- records: 218 · acceptance: 0.7569 · repair rate: 0.0734
-- outcomes: {'provider_error': 2, 'malformed_output': 28, 'ok': 165, 'partial': 23}
+- records: 361 · acceptance: 0.7784 · repair rate: 0.1163
+- outcomes: {'ok': 281, 'partial': 37, 'malformed_output': 35, 'provider_error': 8}
 

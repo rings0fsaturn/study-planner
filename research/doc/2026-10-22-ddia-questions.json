@@ -1,0 +1,152 @@
+[
+ {
+  "label": "reliability meaning",
+  "question": "What does it mean for a data system to be reliable?",
+  "answerSnippet": "The system should continue to work correctly (performing the correct function at the desired level of performance) even in the face of adversity"
+ },
+ {
+  "label": "fault vs failure",
+  "question": "What is the difference between a fault and a failure?",
+  "answerSnippet": "Note that a fault is not the same as a failure"
+ },
+ {
+  "label": "scalability meaning",
+  "question": "How does the book define scalability?",
+  "answerSnippet": "Scalability is the term we use to describe a system\u2019s ability to cope with increased load"
+ },
+ {
+  "label": "maintainability operability",
+  "question": "What does operability mean as an aspect of maintainability?",
+  "answerSnippet": "Make it easy for operations teams to keep the system running smoothly"
+ },
+ {
+  "label": "document schema flexibility",
+  "question": "What does schema flexibility mean in the document model?",
+  "answerSnippet": "Most document databases, and the JSON support in relational databases, do not enforce any schema on the data in documents"
+ },
+ {
+  "label": "relational roots",
+  "question": "What are the roots of the relational model?",
+  "answerSnippet": "proposed by Edgar Codd in 1970"
+ },
+ {
+  "label": "NoSQL drivers",
+  "question": "What drove the adoption of NoSQL databases?",
+  "answerSnippet": "need for greater scalability than relational databases can easily achieve"
+ },
+ {
+  "label": "declarative queries",
+  "question": "Why are declarative query languages preferred over imperative APIs?",
+  "answerSnippet": "declarative query languages like SQL turned out to be much better than imperative query APIs"
+ },
+ {
+  "label": "SSTable merge",
+  "question": "What is an advantage of SSTables over log segments with hash indexes?",
+  "answerSnippet": "Merging segments is simple and efficient, even if the files are bigger than the available memory"
+ },
+ {
+  "label": "B-tree vs LSM reads",
+  "question": "How do B-trees and LSM-trees compare on read performance?",
+  "answerSnippet": "LSM-trees are typically faster for writes, whereas B-trees are"
+ },
+ {
+  "label": "secondary indexes",
+  "question": "How common are secondary indexes in relational databases?",
+  "answerSnippet": "It is also very common to have secondary indexes"
+ },
+ {
+  "label": "replication leaders",
+  "question": "How does leader-based replication work?",
+  "answerSnippet": "One of the replicas is designated the leader"
+ },
+ {
+  "label": "read-your-writes",
+  "question": "What guarantee prevents reading stale data after your own write?",
+  "answerSnippet": "read-after-write consistency, also known as read-your-writes consistency"
+ },
+ {
+  "label": "multi-leader conflicts",
+  "question": "What is the biggest problem with multi-leader replication?",
+  "answerSnippet": "The biggest problem with multi-leader replication is that write conflicts can occur"
+ },
+ {
+  "label": "quorum reads",
+  "question": "When can quorum reads generally expect the most recent value?",
+  "answerSnippet": "If you have n replicas, and you choose w and r such that w + r > n"
+ },
+ {
+  "label": "skew batch",
+  "question": "How does skew affect batch jobs?",
+  "answerSnippet": "due to skew (data not being spread evenly across worker processes) and needing to wait for the slowest task to complete"
+ },
+ {
+  "label": "consistent hashing",
+  "question": "What is consistent hashing?",
+  "answerSnippet": "Consistent hashing, as defined by Karger et al. [7], is a way of evenly distributing load"
+ },
+ {
+  "label": "ACID coined",
+  "question": "Where does the acronym ACID come from?",
+  "answerSnippet": "It was coined in 1983 by Theo H\u00e4rder and Andreas Reuter"
+ },
+ {
+  "label": "read committed",
+  "question": "What is the most basic transaction isolation level?",
+  "answerSnippet": "The most basic level of transaction isolation is"
+ },
+ {
+  "label": "snapshot isolation term",
+  "question": "Which isolation level is named in the chapter on weak isolation?",
+  "answerSnippet": "snapshot isolation"
+ },
+ {
+  "label": "serializable strongest",
+  "question": "How strong is serializable isolation?",
+  "answerSnippet": "Serializable isolation is usually regarded as the strongest isolation level"
+ },
+ {
+  "label": "2PC coordinator",
+  "question": "What extra element appears in distributed transactions compared to single-node ones?",
+  "answerSnippet": "a coordinator (also known as transaction manager )"
+ },
+ {
+  "label": "FLP result",
+  "question": "What does the FLP result prove about consensus?",
+  "answerSnippet": "You may have heard about the FLP result"
+ },
+ {
+  "label": "CAP consistency meaning",
+  "question": "What does consistency mean in the CAP theorem?",
+  "answerSnippet": "the word consistency is used to mean"
+ },
+ {
+  "label": "linearizability illusion",
+  "question": "What illusion does linearizability give?",
+  "answerSnippet": "could give the illusion that there is only one replica"
+ },
+ {
+  "label": "version vectors",
+  "question": "What technique orders events across leaders?",
+  "answerSnippet": "a technique called version vectors can be used"
+ },
+ {
+  "label": "batch definition",
+  "question": "What is a batch processing system?",
+  "answerSnippet": "A batch processing system takes a large amount of input data, runs a job to"
+ },
+ {
+  "label": "event vs processing time",
+  "question": "What is the difference between event time and processing time?",
+  "answerSnippet": "Event time versus processing time"
+ },
+ {
+  "label": "Kreps lambda",
+  "question": "Who questioned the lambda architecture?",
+  "answerSnippet": "Jay Kreps: \u201cQuestioning the Lambda Architecture"
+ },
+ {
+  "label": "exactly-once meaning",
+  "question": "What does exactly-once mean for stream processing?",
+  "answerSnippet": "the final effect is the same as if no faults had occurred"
+ }
+]

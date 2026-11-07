@@ -1,0 +1,31 @@
+{
+  "title": "E2E gap4 pdf 1792662567941",
+  "materialId": "02bcbd7d-ab54-47aa-902c-1046fadfa6e6",
+  "finalState": "ready",
+  "transitions": [
+    {
+      "at": 15,
+      "state": "extracting",
+      "progress": 0.25,
+      "chunks": 0
+    },
+    {
+      "at": 48,
+      "state": "embedding",
+      "progress": 0.6,
+      "chunks": 0
+    },
+    {
+      "at": 101,
+      "state": "ready",
+      "progress": 1,
+      "chunks": 0
+    }
+  ],
+  "wall": {
+    "start": 1792662568065,
+    "created": 1792662581622,
+    "ready": 1792662669471,
+    "cleaned": 1792662672332
+  }
+}

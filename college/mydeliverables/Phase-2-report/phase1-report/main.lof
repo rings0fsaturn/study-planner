@@ -1,0 +1,24 @@
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {2.1}{\ignorespaces Schematic illustration of Bayesian pace calibration by Equation~\eqref {eq:bayes-update}: a broad prior over the pace ratio (dashed) tightens to a narrower posterior (solid) as session evidence accumulates. The values shown are illustrative, not measured.}}{14}{figure.caption.8}%
+\contentsline {figure}{\numberline {2.2}{\ignorespaces Schematic illustration of one-sided CUSUM detection by Equation~\eqref {eq:cusum}: the statistic stays near zero while the pace is stable and accumulates after a shift near $t=10$, raising an alarm when it crosses the threshold $h$. The values shown are illustrative.}}{15}{figure.caption.9}%
+\contentsline {figure}{\numberline {2.3}{\ignorespaces Schematic illustration of a Gaussian-process burn-up projection: observed cumulative progress (solid) is extrapolated to completion (dashed) with a 95\% band that widens with the horizon; the dotted line marks 100\% completion. The values shown are illustrative.}}{16}{figure.caption.10}%
+\contentsline {figure}{\numberline {2.4}{\ignorespaces The predict-then-optimize architecture~\cite {islam2024} this project adopts and extends: a predictive model estimates the learner's pace, and an optimizer turns the estimate into a schedule.}}{16}{figure.caption.11}%
+\contentsline {figure}{\numberline {2.5}{\ignorespaces The self-regulated-learning analytics loop the reviewed work supports: trace data yields validated indicators that are fed back to the learner. The reviewed systems stop at feedback; this project extends the loop by feeding the signal into replanning.}}{17}{figure.caption.12}%
+\addvspace {10\p@ }
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {4.1}{\ignorespaces The open adaptive loop. Logged sessions drive pace calibration, change detection, and progress projection; a detected shift raises a recalibration prompt, and the learner decides whether to regenerate the schedule, which in turn shapes future sessions.}}{22}{figure.caption.16}%
+\contentsline {figure}{\numberline {4.2}{\ignorespaces The offline comparison pipeline. The synthetic generator supplies ground truth; each candidate is scored on per-component metrics; a bootstrap confidence interval and Holm/Benjamini--Hochberg correction gate the result before a model is selected. The oracle is an upper-bound reference, not a deployable method.}}{25}{figure.caption.18}%
+\contentsline {figure}{\numberline {4.3}{\ignorespaces Initial design (predict-then-optimize). The intelligence service runs all four components, and the schedule generator packs each material onto a fixed day, returning a dated \texttt {Slot} grid; a replan re-runs the packer on the service.}}{26}{figure.caption.20}%
+\contentsline {figure}{\numberline {4.4}{\ignorespaces Revised design (capacity-based booking), the delivered system. Progress projection and the booking engine run client-side; Bayesian and enriched-shrinkage calibration and CUSUM detection run in the Python service; Supabase is the data hub; the offline research pipeline supplies the selected models. The closed-loop feedback from verified mastery is drawn dashed as Phase-II work.}}{27}{figure.caption.21}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {5.1}{\ignorespaces Onboarding: the generated booking plan produced from the learner's deadline, weekly capacity, and materials.}}{33}{figure.caption.25}%
+\contentsline {figure}{\numberline {5.2}{\ignorespaces A study session in progress, with the timer and material chosen at the start of the session.}}{33}{figure.caption.26}%
+\contentsline {figure}{\numberline {5.3}{\ignorespaces The Home dashboard: up-next booking, streak, calibrated pace, and projected finish date.}}{34}{figure.caption.27}%
+\contentsline {figure}{\numberline {5.4}{\ignorespaces The Week view: the week's verdict, the daily-minutes chart, and the burn-up projection.}}{35}{figure.caption.28}%
+\contentsline {figure}{\numberline {5.5}{\ignorespaces The Replan screen: three levers to adjust the plan when the projection diverges from the deadline.}}{36}{figure.caption.29}%
+\contentsline {figure}{\numberline {5.6}{\ignorespaces The Roadmap calendar: the plan shown as a month grid of bookings.}}{36}{figure.caption.30}%
+\contentsline {figure}{\numberline {5.7}{\ignorespaces The Roadmaps dashboard: the active plan, drafts, and history over their lifecycle.}}{37}{figure.caption.31}%
+\addvspace {10\p@ }
+\contentsline {figure}{\numberline {6.1}{\ignorespaces Interval coverage against the nominal 0.95 (dashed) by history-length band, frozen regime. The plain Gaussian-process interval under-covers badly; the split-conformal correction restores near-nominal coverage.}}{40}{figure.caption.36}%
+\addvspace {10\p@ }

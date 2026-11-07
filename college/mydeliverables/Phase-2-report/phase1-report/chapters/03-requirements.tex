@@ -1,0 +1,66 @@
+\chapter{System Requirements Specification}
+This chapter specifies the requirements of the Phase-I system. Section~3.1 states the hardware environment. Section~3.2 states the software environment. Section~3.3 lists the functional requirements as numbered items, and Section~3.4 lists the non-functional requirements.
+
+\section{Hardware Requirements}
+The system is designed to run on commodity hardware. A single learner produces a small volume of data, and every model trains and runs on a CPU, so no dedicated graphics processor is required. Table~\ref{tab:hardware} lists the hardware environment.
+
+\begin{table}[htbp]
+\centering
+\caption{Hardware environment.}
+\label{tab:hardware}
+\begin{tabular}{p{4.2cm} p{8.0cm}}
+\toprule
+\textbf{Component} & \textbf{Requirement} \\
+\midrule
+Processor & Any modern x86-64 or ARM CPU; no GPU required \\
+Memory & 8~GB RAM or higher \\
+Storage & A few gigabytes for the container image and local data \\
+Container runtime & Docker (via Colima on macOS) to run the intelligence service \\
+Client device & Any device with a modern web browser \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Software Requirements}
+The system is organised into three tiers: a local-first browser client, a Python intelligence service that hosts the heavier statistical models, and an offline research pipeline used to compare and select those models. Supabase provides authentication, the event database, and object storage that link the client and the service. Table~\ref{tab:software} lists the software environment by tier.
+
+\begin{table}[htbp]
+\centering
+\caption{Software environment by tier.}
+\label{tab:software}
+\begin{tabular}{p{3.6cm} p{8.6cm}}
+\toprule
+\textbf{Tier} & \textbf{Technologies} \\
+\midrule
+Client (single-page app) & React~19, Vite, TypeScript, Dexie over IndexedDB for local-first storage, date-fns \\
+Intelligence service & Python~3.12, FastAPI, Uvicorn, NumPy and SciPy, PyJWT; packaged with Docker \\
+Backend services & Supabase: authentication, a PostgreSQL event database, and object storage \\
+Offline research pipeline & Python (uv workspace), NumPy, with pytest and ruff for testing and linting \\
+Tooling and deployment & pnpm workspace, Vitest and Playwright for testing, Vercel for hosting \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Functional Requirements}
+The functional requirements state what the Phase-I system does.
+\begin{enumerate}[label=\textbf{FR-\arabic*},noitemsep,leftmargin=*]
+    \item The system shall let a learner define a study plan from a set of materials, a deadline, and a weekly study capacity.
+    \item The system shall log study sessions, both from an in-application timer and from manual entry of a past session.
+    \item The system shall estimate the learner's pace from the logged sessions using hierarchical Bayesian calibration.
+    \item The system shall detect a shift in the learner's pace and surface a recalibration prompt for the learner to act on.
+    \item The system shall project the completion date with a calibrated uncertainty band rather than a single date.
+    \item The system shall regenerate the schedule from the learner's realised capacity when the learner chooses to replan.
+    \item The system shall present the learner's progress, including the burn-up curve, streak, and schedule adherence.
+    \item The system shall persist all data on the device and synchronize it to the cloud when a connection is available.
+\end{enumerate}
+
+\section{Non-Functional Requirements}
+The non-functional requirements state the qualities the system must exhibit.
+\begin{enumerate}[label=\textbf{NFR-\arabic*},noitemsep,leftmargin=*]
+    \item \textbf{Offline-first operation.} The core logging loop shall function without network connectivity, and analytical results shall be cached locally for reuse.
+    \item \textbf{Commodity scale.} The system shall serve the individual-learner workload on commodity hardware without specialised accelerators.
+    \item \textbf{Per-learner isolation.} Each learner's data shall be isolated, using a per-user local database and row-level security in the cloud database.
+    \item \textbf{Authenticated services.} Requests to the intelligence service shall carry a signed token that is verified against the identity provider before any model runs.
+    \item \textbf{Responsiveness.} Calibration and projection results shall return within a few seconds, with a fallback to the last cached result when the service is unreachable.
+    \item \textbf{Behavioural alignment.} Where an algorithm exists in both the client and the service, the two implementations shall be kept behaviourally aligned so that results do not depend on which one runs.
+\end{enumerate}

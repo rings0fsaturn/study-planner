@@ -1,0 +1,698 @@
+{
+  "material": "80c8b138-b544-4095-8dc0-1c390ac70da2",
+  "chunks": 754,
+  "questions_total": 30,
+  "skipped": [],
+  "rerank_latency_s": {
+    "mean": 0.7082176256666722,
+    "p95": 0.7558406000000559
+  },
+  "sidecar_health": {
+    "status": "ok",
+    "model": "Qwen/Qwen3-Embedding-0.6B",
+    "dimensions": 768,
+    "device": "cuda:0",
+    "cuda_available": true,
+    "device_name": "AMD Radeon RX 9070 XT",
+    "torch_version": "2.12.0+rocm7.14.0",
+    "loaded": true,
+    "reranker_model": "Qwen/Qwen3-Reranker-0.6B",
+    "reranker_loaded": true
+  },
+  "config": {
+    "embed_model": "Qwen/Qwen3-Embedding-0.6B",
+    "rerank_model": "Qwen/Qwen3-Reranker-0.6B",
+    "rrf": {
+      "k": 60,
+      "wD": 1.0,
+      "wL": 0.7,
+      "pool": 25
+    },
+    "top_k": 50,
+    "dimensions": 768
+  },
+  "summary": {
+    "dense": {
+      "answered": 30,
+      "recall1": 0.6,
+      "recall3": 0.7666666666666667,
+      "recall5": 0.8666666666666667,
+      "mrr": 0.706137102014295,
+      "mean_top_sim": 0.6575822671254475
+    },
+    "hybrid": {
+      "answered": 30,
+      "recall1": 0.6,
+      "recall3": 0.8,
+      "recall5": 0.8666666666666667,
+      "mrr": 0.7196225840750459,
+      "mean_top_sim": 0.6397836367289226
+    },
+    "hybrid_rerank": {
+      "answered": 30,
+      "recall1": 0.6666666666666666,
+      "recall3": 0.9,
+      "recall5": 0.9333333333333333,
+      "mrr": 0.7967307692307692,
+      "mean_top_sim": 0.6333658635616303
+    }
+  },
+  "hits": {
+    "dense": [
+      {
+        "index": 1,
+        "label": "planning gap definition",
+        "answer_ordinal": 114,
+        "rank": 1,
+        "top_similarity": 0.7007018327713013
+      },
+      {
+        "index": 2,
+        "label": "gap analysis measures",
+        "answer_ordinal": 114,
+        "rank": 1,
+        "top_similarity": 0.6852316856384277
+      },
+      {
+        "index": 3,
+        "label": "prevention costs",
+        "answer_ordinal": 192,
+        "rank": 1,
+        "top_similarity": 0.7612861394882202
+      },
+      {
+        "index": 4,
+        "label": "rolling budget rationale",
+        "answer_ordinal": 219,
+        "rank": 1,
+        "top_similarity": 0.7231565117835999
+      },
+      {
+        "index": 5,
+        "label": "liquidity definition",
+        "answer_ordinal": 504,
+        "rank": 2,
+        "top_similarity": 0.6244922876358032
+      },
+      {
+        "index": 6,
+        "label": "learning curve forecast",
+        "answer_ordinal": 258,
+        "rank": 3,
+        "top_similarity": 0.7226003408432007
+      },
+      {
+        "index": 7,
+        "label": "six sigma targets",
+        "answer_ordinal": 685,
+        "rank": 1,
+        "top_similarity": 0.6838356256484985
+      },
+      {
+        "index": 8,
+        "label": "mendelow matrix",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.7194134593009949
+      },
+      {
+        "index": 9,
+        "label": "balanced scorecard drawback",
+        "answer_ordinal": 665,
+        "rank": 1,
+        "top_similarity": 0.7477554082870483
+      },
+      {
+        "index": 10,
+        "label": "kaizen vs standard costing",
+        "answer_ordinal": 690,
+        "rank": 1,
+        "top_similarity": 0.7432673573493958
+      },
+      {
+        "index": 11,
+        "label": "jit production speed",
+        "answer_ordinal": 700,
+        "rank": 2,
+        "top_similarity": 0.6024410724639893
+      },
+      {
+        "index": 12,
+        "label": "performance pyramid link",
+        "answer_ordinal": 663,
+        "rank": 1,
+        "top_similarity": 0.6959733366966248
+      },
+      {
+        "index": 13,
+        "label": "value chain stakeholder consistency",
+        "answer_ordinal": 316,
+        "rank": 1,
+        "top_similarity": 0.6881786584854126
+      },
+      {
+        "index": 14,
+        "label": "transfer price profit movement",
+        "answer_ordinal": 291,
+        "rank": 1,
+        "top_similarity": 0.7365766763687134
+      },
+      {
+        "index": 15,
+        "label": "divisional profitability measures",
+        "answer_ordinal": 504,
+        "rank": 27,
+        "top_similarity": 0.7476810812950134
+      },
+      {
+        "index": 16,
+        "label": "residual income appraisal",
+        "answer_ordinal": 549,
+        "rank": 4,
+        "top_similarity": 0.6385738849639893
+      },
+      {
+        "index": 17,
+        "label": "maximin decision rule",
+        "answer_ordinal": 131,
+        "rank": 1,
+        "top_similarity": 0.6723325252532959
+      },
+      {
+        "index": 18,
+        "label": "minimax regret strategy",
+        "answer_ordinal": 135,
+        "rank": 5,
+        "top_similarity": 0.6518552303314209
+      },
+      {
+        "index": 19,
+        "label": "mis definition",
+        "answer_ordinal": 345,
+        "rank": 1,
+        "top_similarity": 0.7380880117416382
+      },
+      {
+        "index": 20,
+        "label": "network organisation",
+        "answer_ordinal": 293,
+        "rank": 2,
+        "top_similarity": 0.5454683303833008
+      },
+      {
+        "index": 21,
+        "label": "hopwood management styles",
+        "answer_ordinal": 472,
+        "rank": 1,
+        "top_similarity": 0.6245379447937012
+      },
+      {
+        "index": 22,
+        "label": "vfm three es",
+        "answer_ordinal": 612,
+        "rank": 1,
+        "top_similarity": 0.7464478015899658
+      },
+      {
+        "index": 23,
+        "label": "bcg matrix classification",
+        "answer_ordinal": 99,
+        "rank": 3,
+        "top_similarity": 0.5570787191390991
+      },
+      {
+        "index": 24,
+        "label": "ansoff knowledge of environment",
+        "answer_ordinal": 115,
+        "rank": 1,
+        "top_similarity": 0.4634063243865967
+      },
+      {
+        "index": 25,
+        "label": "expert systems",
+        "answer_ordinal": 346,
+        "rank": 5,
+        "top_similarity": 0.5895574688911438
+      },
+      {
+        "index": 26,
+        "label": "good information criteria",
+        "answer_ordinal": 440,
+        "rank": 9,
+        "top_similarity": 0.6107347011566162
+      },
+      {
+        "index": 27,
+        "label": "normal distribution rule",
+        "answer_ordinal": 128,
+        "rank": 19,
+        "top_similarity": 0.39510512351989746
+      },
+      {
+        "index": 28,
+        "label": "five ss aim",
+        "answer_ordinal": 349,
+        "rank": 1,
+        "top_similarity": 0.6053273677825928
+      },
+      {
+        "index": 29,
+        "label": "communication skill definition",
+        "answer_ordinal": 22,
+        "rank": 6,
+        "top_similarity": 0.6858232021331787
+      },
+      {
+        "index": 30,
+        "label": "performance report qualitative info",
+        "answer_ordinal": 440,
+        "rank": 1,
+        "top_similarity": 0.6205399036407471
+      }
+    ],
+    "hybrid": [
+      {
+        "index": 1,
+        "label": "planning gap definition",
+        "answer_ordinal": 114,
+        "rank": 1,
+        "top_similarity": 0.7007018327713013
+      },
+      {
+        "index": 2,
+        "label": "gap analysis measures",
+        "answer_ordinal": 114,
+        "rank": 1,
+        "top_similarity": 0.6852316856384277
+      },
+      {
+        "index": 3,
+        "label": "prevention costs",
+        "answer_ordinal": 192,
+        "rank": 1,
+        "top_similarity": 0.7612861394882202
+      },
+      {
+        "index": 4,
+        "label": "rolling budget rationale",
+        "answer_ordinal": 219,
+        "rank": 1,
+        "top_similarity": 0.7231565117835999
+      },
+      {
+        "index": 5,
+        "label": "liquidity definition",
+        "answer_ordinal": 504,
+        "rank": 2,
+        "top_similarity": 0.5638320446014404
+      },
+      {
+        "index": 6,
+        "label": "learning curve forecast",
+        "answer_ordinal": 258,
+        "rank": 3,
+        "top_similarity": 0.7226003408432007
+      },
+      {
+        "index": 7,
+        "label": "six sigma targets",
+        "answer_ordinal": 685,
+        "rank": 1,
+        "top_similarity": 0.6838356256484985
+      },
+      {
+        "index": 8,
+        "label": "mendelow matrix",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.7194134593009949
+      },
+      {
+        "index": 9,
+        "label": "balanced scorecard drawback",
+        "answer_ordinal": 665,
+        "rank": 1,
+        "top_similarity": 0.6873036623001099
+      },
+      {
+        "index": 10,
+        "label": "kaizen vs standard costing",
+        "answer_ordinal": 690,
+        "rank": 1,
+        "top_similarity": 0.7432673573493958
+      },
+      {
+        "index": 11,
+        "label": "jit production speed",
+        "answer_ordinal": 700,
+        "rank": 2,
+        "top_similarity": 0.6024410724639893
+      },
+      {
+        "index": 12,
+        "label": "performance pyramid link",
+        "answer_ordinal": 663,
+        "rank": 1,
+        "top_similarity": 0.6959733366966248
+      },
+      {
+        "index": 13,
+        "label": "value chain stakeholder consistency",
+        "answer_ordinal": 316,
+        "rank": 1,
+        "top_similarity": 0.6881786584854126
+      },
+      {
+        "index": 14,
+        "label": "transfer price profit movement",
+        "answer_ordinal": 291,
+        "rank": 1,
+        "top_similarity": 0.7365766763687134
+      },
+      {
+        "index": 15,
+        "label": "divisional profitability measures",
+        "answer_ordinal": 504,
+        "rank": 31,
+        "top_similarity": 0.7403784990310669
+      },
+      {
+        "index": 16,
+        "label": "residual income appraisal",
+        "answer_ordinal": 549,
+        "rank": 2,
+        "top_similarity": 0.6327325105667114
+      },
+      {
+        "index": 17,
+        "label": "maximin decision rule",
+        "answer_ordinal": 131,
+        "rank": 1,
+        "top_similarity": 0.6723325252532959
+      },
+      {
+        "index": 18,
+        "label": "minimax regret strategy",
+        "answer_ordinal": 135,
+        "rank": 2,
+        "top_similarity": 0.6518552303314209
+      },
+      {
+        "index": 19,
+        "label": "mis definition",
+        "answer_ordinal": 345,
+        "rank": 4,
+        "top_similarity": 0.6157436370849609
+      },
+      {
+        "index": 20,
+        "label": "network organisation",
+        "answer_ordinal": 293,
+        "rank": 1,
+        "top_similarity": 0.5192510485649109
+      },
+      {
+        "index": 21,
+        "label": "hopwood management styles",
+        "answer_ordinal": 472,
+        "rank": 1,
+        "top_similarity": 0.6245379447937012
+      },
+      {
+        "index": 22,
+        "label": "vfm three es",
+        "answer_ordinal": 612,
+        "rank": 1,
+        "top_similarity": 0.7464478015899658
+      },
+      {
+        "index": 23,
+        "label": "bcg matrix classification",
+        "answer_ordinal": 99,
+        "rank": 2,
+        "top_similarity": 0.5570787191390991
+      },
+      {
+        "index": 24,
+        "label": "ansoff knowledge of environment",
+        "answer_ordinal": 115,
+        "rank": 1,
+        "top_similarity": 0.4634063243865967
+      },
+      {
+        "index": 25,
+        "label": "expert systems",
+        "answer_ordinal": 346,
+        "rank": 1,
+        "top_similarity": 0.4568752646446228
+      },
+      {
+        "index": 26,
+        "label": "good information criteria",
+        "answer_ordinal": 440,
+        "rank": 4,
+        "top_similarity": 0.5378754138946533
+      },
+      {
+        "index": 27,
+        "label": "normal distribution rule",
+        "answer_ordinal": 128,
+        "rank": 22,
+        "top_similarity": 0.35728657245635986
+      },
+      {
+        "index": 28,
+        "label": "five ss aim",
+        "answer_ordinal": 349,
+        "rank": 1,
+        "top_similarity": 0.6053273677825928
+      },
+      {
+        "index": 29,
+        "label": "communication skill definition",
+        "answer_ordinal": 22,
+        "rank": 19,
+        "top_similarity": 0.6858232021331787
+      },
+      {
+        "index": 30,
+        "label": "performance report qualitative info",
+        "answer_ordinal": 440,
+        "rank": 8,
+        "top_similarity": 0.6127586364746094
+      }
+    ],
+    "hybrid_rerank": [
+      {
+        "index": 1,
+        "label": "planning gap definition",
+        "answer_ordinal": 114,
+        "rank": 1,
+        "top_similarity": 0.7007018327713013
+      },
+      {
+        "index": 2,
+        "label": "gap analysis measures",
+        "answer_ordinal": 114,
+        "rank": 2,
+        "top_similarity": 0.6614736318588257
+      },
+      {
+        "index": 3,
+        "label": "prevention costs",
+        "answer_ordinal": 192,
+        "rank": 1,
+        "top_similarity": 0.7612861394882202
+      },
+      {
+        "index": 4,
+        "label": "rolling budget rationale",
+        "answer_ordinal": 219,
+        "rank": 1,
+        "top_similarity": 0.6094077825546265
+      },
+      {
+        "index": 5,
+        "label": "liquidity definition",
+        "answer_ordinal": 504,
+        "rank": 1,
+        "top_similarity": 0.5971270799636841
+      },
+      {
+        "index": 6,
+        "label": "learning curve forecast",
+        "answer_ordinal": 258,
+        "rank": 2,
+        "top_similarity": 0.7226003408432007
+      },
+      {
+        "index": 7,
+        "label": "six sigma targets",
+        "answer_ordinal": 685,
+        "rank": 1,
+        "top_similarity": 0.6838356256484985
+      },
+      {
+        "index": 8,
+        "label": "mendelow matrix",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.7194134593009949
+      },
+      {
+        "index": 9,
+        "label": "balanced scorecard drawback",
+        "answer_ordinal": 665,
+        "rank": 2,
+        "top_similarity": 0.7289788722991943
+      },
+      {
+        "index": 10,
+        "label": "kaizen vs standard costing",
+        "answer_ordinal": 690,
+        "rank": 1,
+        "top_similarity": 0.7432673573493958
+      },
+      {
+        "index": 11,
+        "label": "jit production speed",
+        "answer_ordinal": 700,
+        "rank": 1,
+        "top_similarity": 0.5946409106254578
+      },
+      {
+        "index": 12,
+        "label": "performance pyramid link",
+        "answer_ordinal": 663,
+        "rank": 1,
+        "top_similarity": 0.6959733366966248
+      },
+      {
+        "index": 13,
+        "label": "value chain stakeholder consistency",
+        "answer_ordinal": 316,
+        "rank": 1,
+        "top_similarity": 0.6881786584854126
+      },
+      {
+        "index": 14,
+        "label": "transfer price profit movement",
+        "answer_ordinal": 291,
+        "rank": 1,
+        "top_similarity": 0.7365766763687134
+      },
+      {
+        "index": 15,
+        "label": "divisional profitability measures",
+        "answer_ordinal": 504,
+        "rank": 13,
+        "top_similarity": 0.7476810812950134
+      },
+      {
+        "index": 16,
+        "label": "residual income appraisal",
+        "answer_ordinal": 549,
+        "rank": 1,
+        "top_similarity": 0.6207045316696167
+      },
+      {
+        "index": 17,
+        "label": "maximin decision rule",
+        "answer_ordinal": 131,
+        "rank": 1,
+        "top_similarity": 0.6723325252532959
+      },
+      {
+        "index": 18,
+        "label": "minimax regret strategy",
+        "answer_ordinal": 135,
+        "rank": 2,
+        "top_similarity": 0.6518552303314209
+      },
+      {
+        "index": 19,
+        "label": "mis definition",
+        "answer_ordinal": 345,
+        "rank": 5,
+        "top_similarity": 0.6157436370849609
+      },
+      {
+        "index": 20,
+        "label": "network organisation",
+        "answer_ordinal": 293,
+        "rank": 2,
+        "top_similarity": 0.5454683303833008
+      },
+      {
+        "index": 21,
+        "label": "hopwood management styles",
+        "answer_ordinal": 472,
+        "rank": 1,
+        "top_similarity": 0.6245379447937012
+      },
+      {
+        "index": 22,
+        "label": "vfm three es",
+        "answer_ordinal": 612,
+        "rank": 1,
+        "top_similarity": 0.7464478015899658
+      },
+      {
+        "index": 23,
+        "label": "bcg matrix classification",
+        "answer_ordinal": 99,
+        "rank": 1,
+        "top_similarity": 0.5173749923706055
+      },
+      {
+        "index": 24,
+        "label": "ansoff knowledge of environment",
+        "answer_ordinal": 115,
+        "rank": 1,
+        "top_similarity": 0.4634063243865967
+      },
+      {
+        "index": 25,
+        "label": "expert systems",
+        "answer_ordinal": 346,
+        "rank": 1,
+        "top_similarity": 0.4568752646446228
+      },
+      {
+        "index": 26,
+        "label": "good information criteria",
+        "answer_ordinal": 440,
+        "rank": 2,
+        "top_similarity": 0.5378754138946533
+      },
+      {
+        "index": 27,
+        "label": "normal distribution rule",
+        "answer_ordinal": 128,
+        "rank": 1,
+        "top_similarity": 0.29988324642181396
+      },
+      {
+        "index": 28,
+        "label": "five ss aim",
+        "answer_ordinal": 349,
+        "rank": 2,
+        "top_similarity": 0.5710325837135315
+      },
+      {
+        "index": 29,
+        "label": "communication skill definition",
+        "answer_ordinal": 22,
+        "rank": 8,
+        "top_similarity": 0.6657553911209106
+      },
+      {
+        "index": 30,
+        "label": "performance report qualitative info",
+        "answer_ordinal": 440,
+        "rank": 1,
+        "top_similarity": 0.6205399036407471
+      }
+    ]
+  }
+}

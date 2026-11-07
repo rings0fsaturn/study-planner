@@ -1,0 +1,698 @@
+{
+  "material": "ef3abfa1-99c7-4166-8ba7-6560c862f49f",
+  "chunks": 1094,
+  "questions_total": 30,
+  "skipped": [],
+  "rerank_latency_s": {
+    "mean": 0.7153226191333185,
+    "p95": 0.8366850600014004
+  },
+  "sidecar_health": {
+    "status": "ok",
+    "model": "Qwen/Qwen3-Embedding-0.6B",
+    "dimensions": 768,
+    "device": "cuda:0",
+    "cuda_available": true,
+    "device_name": "AMD Radeon RX 9070 XT",
+    "torch_version": "2.12.0+rocm7.14.0",
+    "loaded": true,
+    "reranker_model": "Qwen/Qwen3-Reranker-0.6B",
+    "reranker_loaded": true
+  },
+  "config": {
+    "embed_model": "Qwen/Qwen3-Embedding-0.6B",
+    "rerank_model": "Qwen/Qwen3-Reranker-0.6B",
+    "rrf": {
+      "k": 60,
+      "wD": 1.0,
+      "wL": 0.7,
+      "pool": 25
+    },
+    "top_k": 50,
+    "dimensions": 768
+  },
+  "summary": {
+    "dense": {
+      "answered": 30,
+      "recall1": 0.4,
+      "recall3": 0.7333333333333333,
+      "recall5": 0.8333333333333334,
+      "mrr": 0.5930773249738767,
+      "mean_top_sim": 0.667670585711797
+    },
+    "hybrid": {
+      "answered": 30,
+      "recall1": 0.4666666666666667,
+      "recall3": 0.7333333333333333,
+      "recall5": 0.8333333333333334,
+      "mrr": 0.6598876698014629,
+      "mean_top_sim": 0.6459192713101705
+    },
+    "hybrid_rerank": {
+      "answered": 30,
+      "recall1": 0.6333333333333333,
+      "recall3": 0.9,
+      "recall5": 0.9666666666666667,
+      "mrr": 0.7988505747126436,
+      "mean_top_sim": 0.6442491193612416
+    }
+  },
+  "hits": {
+    "dense": [
+      {
+        "index": 1,
+        "label": "reliability meaning",
+        "answer_ordinal": 29,
+        "rank": 2,
+        "top_similarity": 0.6289825439453125
+      },
+      {
+        "index": 2,
+        "label": "fault vs failure",
+        "answer_ordinal": 31,
+        "rank": 2,
+        "top_similarity": 0.5684409141540527
+      },
+      {
+        "index": 3,
+        "label": "scalability meaning",
+        "answer_ordinal": 38,
+        "rank": 1,
+        "top_similarity": 0.5996862649917603
+      },
+      {
+        "index": 4,
+        "label": "maintainability operability",
+        "answer_ordinal": 53,
+        "rank": 3,
+        "top_similarity": 0.6274057626724243
+      },
+      {
+        "index": 5,
+        "label": "document schema flexibility",
+        "answer_ordinal": 85,
+        "rank": 1,
+        "top_similarity": 0.6802897453308105
+      },
+      {
+        "index": 6,
+        "label": "relational roots",
+        "answer_ordinal": 67,
+        "rank": 2,
+        "top_similarity": 0.6357549428939819
+      },
+      {
+        "index": 7,
+        "label": "NoSQL drivers",
+        "answer_ordinal": 69,
+        "rank": 1,
+        "top_similarity": 0.778588056564331
+      },
+      {
+        "index": 8,
+        "label": "declarative queries",
+        "answer_ordinal": 97,
+        "rank": 1,
+        "top_similarity": 0.7184914946556091
+      },
+      {
+        "index": 9,
+        "label": "SSTable merge",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.793377161026001
+      },
+      {
+        "index": 10,
+        "label": "B-tree vs LSM reads",
+        "answer_ordinal": 162,
+        "rank": 1,
+        "top_similarity": 0.8655552864074707
+      },
+      {
+        "index": 11,
+        "label": "secondary indexes",
+        "answer_ordinal": 166,
+        "rank": 3,
+        "top_similarity": 0.7164888381958008
+      },
+      {
+        "index": 12,
+        "label": "replication leaders",
+        "answer_ordinal": 270,
+        "rank": 1,
+        "top_similarity": 0.7127344012260437
+      },
+      {
+        "index": 13,
+        "label": "read-your-writes",
+        "answer_ordinal": 290,
+        "rank": 3,
+        "top_similarity": 0.6596311926841736
+      },
+      {
+        "index": 14,
+        "label": "multi-leader conflicts",
+        "answer_ordinal": 302,
+        "rank": 6,
+        "top_similarity": 0.7806723117828369
+      },
+      {
+        "index": 15,
+        "label": "quorum reads",
+        "answer_ordinal": 318,
+        "rank": 2,
+        "top_similarity": 0.6194007992744446
+      },
+      {
+        "index": 16,
+        "label": "skew batch",
+        "answer_ordinal": 42,
+        "rank": 5,
+        "top_similarity": 0.592604398727417
+      },
+      {
+        "index": 17,
+        "label": "consistent hashing",
+        "answer_ordinal": 358,
+        "rank": 1,
+        "top_similarity": 0.739348828792572
+      },
+      {
+        "index": 18,
+        "label": "ACID coined",
+        "answer_ordinal": 391,
+        "rank": 3,
+        "top_similarity": 0.5752682089805603
+      },
+      {
+        "index": 19,
+        "label": "read committed",
+        "answer_ordinal": 410,
+        "rank": 3,
+        "top_similarity": 0.647679328918457
+      },
+      {
+        "index": 20,
+        "label": "snapshot isolation term",
+        "answer_ordinal": 1025,
+        "rank": 8,
+        "top_similarity": 0.6036458015441895
+      },
+      {
+        "index": 21,
+        "label": "serializable strongest",
+        "answer_ordinal": 441,
+        "rank": 1,
+        "top_similarity": 0.7497299909591675
+      },
+      {
+        "index": 22,
+        "label": "2PC coordinator",
+        "answer_ordinal": 636,
+        "rank": null,
+        "top_similarity": 0.6958909034729004
+      },
+      {
+        "index": 23,
+        "label": "FLP result",
+        "answer_ordinal": 630,
+        "rank": 1,
+        "top_similarity": 0.5356906056404114
+      },
+      {
+        "index": 24,
+        "label": "CAP consistency meaning",
+        "answer_ordinal": 394,
+        "rank": 1,
+        "top_similarity": 0.7084943056106567
+      },
+      {
+        "index": 25,
+        "label": "linearizability illusion",
+        "answer_ordinal": 575,
+        "rank": 6,
+        "top_similarity": 0.6586518287658691
+      },
+      {
+        "index": 26,
+        "label": "version vectors",
+        "answer_ordinal": 312,
+        "rank": 4,
+        "top_similarity": 0.5445992946624756
+      },
+      {
+        "index": 27,
+        "label": "batch definition",
+        "answer_ordinal": 696,
+        "rank": 1,
+        "top_similarity": 0.6938694715499878
+      },
+      {
+        "index": 28,
+        "label": "event vs processing time",
+        "answer_ordinal": 1082,
+        "rank": 3,
+        "top_similarity": 0.7000042200088501
+      },
+      {
+        "index": 29,
+        "label": "Kreps lambda",
+        "answer_ordinal": 995,
+        "rank": 5,
+        "top_similarity": 0.5215480327606201
+      },
+      {
+        "index": 30,
+        "label": "exactly-once meaning",
+        "answer_ordinal": 938,
+        "rank": 11,
+        "top_similarity": 0.6775926351547241
+      }
+    ],
+    "hybrid": [
+      {
+        "index": 1,
+        "label": "reliability meaning",
+        "answer_ordinal": 29,
+        "rank": 1,
+        "top_similarity": 0.6273695230484009
+      },
+      {
+        "index": 2,
+        "label": "fault vs failure",
+        "answer_ordinal": 31,
+        "rank": 1,
+        "top_similarity": 0.5552756786346436
+      },
+      {
+        "index": 3,
+        "label": "scalability meaning",
+        "answer_ordinal": 38,
+        "rank": 15,
+        "top_similarity": 0.526960015296936
+      },
+      {
+        "index": 4,
+        "label": "maintainability operability",
+        "answer_ordinal": 53,
+        "rank": 4,
+        "top_similarity": 0.5651606321334839
+      },
+      {
+        "index": 5,
+        "label": "document schema flexibility",
+        "answer_ordinal": 85,
+        "rank": 1,
+        "top_similarity": 0.6802897453308105
+      },
+      {
+        "index": 6,
+        "label": "relational roots",
+        "answer_ordinal": 67,
+        "rank": 2,
+        "top_similarity": 0.6357549428939819
+      },
+      {
+        "index": 7,
+        "label": "NoSQL drivers",
+        "answer_ordinal": 69,
+        "rank": 1,
+        "top_similarity": 0.778588056564331
+      },
+      {
+        "index": 8,
+        "label": "declarative queries",
+        "answer_ordinal": 97,
+        "rank": 1,
+        "top_similarity": 0.7184914946556091
+      },
+      {
+        "index": 9,
+        "label": "SSTable merge",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.793377161026001
+      },
+      {
+        "index": 10,
+        "label": "B-tree vs LSM reads",
+        "answer_ordinal": 162,
+        "rank": 1,
+        "top_similarity": 0.8655552864074707
+      },
+      {
+        "index": 11,
+        "label": "secondary indexes",
+        "answer_ordinal": 166,
+        "rank": 2,
+        "top_similarity": 0.7164888381958008
+      },
+      {
+        "index": 12,
+        "label": "replication leaders",
+        "answer_ordinal": 270,
+        "rank": 4,
+        "top_similarity": 0.6304329037666321
+      },
+      {
+        "index": 13,
+        "label": "read-your-writes",
+        "answer_ordinal": 290,
+        "rank": 1,
+        "top_similarity": 0.6413323879241943
+      },
+      {
+        "index": 14,
+        "label": "multi-leader conflicts",
+        "answer_ordinal": 302,
+        "rank": 1,
+        "top_similarity": 0.6919970512390137
+      },
+      {
+        "index": 15,
+        "label": "quorum reads",
+        "answer_ordinal": 318,
+        "rank": 2,
+        "top_similarity": 0.6194007992744446
+      },
+      {
+        "index": 16,
+        "label": "skew batch",
+        "answer_ordinal": 42,
+        "rank": 16,
+        "top_similarity": 0.5243943929672241
+      },
+      {
+        "index": 17,
+        "label": "consistent hashing",
+        "answer_ordinal": 358,
+        "rank": 1,
+        "top_similarity": 0.739348828792572
+      },
+      {
+        "index": 18,
+        "label": "ACID coined",
+        "answer_ordinal": 391,
+        "rank": 2,
+        "top_similarity": 0.5043802857398987
+      },
+      {
+        "index": 19,
+        "label": "read committed",
+        "answer_ordinal": 410,
+        "rank": 1,
+        "top_similarity": 0.6193479299545288
+      },
+      {
+        "index": 20,
+        "label": "snapshot isolation term",
+        "answer_ordinal": 1025,
+        "rank": 6,
+        "top_similarity": 0.5486921072006226
+      },
+      {
+        "index": 21,
+        "label": "serializable strongest",
+        "answer_ordinal": 441,
+        "rank": 2,
+        "top_similarity": 0.7058887481689453
+      },
+      {
+        "index": 22,
+        "label": "2PC coordinator",
+        "answer_ordinal": 636,
+        "rank": null,
+        "top_similarity": 0.6958909034729004
+      },
+      {
+        "index": 23,
+        "label": "FLP result",
+        "answer_ordinal": 630,
+        "rank": 1,
+        "top_similarity": 0.5356906056404114
+      },
+      {
+        "index": 24,
+        "label": "CAP consistency meaning",
+        "answer_ordinal": 394,
+        "rank": 1,
+        "top_similarity": 0.7084943056106567
+      },
+      {
+        "index": 25,
+        "label": "linearizability illusion",
+        "answer_ordinal": 575,
+        "rank": 2,
+        "top_similarity": 0.6586518287658691
+      },
+      {
+        "index": 26,
+        "label": "version vectors",
+        "answer_ordinal": 312,
+        "rank": 2,
+        "top_similarity": 0.5445992946624756
+      },
+      {
+        "index": 27,
+        "label": "batch definition",
+        "answer_ordinal": 696,
+        "rank": 1,
+        "top_similarity": 0.6938694715499878
+      },
+      {
+        "index": 28,
+        "label": "event vs processing time",
+        "answer_ordinal": 1082,
+        "rank": 2,
+        "top_similarity": 0.6527142524719238
+      },
+      {
+        "index": 29,
+        "label": "Kreps lambda",
+        "answer_ordinal": 995,
+        "rank": 4,
+        "top_similarity": 0.5215480327606201
+      },
+      {
+        "index": 30,
+        "label": "exactly-once meaning",
+        "answer_ordinal": 938,
+        "rank": 11,
+        "top_similarity": 0.6775926351547241
+      }
+    ],
+    "hybrid_rerank": [
+      {
+        "index": 1,
+        "label": "reliability meaning",
+        "answer_ordinal": 29,
+        "rank": 1,
+        "top_similarity": 0.6273695230484009
+      },
+      {
+        "index": 2,
+        "label": "fault vs failure",
+        "answer_ordinal": 31,
+        "rank": 1,
+        "top_similarity": 0.5552756786346436
+      },
+      {
+        "index": 3,
+        "label": "scalability meaning",
+        "answer_ordinal": 38,
+        "rank": 4,
+        "top_similarity": 0.5305087566375732
+      },
+      {
+        "index": 4,
+        "label": "maintainability operability",
+        "answer_ordinal": 53,
+        "rank": 3,
+        "top_similarity": 0.6274057626724243
+      },
+      {
+        "index": 5,
+        "label": "document schema flexibility",
+        "answer_ordinal": 85,
+        "rank": 1,
+        "top_similarity": 0.6802897453308105
+      },
+      {
+        "index": 6,
+        "label": "relational roots",
+        "answer_ordinal": 67,
+        "rank": 2,
+        "top_similarity": 0.6357549428939819
+      },
+      {
+        "index": 7,
+        "label": "NoSQL drivers",
+        "answer_ordinal": 69,
+        "rank": 1,
+        "top_similarity": 0.778588056564331
+      },
+      {
+        "index": 8,
+        "label": "declarative queries",
+        "answer_ordinal": 97,
+        "rank": 1,
+        "top_similarity": 0.7184914946556091
+      },
+      {
+        "index": 9,
+        "label": "SSTable merge",
+        "answer_ordinal": 149,
+        "rank": 1,
+        "top_similarity": 0.793377161026001
+      },
+      {
+        "index": 10,
+        "label": "B-tree vs LSM reads",
+        "answer_ordinal": 162,
+        "rank": 1,
+        "top_similarity": 0.8655552864074707
+      },
+      {
+        "index": 11,
+        "label": "secondary indexes",
+        "answer_ordinal": 166,
+        "rank": 2,
+        "top_similarity": 0.7164888381958008
+      },
+      {
+        "index": 12,
+        "label": "replication leaders",
+        "answer_ordinal": 270,
+        "rank": 1,
+        "top_similarity": 0.7127344012260437
+      },
+      {
+        "index": 13,
+        "label": "read-your-writes",
+        "answer_ordinal": 290,
+        "rank": 1,
+        "top_similarity": 0.6413323879241943
+      },
+      {
+        "index": 14,
+        "label": "multi-leader conflicts",
+        "answer_ordinal": 302,
+        "rank": 3,
+        "top_similarity": 0.715355634689331
+      },
+      {
+        "index": 15,
+        "label": "quorum reads",
+        "answer_ordinal": 318,
+        "rank": 1,
+        "top_similarity": 0.6031962037086487
+      },
+      {
+        "index": 16,
+        "label": "skew batch",
+        "answer_ordinal": 42,
+        "rank": 2,
+        "top_similarity": 0.592604398727417
+      },
+      {
+        "index": 17,
+        "label": "consistent hashing",
+        "answer_ordinal": 358,
+        "rank": 1,
+        "top_similarity": 0.739348828792572
+      },
+      {
+        "index": 18,
+        "label": "ACID coined",
+        "answer_ordinal": 391,
+        "rank": 2,
+        "top_similarity": 0.5043802857398987
+      },
+      {
+        "index": 19,
+        "label": "read committed",
+        "answer_ordinal": 410,
+        "rank": 1,
+        "top_similarity": 0.6193479299545288
+      },
+      {
+        "index": 20,
+        "label": "snapshot isolation term",
+        "answer_ordinal": 1025,
+        "rank": 4,
+        "top_similarity": 0.41390371322631836
+      },
+      {
+        "index": 21,
+        "label": "serializable strongest",
+        "answer_ordinal": 441,
+        "rank": 1,
+        "top_similarity": 0.7497299909591675
+      },
+      {
+        "index": 22,
+        "label": "2PC coordinator",
+        "answer_ordinal": 636,
+        "rank": null,
+        "top_similarity": 0.6728201508522034
+      },
+      {
+        "index": 23,
+        "label": "FLP result",
+        "answer_ordinal": 630,
+        "rank": 1,
+        "top_similarity": 0.5356906056404114
+      },
+      {
+        "index": 24,
+        "label": "CAP consistency meaning",
+        "answer_ordinal": 394,
+        "rank": 1,
+        "top_similarity": 0.7084943056106567
+      },
+      {
+        "index": 25,
+        "label": "linearizability illusion",
+        "answer_ordinal": 575,
+        "rank": 1,
+        "top_similarity": 0.6075402498245239
+      },
+      {
+        "index": 26,
+        "label": "version vectors",
+        "answer_ordinal": 312,
+        "rank": 2,
+        "top_similarity": 0.5445992946624756
+      },
+      {
+        "index": 27,
+        "label": "batch definition",
+        "answer_ordinal": 696,
+        "rank": 1,
+        "top_similarity": 0.6938694715499878
+      },
+      {
+        "index": 28,
+        "label": "event vs processing time",
+        "answer_ordinal": 1082,
+        "rank": 1,
+        "top_similarity": 0.6697497367858887
+      },
+      {
+        "index": 29,
+        "label": "Kreps lambda",
+        "answer_ordinal": 995,
+        "rank": 1,
+        "top_similarity": 0.4141005277633667
+      },
+      {
+        "index": 30,
+        "label": "exactly-once meaning",
+        "answer_ordinal": 938,
+        "rank": 2,
+        "top_similarity": 0.6595702171325684
+      }
+    ]
+  }
+}
